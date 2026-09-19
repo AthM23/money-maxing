@@ -250,3 +250,24 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
   change scope, schema, tool names or the never-cut list. Whether the team is now two builders or the spec's
   three was not stated; if three, the Surface items in B's lane split back out.
 - Blocked on humans: who is Person A and who is Person B; the four Phase 0 decisions listed in the roadmap.
+
+### 2026-09-19 ~19:55 ET — Lanes assigned; scaffold and DRAFT contract landed (Karan + Claude Code session)
+
+- **Person A = Karan, Person B = Atharv**, stated by Karan. `ROADMAP.md` updated. This clears the "who is A and B" blocker.
+- Repo scaffold committed: TypeScript ESM (NodeNext), Node 22, pnpm, vitest, zod, better-sqlite3, tsx. `pnpm install` needs
+  the native build allowed; `pnpm-workspace.yaml` already does that. `pnpm test`, `pnpm typecheck`.
+- `src/contract/` committed as a **DRAFT written by Person A alone**, so it is not frozen: `types.ts` (`Proposal`, `Mark`,
+  routes, six block rules, two-stage `KernelResult`), `tools.ts` (tool registry from spec §8, auditor deny-list),
+  `topics.ts` (the 50 topics from `EVENT_TOPICS.md`), `schema.sql` (spec §7 plus the roadmap's "take now" additions, each
+  marked `-- ADDED`; 30 tables; loads in SQLite). Atharv: edit it in conversation with Karan, points marked `DECIDE:`.
+  Differences from spec §7 worth a look: one `party` table with `alias` instead of `customer` and `vendor`; `gl_line.party_id`;
+  `decision.route`, `decision.tier`, `decision_step`; `approval`, `blocked_attempt`, `approver`; `fact.uses`,
+  `fact.max_amount_cents`, `fact.explained_amount_cents`; `escalation.dedupe_key`; `bill.service_period`.
+- `src/kernel/types.ts`: the kernel's input interface (plain data and lookups, no database or model import).
+- **Proposed by Person A for the four Phase 0 decisions (not agreed):** (1) nothing at or above $500 is AUTO except an
+  exact-match cash application with no residual; the threshold applies to the adjustment amount, not the matched payment.
+  (2) The GPT controller reviews and signs judgment marks but its approval does not satisfy PROPOSE at or above $500; a
+  person clicks. (3) Bank feed from a file now. (4) Processor payout in as a file, cut early if behind. Auditor model:
+  open-weight on the fine-tune host, so it differs from Claude and GPT.
+- In progress, Person A: kernel checks with pass and fail fixtures, eval harness for `tests/cases.csv`, then the
+  `propose_entry` runtime. No API keys are needed for these.

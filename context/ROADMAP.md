@@ -7,7 +7,7 @@ Scope, schema, tool names and the never-cut list still come from the spec; sheet
 [architecture board](./diagrams/architecture/README.md). Decisions and changes of direction still go in
 [`PROJECT_STATUS.md`](./PROJECT_STATUS.md), not here.
 
-Put names here when agreed: **Person A = ______ · Person B = ______**
+**Person A = Karan · Person B = Atharv** (stated by Karan, 2026-09-19 ~19:55 ET)
 
 ## The split in one line
 
