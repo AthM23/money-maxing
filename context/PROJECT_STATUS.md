@@ -14,6 +14,9 @@ notable. See [`README.md`](./README.md) for the rules.
 | **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
+| **Test bar** | [`../tests/README.md`](../tests/README.md) — 115 edge cases, each with an expected route |
+| **Agent onboarding** | [`../AGENTS.md`](../AGENTS.md) |
+| **Proposed spec** | `PROJECT_SPEC.md` + `research/` — **on the `research/claude-session-notes` branch**, not on `main` |
 
 ---
 
@@ -81,3 +84,30 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
   thesis (not a feature), cash reconciliation alone is the "easy" path the judge
   called out, and the target customer is ~Series A and above.
 - Repo is otherwise empty — no code, no stack chosen.
+
+### 2026-09-19 — Test corpus added; AGENTS.md added
+
+- Added [`../tests/`](../tests/): an Office-of-the-CFO edge-case corpus, 115 cases
+  in the hard tail of finance ops, each with an **expected route**
+  (`AUTO` / `PROPOSE` / `ESCALATE` / `REFUSE` / `BLOCK`, plus `INVARIANT`).
+  Corpus prose is ground truth; `tests/cases.csv` is the machine-readable index
+  mapped onto the proposed function packs; `tests/RESULTS.md` is the scoreboard.
+- Added [`../AGENTS.md`](../AGENTS.md) at the repo root: tells any agent to read
+  this file first, how to log to it, what the tests are, and that the spec lives
+  on the `research/claude-session-notes` branch rather than `main`.
+- Nothing has been run — all 115 cases are `todo`. No system exists yet.
+- Three findings from mapping the corpus onto the spec, each needs a decision:
+  - **Only 18 of 115 cases are auto-clearable**, and `ESCALATE` is the single
+    largest route at 39. The corpus tests partitioning, not throughput; a system
+    tuned for auto-clear rate fails it by construction.
+  - **19 cases are out of the spec's declared scope** (tax, FX, multi-entity,
+    Stripe). Two of those matter: `A-07`/`H-2` (Stripe processor payout) is in
+    the corpus's own minimum fixture *and* a demo beat, and `H-6` (evidence
+    changed underneath you) is restageable on `A-24` to bring it back in scope.
+  - Coverage is bank-rec and AP heavy: `revenue` and `forecast` have **zero**
+    minimum-fixture cases and `audit` has one case total, while the demo spine
+    runs through exactly those packs. That fixture has to come from the spec's
+    own planted cases, not from this corpus.
+- Note on branches: this file has now diverged between `main` and
+  `research/claude-session-notes`. The research branch's copy carries the
+  proposed-direction and research entries; this copy carries the tests entry.

@@ -1,0 +1,116 @@
+id,section,title,expected_route,route_qualifier,tier,pack,min_fixture,in_spec_scope,status
+A-01,bank-rec,"Deposit in transit",AUTO,,T1,bank-rec,yes,yes,todo
+A-02,bank-rec,"Outstanding check",AUTO,,T1,bank-rec,yes,yes,todo
+A-03,bank-rec,"Wire fee netted from a receipt",PROPOSE,,T2,bank-rec,yes,yes,todo
+A-04,bank-rec,"Standalone bank charge",PROPOSE,,T1,bank-rec,yes,yes,todo
+A-05,bank-rec,"Many-to-one: one wire settles four invoices",PROPOSE,,T2,ar,yes,yes,todo
+A-06,bank-rec,"One-to-many: one payment run, three bank debits",PROPOSE,,T2,ap,no,yes,todo
+A-07,bank-rec,"Processor payout net of fees (Stripe)",PROPOSE,,T3,bank-rec,yes,no,todo
+A-08,bank-rec,"FX receipt: EUR invoice, USD credit",ESCALATE,,T3,bank-rec,no,no,todo
+A-09,bank-rec,"Descriptor mutation across periods",AUTO,"after normalisation",T3,bank-rec,no,yes,todo
+A-10,bank-rec,"Abbreviated trading name",PROPOSE,,T2,bank-rec,yes,yes,todo
+A-11,bank-rec,"Memo describes the spend, not the payee",PROPOSE,,T3,bank-rec,yes,yes,todo
+A-12,bank-rec,"Transposed invoice reference",PROPOSE,,T2,bank-rec,yes,yes,todo
+A-13,bank-rec,"True duplicate payment",BLOCK,,T2,ap,yes,yes,todo
+A-14,bank-rec,"False duplicate: two legitimate invoices",AUTO,,T3,ap,yes,yes,todo
+A-15,bank-rec,"Returned ACH / NSF reversal",PROPOSE,,T2,ar,no,yes,todo
+A-16,bank-rec,"Stale-dated check clears",PROPOSE,,T2,bank-rec,no,yes,todo
+A-17,bank-rec,"Void and reissue",ESCALATE,,T3,ap,no,yes,todo
+A-18,bank-rec,"Ambiguous same-amount pair",ESCALATE,,T2,bank-rec,yes,yes,todo
+A-19,bank-rec,"Internal transfer / sweep",AUTO,,T2,bank-rec,yes,yes,todo
+A-20,bank-rec,"Partial payment with deduction",ESCALATE,,T2,ar,no,yes,todo
+A-21,bank-rec,"Overpayment creates customer credit",PROPOSE,,T2,ar,no,yes,todo
+A-22,bank-rec,"Zero and negative rows",AUTO,,T1,platform,no,yes,todo
+A-23,bank-rec,"Statement crosses the period boundary",BLOCK,"on the wrong-period half",T2,close,no,yes,todo
+A-24,bank-rec,"Amended statement after reconciliation",ESCALATE,,T3,bank-rec,no,yes,todo
+A-25,bank-rec,"Bank error needing external confirmation",ESCALATE,,T3,bank-rec,no,yes,todo
+B-01,ap,"Quantity variance / short ship",PROPOSE,,T1,ap,yes,yes,todo
+B-02,ap,"Price variance (PPV)",PROPOSE,,T1,ap,yes,yes,todo
+B-03,ap,"Quantity and price variance at once",ESCALATE,,T2,ap,no,yes,todo
+B-04,ap,"Over-receipt against the PO",ESCALATE,,T2,ap,no,yes,todo
+B-05,ap,"Invoice with no PO",ESCALATE,,T1,ap,no,yes,todo
+B-06,ap,"Services with no GRN",ESCALATE,,T2,ap,no,yes,todo
+B-07,ap,"Split delivery: one PO, three GRNs",PROPOSE,,T2,ap,no,yes,todo
+B-08,ap,"Multiple invoices against one PO",PROPOSE,,T2,ap,no,yes,todo
+B-09,ap,"One invoice spanning multiple POs",ESCALATE,,T3,ap,no,yes,todo
+B-10,ap,"Unit-of-measure mismatch",REFUSE,"if no conversion is known",T3,ap,no,yes,todo
+B-11,ap,"Freight not on the PO",PROPOSE,,T2,ap,no,yes,todo
+B-12,ap,"Tax variance",ESCALATE,,T2,ap,no,no,todo
+B-13,ap,"Exact duplicate invoice",BLOCK,,T1,ap,no,yes,todo
+B-14,ap,"Near-duplicate: reissued with a new number",ESCALATE,,T3,ap,no,yes,todo
+B-15,ap,"Internal inconsistency: header != line items",REFUSE,,T2,ap,yes,yes,todo
+B-16,ap,"Credit memo against a prior overbilling",PROPOSE,,T2,ap,no,yes,todo
+B-17,ap,"Vendor bank details changed",BLOCK,,T2,ap,yes,yes,todo
+B-18,ap,"Duplicate vendor master records",ESCALATE,,T3,ap,no,yes,todo
+B-19,ap,"Currency mismatch: PO USD, invoice EUR",ESCALATE,,T3,ap,no,no,todo
+B-20,ap,"Early payment discount 2/10 net 30",PROPOSE,,T2,ap,no,yes,todo
+B-21,ap,"Retainage held back until completion",ESCALATE,,T3,ap,no,yes,todo
+B-22,ap,"Deposit already applied (double-pay risk)",BLOCK,"if unnetted",T3,ap,no,yes,todo
+B-23,ap,"Invoice dated into a closed period",BLOCK,,T2,close,no,yes,todo
+B-24,ap,"Over the approver's limit",BLOCK,,T2,kernel,no,yes,todo
+B-25,ap,"Evidence in a portal with no API",PROPOSE,,T3,ap,no,yes,todo
+B-26,ap,"Vendor statement disagreement",ESCALATE,,T3,ap,no,yes,todo
+C-01,revenue,"Multi-element bundle, no stated prices",ESCALATE,,T3,revenue,no,yes,todo
+C-02,revenue,"Mid-term upgrade: 10 seats in month 7",ESCALATE,,T3,revenue,no,yes,todo
+C-03,revenue,"Usage overage straddling cutoff",PROPOSE,,T2,revenue,no,yes,todo
+C-04,revenue,"Mid-term cancellation with refund",ESCALATE,,T2,revenue,no,yes,todo
+C-05,revenue,"Cash with no remittance advice",ESCALATE,,T2,ar,no,yes,todo
+C-06,revenue,"Remittance disagrees with the cash",ESCALATE,,T2,ar,no,yes,todo
+C-07,revenue,"Paid to the wrong legal entity",ESCALATE,,T3,ar,no,no,todo
+C-08,revenue,"Short-pay claiming an unissued credit",ESCALATE,,T2,ar,no,yes,todo
+C-09,revenue,"Unbilled AR / contract asset",ESCALATE,,T3,revenue,no,yes,todo
+C-10,revenue,"Acceptance clause buried in prose",REFUSE,"without the acceptance document",T3,revenue,no,yes,todo
+C-11,revenue,"Bad debt write-off",ESCALATE,,T2,ar,no,yes,todo
+C-12,revenue,"Rebate / variable consideration",ESCALATE,,T3,revenue,no,yes,todo
+D-01,close,"Post-close invoice for prior-period service",PROPOSE,,T1,close,yes,yes,todo
+D-02,close,"Unreversed accrual posts the cost twice",ESCALATE,,T2,close,yes,yes,todo
+D-03,close,"Accrual true-up",AUTO,"if immaterial",T2,close,no,yes,todo
+D-04,close,"Recurring cost that stopped",ESCALATE,,T3,close,no,yes,todo
+D-05,close,"Mid-month prepaid start (proration)",AUTO,,T2,close,no,yes,todo
+D-06,close,"Asset placed in service mid-period",AUTO,,T2,close,no,yes,todo
+D-07,close,"Cutoff on shipment (FOB shipping point)",ESCALATE,,T3,revenue,no,yes,todo
+D-08,close,"Capitalise or expense internal software",REFUSE,,T3,close,no,yes,todo
+D-09,close,"Immaterial difference",AUTO,,T2,close,no,yes,todo
+D-10,close,"Immaterial but suspicious, third month running",ESCALATE,,T3,audit,no,yes,todo
+E-01,intercompany,"Intercompany mismatch between two books",ESCALATE,,T2,close,no,no,todo
+E-02,intercompany,"Disputed intercompany, no confirmation",REFUSE,,T3,close,no,no,todo
+E-03,intercompany,"Elimination on consolidation",PROPOSE,,T3,reporting,no,no,todo
+E-04,intercompany,"Prohibited lending pair (IRC 956)",BLOCK,,T3,forecast,no,no,todo
+E-05,intercompany,"Covenant floor breach",BLOCK,,T3,forecast,no,no,todo
+E-06,intercompany,"Settlement lag across bank holidays",AUTO,,T3,forecast,no,no,todo
+E-07,intercompany,"Loan maturity inside the horizon",PROPOSE,,T3,forecast,no,no,todo
+E-08,intercompany,"Infeasible day: no legal transfer set",ESCALATE,,T3,forecast,no,no,todo
+E-09,intercompany,"Restricted cash excluded from positioning",AUTO,,T2,forecast,no,no,todo
+E-10,intercompany,"FX translation vs transaction",ESCALATE,,T3,reporting,no,no,todo
+F-01,platform,"Thousands separator splits the CSV field",REFUSE,,T2,platform,yes,yes,todo
+F-02,platform,"Ambiguous date format",REFUSE,,T2,platform,no,yes,todo
+F-03,platform,"Two dates per transaction (posted vs value)",AUTO,,T2,platform,no,yes,todo
+F-04,platform,"Sign convention flip between sources",REFUSE,"on control-total mismatch",T2,platform,no,yes,todo
+F-05,platform,"Re-ingesting the same file",AUTO,"dedupe on source_system + source_id",T1,platform,no,yes,todo
+F-06,platform,"Source amended after ingestion",ESCALATE,,T3,platform,no,yes,todo
+F-07,platform,"Float drift in money arithmetic",INVARIANT,"integer minor units everywhere",T1,platform,no,yes,todo
+F-08,platform,"Non-two-decimal currencies (JPY, KWD)",AUTO,,T3,platform,no,no,todo
+F-09,platform,"Model invents a year outside the fiscal window",REFUSE,,T2,kernel,no,yes,todo
+F-10,platform,"Reasoning model returns empty content",REFUSE,"raise on finish_reason == length",T2,platform,no,yes,todo
+F-11,platform,"Interrupted run leaves partial state",ESCALATE,,T3,platform,no,yes,todo
+F-12,platform,"Malformed export: merged cells, footer row",REFUSE,,T1,platform,no,yes,todo
+F-13,platform,"Whitespace and encoding in vendor names",AUTO,,T1,platform,no,yes,todo
+F-14,platform,"Scanned or handwritten document, low OCR confidence",ESCALATE,,T2,platform,no,yes,todo
+G-01,control,"A human approves a duplicate payment",BLOCK,,T3,kernel,yes,yes,todo
+G-02,control,"Preparer equals approver",BLOCK,,T2,kernel,no,yes,todo
+G-03,control,"Posting into a closed period",BLOCK,,T1,kernel,no,yes,todo
+G-04,control,"Learned rule exceeds its approver's authority",BLOCK,,T3,kernel,no,yes,todo
+G-05,control,"One correction generalised into a rule",REFUSE,"refuse to learn",T3,kernel,yes,yes,todo
+G-06,control,"Rule fails its backtest",BLOCK,,T3,kernel,no,yes,todo
+G-07,control,"Contradicting correction supersedes a rule",PROPOSE,,T2,kernel,no,yes,todo
+G-08,control,"Rule learned too wide",AUTO,"clamped to the class ceiling",T3,kernel,no,yes,todo
+G-09,control,"Rule pinned to a mutating descriptor",INVARIANT,"pin to a stable key",T3,kernel,no,yes,todo
+G-10,control,"Confidently wrong auto-post",INVARIANT,"eval exits non-zero on any false auto-post",T3,kernel,no,yes,todo
+G-11,control,"Uncalibrated confidence",INVARIANT,"confidence from a written checklist",T3,kernel,no,yes,todo
+G-12,control,"Explanation restates the input",INVARIANT,"semantic link in the reviewer's terms",T2,kernel,no,yes,todo
+H-1,boss,"The human approves the duplicate",BLOCK,,T3,kernel,no,yes,todo
+H-2,boss,"The processor payout that can never tie",PROPOSE,,T3,bank-rec,no,no,todo
+H-3,boss,"The rule that dies next month",AUTO,"survive or detect the decay",T3,kernel,no,yes,todo
+H-4,boss,"The invoice whose evidence lives behind a login",PROPOSE,,T3,ap,no,yes,todo
+H-5,boss,"The day with no legal answer",ESCALATE,,T3,forecast,no,no,todo
+H-6,boss,"The evidence that changed underneath you",ESCALATE,,T3,close,no,no,todo
