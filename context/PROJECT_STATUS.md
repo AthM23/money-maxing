@@ -9,9 +9,9 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~19:30 ET |
-| **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
-| **Repo state** | Empty. No code committed yet. |
+| **Last updated** | 2026-09-19 ~20:15 ET |
+| **Phase** | Build started — Phase 0 contract written on `atharv-branch`, **awaiting Person A's review** (roadmap says `src/contract/` is frozen by both) |
+| **Repo state** | Scaffold + `src/contract/` (schema, types, tool names, topics). No function code yet. |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
 | **Test bar** | [`../tests/README.md`](../tests/README.md) — 115 edge cases, each with an expected route |
@@ -250,3 +250,37 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
   change scope, schema, tool names or the never-cut list. Whether the team is now two builders or the spec's
   three was not stated; if three, the Surface items in B's lane split back out.
 - Blocked on humans: who is Person A and who is Person B; the four Phase 0 decisions listed in the roadmap.
+
+### 2026-09-19 ~20:15 ET — Phase 0: scaffold and contract written; four decisions made (AthM23 as Person B + Claude Code session)
+
+- **Person B = AthM23.** Person A is still unnamed. The roadmap says the contract is frozen by both people;
+  this was written by B alone on `atharv-branch`, so it is **proposed until A has read it**.
+- Landed: repo scaffold (TypeScript, Node 22, pnpm, better-sqlite3, zod 4, vitest; `pnpm check`) and
+  `src/contract/`: `schema.sql`, `types.ts` (`Proposal`, `Mark`, routes, functions), `tools.ts` (36 spec §8
+  names), `topics.ts` (the 50 topics), `accounts.ts`, `rules.ts`, `db.ts`. Verified: typecheck clean, 20 vitest
+  tests pass, `pnpm db:init` creates 36 tables and reopens cleanly. The tests also assert the topic and tool
+  lists still equal `EVENT_TOPICS.md` and spec §8.
+- **Decisions, made by AthM23 (not yet confirmed by Person A):**
+  1. *AUTO above $500:* only through a ceiling. Above the threshold the route is PROPOSE unless an active,
+     in-scope fact or approved policy carries a human approver's authority ceiling covering the amount.
+  2. *GPT controller:* reviewer only. PROPOSE needs a human click. The `approval` table enforces it
+     (`role = 'approver'` requires `actor_kind = 'human'`). This narrows spec §3, which let the controller
+     approve within its authority.
+  3. *Bank feed:* a seeded file behind `bank.*`. No Increase sandbox.
+  4. *Processor payout (A-07 / H-2):* in as a file, Phase 3 stretch, third on the cut list.
+- **Schema additions taken** (all marked `+P0` in `schema.sql`): `party` + `alias` · `approval` ·
+  `blocked_attempt` (lift needs a second, different verifier) · `gl_entry.posted_at`, `period.locked_at`,
+  `decision.posted_at` · third clock `trace.ingested_at` · `reversal_mode` on `gl_entry` and `Proposal` ·
+  evidence versioning on `trace` (`content_hash`, `version`, `supersedes_trace_id`) · `fact.authority_ceiling_cents`
+  and `explained_amount_cents` · `decision.route` and `status` · `account` (chart) · `application` · `schedule` /
+  `schedule_line` (one engine for revenue, prepaid, stock comp) · dedupe keys on `intent` and `escalation` ·
+  `event_cursor` · `seed_manifest` · `Proposal.bank_txn_id` and `entry_date`.
+  **Not taken:** employee and grant tables, per-step trace table, artifact kinds in `Proposal.kind` for forecast
+  and reporting. Add when their owner needs them.
+- Choices a reader could trip on: function names are spelled as in `tests/cases.csv` (`bank-rec`, `revenue`,
+  `reporting`), not as topic prefixes · tool names keep their dots; `toMcpName` maps `.` to `__` for the model API ·
+  no migrations: a schema change bumps `SCHEMA_VERSION` and the database is re-seeded · vitest files live in
+  `src/**`, because `tests/` is the corpus.
+- **Not done, needs a human (B's account list):** Intuit developer app and sandbox token · Gmail re-consent with
+  `gmail.readonly` + `gmail.insert` · HubSpot test account · **Plume project, hard deadline 23:59 tonight**.
+  Key names are in `.env.example`.
