@@ -1,0 +1,70 @@
+flowchart TB
+  subgraph SRC["1 · Company systems — real sandboxes, seeded with planted drift"]
+    direction LR
+    QBO["QuickBooks<br/>ledger · AR · AP"]
+    BANK["Bank feed<br/>ACH · wires · fees"]
+    HUB["HubSpot<br/>deals · owners"]
+    MAIL["Gmail<br/>side letters · bills · remittances"]
+    SLACK["Slack<br/>chatter · approvals"]
+    DOCS["Contracts · board consents<br/>policy memos in md · close workbook"]
+  end
+
+  STORE["2 · As-of trace store<br/>what was known, and when"]
+  GRAPH["2 · Context graph<br/>intents · decisions · facts · policies"]
+  DRIFT{{"3 · Drift monitor<br/>contract vs CRM vs invoice vs cash vs ledger vs forecast"}}
+
+  subgraph TEAM["4 · Agent finance team — one judgment layer, nine function packs"]
+    direction LR
+    AR["AR and<br/>collections"]
+    AP["AP"]
+    REC["Bank rec"]
+    REV["Revenue"]
+    CLOSE["Close<br/>accruals · prepaids"]
+    FCST["13-week<br/>forecast"]
+    RPT["Reporting<br/>flux"]
+    AUD["Audit and<br/>controls"]
+    EQ["Equity-lite"]
+  end
+
+  REPLAY["Learn · Replay last quarter<br/>answers hidden, no look-ahead"]
+  COMPILE["Learn · Compile<br/>repeated judgment becomes policy<br/>approved like a pull request"]
+  CI["Learn · Replay suite as CI<br/>no change ships with a regression"]
+
+  ROUTER{{"5 · Custom agent router<br/>compiled rule, else small distilled model, else frontier model<br/>low token cost · low latency"}}
+  INV["6 · Finding the reason<br/>investigator reads receipts, emails, Slack, contracts"]
+  PROP["7 · Proposed entry + workpaper<br/>F footed · E agreed to source · P approved by · J per policy"]
+  KERNEL{{"8 · Kernel — deterministic re-check<br/>trusts nothing the agent says · reject sends it back to 6"}}
+  CTRL["Controller agent on GPT<br/>independent reviewer"]
+  HUMAN(["Human in Slack<br/>only when blocked, asked once"])
+  POST["9 · Post to QuickBooks<br/>workpaper and evidence attached"]
+  BACK["10 · Back into the context graph<br/>answers become scoped facts<br/>every posted entry is an event all nine functions hear"]
+
+  subgraph OBS["11 · Proof and visibility"]
+    direction LR
+    TRACE["Decision traces<br/>every step, tool call, cost"]
+    BOARD["Scoreboard by function<br/>share with no human · escalations · 0 wrong posts"]
+    TIE["Balance-sheet tie-out<br/>every account tied to evidence"]
+  end
+
+  SRC --> STORE
+  STORE --> GRAPH
+  STORE --> DRIFT
+  GRAPH -- "known facts explain expected differences" --> DRIFT
+  DRIFT -- "opens an intent" --> TEAM
+  TEAM --> ROUTER
+  STORE --> REPLAY
+  REPLAY --> COMPILE
+  COMPILE --> CI
+  CI -- "approved policies and routing rules" --> ROUTER
+  ROUTER -- "policy or fact applies: no model call" --> PROP
+  ROUTER -- "needs a reason" --> INV
+  GRAPH --> INV
+  INV --> PROP
+  PROP --> KERNEL
+  KERNEL -- "accept" --> POST
+  KERNEL -- "material or new" --> CTRL
+  CTRL -- "agrees" --> POST
+  CTRL -- "unsure" --> HUMAN
+  HUMAN --> BACK
+  POST --> BACK
+  POST --> OBS

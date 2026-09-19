@@ -48,11 +48,11 @@ Difficulty: `T1` a decent matcher handles it · `T2` separates good from average
 | `in_spec_scope` | `no` = the case falls in the spec's declared out-of-scope area. See the gap list below. |
 | `status` | `todo` → `seeded` → `passing` / `failing`. All `todo` right now. |
 
-`pack` values are the function packs from `context/PROJECT_SPEC.md` (on the
-`research/claude-session-notes` branch): `ar`, `ap`, `bank-rec`, `revenue`,
-`close`, `forecast`, `reporting`, `audit`, `equity` — plus `platform` (ingestion
-and infrastructure) and `kernel` (the deterministic checker and the learning
-loop), which are the shared layer rather than any one pack.
+`pack` values are the function packs from `context/PROJECT_SPEC.md`: `ar`, `ap`,
+`bank-rec`, `revenue`, `close`, `forecast`, `reporting`, `audit`, `equity` —
+plus `platform` (ingestion and infrastructure) and `kernel` (the deterministic
+checker and the learning loop), which are the shared layer rather than any one
+pack.
 
 Note that `pack` and `section` deliberately disagree in places. The corpus files a
 duplicate *payment* under bank reconciliation (A-13); we own it in the AP pack.

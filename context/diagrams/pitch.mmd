@@ -1,0 +1,17 @@
+flowchart LR
+  SYS["Company systems<br/>QuickBooks · bank · HubSpot · Gmail · Slack · contracts"]
+  DRIFT{{"Drift monitor<br/>the same fact disagrees across systems"}}
+  TEAM["Agent finance team<br/>AR · AP · bank rec · revenue · close · forecast · audit · equity"]
+  WHY["Find the reason<br/>emails · Slack · receipts · contracts"]
+  KERNEL{{"Kernel re-checks the workpaper<br/>footed · sourced · approved · per policy"}}
+  POST["Post to QuickBooks<br/>with proof attached"]
+  HUMAN(["Human in Slack<br/>only when blocked"])
+  MEM["Context graph<br/>facts · policies · intents"]
+  LEARN["Replay last quarter, compile judgment into policy<br/>cheaper, faster agents every month"]
+
+  SYS --> DRIFT --> TEAM --> WHY --> KERNEL
+  KERNEL -- "accept" --> POST --> SYS
+  KERNEL -- "unsure" --> HUMAN -- "asked once" --> MEM
+  MEM --> WHY
+  MEM --> LEARN --> TEAM
+  POST -- "ripples to every function" --> TEAM
