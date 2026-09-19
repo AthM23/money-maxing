@@ -64,6 +64,27 @@ export const Proposal = z.object({
 });
 export type Proposal = z.infer<typeof Proposal>;
 
+/**
+ * DRAFT (added by Person A, 20:05): the structured difference the drift monitor attaches to an intent
+ * (`intent.case_json`). It is the hand-off from Person B's comparators to Person A's router.
+ */
+export const CaseFile = z.object({
+  intent_id: z.string().min(1),
+  function: Fn,
+  party_id: z.string().min(1),
+  entry_date: IsoDate,
+  bank_txn_id: z.string().min(1).optional(),
+  /** Open documents the money or the difference relates to, oldest first. */
+  doc_ids: z.array(z.string().min(1)),
+  expected_cents: Cents,
+  received_cents: Cents,
+  /** expected minus received. Positive means short-paid. */
+  shortfall_cents: Cents,
+  method: z.enum(["ach", "wire", "check", "card", "other"]).optional(),
+  trace_ids: z.array(z.string().min(1)),
+});
+export type CaseFile = z.infer<typeof CaseFile>;
+
 export const MARK_CLASSES = ["F", "E", "P", "J"] as const;
 export type MarkClass = (typeof MARK_CLASSES)[number];
 export type MarkStatus = "pass" | "fail" | "judgment";

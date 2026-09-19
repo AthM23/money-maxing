@@ -84,7 +84,9 @@ CREATE TABLE IF NOT EXISTS decision_point (
 CREATE TABLE IF NOT EXISTS intent (
   id TEXT PRIMARY KEY, parent_id TEXT REFERENCES intent(id), function TEXT NOT NULL, question TEXT NOT NULL,
   owner TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('open','waiting_on_human','resolved','abandoned')),
-  end_condition_json TEXT, created_at TEXT NOT NULL, closed_at TEXT
+  end_condition_json TEXT,
+  case_json TEXT,                           -- ADDED: CaseFile from the drift monitor (types.ts)
+  created_at TEXT NOT NULL, closed_at TEXT
 );
 CREATE TABLE IF NOT EXISTS decision (
   id TEXT PRIMARY KEY, intent_id TEXT NOT NULL REFERENCES intent(id), function TEXT NOT NULL,

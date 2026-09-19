@@ -271,3 +271,30 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
   open-weight on the fine-tune host, so it differs from Claude and GPT.
 - In progress, Person A: kernel checks with pass and fail fixtures, eval harness for `tests/cases.csv`, then the
   `propose_entry` runtime. No API keys are needed for these.
+
+### 2026-09-19 ~20:20 ET — Kernel, `propose_entry` runtime, fact memory and router tier 0 landed (Person A)
+
+- `src/kernel/`: pure functions, no database or model import. Marks F1-F3, F7, E1-E3, E5, P1-P6, P9, J1-J3 and the six hard
+  BLOCK rules; two stages (proposal, post gate). Every check has a passing and a failing fixture. `src/runtime/`:
+  `proposeEntry` is the only write path (zod → decision → kernel → AUTO post, PROPOSE park, or BLOCK persisted with its
+  rule and an `entry.blocked` event), `approveDecision` re-runs the kernel as the post gate with the approver's identity,
+  posting is one SQLite transaction (ledger, open balances, artifact, events). `src/memory/`: fact candidates with guards,
+  approval that inherits the approver's ceiling, applicability decided in code with the failed dimension named, one-time
+  facts, supersede and expiry, asked-once escalations. `src/router/`: tier 0 builds proposals in code from an exact match,
+  an active fact or an approved policy.
+- Measured: `pnpm test` → 10 files, **176 tests passing**; `pnpm typecheck` clean. Covered end to end on an in-memory
+  database: Initech cash application posts AUTO; the $1,200 credit memo parks as PROPOSE and posts after a human approves;
+  changing one character of the quoted email makes the kernel reject (E2); the controller agent cannot approve at or above
+  $500; preparer-as-approver, over-limit approver and a locked period each BLOCK and persist; a $20 wire shortfall clears
+  on a compiled policy with zero model calls and AR stays tied; replay never posts. No model has been called yet.
+- **Contract changes made by Person A alone since the last entry, for Atharv to review:** `src/contract/accounts.ts`
+  (chart of accounts as codes), `CaseFile` in `types.ts` and `intent.case_json` in `schema.sql` (the structured difference
+  the drift monitor hands to the router: party, docs, expected, received, shortfall, method, trace ids).
+- **Seeder obligation the kernel enforces (F3):** before any proposal runs, GL 1200 must equal the sum of open invoice
+  balances, and GL 2000 the sum of approved or scheduled bills. If the seed posts invoices without their ledger entries,
+  every AR proposal is rejected with "not tied before the proposal".
+- One brief error of mine, fixed: P9 first rejected any terms end date outside the fiscal window, which rejected the
+  Initech concession (ends 2027-06-30). It now checks the entry date against the window, and the terms end date against
+  "not in the past, not more than five years out".
+- Next for Person A: the agent loop on the Claude Agent SDK and the AR agent pack (needs an Anthropic key to run), the
+  eval harness for `tests/cases.csv`, then replay and compile.
