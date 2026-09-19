@@ -9,7 +9,7 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~17:40 ET |
+| **Last updated** | 2026-09-19 ~17:55 ET |
 | **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
 | **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
@@ -132,3 +132,9 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
 - Added [`diagrams/`](./diagrams/): architecture and one-slide Mermaid sources with PNG renders (both validated by rendering).
 - Feedback that prompted this: the short description sounded like a junior project. The differentiators are now stated against Maximor's shipping product and their CTO's open questions.
 - Pending: sourced finance pain-point numbers (research running).
+
+### 2026-09-19 ~17:55 ET — Sourced finance pain points added (Karan + Claude Code session)
+
+- Added [`research/finance-pain-points.md`](./research/finance-pain-points.md): ten pain points, every number with a source link, vendor surveys labeled, and a "do not use" list of popular claims that failed a direct check.
+- Spec section 2a now maps each pain to the function that answers it. Strongest for this sponsor: their own commissioned study says only 14% of CFOs fully trust AI accounting data unsupervised, which is the case for proof-carrying entries.
+- Three researched scenarios added to the seeding plan as second-wave plants: the reopened close, the missed price escalator, and the accrual whose owner left.

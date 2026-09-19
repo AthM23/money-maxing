@@ -39,6 +39,24 @@ The doc's processes are the baseline we have to build anyway. This table is what
 | Audit | Evidence packs | An auditor agent re-runs the kernel on sampled entries and tests controls, so a third party can re-perform without trusting us. |
 | The track's question | n/a | Answered with a number: share of a month's decisions, by function, that ran with no human, with zero wrong entries posted unreviewed. |
 
+## 2a. The pain each function answers (sourced; full list and links in [research/finance-pain-points.md](research/finance-pain-points.md))
+
+| Pain, with a number | Source | Function that answers it |
+|---|---|---|
+| Median monthly close is 6.4 days; the slowest quarter take 10 or more | APQC, 2,300+ organizations | Close conductor; the scoreboard reports our close in hours |
+| 85% of finance teams reopened closed books at least once in a year to fix errors | FloQast and University of Georgia, 2022 (vendor survey) | Cutoff checks, accruals for bills not yet received, period lock in the kernel |
+| 18% of accountants make errors daily, 59% several a month | Gartner, 497 controllership professionals, 2024 | Kernel on every entry; zero wrong entries posted unreviewed |
+| Only 14% of CFOs fully trust AI accounting data unsupervised; 86% have hit a hallucination | Wakefield Research for **Maximor**, 2026 (their own study) | Proof-carrying entries: trust the kernel, not the model |
+| AP costs $10.89 an invoice on average vs $2.78 best in class; 22% of invoices are exceptions vs 9% | Ardent Partners 2025 | AP pack and the agent router's cost per decision |
+| $2.77B lost to business email compromise in 2024 | FBI IC3 2024 report | Changed-bank-details email refused; vendor-master drift check |
+| Median DSO 38-46 days vs 28-30 for the top quartile | APQC and Hackett | AR and collections; unapplied cash at month end |
+| Revenue leakage runs 3-5% of revenue: $1.5M-$25M a year for a $50M-$500M company | MGI Research | Drift monitor: contract vs CRM vs invoice (missed escalators, unbilled expansions) |
+| 91% still forecast cash in spreadsheets; 61% say unreliable data is the top obstacle | AFP 2025 Treasury Benchmarking | 13-week forecast rebuilt from the ledger and learned facts; explains each miss |
+| Equity administration has no single owner: Tax 49%, Treasury 43%, HRIS/IT 43% | NASPP and Deloitte 2025 | Equity-lite: one departure rippling through payroll, grants and the ledger |
+| US accounting degrees at a 20-year low; CPA candidates down 43% in a decade | AICPA; Atlas CPA Index | The reason any of this matters: the work is growing and the people are not |
+
+Do not cite: "leakage is 4-10% of SaaS revenue", "AI forecasts hit 88-92% accuracy", or the accrual-delay figure attributed to APQC. None survived a direct check.
+
 ## 2b. Why breadth is affordable: one layer, thin function packs
 
 The CTO's first slide: "Finance is not one workflow. The same judgment layer spans many functions." So we build that layer once and add functions as packs. A pack is: seed data with planted exceptions, a few read tools, its decision kinds, a few kernel checks, and a prompt. No function gets its own agent framework.
@@ -131,6 +149,11 @@ One canonical world file (`world/northwind.json`, generated from a seed) drives 
 | Files | contracts, a board consent, the accounting policy memo (markdown), the Q2 close workbook, the grants ledger |
 
 Rules: idempotent (every record carries a `fn:` external id), a manifest maps world ids to external ids, `pnpm seed --target=<system|all> --reset` restores a clean state, and the **planted-drift answer key** lives outside anything an agent can read.
+
+**Three plants taken from the pain-point research (second wave):**
+- *The reopened close.* A $47,000 vendor invoice dated in July surfaces on 8 August, after the period is locked. The kernel refuses a post to the locked period; close books it correctly and reports what the late find did to July.
+- *The missed escalator.* A contract's 4% price increase from month 13 never reached billing. The drift monitor catches contract vs invoice run-rate on the first under-billed invoice, not 14 months later.
+- *The accrual whose owner left.* A $30,000-a-month accrual with a quarterly true-up was owned by an accountant who has gone. The reason exists only in her old emails. Replay reconstructs the intent, so the true-up happens and the auditor's "why" has an answer. (This is "intent as first-class state" in one scene.)
 
 **Planted drift (each one must be detected live):** Initech's deal is $144k in HubSpot but invoices run at $129.6k (CEO concession: explained once found) · Wayne pays $3,300 short with no explanation anywhere · bank shows a deposit the ledger doesn't (parent paying for a subsidiary) · a refund posted twice · the $12.40 difference · a vendor's bank details changed by email two days before a payment run · a closed-won expansion with no invoice · a departed employee still accruing stock comp.
 

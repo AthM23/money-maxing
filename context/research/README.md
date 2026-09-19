@@ -11,6 +11,7 @@ Research behind the build, gathered on 19 Sep 2026 by Karan with a Claude Code s
 | [frontier-stack.md](frontier-stack.md) | Claude Agent SDK, memory layers, context-graph essays, DSPy and GEPA, datasets | Checked against official docs; unverified items labeled |
 | [sandboxes-and-connectors.md](sandboxes-and-connectors.md) | QuickBooks, bank, Gmail, Slack, HubSpot, Stripe: what is confirmed, plus API quirks | Mixed; each line says which |
 | [plan-reasoning.md](plan-reasoning.md) | The earlier order-to-cash plan: how the slides and open questions map to the kernel, workpapers, intent, replay and compile | Superseded in scope, current in mechanism |
+| [finance-pain-points.md](finance-pain-points.md) | Ten finance-team pain points with sourced numbers, why each hurts a $50M-$500M company, a plantable demo scenario for each, and a list of circulating claims that failed verification | Research agent, every number linked; vendor surveys labeled |
 | [hackathon-logistics.md](hackathon-logistics.md) | Deadlines, judging, stackable prizes and what each needs | From HackMIT's docs |
 
 Corrections to earlier notes are recorded in the status log, not edited into other people's files.
