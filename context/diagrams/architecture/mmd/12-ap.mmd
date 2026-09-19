@@ -1,0 +1,337 @@
+flowchart TB
+
+  subgraph AP_SG1["1 · Intake: vendor bill email → validated structured bill"]
+    AP_GMAIL[/"Gmail: vendor bill email with PDF attachment<br/>seeded from world/northwind.json<br/>mail.get_thread → raw PDF bytes kept"/]
+    AP_TRACE[("trace<br/>source=gmail · kind=vendor_bill<br/>external_id=message id · party_id · payload_json<br/>event_time and recorded_time both stored")]
+    AP_EXTRACT["Model port A · claude-haiku-4-5 extraction<br/>vendor, invoice_no, date, po_ref, remit_to, total<br/>lines: item, qty, uom, unit_price, tax<br/>per-field confidence + quoted span per field"]
+    AP_CONF{{"Field confidence propagated (F-14)<br/>scan or handwriting → low confidence on a key<br/>field (amount, invoice_no, remit_to) → cannot AUTO<br/>carried into Proposal.judgment.confidence"}}
+    AP_FOOT{{"Internal-consistency validator, in code (B-15)<br/>header total == sum(lines) + recomputed tax<br/>integer cents · 1,250.00 vs 1,205.00 fails<br/>never accepted, never repaired by the model"}}
+    AP_FISCAL{{"Fiscal-window date check (F-09)<br/>invoice date inside the open fiscal window<br/>model invents 2024 in a 2026 close → reject"}}
+    AP_REJECT["Intake reject: nothing proposed<br/>reason + failing fields stated to the AP inbox<br/>trace kept as evidence of the refusal"]
+    AP_PERIOD{{"Dated into a closed period? (B-23)<br/>period.status = locked for the invoice month<br/>never post there: current-period entry with stated<br/>reason (planted: $47,000 July bill found 8 Aug)"}}
+    AP_IDEM{{"Idempotency + exact duplicate (B-13)<br/>key: vendor.id + normalised invoice_no<br/>(uppercase, strip punctuation and leading zeros)<br/>also currency + doc date (SAP default) → BLOCK"}}
+    AP_BILL[("bill + bill lines (ap.bills)<br/>received → held or approved → scheduled → paid<br/>source trace_id on every row")]
+  end
+
+  subgraph AP_SG2["2 · Vendor master controls (run BEFORE matching)"]
+    AP_VENDOR[("vendor master<br/>vendor.id · tax id · normalised name and address<br/>bank fingerprint = hash(routing + account)<br/>bank_status · last successfully paid fingerprint")]
+    AP_VRESOLVE["Vendor entity resolution → stable vendor.id<br/>tax id → bank fingerprint → normalised name/address<br/>→ alias fact · else model port, alias source cited<br/>display name and sender address = evidence only"]
+    AP_VDUP{{"Master-level duplicate scan (B-18)<br/>Northwind Supply vs Northwind Supply Co<br/>three zones: match / clerical review / non-match<br/>(Fellegi-Sunter) · review zone → merge proposal"}}
+    AP_BANKCMP{{"Comparator: vendor bank details vs last paid (B-17)<br/>invoice remit_to fingerprint != fingerprint of<br/>the last SUCCESSFULLY PAID payment<br/>→ hold BEFORE any matching"}}
+    AP_PHISH[/"Gmail: we changed our bank details email<br/>seeded phish, 2 days before the payment run<br/>any mail naming new remit-to details triggers"/]
+    AP_QUAR["Phishing email quarantined as evidence<br/>trace kept and linked to the vendor, never applied<br/>event ap.vendor.change_requested"]
+    AP_VSTATE["Vendor state machine (code)<br/>verified → change_requested → verified<br/>while change_requested: payment hold + callback task<br/>cooling-off after a change: DESIGN, UNVERIFIED"]
+    AP_SLACKNO{{"Slack approve does NOT lift this block<br/>the click is stored as approval_ignored = true<br/>vendor-master edit, bill entry, payment release<br/>= three separate actors"}}
+    AP_CALLBACK(["Second person verifies out of band<br/>calls the vendor on a number already on file<br/>(number predates the request) · not the requester<br/>and not the payment-run preparer"])
+    AP_FACTBCV[("fact · predicate = bank_change_verified<br/>stated_by = second person · approved_by<br/>value_json: callback number, new fingerprint<br/>source_trace_ids · valid_from")]
+    AP_BEC["Context (slide only): FBI IC3 2024 annual report<br/>BEC losses $2.77B · FBI and Nacha guidance:<br/>verify through a channel other than the request<br/>using contact details already on file"]
+  end
+
+  subgraph AP_SG3["3 · Three-way match in code: PO line vs goods receipt(s) vs bill line"]
+    AP_PO[("po + po lines (ap.po)<br/>item · qty ordered · uom · unit price<br/>consumed qty and cents per line")]
+    AP_GRN[("receipt + receipt lines (ap.receipt)<br/>GRN per delivery · qty received per PO line<br/>or acceptance record for services")]
+    AP_NOPO{{"PO reference present? (B-05)<br/>no PO → two-way only, route by spend category<br/>and amount · never auto-clear above the<br/>no-PO threshold (policy memo) → ESCALATE"}}
+    AP_SERVICE{{"Services with no GRN (B-06)<br/>third leg = acceptance record: approval email,<br/>signed timesheet or milestone sign-off trace<br/>none found → ESCALATE to the PO owner"}}
+    AP_ALLOC["Line-level allocation: bill line → PO line<br/>by po_ref + item · one invoice spanning POs (B-09)<br/>allocate lines to each PO, match each<br/>header-level match is never used → ESCALATE"]
+    AP_UOM{{"UOM normalisation before comparing (B-10)<br/>PO in cases of 12, invoice in each<br/>conversion table per item<br/>no conversion known → REFUSE"}}
+    AP_ACCUM["Accumulate split deliveries (B-07)<br/>one PO, three GRNs across two months<br/>cumulative received per PO line = sum(GRN qty)<br/>match on the running total"]
+    AP_CONSUME["PO consumption tracking (B-08)<br/>four instalment invoices against one PO<br/>previously billed qty and cents per PO line<br/>flag when cumulative billed exceeds the PO"]
+    AP_BILLABLE["Billable qty = min(qty billed,<br/>cumulative received - previously billed)<br/>payable cents = billable qty x PO unit price<br/>integer cents, computed in code"]
+    AP_QTYVAR{{"Quantity variance (B-01)<br/>PO 200 · GRN 196 · invoice 200<br/>pay 196 x PO price · short-pay the 4 units<br/>with a stated reason → PROPOSE"}}
+    AP_PRICEVAR{{"Price variance vs tolerance policy (B-02)<br/>invoice 18.50 vs PO 18.00<br/>price lte PO price + tolerance (scope: vendor /<br/>category) · hold only if unfavourable and over"}}
+    AP_BOTH{{"Both variances at once (B-03)<br/>196 received, billed 200 at 18.50<br/>report BOTH · policy-correct payable 196 x 18.00<br/>→ ESCALATE"}}
+    AP_OVER{{"Over-receipt (B-04)<br/>GRN 204 vs PO 200 · qty billed lte qty ordered<br/>over-receipt tolerance stated in the question<br/>→ ESCALATE"}}
+    AP_FREIGHT["Freight not on the PO (B-11)<br/>180.00 shipping line separated from goods<br/>goods variance and freight variance reported<br/>apart · freight policy applied → PROPOSE"]
+    AP_CREDIT["Credit memo (B-16)<br/>negative bill, sign normalised<br/>applied to the SPECIFIC original bill id<br/>never to an arbitrary open balance → PROPOSE"]
+    AP_DEPOSIT{{"Deposit already applied (B-22)<br/>30% prepayment two months ago<br/>payable = invoice - prepayment on the same PO<br/>unnetted → BLOCK (duplicate in another costume)"}}
+    AP_RETAIN["Retainage (B-21)<br/>10% held back until completion<br/>holdback booked as a separate liability<br/>→ ESCALATE"]
+    AP_DISC["Early-payment discount (B-20)<br/>2/10 net 30 · both amounts computed<br/>discount deadline surfaced to the payment run<br/>(about 37% annualised: 2/98 x 365/20) → PROPOSE"]
+    AP_TAXFX["Tax variance (B-12) and currency mismatch (B-19)<br/>OUT OF SCOPE for the 24h build (tax, FX)<br/>detected and escalated only, never computed"]
+    AP_VARREASON["Model port B · variance reason-finding<br/>mail.search dispute thread · delivery note<br/>quoted spans required · never computes amounts<br/>not found → lists everywhere it looked"]
+    AP_MATCHOUT["Match result per bill line<br/>matched · typed variance(s) · hold reason<br/>→ Proposal.kind approve_bill or hold_bill<br/>with PO, receipt and bill trace ids as evidence"]
+  end
+
+  subgraph AP_SG4["4 · Duplicate-payment defence on the OBLIGATION KEY"]
+    AP_OBKEY["Obligation key, built in code<br/>(vendor.id, po_line or service_period, amount_cents)<br/>index of settled keys: payment id + bank_txn id<br/>survives a new invoice number"]
+    AP_NEARDUP{{"Near-duplicate, BILL stage (B-14)<br/>vendor + amount + date within 30 days (DESIGN)<br/>different invoice number → candidate found<br/>ESCALATE rather than block"}}
+    AP_DISTINCT["Model gathers evidence ONLY<br/>are the two obligations distinct?<br/>distinct PO line, receipt or service period<br/>the model never adjudicates the duplicate"]
+    AP_FALSEDUP{{"False duplicate guard (A-14)<br/>different invoice refs AND different PO lines<br/>or receipts → NOT a duplicate, continue<br/>must not over-block two legitimate invoices"}}
+    AP_VOID{{"Void and reissue (A-17)<br/>check 1042 voided, check 1099 issued<br/>recognise the void entry, link the pair<br/>→ ESCALATE"}}
+    AP_PAYDUP{{"True duplicate, PAYMENT stage (A-13, G-01, H-1)<br/>obligation key already settled by a payment<br/>that has a bank line → BLOCK DUPLICATE_PAYMENT<br/>even when a human has approved"}}
+    AP_H1HUMAN(["Reviewer, twelve exceptions into a long queue<br/>clicks approve on the near-duplicate (H-1)<br/>Northwind Supply 3,150.00, paid 9 Sep<br/>reissued 22 Sep with a new invoice number"])
+    AP_UNBLOCK["Only way out of the block<br/>new evidence that changes the inputs<br/>(a distinct PO line or receipt)<br/>never an override, never learned"]
+  end
+
+  subgraph AP_SG5["5 · GL coding and approval routing"]
+    AP_CODE0["Tier 0 · compiled coding policy, no model call<br/>ap.vendor_history → vendor + item → GL account<br/>memory.policies scope = vendor"]
+    AP_CODE1["Tier 1 claude-haiku-4-5 (stretch: fine-tuned small)<br/>→ tier 2 claude-sonnet-5 → tier 3 claude-opus-5<br/>account from line text + chart of accounts<br/>a kernel reject escalates one tier"]
+    AP_MATRIX[("Approval matrix (policy_memo.lookup)<br/>role → limit by spend category<br/>e.g. Controller limit 10,000<br/>required approver computed in code")]
+    AP_APPROVER(["Approver: controller agent (GPT) within its<br/>authority, else a human in Slack<br/>H-1: reviewer twelve exceptions deep<br/>clicks approve"])
+    AP_SOD{{"Preparer != approver (G-02)<br/>enforced at the STORAGE layer: the approval<br/>write is rejected by a table constraint<br/>not by a prompt"}}
+    AP_LIMIT{{"Over the approver limit (B-24)<br/>14,000 bill vs Controller limit 10,000<br/>→ BLOCK and route up to the next authority"}}
+    AP_CEILING{{"Learned rule inherits approver ceiling (G-04)<br/>policy.approved_by → matrix limit<br/>Controller-approved rule meets a 50,000 bill<br/>→ BLOCK, route up"}}
+  end
+
+  subgraph AP_SG6["6 · Payment-run selection: decide what gets paid this week"]
+    AP_RUNINTENT["Weekly payment-run intent<br/>opened on schedule, owner = treasurer<br/>end_condition: run proposed or nothing eligible"]
+    AP_INDUE["Inputs from ap.bills: approved bills<br/>due_date · discount deadline and amount<br/>holds: hold_bill · open escalation · dispute<br/>vendor bank_status != verified"]
+    AP_INFLOOR[("Input: forecast_line (13-week forecast)<br/>projected cash by week · minimum-cash floor<br/>consumes forecast.updated")]
+    AP_ELIGIBLE{{"Eligible = approved AND unheld<br/>AND vendor bank_status == verified<br/>AND obligation key not settled<br/>(re-checked at release)"}}
+    AP_RANK["Deterministic selection (code)<br/>rank: discount deadline → due date → bill id<br/>take while projected cash gte floor<br/>deferred bills listed with the reason"]
+    AP_RUNPROP["Run proposal<br/>Proposal.kind = schedule_payment<br/>selected and deferred lists · cash after run<br/>event ap.payment.scheduled"]
+    AP_RELEASE["Payment release by a third actor<br/>only after kernel accept and approval<br/>ONE book entry: Dr Accounts payable / Cr Cash<br/>optional positive-pay file: check no, amount, payee"]
+    AP_DEBITS[/"Settles as SEVERAL bank debits (A-06)<br/>bank_txn per vendor payment<br/>hand-off to bank rec: 1:N group, exact sum only"/]
+  end
+
+  subgraph AP_SG7["7 · Evidence behind a login, and vendor statements"]
+    AP_PORTAL[/"Supplier web portal, no API (H-4, B-25)<br/>Kestrel Manufacturing delivery note<br/>PO in ERP · dispute thread in email<br/>evidence gathered → PROPOSE"/]
+    AP_BROWSER["STRETCH · portal browser automation<br/>saved session, read-only<br/>screenshot everything read<br/>→ trace kind=portal_screenshot + hash"]
+    AP_H4HUMAN(["Human decides the short-ship ONCE (H-4)<br/>next identical case clears itself, citing<br/>that rule and that approver by name"])
+    AP_STMT[/"Vendor statement (B-26)<br/>vendor says 84,200 outstanding<br/>AP subledger says 61,750"/]
+    AP_STMTREC["Two-population reconcile (code), key = vendor.id<br/>+ normalised invoice_no · theirs-not-ours ·<br/>ours-not-theirs · amount differs · in transit<br/>items must sum to the 22,450 gap → ESCALATE"]
+  end
+
+  subgraph AP_SG8["8 · Shared exit"]
+    AP_SCHEMAKIND["PROPOSED SCHEMA ADDITION<br/>Proposal.kind lacks vendor_bank_change<br/>(also reconciling_item, unapplied_cash<br/>for the bank rec and AR packs)"]
+    AP_PROPOSE["propose_entry + workpaper<br/>kinds: approve_bill · hold_bill · schedule_payment<br/>evidence: PO, receipt, bill trace ids + quotes"]
+    AP_KFE{{"Pack checks F and E<br/>F lines foot · payable lte min(PO remaining,<br/>received remaining) · AP subledger == GL control<br/>E PO, receipt, bill tie on vendor, item, qty, price"}}
+    AP_KPJ{{"Pack checks P and J<br/>P approver within limit and != preparer · period<br/>open · vendor bank_status == verified at release<br/>J tolerance policy active, in scope, under ceiling"}}
+    AP_KERNEL{{"Kernel F·E·P·J + pack checks"}}
+    AP_RAUTO(("AUTO"))
+    AP_RPROPOSE(("PROPOSE"))
+    AP_RESCALATE(("ESCALATE"))
+    AP_RREFUSE(("REFUSE"))
+    AP_RBLOCK(("BLOCK"))
+    AP_ESCQ["escalate(question) → Slack (see diagram 05)<br/>names what is known, what is not, options<br/>bill stays on hold_bill until answered"]
+    AP_BLOCKED[("PROPOSED SCHEMA ADDITION<br/>artifact.kind = blocked_attempt<br/>rule_id · inputs · attempted_by · approval_ignored<br/>original payment id + bank_txn id")]
+  end
+
+  subgraph AP_SG8O["8b · OUTPUT CASES: outcome → route → entry or artifact → notified (corpus ids)"]
+    AP_OCLEAN["Clean three-way match under the auto limit<br/>AUTO · Dr Expense (coded account) / Cr Accounts<br/>payable · QBO Bill mirror<br/>notified: none · baseline"]
+    AP_OFALSE["Same vendor, amount, day · distinct refs and POs<br/>AUTO · both bills approved, Dr Expense / Cr AP x 2<br/>notified: none · A-14"]
+    AP_OVAR["Qty or price variance, split delivery, freight<br/>PROPOSE · Dr Expense (+ Dr Freight-in) / Cr AP at<br/>received qty x PO price · short-pay note to vendor<br/>controller, buyer · B-01 B-02 B-07 B-08 B-11"]
+    AP_OCM["Credit memo<br/>PROPOSE · Dr Accounts payable / Cr Expense<br/>applied to the specific original bill<br/>controller · B-16"]
+    AP_ODISC["Early-payment discount<br/>PROPOSE · both amounts + deadline · at payment:<br/>Dr AP / Cr Cash / Cr Purchase discounts<br/>treasurer · B-20"]
+    AP_ORUN["Weekly payment run<br/>PROPOSE · schedule_payment · Dr AP / Cr Cash<br/>one entry, several bank debits<br/>treasurer, controller · A-06"]
+    AP_OHOLD["Both variances, over-receipt, no PO, services,<br/>spanning POs, low extraction confidence<br/>ESCALATE · hold_bill, no GL entry · question to<br/>PO owner · B-03 B-04 B-05 B-06 B-09 F-14"]
+    AP_ORETAIN["Retainage<br/>ESCALATE · draft Dr Expense / Cr AP (net) /<br/>Cr Retainage payable (10%)<br/>controller · B-21"]
+    AP_ONEAR["Near-duplicate at bill stage · void and reissue<br/>ESCALATE · hold_bill + original shown / pair linked<br/>no GL entry · AP lead · B-14 A-17"]
+    AP_OVDUP["Duplicate vendor records<br/>ESCALATE · vendor merge proposal, no GL entry<br/>controller · B-18"]
+    AP_OSTMT["Vendor statement mismatch<br/>ESCALATE · itemised two-way difference workpaper<br/>AP lead · B-26"]
+    AP_OREFUSE["Header != lines · UOM unknown · invented year<br/>REFUSE · nothing proposed, reason stated<br/>AP inbox · B-15 B-10 F-09"]
+    AP_ODUP["Exact duplicate / already-settled obligation /<br/>unnetted deposit · BLOCK · blocked_attempt with<br/>original payment + bank line, no GL entry<br/>approver, controller · B-13 A-13 G-01 H-1 B-22"]
+    AP_OBANK["Bank details changed<br/>BLOCK · payment hold + callback task<br/>controller, vendor owner · B-17"]
+    AP_OLIMIT["Over limit · closed period · self-approval ·<br/>rule over its ceiling · BLOCK · reroute up, or<br/>current-period entry with stated reason<br/>next authority · B-24 B-23 G-02 G-04"]
+  end
+
+  subgraph AP_SG9["9 · Events, hand-offs, learning, metrics"]
+    AP_EVAPPROVED["ap.bill.approved<br/>→ forecast (outflow forecast_line by due week)<br/>→ close (AP checklist_item)"]
+    AP_EVSCHED["ap.payment.scheduled<br/>→ forecast (cash out, week of run)<br/>→ bank rec (expects 1:N debits)"]
+    AP_EVHELD["ap.bill.held<br/>→ close: accrual candidate<br/>→ forecast: outflow deferred"]
+    AP_EVENT[("event (bus)<br/>also entry.blocked → audit<br/>consumes forecast.updated ·<br/>bankrec.unmatched · close.period.locked")]
+    AP_ACCRUAL["Accrual hand-off to close<br/>goods or service received, bill not yet received<br/>(July cloud bill arrives 3 Aug) → close proposes<br/>Dr Expense / Cr Accrued liabilities, flagged to reverse"]
+    AP_LCODING["LEARNABLE · policy candidates<br/>GL coding per vendor · freight policy<br/>acceptance-record substitutes for service vendors<br/>aliases on stable keys (G-09) → tier 0 next run"]
+    AP_LPRICE["LEARNABLE · vendor-item price precedent<br/>guardrails: NOT a different line item,<br/>NOT a larger variance · clamped (G-08) · two<br/>agreeing corrections + backtest (G-05, G-06)"]
+    AP_NEVER{{"NEVER LEARNED<br/>bank-detail trust from an inbound message<br/>duplicate overrides or exemptions · approval limits<br/>a rule whose approver ceiling is below its amounts"}}
+    AP_METRICS["Metrics · TO BE MEASURED, nothing run yet<br/>touchless rate and precision · exception rate<br/>duplicates blocked (count, $) · bank-change holds<br/>discounts captured · blocks despite approval (H-1)"]
+  end
+
+  %% 1 intake
+  AP_GMAIL ==> AP_TRACE
+  AP_TRACE ==> AP_EXTRACT
+  AP_EXTRACT ==> AP_CONF
+  AP_CONF ==> AP_FOOT
+  AP_FOOT -- "fail" --> AP_REJECT
+  AP_FOOT == "foots" ==> AP_FISCAL
+  AP_FISCAL -- "outside window" --> AP_REJECT
+  AP_FISCAL == "in window" ==> AP_PERIOD
+  AP_PERIOD == "open, or re-dated to the current period" ==> AP_IDEM
+  AP_PERIOD -- "post into the locked period (B-23)" --> AP_RBLOCK
+  AP_IDEM == "new key" ==> AP_BILL
+  AP_IDEM -- "exact duplicate (B-13)" --> AP_RBLOCK
+  AP_REJECT --> AP_RREFUSE
+  AP_CONF -. "low confidence: no AUTO, ESCALATE" .-> AP_KPJ
+
+  %% 2 vendor master
+  AP_BILL ==> AP_VRESOLVE
+  AP_VENDOR -. "keys" .-> AP_VRESOLVE
+  AP_VRESOLVE ==> AP_VDUP
+  AP_VDUP -- "review zone: merge proposal (ESCALATE)" --> AP_PROPOSE
+  AP_VDUP == "single vendor.id" ==> AP_BANKCMP
+  AP_VENDOR -. "last paid fingerprint" .-> AP_BANKCMP
+  AP_BEC -. "why this is a hard block" .-> AP_BANKCMP
+  AP_PHISH --> AP_QUAR
+  AP_QUAR -- "change_requested" --> AP_VSTATE
+  AP_BANKCMP -- "fingerprint differs" --> AP_VSTATE
+  AP_VSTATE -- "hard BLOCK: payment hold" --> AP_RBLOCK
+  AP_VSTATE --> AP_SLACKNO
+  AP_SLACKNO -- "new evidence, never an approval" --> AP_CALLBACK
+  AP_CALLBACK -- "record_fact_candidate" --> AP_FACTBCV
+  AP_FACTBCV -. "bank_status = verified: hold lifted, bill continues" .-> AP_NOPO
+
+  %% 3 three-way match
+  AP_BANKCMP == "same fingerprint" ==> AP_NOPO
+  AP_NOPO -- "no PO" --> AP_MATCHOUT
+  AP_NOPO == "has PO" ==> AP_SERVICE
+  AP_SERVICE -- "no acceptance record" --> AP_MATCHOUT
+  AP_SERVICE == "goods, or acceptance found" ==> AP_ALLOC
+  AP_PO -. "PO lines" .-> AP_ALLOC
+  AP_ALLOC ==> AP_UOM
+  AP_ALLOC -- "non-goods lines and terms, fixed order" --> AP_FREIGHT
+  AP_FREIGHT --> AP_CREDIT
+  AP_CREDIT --> AP_DEPOSIT
+  AP_DEPOSIT --> AP_RETAIN
+  AP_DEPOSIT -- "prepayment not netted (B-22)" --> AP_RBLOCK
+  AP_RETAIN --> AP_DISC
+  AP_ALLOC -. "tax or FX difference" .-> AP_TAXFX
+  AP_UOM -- "no conversion (B-10)" --> AP_RREFUSE
+  AP_UOM == "normalised" ==> AP_ACCUM
+  AP_GRN -. "GRN lines" .-> AP_ACCUM
+  AP_ACCUM ==> AP_CONSUME
+  AP_CONSUME ==> AP_BILLABLE
+  AP_BILLABLE --> AP_QTYVAR
+  AP_BILLABLE --> AP_PRICEVAR
+  AP_BILLABLE --> AP_OVER
+  AP_QTYVAR -- "and price too" --> AP_BOTH
+  AP_PRICEVAR -- "and qty too" --> AP_BOTH
+  AP_QTYVAR -. "why short?" .-> AP_VARREASON
+  AP_QTYVAR -. "delivery note only in the portal" .-> AP_PORTAL
+  AP_PRICEVAR -. "why higher?" .-> AP_VARREASON
+  AP_VARREASON -. "quoted evidence" .-> AP_MATCHOUT
+  AP_QTYVAR ==> AP_MATCHOUT
+  AP_PRICEVAR ==> AP_MATCHOUT
+  AP_BOTH --> AP_MATCHOUT
+  AP_OVER --> AP_MATCHOUT
+  AP_DISC --> AP_MATCHOUT
+  AP_TAXFX -. "escalate only" .-> AP_MATCHOUT
+
+  %% 4 duplicate defence
+  AP_MATCHOUT ==> AP_OBKEY
+  AP_OBKEY ==> AP_NEARDUP
+  AP_NEARDUP -- "candidate found" --> AP_DISTINCT
+  AP_NEARDUP -- "void entry on the original" --> AP_VOID
+  AP_DISTINCT --> AP_FALSEDUP
+  AP_NEARDUP == "no candidate" ==> AP_CODE0
+  AP_FALSEDUP == "distinct: continue (A-14)" ==> AP_CODE0
+  AP_FALSEDUP -- "not shown distinct: hold_bill (B-14)" --> AP_PROPOSE
+  AP_VOID -- "link pair (ESCALATE)" --> AP_PROPOSE
+  AP_PAYDUP -- "DUPLICATE_PAYMENT" --> AP_RBLOCK
+  AP_FALSEDUP -- "ESCALATE shown to reviewer" --> AP_H1HUMAN
+  AP_H1HUMAN -- "approves anyway (G-01)" --> AP_PAYDUP
+  AP_PAYDUP -. "exit" .-> AP_UNBLOCK
+  AP_UNBLOCK -. "distinct obligation proven: continues" .-> AP_CODE0
+  AP_PAYDUP -. "re-run on every bill at release" .-> AP_ELIGIBLE
+  AP_OBKEY -. "settled-key index" .-> AP_PAYDUP
+
+  %% 5 coding and approval
+  AP_CODE0 -- "no policy hit" --> AP_CODE1
+  AP_CODE0 == "coded" ==> AP_LIMIT
+  AP_CODE1 --> AP_LIMIT
+  AP_MATRIX -. "limits" .-> AP_LIMIT
+  AP_MATRIX -. "ceiling of policy.approved_by" .-> AP_CEILING
+  AP_LIMIT == "within limit" ==> AP_CEILING
+  AP_LIMIT -- "over limit: route up" --> AP_RBLOCK
+  AP_CEILING == "under ceiling" ==> AP_SOD
+  AP_CEILING -- "rule exceeds ceiling" --> AP_RBLOCK
+  AP_APPROVER -- "approval write" --> AP_SOD
+  AP_SOD -- "same actor" --> AP_RBLOCK
+  AP_SOD == "distinct actors" ==> AP_PROPOSE
+  AP_SOD -. "approved bills land in ap.bills" .-> AP_INDUE
+
+  %% 6 payment run
+  AP_RUNINTENT --> AP_ELIGIBLE
+  AP_INDUE --> AP_ELIGIBLE
+  AP_ELIGIBLE ==> AP_RANK
+  AP_INFLOOR --> AP_RANK
+  AP_RANK ==> AP_RUNPROP
+  AP_RUNPROP == "schedule_payment" ==> AP_PROPOSE
+  AP_ORUN == "kernel accepted and approved: release" ==> AP_RELEASE
+  AP_RELEASE ==> AP_DEBITS
+
+  %% 7 evidence and statements
+  AP_PORTAL --> AP_BROWSER
+  AP_BROWSER -. "delivery note trace" .-> AP_VARREASON
+  AP_BROWSER --> AP_H4HUMAN
+  AP_H4HUMAN -. "decided once → precedent" .-> AP_LPRICE
+  AP_STMT --> AP_STMTREC
+  AP_STMTREC -- "itemised difference (ESCALATE)" --> AP_PROPOSE
+  AP_BILL -. "open bills" .-> AP_STMTREC
+
+  %% 8 shared exit
+  AP_SCHEMAKIND -. "needed for the bank-change hold" .-> AP_PROPOSE
+  AP_PROPOSE ==> AP_KERNEL
+  AP_KFE --> AP_KERNEL
+  AP_KPJ --> AP_KERNEL
+  AP_KERNEL ==> AP_RAUTO
+  AP_KERNEL ==> AP_RPROPOSE
+  AP_KERNEL --> AP_RESCALATE
+  AP_KERNEL --> AP_RREFUSE
+  AP_KERNEL -- "hard block fails" --> AP_RBLOCK
+  AP_RBLOCK -- "every block persists" --> AP_BLOCKED
+
+  %% 8b output cases
+  AP_RAUTO ==> AP_OCLEAN
+  AP_RAUTO --> AP_OFALSE
+  AP_RPROPOSE ==> AP_OVAR
+  AP_RPROPOSE --> AP_OCM
+  AP_RPROPOSE --> AP_ODISC
+  AP_RPROPOSE --> AP_ORUN
+  AP_RESCALATE --> AP_ESCQ
+  AP_ESCQ --> AP_OHOLD
+  AP_ESCQ --> AP_ORETAIN
+  AP_ESCQ --> AP_ONEAR
+  AP_ESCQ --> AP_OVDUP
+  AP_ESCQ --> AP_OSTMT
+  AP_RREFUSE --> AP_OREFUSE
+  AP_BLOCKED --> AP_ODUP
+  AP_BLOCKED --> AP_OBANK
+  AP_BLOCKED --> AP_OLIMIT
+
+  %% 9 events and learning
+  AP_OCLEAN --> AP_EVAPPROVED
+  AP_OVAR --> AP_EVAPPROVED
+  AP_ORUN --> AP_EVSCHED
+  AP_OHOLD --> AP_EVHELD
+  AP_ONEAR --> AP_EVHELD
+  AP_ODUP -. "entry.blocked" .-> AP_EVENT
+  AP_EVAPPROVED --> AP_EVENT
+  AP_EVSCHED --> AP_EVENT
+  AP_EVHELD --> AP_EVENT
+  AP_EVHELD -. "held at cutoff" .-> AP_ACCRUAL
+  AP_OVAR -. "approved precedent" .-> AP_LPRICE
+  AP_OCLEAN -. "approved codings" .-> AP_LCODING
+  AP_NEVER -. "filter before any rule is adopted" .-> AP_LCODING
+  AP_NEVER -. "filter before any rule is adopted" .-> AP_LPRICE
+  AP_LCODING -. "approved coding policy → tier 0" .-> AP_CODE0
+  AP_LPRICE -. "approved tolerance policy" .-> AP_PRICEVAR
+  AP_EVENT -. "counted from event, decision, artifact" .-> AP_METRICS
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class AP_GMAIL,AP_PHISH,AP_DEBITS,AP_STMT,AP_BEC src
+  class AP_REJECT,AP_VRESOLVE,AP_QUAR,AP_VSTATE,AP_ALLOC,AP_ACCUM,AP_CONSUME,AP_BILLABLE,AP_FREIGHT,AP_CREDIT,AP_RETAIN,AP_DISC,AP_MATCHOUT,AP_OBKEY,AP_UNBLOCK,AP_CODE0,AP_RUNINTENT,AP_INDUE,AP_RANK,AP_RUNPROP,AP_RELEASE,AP_STMTREC,AP_ESCQ,AP_PROPOSE code
+  class AP_OCLEAN,AP_OFALSE,AP_OVAR,AP_OCM,AP_ODISC,AP_ORUN,AP_OHOLD,AP_ORETAIN,AP_ONEAR,AP_OVDUP,AP_OSTMT,AP_OREFUSE,AP_ODUP,AP_OBANK,AP_OLIMIT,AP_EVAPPROVED,AP_EVSCHED,AP_EVHELD,AP_ACCRUAL,AP_METRICS code
+  class AP_EXTRACT,AP_VARREASON,AP_DISTINCT,AP_CODE1 model
+  class AP_CALLBACK,AP_APPROVER,AP_H4HUMAN,AP_H1HUMAN human
+  class AP_TRACE,AP_BILL,AP_VENDOR,AP_FACTBCV,AP_PO,AP_GRN,AP_MATRIX,AP_INFLOOR,AP_EVENT store
+  class AP_CONF,AP_FOOT,AP_FISCAL,AP_PERIOD,AP_IDEM,AP_VDUP,AP_BANKCMP,AP_SLACKNO,AP_NOPO,AP_SERVICE,AP_UOM,AP_QTYVAR,AP_PRICEVAR,AP_BOTH,AP_OVER,AP_DEPOSIT,AP_NEARDUP,AP_FALSEDUP,AP_VOID,AP_PAYDUP,AP_SOD,AP_LIMIT,AP_CEILING,AP_ELIGIBLE,AP_KFE,AP_KPJ,AP_KERNEL,AP_NEVER gate
+  class AP_LCODING,AP_LPRICE learn
+  class AP_RAUTO rAuto
+  class AP_RPROPOSE rPropose
+  class AP_RESCALATE rEscalate
+  class AP_RREFUSE rRefuse
+  class AP_RBLOCK rBlock
+  class AP_TAXFX,AP_PORTAL,AP_BROWSER,AP_SCHEMAKIND,AP_BLOCKED stretch

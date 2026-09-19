@@ -1,0 +1,338 @@
+flowchart TB
+
+subgraph AR_SG1["1 · Inputs and triggers (pack 1: AR, cash application, collections)"]
+  AR_IN_FACTS[("fact via memory.facts, active on payment date<br/>pct_off 10 until renewal · alias · pays_for<br/>scope_json · valid_from / valid_to · approved_by")]
+  AR_IN_BANK[/"bank_txn inbound credit (Increase ACH / wire, or file)<br/>id · amount_cents · value_date · posted_date<br/>originator_company_id · entry_description · addenda<br/>thin descriptor, e.g. INITECH PMT"/]
+  AR_IN_REMIT[/"Gmail remittance advice (email body or PDF)<br/>trace.kind=remittance · party_id · event_time<br/>lines: invoice_no + amount, and a stated total"/]
+  AR_IN_INV[("invoice via ledger.open_invoices<br/>invoice.id · normalised invoice number<br/>balance_cents · due_date · customer_id")]
+  AR_IN_TERMS[/"contract + HubSpot CRM<br/>contracts.find_clause: terms, early-pay discount<br/>crm.notes · crm.owner · deal amount"/]
+  AR_IN_CAL["Aging calendar sweep (daily, code)<br/>invoice.due_date before today<br/>and balance above 0"]
+  AR_VALID{{"Structural validation at ingest<br/>field count · sign · date format · fiscal window<br/>fail: REFUSE the whole file, not half of it<br/>(F-01, F-02, F-04)"}}
+  AR_CMP_CASH{{"Drift comparator: invoice vs cash received<br/>bank credit with no applied Payment"}}
+  AR_CMP_RUN{{"Drift comparator: CRM deal vs contract<br/>vs invoice run-rate<br/>Initech: $144k in HubSpot vs $129.6k invoiced"}}
+  AR_CMP_SUB{{"Drift comparator: AR subledger vs GL control<br/>every sync and at period end"}}
+  AR_EVT_IN[/"events consumed: bankrec.unmatched (credit)<br/>bankrec.reversal_detected (return line, trace number<br/>of the prior credit, A-15) · rev.invoice_issued<br/>fact.activated re-opens parked intents"/]
+  AR_SUPPRESS{{"Known fact explains the expected delta?<br/>code tests scope + valid dates, never the model"}}
+  AR_INTENT[("intent: function=ar · question · owner<br/>e.g. Resolve the $1,200 shortfall on INV-1042<br/>end_condition_json: balance 0 or hold set")]
+  AR_ROUTER["Agent router<br/>tier 0 compiled policy or fact, no model call<br/>tier 1 claude-haiku-4-5 → tier 2 claude-sonnet-5<br/>→ tier 3 claude-opus-5"]
+end
+
+subgraph AR_SG2["2 · Normalise and resolve the payer"]
+  AR_NORM["Normalise, keep raw<br/>integer cents · value_date and posted_date stored<br/>fold whitespace / case / encoding<br/>raw descriptor kept in trace.payload_json"]
+  AR_KEY_ORIG["Stable key lookup<br/>originator_company_id · ISO 20022 EndToEndId<br/>/ AcctSvcrRef → customer.id"]
+  AR_ALIAS[("Alias table: fact predicate=alias<br/>normalised payer string → customer.id<br/>source cited: prior payment trace,<br/>contract signature block, CRM domain")]
+  AR_PARENT["Parent / child link<br/>customer.parent_id + fact pays_for<br/>parent pays for subsidiary:<br/>child invoices join the candidate set"]
+  AR_PAYER_GATE{{"Resolved to exactly one customer.id?"}}
+  AR_PARTYKEY["Stable party key = customer.id + hierarchy set<br/>descriptor text is evidence only,<br/>never a rule predicate (A-09, G-09)"]
+end
+
+subgraph AR_SG3["3 · Cash application passes, in order (code · tolerance 1:1 only, group sums exact)"]
+  AR_CAND["Blocking: candidate generation<br/>open invoices of party + hierarchy only<br/>invoice date lte bank value_date"]
+  AR_P1["Pass 1 · Remittance join (directed)<br/>advice linked by payer + amount + date window<br/>-5 / +3 days (DESIGN)<br/>advice exists: apply AS DIRECTED, no search"]
+  AR_P1_FOOT{{"Advice re-footed in code<br/>sum(lines) equals stated total<br/>equals bank amount?"}}
+  AR_P2["Pass 2 · Exact 1:1<br/>amount equals open balance AND normalised<br/>invoice number found in addenda / reference"]
+  AR_P3["Pass 3 · Near-reference 1:1 (A-12)<br/>amount + party exact · invoice number at<br/>Damerau-Levenshtein distance 1 (10423 vs 10432)<br/>unique: PROPOSE with the transposition named"]
+  AR_P4A["Pass 4a · Typed delta: known fact<br/>expected = balance x (1 - pct_off), fact in scope<br/>Initech: 12,000 x 0.90 = 10,800"]
+  AR_P4B["Pass 4b · Typed delta: contractual early-pay discount<br/>(contract terms, paid inside the window), then<br/>Pass 4c · wire-fee band: policy per bank / corridor,<br/>clamped (G-08), 1:1 only (A-03 shape: 17.50)"]
+  AR_P4D["Pass 4d · else unclassified short-pay<br/>1:1 on party + reference, delta unexplained<br/>goes to residual classification"]
+  AR_P5_BOUND{{"Subset-sum bound: n lte 24 open items?<br/>above n: do not search,<br/>ESCALATE with the candidate list"}}
+  AR_P5["Pass 5 · Bounded subset-sum (A-05, C-05)<br/>exact integer cents, NO tolerance<br/>meet-in-the-middle O(2^(n/2)) or DP<br/>stops after 2 solutions"]
+  AR_UNIQ{{"Uniqueness gate (A-18, C-05)<br/>every pass returns ALL candidates up to 2<br/>a second candidate: refuse to pick,<br/>ESCALATE and show all"}}
+  AR_MATCHED{{"Match result and residual type (code)<br/>applications: doc_id + amount_cents<br/>residual_cents = bank amount - sum(applications)<br/>zero · short · over"}}
+end
+
+subgraph AR_SG4["4 · Residual classification when cash differs from invoices"]
+  AR_PORT_C_OUT{{"Short-pay reason gate (code) on port C output<br/>must be: quoted span + predicate it supports<br/>(pct_off, until) OR not found + every place searched<br/>quote re-checked as a substring of its trace"}}
+  AR_RES_UNAPP["Unapplied cash<br/>on the customer, or suspense if payer unknown<br/>never forced onto an invoice<br/>open at month end → close checklist_item"]
+  AR_RES_RETURN["Returned ACH / NSF / originator reversal (A-15)<br/>pair by trace number / original ref, NOT amount<br/>reverse the application, reopen the invoice<br/>ACH receipts provisional 5 banking days (DESIGN)"]
+  AR_RES_OVER["Overpayment (A-21)<br/>apply 10,000 · 2,000 → kind=customer_credit<br/>a liability line, never revenue"]
+  AR_RES_C06["Remittance disagrees with cash (C-06)<br/>advice 25,000 vs bank 24,180:<br/>apply per advice, the 820 becomes<br/>its own short-pay case"]
+  AR_EX_WAYNE["EXAMPLE Wayne: pays $3,300 short<br/>contract, CRM, mail, Slack searched:<br/>nothing explains it → does not guess<br/>→ ESCALATE to the owner in Slack"]
+  AR_RES_NONE["Short-pay, reason not derivable (A-20)<br/>apply partial · kind=dispute_hold<br/>question to the account owner"]
+  AR_RES_C08["Short-pay claiming an unissued credit (C-08)<br/>open a deduction case · dispute_hold<br/>never written off silently"]
+  AR_EX_INITECH["EXAMPLE Initech: pays $10,800 on $12,000 INV-1042<br/>CEO email 28 Jun: 10% off through renewal<br/>→ credit memo $1,200<br/>+ fact pct_off=10 until renewal"]
+  AR_RES_FOUND["Short-pay WITH a found reason<br/>side letter quote supports pct_off + until<br/>kind=credit_memo + terms_change"]
+  AR_RES_BAD["Bad debt (C-11): customer in administration<br/>kind=write_off draft against the allowance,<br/>human approval · invoice NEVER deleted or voided"]
+end
+
+subgraph AR_SG5["5 · Where the model is used (side-ports) vs what stays in code"]
+  AR_PORT_A["Model port A · payer entity resolution (tier 1)<br/>which customer is ACME CLOUD SVCS?<br/>must cite the alias source trace,<br/>else returns no answer"]
+  AR_PORT_B["Model port B · remittance extraction<br/>claude-haiku-4-5 · returns a list of<br/>invoice_no + amount_cents,<br/>each with a quoted span"]
+  AR_PORT_B_CHK{{"Code re-adds the extracted lines<br/>reject if sum differs from stated total<br/>each quote must be a substring of its trace"}}
+  AR_PORT_C["Model port C · reason-finding (tier 2 to 3)<br/>mail.search · chat.search · crm.notes<br/>contracts.find_clause · policy_memo.lookup<br/>memory.similar_decisions"]
+  AR_PORT_D["Model port D · draft collection email<br/>tone by dunning stage · amounts and dates<br/>injected by code from the ledger"]
+  AR_CODE_ONLY["Stays in code<br/>cents arithmetic · all matching passes · subset-sum<br/>fact scope test · aging · dunning stage · tie-outs<br/>model never adds, never picks equal-sum candidates"]
+end
+
+subgraph AR_SG6["6 · Collections"]
+  AR_AGE["Aging buckets (code, from due_date)<br/>current · 1-30 · 31-60 · 61-90 · 90+<br/>per customer and invoice"]
+  AR_HOLD_GATE{{"Exclude from chasing?<br/>dispute_hold · unanswered escalation<br/>· active promise_to_pay fact"}}
+  AR_DUN["Dunning cadence (code, DESIGN)<br/>stage 1 day 3 reminder · stage 2 day 15<br/>stage 3 day 30 cc account owner<br/>stage 4 day 60 AR lead · 90+ bad-debt review"]
+  AR_GMAIL[/"Gmail send: drafted email + invoice reference<br/>QBO sandbox mail cap is 40/day, so Gmail<br/>artifact system=gmail kind=collections_email<br/>replies return as trace.kind=collections_reply"/]
+  AR_PTP[("fact promise_to_pay<br/>value: date + amount_cents · scope: invoice.id<br/>valid_to = promised date · source_trace_ids")]
+  AR_PTP_GATE{{"Promise date passed and no cash?<br/>yes: fact expires,<br/>dunning resumes at stage + 1"}}
+  AR_FC["Hand-off to forecast: expected payment timing<br/>forecast_line kind=ar_inflow · week<br/>amount_cents · fact_id<br/>dispute = haircut · promise = moved week"]
+  AR_OWNER(["Account owner (crm.owner)<br/>in Slack"])
+end
+
+subgraph AR_SG7["7 · Shared exit: propose → kernel → five routes"]
+  AR_PROPOSE["propose_entry + workpaper<br/>kind · applications · entries · terms_change<br/>evidence (trace_id + quote) · fact_refs · policy_refs"]
+  AR_KC_F{{"F pack checks<br/>applications fit the bank amount and each open balance<br/>sum(applications) + residual lines equals bank amount<br/>AR subledger equals GL control after posting"}}
+  AR_KC_E{{"E pack checks<br/>quote is a substring of its trace<br/>party / amount / date tie · remittance total re-footed<br/>credit memo needs an evidence quote"}}
+  AR_KC_P{{"P pack checks<br/>approver is not preparer, always (G-02)<br/>credit memo / write-off above $500 materiality:<br/>approver within approval matrix · period open (G-03)"}}
+  AR_KC_J{{"J pack checks<br/>fact active on the payment date and in scope<br/>(customer, contract, until-date)<br/>policy ceiling not above its approver (G-04)"}}
+  AR_KC_BLOCK{{"Hard BLOCKs<br/>credit memo / write-off with no evidence trace<br/>locked period (G-03) · preparer = approver (G-02)<br/>delete or void an invoice to clear a bad debt"}}
+  AR_KERNEL{{"Kernel F·E·P·J + pack checks"}}
+  AR_RT_AUTO(("AUTO"))
+  AR_RT_PROPOSE(("PROPOSE"))
+  AR_RT_ESCALATE(("ESCALATE"))
+  AR_RT_REFUSE(("REFUSE"))
+  AR_RT_BLOCK(("BLOCK"))
+  AR_CTRL["Controller agent (GPT, different model family)<br/>reviews evidence, approves within authority<br/>human approver above materiality or when new"]
+  AR_SLACK(["Human in Slack<br/>escalation: question_json → answer_json"])
+  AR_POST[("Post: gl_entry + gl_line (local ledger)<br/>source_decision_id · artifact row per output")]
+  AR_QBO[/"QuickBooks mirror (one-way)<br/>Payment · CreditMemo + zero-amount Payment link<br/>workpaper and source email attached"/]
+
+subgraph AR_SG7B["7b · OUTPUT CASES: route → outcome, entry or artifact → who is notified"]
+  AR_OC_EXACT["Exact or advice-directed full payment (baseline)<br/>Dr Cash / Cr Accounts receivable · QBO Payment<br/>notified: no one, scoreboard count only"]
+  AR_OC_INITECH["Short-pay explained by a cited fact (Initech, spine)<br/>Dr Cash 10,800 / Cr AR 10,800<br/>credit memo: Dr Deferred revenue 1,200 / Cr AR 1,200<br/>PROPOSE first · AUTO once the policy is earned"]
+  AR_OC_SUBSET["One wire, unique subset of invoices (A-05)<br/>Dr Cash 18,400 / Cr AR x 4<br/>the four invoices listed on the workpaper"]
+  AR_OC_TRANS["Transposed reference, unique (A-12)<br/>Dr Cash / Cr AR + note naming 10423 vs 10432"]
+  AR_OC_FEE["Wire net of bank fee, inside the fee band (A-03 shape)<br/>Dr Cash 8,232.50 / Dr Bank charges 17.50 / Cr AR 8,250<br/>book already carries the gross receipt (bank rec):<br/>Dr Bank charges 17.50 / Cr CASH 17.50, never Cr AR"]
+  AR_OC_OVER["Overpayment (A-21)<br/>Dr Cash 12,000 / Cr AR 10,000<br/>/ Cr Customer credits (liability) 2,000"]
+  AR_OC_RETURN["Reversal / return of a receipt (A-15)<br/>Dr AR / Cr Cash · application reversed<br/>invoice reopened"]
+  AR_OC_PARENT["Parent pays for subsidiary (planted)<br/>Dr Cash / Cr AR of the child via hierarchy<br/>record_fact_candidate(pays_for)<br/>PROPOSE first time, then the fact covers it"]
+  AR_OC_SHORT["Short-pay, reason not derivable (A-20, C-08, Wayne)<br/>Dr Cash / Cr AR for the part paid<br/>remainder stays open under dispute_hold<br/>Slack question to the account owner"]
+  AR_OC_MULTI["Several subsets fit / no advice (C-05)<br/>Dr Cash / Cr Unapplied cash (customer)<br/>all fitting combinations shown, none picked"]
+  AR_OC_C06["Advice total differs from cash (C-06)<br/>Dr Cash 24,180 / Cr AR per advice<br/>820 opened as a short-pay case"]
+  AR_OC_BAD["Bad debt (C-11) · draft write-off vs the allowance:<br/>Dr Allowance for doubtful accounts 18,000 / Cr AR<br/>allowance short: Dr Bad debt expense / Cr Allowance<br/>invoice kept, never deleted or voided"]
+  AR_OC_C07["Wrong legal entity (C-07)<br/>no entry · out of 24h scope (multi-entity)<br/>flagged as misdirected only"]
+  AR_OC_REFUSE["Malformed file or advice that will not foot<br/>(F-01, F-02, F-04)<br/>nothing proposed · reason + places looked stated"]
+  AR_OC_BLOCK["Blocked attempt (G-02, G-03, G-04 · invoice<br/>delete or void to clear a bad debt)<br/>no entry · persisted with rule id, inputs,<br/>attempted_by, approval_ignored"]
+  AR_NT_CTRL["Controller<br/>approve click, evidence attached"]
+  AR_NT_LEAD(["AR lead"])
+  AR_NT_OWNER(["Account owner<br/>(Slack question)"])
+  AR_NT_CFO(["CFO"])
+end
+end
+
+subgraph AR_SG8["8 · Events, learning and scoreboard"]
+  AR_EVT[("event table (bus)<br/>topic · from_function=ar · intent_id · payload_json")]
+  AR_E_APPLIED["ar.payment.applied<br/>bank rec closes its group<br/>forecast drops the expected inflow"]
+  AR_E_CM["ar.credit_memo.posted<br/>carries terms_change: pct_off + until<br/>(concession learned)"]
+  AR_E_UNAPP["ar.dispute.opened (forecast haircut)<br/>ar.unapplied_cash (close checklist)<br/>ar.receivable.reopened (forecast, bank rec)"]
+  AR_DS_REV["Revenue + billing · rev.schedule.revised<br/>revenue moves ONLY via the schedule revision:<br/>July revenue -$1,200 · future invoices lowered"]
+  AR_DS_FC["Forecast (13-week)<br/>-$1,200 a month through renewal<br/>dispute haircut · reopened receivable"]
+  AR_DS_CLOSE["Close + reporting<br/>checklist: AR concessions reviewed · unapplied cash<br/>AR subledger tie-out<br/>flux line traced to the intent"]
+  AR_L_FACTS[("Learnable facts<br/>payer aliases · parent pays_for child<br/>concession terms with until-date<br/>usual remittance channel · promise_to_pay")]
+  AR_L_POL[("Learnable policies (replay → compile → backtest)<br/>wire-fee band per corridor<br/>small-balance write-off threshold, clamped (G-08)<br/>short-pay treatment by cited fact")]
+  AR_L_NEVER{{"Never learned<br/>a rule keyed on description text (A-09, G-09)<br/>anything from a single correction (G-05) · a tolerance<br/>above the class ceiling · always short-pays, clear it"}}
+  AR_FACT_ACT["emits event fact.activated → consumed in stage 1<br/>parked intents re-run with the new fact<br/>the same question is not asked again"]
+  AR_L_LADDER["Autonomy ladder per decision kind<br/>auto-post at 95% replay agreement, n gte 5,<br/>and a covering policy or fact<br/>review at 80% · otherwise shadow"]
+  AR_M1["Scoreboard (TO BE MEASURED, nothing run yet)<br/>auto-apply rate + precision · false auto-posts (must be 0)<br/>unapplied cash at month end (count, dollars)<br/>questions run 1 vs run 2 · days deposit → application"]
+end
+
+%% 1 inputs and triggers
+AR_IN_BANK ==> AR_VALID
+AR_VALID == "valid rows" ==> AR_CMP_CASH
+AR_VALID -- "malformed" --> AR_RT_REFUSE
+AR_IN_INV --> AR_CMP_CASH
+AR_IN_INV --> AR_CMP_SUB
+AR_IN_INV --> AR_CMP_RUN
+AR_IN_TERMS --> AR_CMP_RUN
+AR_CMP_CASH ==> AR_SUPPRESS
+AR_CMP_RUN --> AR_SUPPRESS
+AR_CMP_SUB --> AR_SUPPRESS
+AR_IN_FACTS --> AR_SUPPRESS
+AR_SUPPRESS == "no: open an intent" ==> AR_INTENT
+AR_SUPPRESS -- "yes: delta expected,<br/>tier 0 fact covers it" --> AR_ROUTER
+AR_EVT_IN -- "hand-off opens or re-opens" --> AR_INTENT
+AR_IN_CAL -- "overdue: collections intent" --> AR_INTENT
+AR_INTENT ==> AR_ROUTER
+
+%% 2 payer
+AR_ROUTER == "chosen tier runs the pack" ==> AR_NORM
+AR_NORM ==> AR_KEY_ORIG
+AR_KEY_ORIG -- "miss" --> AR_ALIAS
+AR_ALIAS -- "then hierarchy" --> AR_PARENT
+AR_KEY_ORIG == "hit" ==> AR_PAYER_GATE
+AR_PARENT --> AR_PAYER_GATE
+AR_PAYER_GATE == "yes" ==> AR_PARTYKEY
+AR_PAYER_GATE -. "no: keys failed" .-> AR_PORT_A
+AR_PORT_A -. "alias + cited source<br/>→ fact candidate" .-> AR_ALIAS
+AR_PORT_A -- "no cited alias:<br/>payer unknown" --> AR_RES_UNAPP
+
+%% 3 passes
+AR_P4B -- "miss" --> AR_P4D
+AR_PARTYKEY ==> AR_CAND
+AR_CAND ==> AR_P1
+AR_IN_REMIT -.-> AR_PORT_B
+AR_PORT_B --> AR_PORT_B_CHK
+AR_PORT_B_CHK -- "verified advice lines" --> AR_P1
+AR_P1 -- "advice exists" --> AR_P1_FOOT
+AR_P1_FOOT == "yes: apply as directed" ==> AR_MATCHED
+AR_P1_FOOT -- "no" --> AR_RES_C06
+AR_P1 -- "no advice" --> AR_P2
+AR_P2 -- "miss" --> AR_P3
+AR_P3 -- "miss" --> AR_P4A
+AR_P4A -- "miss" --> AR_P4B
+AR_P4D -- "no 1:1 anchor at all" --> AR_P5_BOUND
+AR_P5_BOUND -- "yes" --> AR_P5
+AR_P5_BOUND -- "no: candidate list only" --> AR_RES_UNAPP
+AR_P2 -- "candidates" --> AR_UNIQ
+AR_P3 -- "candidates" --> AR_UNIQ
+AR_P4A -- "candidates" --> AR_UNIQ
+AR_P4B -- "candidates" --> AR_UNIQ
+AR_P4D -- "candidates" --> AR_UNIQ
+AR_P5 -- "solutions (max 2)" --> AR_UNIQ
+AR_UNIQ == "exactly 1" ==> AR_MATCHED
+AR_UNIQ -- "2 or more, or none" --> AR_RES_UNAPP
+
+%% 4 residuals and 5 model ports
+AR_MATCHED == "zero" ==> AR_PROPOSE
+AR_MATCHED -. "short, unclassified (4d): find the reason" .-> AR_PORT_C
+AR_MATCHED -- "short, typed by 4a to 4c: reason is the cited<br/>fact, contract term or fee policy, no model call" --> AR_PROPOSE
+AR_MATCHED -- "over" --> AR_RES_OVER
+AR_EVT_IN -- "reversal: paired by trace number" --> AR_RES_RETURN
+AR_PORT_C -- "span or not-found report" --> AR_PORT_C_OUT
+AR_PORT_C_OUT -- "quoted span found" --> AR_RES_FOUND
+AR_PORT_C_OUT -- "not found" --> AR_RES_NONE
+AR_PORT_C_OUT -- "customer cites a credit<br/>never issued" --> AR_RES_C08
+AR_RES_FOUND -. "example" .-> AR_EX_INITECH
+AR_RES_NONE -. "example" .-> AR_EX_WAYNE
+AR_CODE_ONLY -. "boundary: model proposes, code checks" .-> AR_PORT_B_CHK
+AR_RES_FOUND --> AR_PROPOSE
+AR_RES_NONE --> AR_PROPOSE
+AR_RES_C08 --> AR_PROPOSE
+AR_RES_C06 --> AR_PROPOSE
+AR_RES_OVER --> AR_PROPOSE
+AR_RES_RETURN --> AR_PROPOSE
+AR_RES_UNAPP --> AR_PROPOSE
+AR_RES_BAD --> AR_PROPOSE
+
+%% 6 collections
+AR_PORT_D -- "stage 1-2: send unattended (DESIGN)" --> AR_GMAIL
+AR_PORT_D -- "stage 3+: owner approves draft" --> AR_OWNER
+AR_GMAIL -- "reply: promise extracted with quoted span,<br/>date validated in code" --> AR_PTP
+AR_IN_CAL --> AR_AGE
+AR_AGE --> AR_HOLD_GATE
+AR_HOLD_GATE -- "no: chase" --> AR_DUN
+AR_HOLD_GATE -- "yes: held" --> AR_FC
+AR_DUN -. "draft" .-> AR_PORT_D
+AR_OWNER -- "approves draft" --> AR_GMAIL
+AR_PTP --> AR_PTP_GATE
+AR_PTP_GATE -- "yes" --> AR_DUN
+AR_PTP -. "pauses chasing" .-> AR_HOLD_GATE
+AR_PTP --> AR_FC
+AR_AGE -- "bucket + ledger.party_history" --> AR_FC
+AR_RES_NONE -. "dispute_hold" .-> AR_HOLD_GATE
+AR_DUN -- "90+ and insolvency notice" --> AR_RES_BAD
+
+%% 7 shared exit
+AR_PROPOSE ==> AR_KERNEL
+AR_KC_F --> AR_KERNEL
+AR_KC_E --> AR_KERNEL
+AR_KC_P --> AR_KERNEL
+AR_KC_J --> AR_KERNEL
+AR_KC_BLOCK --> AR_KERNEL
+AR_KERNEL -. "reject: escalate one tier" .-> AR_ROUTER
+AR_KERNEL ==> AR_RT_AUTO
+AR_KERNEL --> AR_RT_PROPOSE
+AR_KERNEL --> AR_RT_ESCALATE
+AR_KERNEL --> AR_RT_REFUSE
+AR_KERNEL --> AR_RT_BLOCK
+AR_RT_AUTO ==> AR_POST
+AR_RT_PROPOSE --> AR_CTRL
+AR_CTRL -- "approved" --> AR_POST
+AR_RT_ESCALATE --> AR_SLACK
+AR_POST ==> AR_QBO
+
+%% 7b output cases
+AR_RT_AUTO ==> AR_OC_EXACT
+AR_OC_EXACT == "posts unattended" ==> AR_POST
+AR_RT_PROPOSE --> AR_OC_INITECH
+AR_RT_PROPOSE --> AR_OC_SUBSET
+AR_RT_PROPOSE --> AR_OC_TRANS
+AR_RT_PROPOSE --> AR_OC_FEE
+AR_RT_PROPOSE --> AR_OC_OVER
+AR_RT_PROPOSE --> AR_OC_RETURN
+AR_RT_PROPOSE --> AR_OC_PARENT
+AR_RT_ESCALATE --> AR_OC_SHORT
+AR_RT_ESCALATE --> AR_OC_MULTI
+AR_RT_ESCALATE --> AR_OC_C06
+AR_RT_ESCALATE --> AR_OC_BAD
+AR_RT_ESCALATE --> AR_OC_C07
+AR_RT_REFUSE --> AR_OC_REFUSE
+AR_RT_BLOCK --> AR_OC_BLOCK
+AR_OC_INITECH --> AR_NT_CTRL
+AR_OC_SUBSET --> AR_NT_CTRL
+AR_OC_TRANS --> AR_NT_CTRL
+AR_OC_FEE --> AR_NT_CTRL
+AR_OC_OVER --> AR_NT_CTRL
+AR_OC_RETURN --> AR_NT_CTRL
+AR_OC_PARENT --> AR_NT_CTRL
+AR_OC_BLOCK -- "approver + controller, audit" --> AR_NT_CTRL
+AR_OC_SHORT --> AR_NT_OWNER
+AR_OC_MULTI --> AR_NT_LEAD
+AR_OC_C06 --> AR_NT_LEAD
+AR_OC_REFUSE -- "AR inbox" --> AR_NT_LEAD
+AR_OC_C07 --> AR_NT_LEAD
+AR_OC_BAD --> AR_NT_CFO
+
+%% 8 events, learning, metrics
+AR_SLACK -. "answer → record_fact_candidate(fact):<br/>scope · valid_from / valid_to · stated_by · approved_by" .-> AR_L_FACTS
+AR_L_FACTS -. "on approval" .-> AR_FACT_ACT
+AR_FACT_ACT -. "fact.activated" .-> AR_EVT_IN
+AR_E_UNAPP --> AR_DS_FC
+AR_E_UNAPP --> AR_DS_CLOSE
+AR_E_CM --> AR_DS_CLOSE
+AR_POST --> AR_EVT
+AR_EVT --> AR_E_APPLIED
+AR_EVT --> AR_E_CM
+AR_EVT --> AR_E_UNAPP
+AR_E_APPLIED --> AR_DS_FC
+AR_E_CM --> AR_DS_REV
+AR_E_CM --> AR_DS_FC
+AR_FC -. "forecast_line" .-> AR_DS_FC
+AR_L_NEVER -. "filters candidates" .-> AR_L_FACTS
+AR_L_NEVER -. "filters candidates" .-> AR_L_POL
+AR_CTRL -. "corrections feed compile" .-> AR_L_POL
+AR_L_POL -.-> AR_L_LADDER
+AR_L_LADDER -. "tier 0 coverage grows" .-> AR_ROUTER
+AR_L_FACTS -. "read next run" .-> AR_IN_FACTS
+AR_EVT -.-> AR_M1
+
+classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+class AR_IN_BANK,AR_IN_REMIT,AR_IN_TERMS,AR_EVT_IN src
+class AR_IN_INV,AR_IN_FACTS,AR_INTENT,AR_ALIAS,AR_PTP,AR_POST,AR_EVT store
+class AR_IN_CAL,AR_CMP_CASH,AR_CMP_RUN,AR_CMP_SUB,AR_SUPPRESS,AR_ROUTER,AR_NORM,AR_KEY_ORIG,AR_PARENT,AR_PAYER_GATE,AR_PARTYKEY code
+class AR_CAND,AR_P1,AR_P1_FOOT,AR_P2,AR_P3,AR_P4A,AR_P4B,AR_P4D,AR_P5_BOUND,AR_P5,AR_MATCHED code
+class AR_RES_FOUND,AR_RES_NONE,AR_RES_C08,AR_RES_C06,AR_RES_OVER,AR_RES_RETURN,AR_RES_UNAPP,AR_RES_BAD code
+class AR_PORT_B_CHK,AR_PORT_C_OUT,AR_CODE_ONLY,AR_AGE,AR_HOLD_GATE,AR_DUN,AR_PTP_GATE,AR_FC,AR_PROPOSE code
+class AR_E_APPLIED,AR_E_CM,AR_E_UNAPP,AR_DS_REV,AR_DS_FC,AR_DS_CLOSE,AR_M1 code
+class AR_OC_FEE,AR_OC_EXACT,AR_OC_INITECH,AR_OC_SUBSET,AR_OC_TRANS,AR_OC_OVER,AR_OC_RETURN,AR_OC_PARENT,AR_OC_SHORT,AR_OC_MULTI,AR_OC_C06,AR_OC_BAD,AR_OC_REFUSE,AR_OC_BLOCK code
+class AR_PORT_A,AR_PORT_B,AR_PORT_C,AR_PORT_D,AR_CTRL,AR_NT_CTRL model
+class AR_OWNER,AR_SLACK,AR_NT_LEAD,AR_NT_OWNER,AR_NT_CFO human
+class AR_VALID,AR_UNIQ,AR_KC_F,AR_KC_E,AR_KC_P,AR_KC_J,AR_KC_BLOCK,AR_KERNEL,AR_L_NEVER gate
+class AR_FACT_ACT,AR_L_FACTS,AR_L_POL,AR_L_LADDER,AR_EX_INITECH,AR_EX_WAYNE learn
+class AR_GMAIL,AR_QBO ext
+class AR_RT_AUTO rAuto
+class AR_RT_PROPOSE rPropose
+class AR_RT_ESCALATE rEscalate
+class AR_RT_REFUSE rRefuse
+class AR_RT_BLOCK rBlock
+class AR_OC_C07 stretch

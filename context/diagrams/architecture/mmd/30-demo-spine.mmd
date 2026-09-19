@@ -1,0 +1,190 @@
+flowchart LR
+
+subgraph S_SG_BANK["1 · Bank rec"]
+  S_B_DEP[/"bank_txn: Initech ACH $10,800<br/>thin description, no remittance advice"/]
+  S_B_MATCH{{"Match to open invoices in code<br/>exact, amount-with-deduction, bounded subset-sum<br/>nothing open equals 10,800"}}
+  S_B_EVT["event bankrec.unmatched<br/>bank_txn id, 1,080,000 cents, party Initech"]
+  S_B_W_DEP[/"Beat 2 · bank_txn: Wayne deposit<br/>$3,300 short of its open invoice"/]
+end
+
+subgraph S_SG_AR["2 · AR and collections"]
+  S_AR_INTENT[("intent (function ar)<br/>Resolve the $1,200 shortfall on INV-1042<br/>end_condition: INV-1042 open balance 0,<br/>with evidence")]
+  S_AR_CASH["propose_entry apply_payment<br/>Dr Cash 10,800 / Cr Accounts receivable 10,800<br/>INV-1042 open balance 12,000 → 1,200"]
+  S_AR_CM["propose_entry credit_memo $1,200 + workpaper<br/>Dr Deferred revenue (contract liability) 1,200<br/>Cr Accounts receivable 1,200 (names assumed)<br/>terms_change pct_off 10 until renewal"]
+  S_AR_W_INTENT[("Beat 2 · intent (function ar)<br/>Resolve the $3,300 shortfall on<br/>Wayne open invoice")]
+  S_AR_W_CASH["Beat 2 · apply_payment for cash received<br/>Dr Cash / Cr Accounts receivable<br/>$3,300 stays open, no write-off, no guess"]
+end
+
+subgraph S_SG_INV["3 · Investigator (shared layer)"]
+  S_I_CONTRACT["contracts.find_clause (Initech)<br/>$12,000 a month, $144k a year,<br/>no discount clause"]
+  S_I_CRM["crm.notes and crm.owner (HubSpot)<br/>deal amount $144k, no concession noted"]
+  S_I_MAIL["mail.search → CEO email of 28 Jun<br/>10% off through renewal<br/>trace_id + quoted span kept as evidence"]
+  S_I_FACT[("fact: Initech price_concession 10 pct<br/>scope Initech contract invoices,<br/>valid_from 28 Jun, valid_to renewal date,<br/>stated_by CEO, approved_by, source_trace_ids")]
+  S_I_W_SEARCH["Beat 2 · looks everywhere<br/>contracts.find_clause, crm.notes, mail.search,<br/>chat.search, memory.facts, similar_decisions<br/>nothing explains $3,300"]
+  S_I_W_REFUSE(("ESCALATE<br/>no guess"))
+end
+
+subgraph S_SG_K["4 · Kernel, controller, local ledger"]
+  S_K_F{{"F footed<br/>debits 1,200 equal credits 1,200<br/>10,800 + 1,200 fit the 12,000 open balance<br/>AR subledger equals GL control"}}
+  S_K_E{{"E agreed to source<br/>quoted span is a substring of the 28 Jun<br/>email trace, party, amount, date tie"}}
+  S_K_CTRL["Controller agent (GPT, other model family)<br/>reviewer: re-reads workpaper + evidence<br/>1,200 gte $500 and a new concession → hands up"]
+  S_K_APPROVER(["Human approver in Slack (approval matrix)<br/>clicks approve, workpaper + email attached"])
+  S_K_P{{"P approved: 1,200 gte $500 materiality needs an<br/>approver authorized in the matrix (sheet 04),<br/>preparer is not approver, July period open"}}
+  S_K_J{{"J per policy<br/>fact active on the date and in scope,<br/>policy memo concession rule cited"}}
+  S_K_ROUTE(("PROPOSE<br/>approved"))
+  S_K_ESC(("ESCALATE"))
+  S_K_POST[("gl_entry + gl_line, source_decision_id<br/>Dr Deferred revenue 1,200<br/>Cr Accounts receivable 1,200")]
+  S_K_EVT["event ar.credit_memo.posted<br/>intent_id, party Initech,<br/>120,000 cents, fact_id"]
+end
+
+subgraph S_SG_QBO["5 · QuickBooks mirror (one-way)"]
+  S_Q_PAY["Payment $10,800<br/>linked to Invoice INV-1042"]
+  S_Q_CM["CreditMemo $1,200<br/>applied via zero-amount Payment<br/>linking CreditMemo and Invoice"]
+  S_Q_ATT["Attachable multipart upload<br/>workpaper + CEO email,<br/>AttachableRef.EntityRef → CreditMemo"]
+end
+
+subgraph S_SG_REV["6 · Revenue"]
+  S_R_SCHED["rev.schedule revised in code<br/>prospective modification: Initech monthly<br/>12,000 → 10,800, July through renewal"]
+  S_R_GUARD{{"double-hit guard: concession reduces<br/>revenue once, via the schedule<br/>(memo hit deferred revenue, not revenue)"}}
+  S_R_JE["propose_entry rev_recognition, July<br/>Dr Deferred revenue 10,800<br/>Cr Subscription revenue 10,800 (names assumed)<br/>July revenue -$1,200 vs old schedule"]
+  S_R_EVT["event rev.schedule.revised<br/>same intent_id, -120,000 cents a month"]
+end
+
+subgraph S_SG_FC["7 · Forecast"]
+  S_F_LINE["forecast_line rebuilt in code<br/>Initech inflow -$1,200 a month<br/>through renewal, fact_id set"]
+  S_F_GATE{{"13-week total moves by exactly<br/>-1,200 per Initech billing month<br/>opening cash equals GL cash"}}
+end
+
+subgraph S_SG_BILL["8 · Billing"]
+  S_BL_INV["Future Initech invoices<br/>$12,000 → $10,800 until fact valid_to<br/>run-rate $129.6k a year"]
+  S_BL_END["At renewal date the fact expires<br/>price reverts to contract"]
+end
+
+subgraph S_SG_REP["9 · Reporting"]
+  S_REP_FLUX["Flux line via report.variance<br/>July subscription revenue -$1,200: Initech<br/>10% concession, CEO email 28 Jun,<br/>links intent and decision ids, ties to ledger"]
+end
+
+subgraph S_SG_CLOSE["10 · Close"]
+  S_C_MARK["close.mark AR concessions reviewed → done<br/>decision_ids_json holds the credit memo decision"]
+  S_C_LIST[("checklist_item<br/>period July, function close,<br/>status done, depends on AR and revenue")]
+end
+
+subgraph S_SG_AUD["11 · Audit"]
+  S_A_SAMPLE["audit.sample picks the credit memo entry"]
+  S_A_RERUN{{"audit.rerun_kernel re-performs F · E · P · J<br/>same verdict, quote still in the email,<br/>no finding"}}
+end
+
+subgraph S_SG_DRIFT["12 · Drift monitor"]
+  S_D_CMP["Comparator: CRM deal vs contract vs invoice run-rate<br/>HubSpot $144k vs invoices $129.6k<br/>difference $14.4k = 12 x $1,200"]
+  S_D_GATE{{"Active fact in scope explains<br/>the difference exactly?"}}
+  S_D_OK["Explained: shown on drift board with fact id<br/>no new intent opened"]
+end
+
+subgraph S_SG_HUMAN["13 · Beat 2 · Human in Slack and memory"]
+  S_H_ESC["escalate(question)<br/>crm.owner → Slack DM to account owner<br/>lists everywhere it looked, escalation.slack_ts"]
+  S_H_OWNER(["Wayne account owner<br/>answers in Slack (judge phone)"])
+  S_H_FACT[("answer_json → record_fact_candidate → fact<br/>party Wayne, scope, valid_from, valid_to,<br/>learned_at, approved_by")]
+  S_H_RUN2{{"July run 2, same seed<br/>memory.facts hit at router tier 0:<br/>fact active and in scope?"}}
+  S_H_NOASK["Does not ask again<br/>repeat questions run 2: 0 for Wayne,<br/>entry proposed per the stored answer"]
+  S_H_AUTO(("AUTO"))
+end
+
+subgraph S_SG_VIEW["14 · Console · intent ripple view"]
+  S_ART[("artifact rows by intent_id<br/>decision_id, function, system,<br/>external_id, kind")]
+  S_V_RIPPLE["Click the intent: every artifact it created,<br/>in every function"]
+  S_V_SAME["Same amounts everywhere<br/>bank 10,800 · credit memo 1,200 · QuickBooks 1,200 ·<br/>revenue -1,200 · forecast -1,200 a month ·<br/>billing 10,800 · flux -1,200 · drift 14.4k explained"]
+end
+
+S_B_DEP --> S_B_MATCH
+S_B_MATCH -- "no match" --> S_B_EVT
+S_B_EVT -- "opens" --> S_AR_INTENT
+S_AR_INTENT --> S_AR_CASH
+S_AR_CASH -- "kernel accepts, posted, mirrored" --> S_Q_PAY
+S_AR_INTENT -- "investigate the 1,200" --> S_I_CONTRACT
+S_I_CONTRACT --> S_I_CRM
+S_I_CRM --> S_I_MAIL
+S_I_MAIL -- "record_fact_candidate" --> S_I_FACT
+S_I_FACT --> S_AR_CM
+S_AR_CM == "workpaper" ==> S_K_F
+S_K_F ==> S_K_E
+S_K_E ==> S_K_P
+S_AR_CM -. "material: review" .-> S_K_CTRL
+S_K_CTRL -- "agrees" --> S_K_APPROVER
+S_K_APPROVER -- "approve click" --> S_K_P
+S_K_P ==> S_K_J
+S_K_J == "no mark fails" ==> S_K_ROUTE
+S_K_J -. "a mark fails: up one router tier, then" .-> S_K_ESC
+S_R_GUARD -. "fail" .-> S_K_ESC
+S_K_ROUTE == "post gate: kernel re-run with approver identity" ==> S_K_POST
+S_K_POST == "mirror" ==> S_Q_CM
+S_Q_CM --> S_Q_ATT
+S_K_POST --> S_K_EVT
+S_K_EVT -- "AR tells revenue" --> S_R_SCHED
+S_R_SCHED --> S_R_GUARD
+S_R_GUARD -- "pass" --> S_R_JE
+S_R_JE -- "kernel accepts, posted" --> S_R_EVT
+S_K_EVT -- "AR tells forecast" --> S_F_LINE
+S_F_LINE --> S_F_GATE
+S_K_EVT -- "terms_change" --> S_BL_INV
+S_BL_INV --> S_BL_END
+S_R_EVT --> S_REP_FLUX
+S_R_EVT -- "everything tells close" --> S_C_MARK
+S_C_MARK --> S_C_LIST
+S_K_POST -. "month end sample" .-> S_A_SAMPLE
+S_A_SAMPLE --> S_A_RERUN
+S_BL_INV -. "next sync" .-> S_D_CMP
+S_D_CMP --> S_D_GATE
+S_I_FACT -. "approved fact" .-> S_D_GATE
+S_D_GATE -- "yes" --> S_D_OK
+S_D_GATE -. "no: opens a new intent" .-> S_AR_INTENT
+
+S_B_W_DEP -- "B2 unmatched" --> S_AR_W_INTENT
+S_AR_W_INTENT --> S_AR_W_CASH
+S_AR_W_INTENT -- "B2 investigate" --> S_I_W_SEARCH
+S_I_W_SEARCH --> S_I_W_REFUSE
+S_I_W_REFUSE -- "B2 blocked on context" --> S_H_ESC
+S_H_ESC --> S_H_OWNER
+S_H_OWNER -- "answer" --> S_H_FACT
+S_H_FACT -. "learned, asked once" .-> S_H_RUN2
+S_H_RUN2 -- "yes" --> S_H_NOASK
+S_H_RUN2 -. "no: out of scope or expired, investigate again" .-> S_I_W_SEARCH
+S_H_NOASK -- "propose_entry → kernel accepts → AUTO only if<br/>the autonomy ladder allows, else PROPOSE" --> S_H_AUTO
+
+S_Q_ATT -.-> S_ART
+S_R_JE -.-> S_ART
+S_F_GATE -.-> S_ART
+S_BL_END -.-> S_ART
+S_REP_FLUX -.-> S_ART
+S_C_LIST -.-> S_ART
+S_A_RERUN -.-> S_ART
+S_D_OK -.-> S_ART
+S_ART --> S_V_RIPPLE
+S_V_RIPPLE --> S_V_SAME
+
+classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+class S_B_DEP,S_B_W_DEP src
+class S_B_EVT,S_K_EVT,S_R_EVT,S_R_SCHED,S_F_LINE,S_BL_INV,S_BL_END,S_C_MARK,S_A_SAMPLE,S_D_CMP,S_D_OK,S_V_RIPPLE,S_V_SAME,S_H_NOASK code
+class S_AR_CASH,S_AR_CM,S_AR_W_CASH,S_I_CONTRACT,S_I_CRM,S_I_MAIL,S_I_W_SEARCH,S_K_CTRL,S_R_JE,S_REP_FLUX,S_H_ESC model
+class S_AR_INTENT,S_AR_W_INTENT,S_K_POST,S_C_LIST,S_ART store
+class S_I_FACT,S_H_FACT learn
+class S_B_MATCH,S_K_F,S_K_E,S_K_P,S_K_J,S_R_GUARD,S_F_GATE,S_A_RERUN,S_D_GATE,S_H_RUN2 gate
+class S_H_OWNER,S_K_APPROVER human
+class S_Q_PAY,S_Q_CM,S_Q_ATT ext
+class S_K_ROUTE rPropose
+class S_I_W_REFUSE rEscalate
+class S_H_AUTO rAuto
+class S_K_ESC rEscalate

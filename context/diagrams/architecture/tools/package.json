@@ -1,0 +1,11 @@
+{
+  "name": "footnote-architecture-tools",
+  "private": true,
+  "type": "module",
+  "description": "Rebuilds SVG renders and Excalidraw boards from ../mmd/*.mmd",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "^11.17.0",
+    "puppeteer": "^25.0.0"
+  }
+}

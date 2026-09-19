@@ -1,0 +1,262 @@
+flowchart TB
+
+  subgraph H_SG1["1 · Deciding to escalate: only when blocked on context (preconditions checked in CODE)"]
+    H_INTENT[("intent: open question + end_condition_json<br/>e.g. Resolve the $3,300 Wayne shortfall<br/>opened by drift monitor: invoice vs cash received")]
+    H_SEARCH["Investigator runs its search plan (read tools)<br/>mail.search · chat.search · contracts.find_clause<br/>crm.notes · policy_memo.lookup · workbook.lookup<br/>memory.facts · memory.policies · similar_decisions"]
+    H_FOUND{{"Explaining evidence found?<br/>quote is a substring of its trace (kernel E)<br/>party, amount and date tie"}}
+    H_NOT_BLOCKED["Not blocked → propose_entry + workpaper<br/>and record_fact_candidate from the evidence<br/>no human is asked"]
+    H_EX_INITECH["EXAMPLE A · Initech pays $10,800 on $12,000<br/>CEO email of 28 Jun found: 10% off through renewal<br/>→ fact (stated_by CEO) WITHOUT asking anyone"]
+    H_G_EXHAUST{{"Pre 1 · search plan exhausted<br/>every planned source queried, zero explaining hits<br/>sources + hit counts saved on the decision trace"}}
+    H_G_MEM{{"Pre 2 · no active fact or policy covers it<br/>memory.facts(party_id, predicate, date) empty<br/>memory.policies(function, kind) no condition match"}}
+    H_G_BUS{{"Pre 3 · not answerable by another function<br/>event table searched by party_id and intent_id<br/>else handoff(to_function, intent_id, note)"}}
+    H_HANDOFF["handoff over the event bus, e.g. AR asks revenue<br/>no human involved, intent stays with agents"]
+    H_G_DEDUPE{{"Pre 4 · not already asked<br/>dedupe key: party_id + predicate + decision kind<br/>looked up in the escalation table"}}
+    H_REUSE["Already asked → reuse answer_json, or attach this<br/>intent to the open escalation (no second message)<br/>repeat-question counter must stay 0"]
+    H_ESCALATE(("ESCALATE"))
+  end
+
+  subgraph H_SG2["2 · Composing the question: escalate(question)"]
+    H_WHO_OWNER["Who 1 · crm.owner(party_id)<br/>account owner (HubSpot deal owner)"]
+    H_WHO_MATRIX{{"Who 2 · approval matrix (policy_memo.lookup)<br/>does the owner have authority for this amount?<br/>if not, ask the role that does"}}
+    H_WHO_FALLBACK["Who 3 · fallback: function owner (intent.owner)<br/>then the controller"]
+    H_ASKED["asked_user resolved to a Slack user id<br/>(account owners are seeded as Slack users)"]
+    H_Q_WHAT["Payload 1 · what happened, with amounts<br/>integer cents computed by code, never by the model<br/>invoice id, expected, received, shortfall"]
+    H_Q_CHECKED["Payload 2 · what was checked<br/>each source searched, query, hit count<br/>so the human does not repeat the search"]
+    H_Q_UNKNOWN["Payload 3 · what is unknown<br/>one sentence naming the missing context"]
+    H_Q_OPTIONS["Payload 4 · 2 to 4 proposed treatments<br/>credit_memo · dispute_hold · write_off · chase<br/>each with an entry preview (dr/cr, kernel F dry run)"]
+    H_Q_DEFAULT["Payload 5 · default if no answer by the deadline<br/>dispute_hold: balance stays open, never write off<br/>re-ping, then ask the fallback user"]
+    H_Q_DEADLINE["Payload 6 · deadline<br/>tied to the blocked checklist_item in the close<br/>(AR concessions reviewed, July close)"]
+    H_Q_COMPOSE["Wording drafted by claude-haiku-4-5<br/>numbers and entry previews injected by code<br/>validated with a zod schema → question_json"]
+    H_ESC_TBL[("escalation<br/>id, decision_id, asked_user, question_json,<br/>answer_json, asked_at, answered_at, slack_ts")]
+    H_WAIT["intent.status = waiting_on_human<br/>event topic: human.escalation.opened"]
+    H_CHK_BLOCK["close.mark(item, blocked, reason)<br/>checklist_item.status = blocked<br/>blocked_reason = escalation id + who was asked"]
+  end
+
+  subgraph H_SG3["3 · Slack round trip"]
+    H_G_TUNNEL{{"Public request URL available?<br/>(cloudflared or ngrok tunnel)"}}
+    H_SL_BTN["Path A · Slack message with buttons<br/>one button per treatment + Other (free text)<br/>interaction payload POSTed to the request URL"]
+    H_SL_THREAD["Path B (fallback) · threaded message<br/>bot polls replies on slack_ts, or Socket Mode<br/>no public URL needed"]
+    H_HUMAN(["Human in Slack<br/>account owner / CEO / controller<br/>(demo: the phone of a judge)"])
+    H_G_SIG{{"Signature verification (Path A)<br/>HMAC-SHA256 of timestamp + body, signing secret<br/>reject if timestamp older than 5 min"}}
+    H_G_IDENT{{"Identity check<br/>answerer Slack id equals asked_user<br/>OR answerer has authority in the approval matrix"}}
+    H_IDENT_FAIL["Not authorised → answer ignored<br/>bot replies in thread, escalation stays open<br/>attempt stored as a trace"]
+    H_VERBATIM[("trace: verbatim reply kept<br/>source slack, kind human_answer, party_id<br/>event_time and recorded_time")]
+    H_PARSE["Free-text answer parsed by claude-haiku-4-5<br/>→ structured answer (zod): treatment, pct or cents,<br/>party, until, reason, parse confidence"]
+    H_G_CONF{{"Parse low confidence, a field missing,<br/>or answer conflicts with a proposed treatment?"}}
+    H_READBACK["Read-back confirmation in the thread<br/>I understood: 10% off Wayne invoices through renewal<br/>Confirm / Fix"]
+    H_ANS_ROW["escalation.answer_json + answered_at written<br/>event topic: human.escalation.answered<br/>checklist_item unblocked"]
+    H_RESUME["Intent resumes with the chosen treatment<br/>→ propose_entry + workpaper for THIS case<br/>kernel P: escalations answered before posting"]
+    H_TIMEOUT["Deadline passes, no answer → stated default applied<br/>checklist_item stays blocked, time keeps counting"]
+  end
+
+  subgraph H_SG4["4 · From answer to memory: two different objects"]
+    subgraph H_SG4A["4a · FACT: party-scoped, from ONE authoritative answer"]
+      H_FACT_CAND["record_fact_candidate(fact)<br/>e.g. Initech · discount · 10% off through renewal<br/>source_trace_ids = the email or the verbatim reply"]
+      H_G_CLAMP{{"Scope clamp (G-08)<br/>never wider than the class ceiling<br/>never narrower than the case it came from"}}
+      H_G_STABLE{{"Pinned to stable keys (G-09, H-3)<br/>party_id, contract id, vendor id<br/>never a bank descriptor or statement string"}}
+      H_G_END{{"Must end: valid_to date or end condition<br/>through renewal → renewal date from contracts.get<br/>no open-ended facts"}}
+      H_G_AUTH{{"Authority ceiling (G-04)<br/>fact inherits the limit of whoever approved it<br/>scope_json.max_amount_cents from the approval matrix"}}
+      H_FACT_REJECT["A guard fails → stays candidate<br/>the answer settles this one decision only<br/>nothing is remembered wider than was said"]
+      H_FACT_APPROVER(["approved_by: the answerer if authorised<br/>else the controller, named on the fact"])
+      H_FACT_TBL[("fact<br/>party_id, predicate, value_json, scope_json,<br/>valid_from, valid_to, learned_at, source_trace_ids,<br/>stated_by, approved_by, status")]
+      H_FACT_LIFE["Lifecycle: candidate → approved → active<br/>→ expired / superseded<br/>new version, old row stays on record (G-07)"]
+    end
+    subgraph H_SG4B["4b · POLICY: generalises across parties, so the bar is higher"]
+      H_CORR["Controller corrections and human answers<br/>of the same decision kind, across parties<br/>(short-pay treatment, wire-fee write-off, AP coding)"]
+      H_G_TWO{{"Second agreeing correction? (G-05)<br/>one correction is an anecdote"}}
+      H_REFUSE_LEARN(("REFUSE<br/>to learn"))
+      H_COMPILE["Compile a policy draft (claude-sonnet-5)<br/>condition_json, action_json, intent_text<br/>cites BOTH corrections verbatim"]
+      H_BACKTEST["Backtest in code against every closed period<br/>Apr to Jun decision_point rows → backtest_json<br/>agreements, mis-clears, n"]
+      H_G_BT{{"Backtest clean? (G-06)<br/>any prior-period mis-clear = fail"}}
+      H_BLOCK_POLICY(("BLOCK<br/>cannot adopt"))
+      H_PR(["Controller approves like a pull request<br/>console policy approval: diff, citations, backtest<br/>approved_by, approved_at"])
+      H_TIER["tier = portability (three context tiers of the judge)<br/>universal (law) · vertical (SaaS norms)<br/>· company-specific (Northwind only)"]
+      H_POLICY_TBL[("policy<br/>function, name, condition_json, action_json,<br/>intent_text, tier, backtest_json, status, approved_by")]
+    end
+  end
+
+  subgraph H_SG5["5 · Applying it next time, with no prompt"]
+    H_NEXT[/"Next occurrence<br/>July run 2 from the same seed, or the August invoice<br/>same party, same pattern"/]
+    H_DRIFT["Drift monitor suppression<br/>invoice vs cash received differs by the expected amount<br/>explained by fact_id → no intent opened"]
+    H_ROUTER["Agent router tier 0 hit<br/>compiled policy or fact, no model call"]
+    H_G_SCOPE{{"Scope match decided in CODE, never by the model<br/>party_id equal · amount lte ceiling<br/>date within valid_from..valid_to · status active"}}
+    H_BILLING["Billing lowers future invoices<br/>terms_change pct_off until valid_to"]
+    H_REVFC["Revenue schedule (rev.schedule) and<br/>forecast_line.fact_id read the fact<br/>forecast drops each month through renewal"]
+    H_PROPOSE["propose_entry + workpaper<br/>fact_refs and policy_refs filled"]
+    H_KERNEL{{"Kernel J-check: fact active on the date and in scope<br/>workpaper cites fact id, stated_by, approved_by<br/>(H-4: that rule and that approver by name)"}}
+    H_AUTO(("AUTO"))
+    H_R_PROPOSE(("PROPOSE"))
+    H_NOSCOPE["Scope does NOT match<br/>different customer · larger amount · after valid_to"]
+    H_REFUSE_GEN["REFUSES TO GENERALISE<br/>fact not applied, failed scope dimension named<br/>falls to tier 1+ investigation, then asks (stage 1)"]
+    H_EX_WAYNE["EXAMPLE B · Wayne pays $3,300 short<br/>nothing explains it → Slack → answer → fact<br/>→ July run 2 does not ask"]
+    H_EX_H4["H-4 PATTERN · Kestrel short-shipped invoice<br/>automate the 45 min investigation, not the judgment<br/>human decides once, next identical case clears itself"]
+  end
+
+  subgraph H_SG6["6 · Decay and contradiction"]
+    H_EXPIRE["Expiry job: valid_to reached or renewal signed<br/>status → expired, drift suppression stops<br/>next short-pay is a new question"]
+    H_CONTRA["Contradicting human decision (G-07)<br/>→ new version via PROPOSE, never an edit<br/>old version marked superseded, kept on record"]
+    H_ZERO_FIRE{{"Monitor: rule fired zero times this period<br/>while it fired in prior periods (H-3)<br/>GUSTO PAYROLL became GUSTO TAX COLLECTION"}}
+    H_ZERO_ACT["Opens an intent: rule decay suspected<br/>unmatched items that resemble the old matches listed<br/>re-pin to vendor_id, propose a new version"]
+    H_EVID_VER["Evidence re-versioned (H-6)<br/>trace payload changed after learned_at<br/>→ facts citing it drop to candidate, decisions flagged"]
+  end
+
+  subgraph H_SG7["7 · What is measured (counts with n, real runs only · nothing run yet)"]
+    H_M_Q["Questions asked<br/>run 1 vs run 2<br/>count of escalation rows per run"]
+    H_M_REPEAT["Repeat questions<br/>target 0<br/>same dedupe key asked twice"]
+    H_M_FACTS["Facts applied<br/>tier 0 decisions citing a fact_id<br/>and drift rows suppressed"]
+    H_M_REFUSALS["Refusals to generalise<br/>scope mismatches by dimension<br/>plus REFUSE-to-learn count"]
+    H_M_BLOCKED["Time blocked on humans<br/>answered_at minus asked_at<br/>summed per period and per function"]
+    H_SCORE[("console scoreboard<br/>run 1 vs run 2, per function")]
+  end
+
+  %% 1 deciding
+  H_INTENT --> H_SEARCH
+  H_SEARCH --> H_FOUND
+  H_FOUND -- "yes" --> H_NOT_BLOCKED
+  H_NOT_BLOCKED -.-> H_EX_INITECH
+  H_FOUND -- "no" --> H_G_EXHAUST
+  H_G_EXHAUST -- "sources left" --> H_SEARCH
+  H_G_EXHAUST -- "exhausted" --> H_G_MEM
+  H_G_MEM -- "none" --> H_G_BUS
+  H_G_MEM -- "covered: not a question, tier 0 applies it" --> H_ROUTER
+  H_G_BUS -- "another function can answer" --> H_HANDOFF
+  H_G_BUS -- "no" --> H_G_DEDUPE
+  H_G_DEDUPE -- "already asked" --> H_REUSE
+  H_G_DEDUPE -- "new question" --> H_ESCALATE
+  H_G_DEDUPE -. "lookup" .-> H_ESC_TBL
+
+  %% 2 composing
+  H_ESCALATE --> H_WHO_OWNER
+  H_WHO_OWNER --> H_WHO_MATRIX
+  H_WHO_MATRIX -- "authorised" --> H_ASKED
+  H_WHO_MATRIX -- "no owner or no authority" --> H_WHO_FALLBACK
+  H_WHO_FALLBACK --> H_ASKED
+  H_ESCALATE --> H_Q_WHAT
+  H_Q_WHAT --> H_Q_CHECKED
+  H_Q_CHECKED --> H_Q_UNKNOWN
+  H_Q_UNKNOWN --> H_Q_OPTIONS
+  H_Q_OPTIONS --> H_Q_DEFAULT
+  H_Q_DEFAULT --> H_Q_DEADLINE
+  H_Q_DEADLINE --> H_Q_COMPOSE
+  H_ASKED --> H_Q_COMPOSE
+  H_Q_COMPOSE --> H_ESC_TBL
+  H_ESC_TBL --> H_WAIT
+  H_WAIT --> H_CHK_BLOCK
+
+  %% 3 slack
+  H_CHK_BLOCK --> H_G_TUNNEL
+  H_G_TUNNEL -- "yes" --> H_SL_BTN
+  H_G_TUNNEL -- "no tunnel" --> H_SL_THREAD
+  H_SL_BTN --> H_HUMAN
+  H_SL_THREAD --> H_HUMAN
+  H_HUMAN -- "button click or Other text" --> H_G_SIG
+  H_HUMAN -- "threaded reply" --> H_G_IDENT
+  H_G_SIG -- "valid" --> H_G_IDENT
+  H_G_SIG -- "bad signature or stale timestamp" --> H_IDENT_FAIL
+  H_G_IDENT -- "fail" --> H_IDENT_FAIL
+  H_G_IDENT -- "pass" --> H_VERBATIM
+  H_VERBATIM --> H_PARSE
+  H_PARSE --> H_G_CONF
+  H_G_CONF -- "yes" --> H_READBACK
+  H_READBACK -- "Confirm / Fix" --> H_HUMAN
+  H_G_CONF -- "no: clear" --> H_ANS_ROW
+  H_ANS_ROW --> H_RESUME
+  H_HUMAN -. "silence" .-> H_TIMEOUT
+
+  %% 4a fact
+  H_ANS_ROW -. "answer names a standing arrangement" .-> H_FACT_CAND
+  H_NOT_BLOCKED -. "evidence states a standing arrangement" .-> H_FACT_CAND
+  H_FACT_CAND --> H_G_CLAMP
+  H_G_CLAMP -- "scope clamped" --> H_G_STABLE
+  H_G_STABLE -- "stable" --> H_G_END
+  H_G_STABLE -- "no stable key" --> H_FACT_REJECT
+  H_G_END -- "has an end" --> H_G_AUTH
+  H_G_AUTH -- "all guards pass" --> H_FACT_APPROVER
+  H_G_END -- "no end date or condition" --> H_FACT_REJECT
+  H_FACT_APPROVER --> H_FACT_TBL
+  H_FACT_TBL --> H_FACT_LIFE
+
+  %% 4b policy
+  H_ANS_ROW -. "answer or correction of a repeated kind" .-> H_CORR
+  H_CORR --> H_G_TWO
+  H_G_TWO -- "only one" --> H_REFUSE_LEARN
+  H_G_TWO -- "two agree" --> H_COMPILE
+  H_COMPILE --> H_BACKTEST
+  H_BACKTEST --> H_G_BT
+  H_G_BT -- "fail" --> H_BLOCK_POLICY
+  H_G_BT -- "pass" --> H_PR
+  H_PR --> H_TIER
+  H_TIER --> H_POLICY_TBL
+
+  %% 5 applying
+  H_NEXT --> H_DRIFT
+  H_NEXT --> H_ROUTER
+  H_FACT_TBL -. "memory.facts" .-> H_G_SCOPE
+  H_POLICY_TBL -. "memory.policies" .-> H_G_SCOPE
+  H_DRIFT --> H_G_SCOPE
+  H_ROUTER --> H_G_SCOPE
+  H_G_SCOPE -- "in scope" --> H_BILLING
+  H_G_SCOPE -- "in scope" --> H_REVFC
+  H_G_SCOPE -- "in scope" --> H_PROPOSE
+  H_RESUME -. "this case" .-> H_PROPOSE
+  H_PROPOSE ==> H_KERNEL
+  H_KERNEL == "accept + autonomy ladder auto (sheet 04): no human" ==> H_AUTO
+  H_KERNEL -- "accept, but gte $500, new, or below auto:<br/>approve click, still no question asked" --> H_R_PROPOSE
+  H_KERNEL -- "a mark fails: fact not applied" --> H_REFUSE_GEN
+  H_G_SCOPE -- "out of scope" --> H_NOSCOPE
+  H_NOSCOPE --> H_REFUSE_GEN
+  H_REFUSE_GEN -. "asks: back to stage 1" .-> H_INTENT
+  H_AUTO -.-> H_EX_WAYNE
+  H_KERNEL -.-> H_EX_H4
+
+  %% 6 decay
+  H_FACT_LIFE -. "valid_to" .-> H_EXPIRE
+  H_FACT_LIFE -. "superseded" .-> H_CONTRA
+  H_ROUTER -. "fire counts per rule per period" .-> H_ZERO_FIRE
+  H_ZERO_FIRE -- "zero fires" --> H_ZERO_ACT
+  H_VERBATIM -. "payload hash changes" .-> H_EVID_VER
+  H_EVID_VER -. "invalidate" .-> H_FACT_TBL
+  H_CONTRA -. "new version row" .-> H_FACT_CAND
+
+  %% 7 measured
+  H_ESC_TBL -. "count" .-> H_M_Q
+  H_REUSE -. "count" .-> H_M_REPEAT
+  H_AUTO -. "count" .-> H_M_FACTS
+  H_REFUSE_GEN -. "count" .-> H_M_REFUSALS
+  H_REFUSE_LEARN -. "count" .-> H_M_REFUSALS
+  H_TIMEOUT -. "clock" .-> H_M_BLOCKED
+  H_ANS_ROW -. "answered_at" .-> H_M_BLOCKED
+  H_M_Q --> H_SCORE
+  H_M_REPEAT --> H_SCORE
+  H_M_FACTS --> H_SCORE
+  H_M_REFUSALS --> H_SCORE
+  H_M_BLOCKED --> H_SCORE
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class H_NEXT src
+  class H_NOT_BLOCKED,H_HANDOFF,H_REUSE,H_WHO_OWNER,H_WHO_FALLBACK,H_ASKED,H_Q_WHAT,H_Q_CHECKED,H_Q_UNKNOWN,H_Q_OPTIONS,H_Q_DEFAULT,H_Q_DEADLINE,H_WAIT,H_CHK_BLOCK,H_IDENT_FAIL,H_ANS_ROW,H_RESUME,H_TIMEOUT,H_BACKTEST,H_DRIFT,H_ROUTER,H_BILLING,H_REVFC,H_PROPOSE,H_NOSCOPE,H_EXPIRE,H_EVID_VER code
+  class H_SEARCH,H_Q_COMPOSE,H_PARSE,H_COMPILE model
+  class H_HUMAN,H_FACT_APPROVER,H_PR human
+  class H_INTENT,H_ESC_TBL,H_VERBATIM,H_FACT_TBL,H_POLICY_TBL,H_SCORE store
+  class H_FOUND,H_G_EXHAUST,H_G_MEM,H_G_BUS,H_G_DEDUPE,H_WHO_MATRIX,H_G_TUNNEL,H_G_SIG,H_G_IDENT,H_G_CONF,H_G_CLAMP,H_G_STABLE,H_G_END,H_G_AUTH,H_G_TWO,H_G_BT,H_G_SCOPE,H_KERNEL,H_ZERO_FIRE gate
+  class H_EX_INITECH,H_EX_WAYNE,H_EX_H4,H_FACT_CAND,H_FACT_REJECT,H_FACT_LIFE,H_CORR,H_TIER,H_CONTRA,H_ZERO_ACT,H_REFUSE_GEN,H_M_Q,H_M_REPEAT,H_M_FACTS,H_M_REFUSALS,H_M_BLOCKED learn
+  class H_SL_BTN,H_SL_THREAD,H_READBACK ext
+  class H_AUTO rAuto
+  class H_R_PROPOSE rPropose
+  class H_ESCALATE rEscalate
+  class H_REFUSE_LEARN rRefuse
+  class H_BLOCK_POLICY rBlock

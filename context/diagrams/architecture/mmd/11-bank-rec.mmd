@@ -1,0 +1,315 @@
+flowchart TB
+
+  subgraph BR_SG1["1 · Inputs and triggers"]
+    BR_TRIG["Drift monitor comparator C3: bank vs ledger cash<br/>runs on every sync and at period end<br/>difference not covered by a fact → intent(function=bankrec)"]
+    BR_FEED[/"Bank feed: Increase sandbox or file (same tool)<br/>bank_txn.id, posted_date AND value_date (F-03)<br/>amount in integer cents (F-07), raw descriptor"/]
+    BR_GL[("GL cash account activity<br/>ledger.account_activity(cash accounts)<br/>gl_entry / gl_line, debit_cents, credit_cents")]
+    BR_CARRY[("Prior-period reconciling items carried forward<br/>outstanding checks and deposits in transit<br/>keyed by check number / trace number")]
+    BR_PAYOUT[/"Processor payout file (file only, no API)<br/>gross / fee / net per item, automatic_payout_id<br/>STRETCH: undecided scope A-07/H-2"/]
+    BR_AMEND[/"Statement re-issued / amended (A-24)<br/>same statement id, new content hash"/]
+    BR_EVIN[/"Consumed events: ar.payment.applied,<br/>ap.payment.scheduled (expect 1:n debits),<br/>close.period.locked"/]
+    BR_VALID{{"Structural validation before content:<br/>field count vs header (F-01), date format (F-02),<br/>merged cells / footer rows (F-12), sign convention<br/>asserted against statement control total (F-04)"}}
+    BR_FILE_REFUSE["REFUSE the whole file, not half of it<br/>reason stated, nothing ingested<br/>(F-01, F-02, F-04, F-12)"]
+    BR_INGEST["Idempotent ingest on source_system + source_id (F-05)<br/>statement key (account, period, version_hash)<br/>writes trace(kind=bank_statement) and bank_txn"]
+  end
+
+  subgraph BR_SG2["2 · Normalise (code, raw kept)"]
+    BR_NORM["Descriptor normalisation: fold whitespace, NBSP,<br/>trailing tabs, case, encoding (F-13)<br/>raw string kept on the trace as evidence"]
+    BR_ALIAS[("Alias table: fact(predicate=alias)<br/>descriptor variant → stable key<br/>originator_company_id, vendor.id, customer.id")]
+    BR_RESOLVE["Resolve party to stable key: originator id →<br/>alias table → else model port A<br/>GUSTO PAYROLL and GUSTO TAX COLLECTION<br/>land on one key (A-09, H-3)"]
+    BR_XFER{{"Internal transfer / sweep detection (A-19)<br/>two legs, both own-account ids, equal and opposite,<br/>value dates within 2 days → transfer pair<br/>never touches P and L, cash not double counted"}}
+    BR_ZERO["Zero and negative rows (A-22)<br/>0.00 line is valid data, kept and grouped<br/>no percent division, sign carried explicitly"]
+    BR_CUTOFF{{"Period boundary split (A-23)<br/>split statement lines at cutoff on value date<br/>post-cutoff half goes to the next period only"}}
+    BR_NEXTP["Queued for the next period only<br/>any attempt to post it into the locked month<br/>→ BLOCK, persisted with rule id (A-23)"]
+    BR_BLOCKING["Blocking (candidate generation)<br/>same resolved party (plus parent/child), open items<br/>only (bank_txn vs gl_line on cash accounts),<br/>item date lte bank value date"]
+  end
+
+  subgraph BR_SG3["3 · Matching passes, in order (all code, each returns up to 2 candidates)"]
+    BR_P0["Pass 0 · carry-forward clear<br/>prior-period outstanding list matched by<br/>check number / trace, date window widened<br/>for THIS list only (A-02, A-16)"]
+    BR_P1["Pass 1 · exact 1:1<br/>amount equal in cents + resolved party<br/>+ value date within 3 days (DESIGN window)"]
+    BR_P2["Pass 2 · reference 1:1<br/>check number, ACH trace number, EndToEndId,<br/>invoice ref · near-ref Damerau-Levenshtein 1 and<br/>unique → PROPOSE naming the transposition (A-12)"]
+    BR_P3["Pass 3 · tolerance, 1:1 ONLY<br/>amount tolerance from an approved policy,<br/>clamped to the class ceiling · NEVER combined<br/>with subset-sum or any group pass"]
+    BR_P4["Pass 4 · fee-delta, 1:1 only (A-03)<br/>same party, book minus bank inside the learned<br/>fee band for that bank / corridor<br/>8,250.00 vs 8,232.50 → match + 17.50 fee line"]
+    BR_P5["Pass 5 · many-to-one bounded subset-sum (A-05)<br/>one payment covering three invoices · same party,<br/>open items, n lte 24, exact cents, meet-in-the-middle<br/>O(2^(n/2)) or DP · hands application to AR"]
+    BR_P6["Pass 6 · one-to-many (A-06)<br/>one book payment run = three bank debits<br/>exact sum, same run id from ap.payment.scheduled"]
+    BR_P7["Pass 7 · processor payout expansion (STRETCH A-07/H-2)<br/>bank line net == sum(net) for one automatic_payout_id<br/>assert sum(gross) - sum(fee) == sum(net) to the cent"]
+    BR_CLEARING[("Processor clearing account (STRETCH)<br/>charge: Dr Clearing / Cr AR at gross · payout: Dr Cash<br/>net, Dr Processing fees, Cr Clearing gross<br/>check: clearing balance == not yet paid out")]
+    BR_P8{{"Pass 8 · duplicate detection<br/>same party + amount, book lines gt bank lines<br/>refund posted twice: second book line has no bank line"}}
+    BR_DUP_TRUE["True duplicate (A-13): same vendor, amount and<br/>invoice ref, 3 days apart, two bank debits<br/>→ bankrec.unmatched debit to AP, obligation-key BLOCK"]
+    BR_DUP_FALSE["False duplicate (A-14): same vendor, amount, day<br/>but distinct invoice refs and PO lines<br/>→ two valid 1:1 matches, do not suppress"]
+    BR_P9{{"Pass 9 · ambiguity check (A-18)<br/>two 4,500.00 debits, same day, different vendors<br/>any second candidate is kept, never dropped"}}
+    BR_UNIQ{{"Uniqueness gate (Fellegi-Sunter three zones)<br/>exactly one candidate → AUTO / PROPOSE eligible<br/>second candidate → ESCALATE, both shown<br/>no candidate → residue (stage 5)"}}
+  end
+
+  subgraph BR_SG4["4 · Typed groups and the two-sided proof (correction to spec kernel F)"]
+    BR_SPECFIX["Spec said: every bank line matched exactly once<br/>Replaced by: every bank line AND every ledger cash<br/>line sits in exactly one TYPED GROUP"]
+    BR_GROUP[("rec group: id, type, bank_txn ids, gl_line ids,<br/>sum_bank_cents, sum_book_cents, pass, statement hash<br/>DESIGN: in workpaper marks_json, schema gap<br/>Proposal.kind lacks reconciling_item")]
+    BR_GMANY["match, typed 1:1 · 1:n · n:1 · n:m<br/>1:1 from passes 0-4 (tolerance allowed)<br/>groups from passes 5-7, exact sums only"]
+    BR_GXFER["transfer pair (A-19)<br/>both legs cash accounts, net zero, no P and L"]
+    BR_TIMING["reconciling_item(timing)<br/>NOT a journal entry, carried forward"]
+    BR_DIT["Deposit in transit (A-01)<br/>book 30 Sep, bank 2 Oct<br/>adds to bank balance"]
+    BR_OSC["Outstanding check (A-02)<br/>check 1042 uncleared at month end<br/>subtracts from bank balance, cleared once next<br/>period, never double counted"]
+    BR_STALECHK["Stale check (A-16)<br/>written March, clears September<br/>clears its carried-forward item"]
+    BR_ADJ["adjusting_entry<br/>book side is wrong or missing: fee, interest,<br/>bank charge, duplicate book line → JE proposed"]
+    BR_OPENEX["open_exception<br/>named, aged, owner, places searched<br/>never silently dropped, never plugged"]
+    BR_CARRY_OUT[("Carry-forward list for the next period<br/>check number / trace, amount, age<br/>becomes input 1 of the next run")]
+    BR_PROOF{{"TWO-SIDED PROOF (code, integer cents)<br/>bank balance + deposits in transit - outstanding checks<br/>== book balance + adjustments<br/>difference must be 0 cents"}}
+  end
+
+  subgraph BR_SG5["5 · Unexplained residue"]
+    BR_RES["Residual classification (code)<br/>book-only before cutoff → timing item<br/>bank-only with bank-originated code (fee, interest)<br/>→ JE · anything else → model port"]
+    BR_A04["Standalone bank charge (A-04)<br/>bank debits 300.00, no book entry<br/>propose Dr Bank charges / Cr Cash"]
+    BR_A10["Abbreviated trading name (A-10)<br/>ACME CLOUD SVCS vs Acme Cloud Services Inc.<br/>→ port A"]
+    BR_A11["Memo describes the spend, not the payee (A-11)<br/>ledger: Q3 conference booth<br/>bank: CASCADE EVENTS LLC · rules leave it alone<br/>→ port B"]
+    BR_A17["Void and reissue (A-17)<br/>check 1042 voided, check 1099 issued, same payee<br/>and amount · recognise void entry, link the pair"]
+    BR_A25["Bank error (A-25)<br/>bank posts 4,500 where instruction was 4,050<br/>needs external confirmation, bank query drafted"]
+    BR_1240["The $12.40 difference nobody can explain<br/>port C finds no evidence<br/>everywhere-I-looked list attached"]
+    BR_MATERIAL{{"Materiality gate (code, $500 from kernel P)<br/>immaterial, first occurrence, non-sensitive<br/>→ log, do not queue (D-09) · recurring or in a<br/>sensitive account (cash) → escalate (D-10)"}}
+    BR_PLUG{{"Plug guard: an unexplained difference is never<br/>booked to suspense / rounding without<br/>evidence and approval"}}
+  end
+
+  subgraph BR_SG6["6 · Where a model is used vs code"]
+    BR_ROUTER["Agent router: tier 0 compiled policy or fact (no<br/>model call) → tier 1 claude-haiku-4-5 → tier 2<br/>claude-sonnet-5 → tier 3 claude-opus-5<br/>kernel reject escalates one tier"]
+    BR_MA["Port A · entity resolution on hard descriptors<br/>must cite the alias source (prior payment trace,<br/>contract signature block, CRM domain)<br/>may not restate amounts as the reason (G-12)"]
+    BR_MB["Port B · no-lexical-overlap match<br/>one bank line + up to 5 code-generated candidates<br/>equal in amount · cites a trace (booth invoice<br/>naming the conference) · none is a valid answer"]
+    BR_MC["Port C · reason-finding for a residual<br/>Investigator: mail.search, chat.search,<br/>bank.get_transaction, memory.similar_decisions<br/>returns a quoted span or REFUSE + places searched"]
+    BR_MNEVER{{"Model never: adds numbers, picks among<br/>equal-amount or equal-sum candidates,<br/>widens a tolerance, or posts"}}
+    BR_CODEONLY["Code only: validation, normalise, passes 0-9,<br/>subset-sum, proof arithmetic, cutoff,<br/>materiality, hash compare"]
+  end
+
+  subgraph BR_SG7["7 · Shared exit"]
+    BR_PROPOSE["propose_entry + workpaper<br/>kind = bank_adjustment or no_action<br/>entries Dr/Cr, evidence trace_id + quote, marks F E P J"]
+    BR_ESCQ["escalate(question)<br/>candidates shown, none picked<br/>names what it does not know"]
+    BR_KERNEL{{"Kernel F·E·P·J + pack checks"}}
+    BR_KF{{"F · every bank line and every ledger cash line is in<br/>exactly one typed group or a named reconciling item<br/>two-sided proof ties to the cent · payout arithmetic"}}
+    BR_KE{{"E · every adjusting JE cites its bank line, fee JE<br/>cites the matched pair, quote is substring of trace<br/>J · fee-band policy approved, active on the value<br/>date, scoped to the bank / corridor"}}
+    BR_KP{{"P · period open (close.period.locked)<br/>rec preparer is not approver<br/>a stale rec cannot be signed"}}
+    BR_KX{{"Hard rules: no P and L impact from internal<br/>transfers · one bank line in two groups · plug with<br/>no evidence · post-cutoff half into locked month"}}
+    BR_R_AUTO(("AUTO"))
+    BR_R_PROPOSE(("PROPOSE"))
+    BR_R_ESCALATE(("ESCALATE"))
+    BR_R_REFUSE(("REFUSE"))
+    BR_R_BLOCK(("BLOCK"))
+    BR_POST["Post to local ledger gl_entry / gl_line<br/>→ one-way QuickBooks mirror (JournalEntry)"]
+    BR_CTRL["Controller agent (GPT, different model family)<br/>reviews PROPOSE within its authority"]
+    BR_SLACK(["Human in Slack: controller, AP / AR lead<br/>answer → fact candidate with scope"])
+  end
+
+  subgraph BR_SG7B["7b · OUTPUT CASES (outcome → route → entry or artifact → notified)"]
+    BR_O_TIMING["Deposit in transit / outstanding check<br/>AUTO · reconciling item, no JE, carried forward<br/>notified: none · A-01, A-02"]
+    BR_O_SWEEP["Internal sweep 50,000 · AUTO<br/>transfer pair, Dr Cash B / Cr Cash A, no P and L<br/>notified: none · A-19"]
+    BR_O_DESC["Descriptor changed, stable key same · AUTO<br/>match via originator id / party<br/>notified: none (decay monitor) · A-09, H-3"]
+    BR_O_LOG["Immaterial one-off variance · AUTO<br/>logged as named open item, no JE, not queued<br/>notified: none · D-09"]
+    BR_O_FEE["Wire net of fee · PROPOSE<br/>match + Dr Bank charges 17.50 / Cr Cash 17.50<br/>notified: controller · A-03"]
+    BR_O_CHG["Bank charge, no book entry · PROPOSE<br/>Dr Bank charges 300.00 / Cr Cash 300.00<br/>notified: controller · A-04"]
+    BR_O_SEM["Abbreviated name / spend memo · PROPOSE<br/>match + semantic explanation citing a trace<br/>notified: controller · A-10, A-11"]
+    BR_O_GROUP["Many-to-one / one-to-many · PROPOSE<br/>group shown line by line, exact sum<br/>notified: controller · A-05, A-06"]
+    BR_O_STALE["Stale check clears · PROPOSE<br/>clear the outstanding item, no JE<br/>notified: controller · A-16"]
+    BR_O_REFUND["Refund posted twice (planted) · PROPOSE<br/>reverse the duplicate book entry<br/>Dr Cash / Cr Refunds · notified: controller"]
+    BR_O_PAYOUT["Processor payout (STRETCH) · PROPOSE<br/>Dr Cash 9,420 + Dr Fees 280 / Cr Clearing 9,700<br/>+ tie-out · controller · A-07, H-2"]
+    BR_O_AMBIG["Two equal candidates · ESCALATE<br/>both shown, none picked, no entry<br/>notified: AP / AR lead · A-18 (A-17 link pair)"]
+    BR_O_PLUG["Bank error / unexplained 12.40 · ESCALATE and<br/>REFUSE to plug · open exception, places-searched<br/>list, bank query draft · controller · A-25, D-10"]
+    BR_O_CUTOFF["Wrong-period half · BLOCK<br/>blocked attempt persisted with rule id,<br/>even if a human approves · notified: close · A-23"]
+  end
+
+  subgraph BR_SG8["8 · Evidence amended after reconciliation (A-24 / F-06 / H-6)"]
+    BR_HASH{{"Version check on ingest (input 1, A-24): amended file<br/>arrives later, content hash differs from version_hash<br/>of an already reconciled statement (account, period)"}}
+    BR_INVAL["Invalidate dependent groups: every rec group and<br/>workpaper citing a changed line → kernel_verdict<br/>stale, proof no longer signed"]
+    BR_REOPEN["Reopen: checklist_item bank rec → blocked<br/>re-run stages 2-7 on affected lines only<br/>emit bankrec.stale"]
+    BR_O_AMEND["Amended statement · ESCALATE<br/>rec marked stale, version diff attached<br/>notified: controller, close · A-24, F-06, H-6"]
+  end
+
+  subgraph BR_SG9["9 · Events, learning, metrics"]
+    BR_BUS[("event bus (event table)<br/>topic, from_function=bankrec, intent_id")]
+    BR_E_UNM["bankrec.unmatched<br/>credit → AR cash application<br/>debit → AP (payment or duplicate, A-13)<br/>bankrec.reversal_detected → AR reopen (A-15)"]
+    BR_E_REC["bankrec.reconciled<br/>→ close tie-out (checklist_item bank rec)<br/>→ forecast opening cash"]
+    BR_L_ALIAS["Learnable: alias entries pinned to stable keys<br/>record_fact_candidate(alias) with scope, valid_from,<br/>approved_by → written to the alias table (stage 2)"]
+    BR_L_FEE["Learnable: fee pattern per bank / counterparty<br/>corridor as a policy, clamped, backtested in replay,<br/>n gte 5 · feeds pass 4 · also coding of bank charges"]
+    BR_L_NEVER{{"Never learned: tolerance widening, a standing plug<br/>tolerance, predicates cut from statement wording<br/>(A-09, G-09), clearing ambiguous pairs from<br/>precedent, anything from one correction (G-05)"}}
+    BR_DECAY["Decay monitor: rule hit-rate month over month<br/>drop → alarm, exceptions are not new problems (H-3)"]
+    BR_M1["Metrics (TO BE MEASURED, nothing run yet)<br/>lines auto-matched + precision, false auto-posts (0),<br/>unreconciled dollars, open exceptions by age, questions<br/>run 1 vs run 2, model calls per 1,000 lines vs baseline"]
+  end
+
+  %% 1 inputs
+  BR_FEED --> BR_VALID
+  BR_PAYOUT -.-> BR_VALID
+  BR_AMEND --> BR_VALID
+  BR_VALID -- "fails" --> BR_FILE_REFUSE
+  BR_VALID -- "passes" --> BR_INGEST
+  BR_FILE_REFUSE --> BR_R_REFUSE
+  BR_INGEST -- "hash differs on a reconciled statement" --> BR_HASH
+
+  %% 2 normalise
+  BR_INGEST -- "bank_txn lines" --> BR_TRIG
+  BR_GL -- "ledger cash lines" --> BR_TRIG
+  BR_CARRY -- "known timing items suppress expected difference" --> BR_TRIG
+  BR_EVIN -- "expected credits and debits" --> BR_TRIG
+  BR_TRIG -- "intent opened" --> BR_NORM
+  BR_NORM --> BR_RESOLVE
+  BR_ALIAS --> BR_RESOLVE
+  BR_RESOLVE --> BR_XFER
+  BR_XFER -- "not a transfer" --> BR_ZERO
+  BR_ZERO --> BR_CUTOFF
+  BR_CUTOFF -- "in-period half" --> BR_BLOCKING
+  BR_CUTOFF -- "post-cutoff half" --> BR_NEXTP
+  BR_NEXTP -- "attempt to post into the locked month" --> BR_R_BLOCK
+  BR_XFER -- "pair found" --> BR_GXFER
+
+  %% 3 passes
+  BR_BLOCKING --> BR_P0
+  BR_CARRY -- "outstanding list" --> BR_P0
+  BR_P0 -- "remainder" --> BR_P1
+  BR_P1 -- "remainder" --> BR_P2
+  BR_P2 -- "remainder" --> BR_P3
+  BR_P3 -- "remainder" --> BR_P4
+  BR_P4 -- "remainder" --> BR_P5
+  BR_P5 -- "n gt 24: do not search, candidate list" --> BR_ESCQ
+  BR_P5 -- "remainder" --> BR_P6
+  BR_P6 -- "remainder" --> BR_P7
+  BR_CLEARING -.-> BR_P7
+  BR_P7 -- "remainder" --> BR_P8
+  BR_P8 -- "same ref" --> BR_DUP_TRUE
+  BR_DUP_TRUE -- "DUPLICATE_PAYMENT, enforced in the AP pack" --> BR_R_BLOCK
+  BR_P8 -- "distinct refs" --> BR_DUP_FALSE
+  BR_P8 --> BR_P9
+  BR_DUP_FALSE --> BR_P9
+  BR_P9 -- "all candidates from passes 0-8" --> BR_UNIQ
+  BR_UNIQ -- "second candidate" --> BR_ESCQ
+  BR_UNIQ -- "no candidate" --> BR_RES
+  BR_UNIQ -- "exactly one" --> BR_GROUP
+
+  %% 4 groups and proof
+  BR_SPECFIX --> BR_GROUP
+  BR_GROUP --> BR_GMANY
+  BR_GROUP --> BR_TIMING
+  BR_GROUP --> BR_ADJ
+  BR_GROUP --> BR_OPENEX
+  BR_TIMING --> BR_DIT
+  BR_TIMING --> BR_OSC
+  BR_TIMING --> BR_STALECHK
+  BR_GMANY --> BR_PROOF
+  BR_GXFER --> BR_PROOF
+  BR_DIT --> BR_PROOF
+  BR_OSC --> BR_PROOF
+  BR_STALECHK --> BR_PROOF
+  BR_ADJ --> BR_PROOF
+  BR_OPENEX --> BR_PROOF
+  BR_PROOF -. "uncleared timing items" .-> BR_CARRY_OUT
+  BR_CARRY_OUT -. "next period" .-> BR_CARRY
+  BR_PROOF == "groups + proof" ==> BR_PROPOSE
+
+  %% 5 residue
+  BR_RES -- "book-only before cutoff" --> BR_TIMING
+  BR_RES -- "bank-originated code" --> BR_A04
+  BR_RES --> BR_A10
+  BR_RES --> BR_A11
+  BR_RES --> BR_A17
+  BR_RES --> BR_A25
+  BR_RES --> BR_1240
+  BR_A04 --> BR_ADJ
+  BR_A10 --> BR_ROUTER
+  BR_A11 --> BR_ROUTER
+  BR_1240 --> BR_ROUTER
+  BR_A17 --> BR_ESCQ
+  BR_A25 --> BR_PLUG
+  BR_MC -- "not found" --> BR_MATERIAL
+  BR_MATERIAL -- "immaterial one-off" --> BR_OPENEX
+  BR_MATERIAL -- "recurring or sensitive" --> BR_PLUG
+  BR_PLUG --> BR_ESCQ
+
+  %% 6 model ports
+  BR_ROUTER --> BR_MA
+  BR_ROUTER --> BR_MB
+  BR_ROUTER --> BR_MC
+  BR_MA -- "cited alias" --> BR_PROPOSE
+  BR_MB -- "cited candidate" --> BR_PROPOSE
+  BR_MC -- "evidence found" --> BR_PROPOSE
+  BR_MNEVER -- "binds every port" --> BR_MB
+  BR_CODEONLY --> BR_MNEVER
+
+  %% 7 exit
+  BR_PROPOSE ==> BR_KERNEL
+  BR_KF --> BR_KERNEL
+  BR_KE --> BR_KERNEL
+  BR_KP --> BR_KERNEL
+  BR_KX --> BR_KERNEL
+  BR_KERNEL == "accept, covered by policy or fact" ==> BR_R_AUTO
+  BR_KERNEL -- "accept, material or new" --> BR_R_PROPOSE
+  BR_KERNEL -- "judgment left open" --> BR_R_ESCALATE
+  BR_KERNEL -- "no evidence to propose" --> BR_R_REFUSE
+  BR_KERNEL -- "hard rule hit" --> BR_R_BLOCK
+  BR_ESCQ --> BR_R_ESCALATE
+  BR_R_AUTO == "adjusting JEs only: timing items and matches write no JE" ==> BR_POST
+  BR_R_PROPOSE --> BR_CTRL
+  BR_CTRL == "approved" ==> BR_POST
+  BR_CTRL -- "above its authority or new kind" --> BR_SLACK
+  BR_SLACK == "human approves a kernel-accepted PROPOSE" ==> BR_POST
+  BR_R_ESCALATE --> BR_SLACK
+
+  %% 7b output cases
+  BR_R_AUTO --> BR_O_TIMING
+  BR_O_TIMING --> BR_O_SWEEP
+  BR_O_SWEEP --> BR_O_DESC
+  BR_O_DESC --> BR_O_LOG
+  BR_R_PROPOSE --> BR_O_FEE
+  BR_O_FEE --> BR_O_CHG
+  BR_O_CHG --> BR_O_SEM
+  BR_O_SEM --> BR_O_PAYOUT
+  BR_R_PROPOSE --> BR_O_GROUP
+  BR_O_GROUP --> BR_O_STALE
+  BR_O_STALE --> BR_O_REFUND
+  BR_R_ESCALATE --> BR_O_AMBIG
+  BR_O_AMBIG --> BR_O_PLUG
+  BR_R_ESCALATE --> BR_O_AMEND
+  BR_R_REFUSE --> BR_O_PLUG
+  BR_R_BLOCK --> BR_O_CUTOFF
+
+  %% 8 amended evidence
+  BR_POST -. "signed rec carries version_hash" .-> BR_HASH
+  BR_HASH -- "line diff: changed, added, removed bank_txn ids" --> BR_INVAL
+  BR_INVAL --> BR_REOPEN
+  BR_REOPEN --> BR_O_AMEND
+
+  %% 9 events, learning, metrics
+  BR_POST --> BR_BUS
+  BR_BUS --> BR_E_UNM
+  BR_BUS --> BR_E_REC
+  BR_DUP_TRUE -.-> BR_E_UNM
+  BR_SLACK -. "answer" .-> BR_L_ALIAS
+  BR_CTRL -. "approved fee lines, n gte 5" .-> BR_L_FEE
+  BR_L_ALIAS -. "approved alias" .-> BR_ALIAS
+  BR_L_FEE -. "approved fee-band policy" .-> BR_P4
+  BR_L_NEVER -. "filter before any rule is adopted" .-> BR_L_FEE
+  BR_BUS -. "rule hit counts per period" .-> BR_DECAY
+  BR_DECAY --> BR_M1
+  BR_E_REC --> BR_M1
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class BR_FEED,BR_AMEND,BR_EVIN src
+  class BR_TRIG,BR_INGEST,BR_NORM,BR_RESOLVE,BR_ZERO,BR_BLOCKING,BR_P0,BR_P1,BR_P2,BR_P3,BR_P4,BR_P5,BR_P6,BR_DUP_TRUE,BR_DUP_FALSE,BR_SPECFIX,BR_GMANY,BR_GXFER,BR_TIMING,BR_DIT,BR_OSC,BR_STALECHK,BR_ADJ,BR_OPENEX,BR_RES,BR_A04,BR_A10,BR_A11,BR_A17,BR_A25,BR_1240,BR_ROUTER,BR_CODEONLY,BR_PROPOSE,BR_ESCQ,BR_INVAL,BR_REOPEN,BR_E_UNM,BR_E_REC,BR_M1 code
+  class BR_MA,BR_MB,BR_MC,BR_CTRL model
+  class BR_SLACK human
+  class BR_GL,BR_CARRY,BR_CARRY_OUT,BR_ALIAS,BR_GROUP,BR_BUS store
+  class BR_VALID,BR_XFER,BR_CUTOFF,BR_P8,BR_P9,BR_UNIQ,BR_PROOF,BR_MATERIAL,BR_PLUG,BR_MNEVER,BR_KERNEL,BR_KF,BR_KE,BR_KP,BR_KX,BR_HASH,BR_L_NEVER gate
+  class BR_L_ALIAS,BR_L_FEE,BR_DECAY learn
+  class BR_POST ext
+  class BR_R_AUTO,BR_O_TIMING,BR_O_SWEEP,BR_O_DESC,BR_O_LOG rAuto
+  class BR_R_PROPOSE,BR_O_FEE,BR_O_CHG,BR_O_SEM,BR_O_GROUP,BR_O_STALE,BR_O_REFUND rPropose
+  class BR_R_ESCALATE,BR_O_AMBIG,BR_O_AMEND,BR_O_PLUG rEscalate
+  class BR_R_REFUSE,BR_FILE_REFUSE rRefuse
+  class BR_R_BLOCK,BR_O_CUTOFF,BR_NEXTP rBlock
+  class BR_PAYOUT,BR_P7,BR_CLEARING,BR_O_PAYOUT stretch

@@ -1,0 +1,236 @@
+flowchart TB
+
+subgraph O_SG1["1 · Decision trace capture (every step, stored per decision)"]
+  O_LOOP["Agent loop step<br/>Claude Agent SDK, in-process MCP tools<br/>keyed by intent_id + decision_id"]
+  O_C_TOOL["Tool call record<br/>tool name, args, result hash, latency ms<br/>e.g. mail.search, ledger.get_invoice"]
+  O_C_EVID["Evidence hit or miss<br/>trace_id + quote offset in the trace<br/>a miss records where it looked"]
+  O_C_MARK["Kernel mark<br/>cls F / E / P / J, check name,<br/>status pass / fail / judgment, refs"]
+  O_C_TIER["Router tier 0-3 and model id<br/>tokens in / out, cost_micros, latency ms,<br/>kernel-reject tier bumps counted"]
+  O_STEP[("decision_step (assumption: new table)<br/>decision_id, seq, kind, payload_json,<br/>tier, tokens, cost_micros, latency_ms")]
+  O_DEC[("decision<br/>mode live or replay, actor, autonomy_level,<br/>model_calls, cost_micros")]
+  O_WP[("workpaper<br/>marks_json, kernel_verdict,<br/>checkable_num, checkable_den")]
+  O_EVT[("event<br/>ts, topic, from_function, intent_id<br/>hand-offs and console feed")]
+  O_SUB_REPLAY["Replay substrate<br/>same rows with mode replay, as-of time T,<br/>no look-ahead"]
+  O_SUB_TRAIN["Training substrate (stretch, first cut)<br/>kernel-accepted traces + human corrections →<br/>open-weight tier 1 fine-tune (sheet 21) · never the<br/>115-case corpus or the answer key"]
+end
+
+subgraph O_SG2["2 · Console (Next.js polling SQLite)"]
+  O_POLL["Next.js console<br/>polls SQLite via better-sqlite3<br/>read-only except policy approval"]
+  O_V_DRIFT["Drift board<br/>9 comparators: open vs explained by a fact<br/>reads intent, fact, event"]
+  O_V_FUNC["Function board<br/>per pack: open intents, decisions, route mix<br/>reads intent, decision"]
+  O_V_RIPPLE["Intent ripple view<br/>one intent → every artifact, every function,<br/>same amounts (artifact by intent_id)"]
+  O_V_WP["Workpaper view<br/>four tick marks F · E · P · J per claim,<br/>quoted span highlighted in its source trace"]
+  O_V_TRACE["Trace timeline<br/>decision_step by seq: tool, evidence,<br/>mark, tier, dollars, latency"]
+  O_V_POLICY["Policy approval, pull-request style<br/>condition_json, action_json, intent_text,<br/>backtest_json vs Q2, approve or reject"]
+  O_V_ESC["Escalation queue<br/>escalation: asked_user, question_json,<br/>asked_at, answered_at, slack_ts"]
+  O_V_CLOSE["Close checklist: done and stuck<br/>checklist_item status, blocked_reason,<br/>depends_on_json"]
+  O_V_TIE["Tie-out sheet<br/>one row per balance-sheet account,<br/>green or honestly red"]
+  O_V_SCORE["Scoreboard by function<br/>counts with n, run 1 vs run 2"]
+  O_CTRL(["Human controller<br/>approves or rejects the policy PR"])
+  O_POLICY[("policy<br/>status proposed → approved,<br/>approved_by, approved_at, tier")]
+end
+
+subgraph O_SG3["3 · Scoreboard numbers (spec 13: counts, with n, real runs only)"]
+  O_SQL["Scoring queries in code (World lane)<br/>over decision, workpaper, escalation,<br/>decision_step, never a model"]
+  O_N_DEC["Per function: decisions<br/>count of decision rows by function"]
+  O_N_COMP["Per function: compiled or rule-based<br/>tier 0 policy or fact, model_calls = 0"]
+  O_N_FREE["Per function: free inference<br/>tiers 1-3, model_calls gte 1"]
+  O_N_ESC["Per function: escalated<br/>decisions with an escalation row, and why"]
+  O_N_WRONG{{"Wrong entries posted unreviewed<br/>posted with no approver and differs from key<br/>TARGET 0"}}
+  O_N_NOHUMAN["Overall: share of July decisions<br/>that ran with no human<br/>(no escalation, no human approver)"]
+  O_N_CHECK["Overall: checkable fraction<br/>sum checkable_num / sum checkable_den"]
+  O_N_QUEST["Overall: questions asked and<br/>repeat questions, run 1 vs run 2"]
+  O_N_COST["Overall: dollars and model calls<br/>per decision, by tier 0 / 1 / 2 / 3"]
+  O_N_BS["Overall: balance-sheet accounts<br/>tied to evidence, k of n"]
+end
+
+subgraph O_SG4["4 · Balance-sheet tie-out (each period end)"]
+  O_T_TB["ledger.trial_balance at period end<br/>each balance-sheet account, integer cents"]
+  O_T_SUB["AR and AP control accounts<br/>vs subledger open items by party"]
+  O_T_SCHED["Deferred revenue, prepaids, accruals<br/>vs schedule rows computed in code"]
+  O_T_BANK["Cash vs bank statement<br/>every bank_txn matched exactly once"]
+  O_T_EVID["Evidence behind the support<br/>workpaper ids, trace ids, artifact ids"]
+  O_T_GATE{{"GL balance minus support<br/>equals 0 cents?"}}
+  O_T_GREEN["GREEN<br/>tied, evidence linked"]
+  O_T_RED["HONESTLY RED<br/>difference shown in cents, never plugged,<br/>opens intent, checklist_item stuck"]
+end
+
+subgraph O_SG5["5 · Edge-case eval harness (score the route, not the match)"]
+  O_H_CORPUS[/"tests/edge-cases/office-of-the-cfo.md<br/>prose is ground truth, rubric in section J"/]
+  O_H_CSV[/"tests/cases.csv · 115 cases<br/>id, section, expected_route, route_qualifier,<br/>tier, pack, min_fixture, in_spec_scope, status"/]
+  O_H_SCOPE{{"in_spec_scope = yes?<br/>96 in, 19 out"}}
+  O_H_OOS1["Listed out of scope, not regressions<br/>E-01..E-10, H-5 multi-entity and treasury<br/>A-08, B-19, F-08 FX · B-12 tax · C-07"]
+  O_H_OOS2["A-07 / H-2 processor payout file<br/>UNDECIDED, is in the corpus min fixture"]
+  O_H_OOS3["H-6 evidence changed underneath you<br/>restaged single-entity on A-24<br/>(amended bank statement)"]
+  O_H_SEED["Seed fixture per case from the world file<br/>min_fixture = yes first: 22 case ids,<br/>then T1 → T2 → T3, status todo → seeded"]
+  O_H_TWICE["Learnable cases seeded twice<br/>before and after the human decides<br/>(G-05, G-07, H-3, Wayne short-pay)"]
+  O_H_FLAG{{"Falsifiable baseline flag set?<br/>deterministic tier disabled,<br/>everything through the model"}}
+  O_H_RUNT["Run tiered system<br/>router tiers 0-3, code matchers on,<br/>kernel on"]
+  O_H_RUNB["Run model-only baseline<br/>no tier 0, no code matchers,<br/>kernel still gates posting (assumption)"]
+  O_H_ACTUAL["Derive actual route in code<br/>AUTO no approver · PROPOSE approval row ·<br/>ESCALATE escalation row · REFUSE kind no_action,<br/>no proposal · BLOCK persisted rule name"]
+  O_H_CMP{{"actual route equals expected_route<br/>and route_qualifier holds?<br/>status → passing or failing"}}
+  O_H_INV["5 INVARIANT cases (e.g. G-09..G-12)<br/>asserted as vitest properties, not routed"]
+  O_M_RATE["Auto-clear rate, target 70-85%<br/>over July transaction volume, not the 115<br/>(only 18 corpus cases are AUTO)"]
+  O_M_PREC["Auto-clear precision, target 100%<br/>the number that must not move"]
+  O_M_FALSE{{"False auto-posts gt 0?<br/>actual AUTO where expected is not,<br/>or an auto-posted entry differs from key"}}
+  O_M_EXIT["Process exits non-zero<br/>CI red (G-10)"]
+  O_M_RECALL["Exception recall, target 100%<br/>seeded exceptions surfaced over seeded"]
+  O_M_COST["Cost per 1,000 transactions<br/>sum cost_micros, tiered vs baseline"]
+  O_H_RESULTS[/"tests/RESULTS.md<br/>5 headline numbers, tiered vs baseline table,<br/>known failures, run log per commit,<br/>unflattering rows kept"/]
+end
+
+subgraph O_SG6["6 · Agent-drift detection, three ways"]
+  O_D_K{{"Way 1 · Kernel on every entry<br/>no mark may fail, reject bumps a tier"}}
+  O_D_KREJ["Entry not posted<br/>router bumps one tier, then escalates"]
+  O_D_T{{"Way 2 · Tie-outs at each period end<br/>a red row opens an intent"}}
+  O_D_CI["Way 3 · Replay suite as CI<br/>trigger: any policy or prompt change,<br/>re-run Q2 decision points, answers hidden"]
+  O_D_RR[("replay_result<br/>agrees, diff_json, triage,<br/>agreement by decision kind with n")]
+  O_D_GATE{{"Q2 agreement lower than before<br/>for any decision kind?"}}
+  O_D_NOSHIP["Change does not ship"]
+  O_D_SHIP["Change ships, autonomy ladder recomputed<br/>gte 95% with n gte 5 and a covering policy or fact:<br/>auto-post · gte 80% post with review · else shadow"]
+end
+
+subgraph O_SG7["7 · Reproducibility"]
+  O_R_WORLD[/"seed (one integer) → world/northwind.json<br/>canonical world with planted drift,<br/>same seed gives the same world"/]
+  O_R_CMD["pnpm seed --target=system or all --reset<br/>idempotent: every record carries an fn: external id"]
+  O_R_MAN[("manifest<br/>world id → external id, per system")]
+  O_R_SYS["QuickBooks · HubSpot · Gmail · Slack ·<br/>bank · files, all restored to clean state"]
+  O_R_KEY[("Planted-drift answer key and human_outcome_json<br/>outside anything an agent tool can read")]
+  O_R_RUNS["July run 1, corrections compiled,<br/>July run 2 from the same seed"]
+  O_R_ART[/"Run artifacts committed per run<br/>scoreboard json, trace export, eval output"/]
+  O_R_LIM[/"README limitations section<br/>we built the company and its history,<br/>results with n, how to run"/]
+end
+
+O_LOOP --> O_C_TOOL --> O_C_EVID --> O_C_MARK --> O_C_TIER
+O_C_TOOL -- "append" --> O_STEP
+O_C_EVID -- "append" --> O_STEP
+O_C_MARK -- "marks_json" --> O_WP
+O_C_TIER -- "totals" --> O_DEC
+O_C_TIER -- "append" --> O_STEP
+O_LOOP -- "handoff topics" --> O_EVT
+O_STEP -. "replayed" .-> O_SUB_REPLAY
+O_STEP -. "accepted or human-corrected only" .-> O_SUB_TRAIN
+
+O_STEP --> O_POLL
+O_WP --> O_POLL
+O_DEC --> O_POLL
+O_EVT --> O_POLL
+O_POLL --> O_V_DRIFT
+O_POLL --> O_V_FUNC
+O_POLL --> O_V_RIPPLE
+O_POLL --> O_V_WP
+O_POLL --> O_V_TRACE
+O_POLL --> O_V_POLICY
+O_POLL --> O_V_ESC
+O_POLL --> O_V_CLOSE
+O_POLL --> O_V_TIE
+O_POLL --> O_V_SCORE
+O_V_POLICY --> O_CTRL
+O_CTRL -- "approve or reject, both recorded" --> O_POLICY
+
+O_V_SCORE -- "numbers from" --> O_SQL
+O_SQL --> O_N_DEC
+O_SQL --> O_N_COMP
+O_SQL --> O_N_FREE
+O_SQL --> O_N_ESC
+O_SQL --> O_N_WRONG
+O_SQL --> O_N_NOHUMAN
+O_SQL --> O_N_CHECK
+O_SQL --> O_N_QUEST
+O_SQL --> O_N_COST
+O_SQL --> O_N_BS
+
+O_V_TIE -- "rows from" --> O_T_TB
+O_T_TB --> O_T_SUB
+O_T_TB --> O_T_SCHED
+O_T_TB --> O_T_BANK
+O_T_SUB --> O_T_EVID
+O_T_SCHED --> O_T_EVID
+O_T_BANK --> O_T_EVID
+O_T_EVID --> O_T_GATE
+O_T_GATE -- "yes" --> O_T_GREEN
+O_T_GATE -- "no" --> O_T_RED
+O_T_GREEN -. "k of n" .-> O_N_BS
+
+O_H_CORPUS -- "labels" --> O_H_CSV
+O_H_CSV --> O_H_SCOPE
+O_H_SCOPE -- "no" --> O_H_OOS1
+O_H_SCOPE -- "undecided" --> O_H_OOS2
+O_H_SCOPE -- "restage" --> O_H_OOS3
+O_H_OOS3 -. "as A-24" .-> O_H_SEED
+O_H_SCOPE -- "yes" --> O_H_SEED
+O_H_SEED --> O_H_TWICE
+O_H_TWICE --> O_H_FLAG
+O_H_FLAG -- "off" --> O_H_RUNT
+O_H_FLAG -- "on" --> O_H_RUNB
+O_H_RUNT --> O_H_ACTUAL
+O_H_RUNB --> O_H_ACTUAL
+O_H_ACTUAL --> O_H_CMP
+O_H_CSV -- "INVARIANT rows" --> O_H_INV
+O_H_INV --> O_H_CMP
+O_H_CMP --> O_M_RATE
+O_H_CMP --> O_M_PREC
+O_H_CMP --> O_M_FALSE
+O_H_CMP --> O_M_RECALL
+O_H_CMP --> O_M_COST
+O_M_FALSE -- "yes" --> O_M_EXIT
+O_M_FALSE -- "0" --> O_H_RESULTS
+O_M_EXIT -- "still logged" --> O_H_RESULTS
+O_M_RATE --> O_H_RESULTS
+O_M_PREC --> O_H_RESULTS
+O_M_RECALL --> O_H_RESULTS
+O_M_COST --> O_H_RESULTS
+
+O_M_PREC -. "guarded live by" .-> O_D_K
+O_D_K -- "any fail" --> O_D_KREJ
+O_T_GATE -. "is way 2" .-> O_D_T
+O_D_T -- "red row" --> O_T_RED
+O_H_RESULTS -. "same CI job" .-> O_D_CI
+O_D_CI --> O_D_RR
+O_D_RR --> O_D_GATE
+O_D_GATE -- "yes" --> O_D_NOSHIP
+O_D_GATE -- "no" --> O_D_SHIP
+
+O_R_WORLD --> O_R_CMD
+O_R_CMD --> O_R_MAN
+O_R_MAN --> O_R_SYS
+O_R_WORLD -- "held apart" --> O_R_KEY
+O_R_SYS --> O_R_RUNS
+O_R_RUNS --> O_R_ART
+O_R_ART --> O_R_LIM
+O_N_WRONG -. "scored against" .-> O_R_KEY
+O_H_SEED -. "fixtures from" .-> O_R_WORLD
+O_D_SHIP -. "then" .-> O_R_RUNS
+O_N_QUEST -. "compares" .-> O_R_RUNS
+O_N_WRONG -. "same test as" .-> O_M_FALSE
+
+classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+class O_LOOP model
+class O_C_TOOL,O_C_EVID,O_C_MARK,O_C_TIER,O_POLL,O_V_DRIFT,O_V_FUNC,O_V_RIPPLE,O_V_WP,O_V_TRACE,O_V_POLICY,O_V_ESC,O_V_CLOSE,O_V_TIE,O_V_SCORE code
+class O_SQL,O_N_DEC,O_N_COMP,O_N_FREE,O_N_ESC,O_N_NOHUMAN,O_N_CHECK,O_N_QUEST,O_N_COST,O_N_BS code
+class O_T_TB,O_T_SUB,O_T_SCHED,O_T_BANK,O_T_EVID,O_T_GREEN code
+class O_H_SEED,O_H_TWICE,O_H_RUNT,O_H_ACTUAL,O_H_INV,O_M_RATE,O_M_PREC,O_M_RECALL,O_M_COST,O_R_CMD,O_R_RUNS,O_D_SHIP code
+class O_H_RUNB model
+class O_STEP,O_DEC,O_WP,O_EVT,O_POLICY,O_D_RR,O_R_MAN,O_R_KEY store
+class O_CTRL human
+class O_N_WRONG,O_T_GATE,O_H_SCOPE,O_H_FLAG,O_H_CMP,O_M_FALSE,O_D_K,O_D_T,O_D_GATE gate
+class O_T_RED,O_D_KREJ code
+class O_M_EXIT,O_D_NOSHIP gate
+class O_SUB_REPLAY,O_D_CI learn
+class O_H_CORPUS,O_H_CSV,O_R_WORLD src
+class O_R_SYS,O_H_RESULTS,O_R_ART,O_R_LIM ext
+class O_SUB_TRAIN,O_H_OOS1,O_H_OOS2,O_H_OOS3 stretch

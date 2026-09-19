@@ -1,0 +1,353 @@
+flowchart TB
+
+  subgraph IN_SG1["1 · The seeded world (test harness side, not product code)"]
+    IN_WORLD[/"world/northwind.json · generated from an integer seed<br/>ONE canonical world file: Northwind Systems, $60M<br/>SaaS, 12 customers, 10 vendors, Apr-Jun + July 2026<br/>every system tells the same story except planted drift"/]
+    IN_PLANT["planted drift written into the world file<br/>Initech $144k deal vs $129.6k invoices · Wayne<br/>$3,300 short · refund posted twice · $12.40 diff<br/>changed vendor bank details · departed employee"]
+    IN_ANSKEY[("planted-drift ANSWER KEY<br/>stored OUTSIDE anything an agent can read<br/>no tool, no table, no working-dir path reaches it")]
+    IN_SEEDCMD["pnpm seed --target=system or all --reset<br/>restores a clean state per target"]
+    IN_SEEDER["seeder per target (code), idempotent<br/>every record carries an fn: external id<br/>re-run = upsert on fn: id, never a duplicate<br/>verifies each write by id, not search (HubSpot lag)"]
+    IN_MANIFEST[("seed manifest<br/>world id → external id per target system<br/>+ world recorded_time per record")]
+    IN_CLOCKGAP["brief finding: THREE CLOCKS<br/>Q2 is seeded today, so QBO CreateTime, HubSpot<br/>createdate, Increase created_at all say 19 Sep 2026<br/>→ naive recorded_time makes replay return nothing"]
+  end
+
+  subgraph IN_SG2["2 · Connectors: pull loop + persisted cursor each · no public URL anywhere · never write domain tables"]
+    subgraph IN_SG2A["2a · QuickBooks Online sandbox"]
+      IN_QBO_SRC[/"QuickBooks Online sandbox company<br/>sandbox-quickbooks.api.intuit.com<br/>the real ledger holding the seeded Q2 history"/]
+      IN_QBO_AUTH["OAuth 2.0 auth-code, client id and secret<br/>access token ~1h, rolling refresh token<br/>(lifetimes UNVERIFIED) · blocked on Intuit app"]
+      IN_QBO_CDC["POLL Change Data Capture: GET /v3/company/realm/cdc<br/>entities list, changedSince = cursor · 30-day lookback,<br/>1,000 objects per response, 500 req/min · webhooks<br/>not needed (public HTTPS, ids only, format UNVERIFIED)"]
+      IN_QBO_OBJ["entities: Customer Vendor Invoice Payment<br/>CreditMemo Bill BillPayment JournalEntry Deposit<br/>(+ Item, Attachable) · reports TB, aged AR / AP<br/>pulled as CONTROL TOTALS"]
+      IN_QBO_ECHO{{"echo suppression on ingest<br/>fn: external id maps to an artifact row?<br/>yes → our own mirror write → skip as a source"}}
+    end
+    subgraph IN_SG2B["2b · Bank feed"]
+      IN_BANK_SRC[/"Increase sandbox · sandbox.increase.com<br/>Bearer API key · Idempotency-Key header<br/>decision pending: signup over 30 min →<br/>bank feed is the file only, same tool"/]
+      IN_BANK_SIM["LIVE July lines via simulations<br/>POST /simulations/inbound_ach_transfers<br/>POST /simulations/inbound_wire_transfers<br/>(debtor_name, unstructured_remittance_information)"]
+      IN_BANK_POLL["poll GET /events, created_at.after = cursor<br/>categories transaction.created, inbound_ach_transfer,<br/>inbound_wire_transfer · cursor pages, max 100<br/>amount already integer minor units"]
+      IN_BANK_FILE[/"Q2 HISTORY from a CSV / OFX file behind the<br/>same bank.* tool: posted date, value date,<br/>descriptor, amount, running balance<br/>opening and closing balance = control total"/]
+      IN_BANK_QUIRK["quirk: simulations post NOW, one timestamp<br/>backdating Q2 UNVERIFIED and unlikely → file<br/>file cursor = sha256: re-drop is a no-op,<br/>changed hash = new version (A-24)"]
+    end
+    subgraph IN_SG2C["2c · HubSpot test account"]
+      IN_HS_SRC[/"HubSpot developer test account<br/>expires after 90 idle days<br/>static bearer token, legacy private app"/]
+      IN_HS_POLL["poll CRM search sorted on hs_lastmodifieddate<br/>5 req/s · 200 per page · 10,000 results cap<br/>webhooks skipped (need public URL)<br/>/crm/v3 vs date-versioned path UNVERIFIED"]
+      IN_HS_OBJ["companies · deals (amount, closedate, stage,<br/>owner) · notes / engagements · owners ·<br/>associations"]
+    end
+    subgraph IN_SG2D["2d · Gmail"]
+      IN_GM_SRC[/"Gmail test mailbox<br/>CEO side-letter threads, remittance advices,<br/>vendor bill PDFs, dispute, bank-details phish, noise"/]
+      IN_GM_AUTH["OAuth user consent<br/>gmail.readonly for search and read<br/>gmail.insert or gmail.modify to seed<br/>(existing client is compose-only → re-consent)"]
+      IN_GM_SEED["backdated seeding: users.messages.insert<br/>internalDateSource = dateHeader<br/>the ONE source that backdates natively<br/>fallback: send between two accounts, dated today"]
+      IN_GM_SYNC["incremental: users.history.list(startHistoryId)<br/>404 on too-old id → full resync<br/>(messages.list + batched messages.get)<br/>inserts emit history? UNVERIFIED → full sync after seed"]
+      IN_GM_OBJ["messages: headers, body, internalDate, threadId,<br/>labels · attachments: bill PDFs, remittance advices<br/>quota 6,000 units/min: get 20, list 5, insert 25"]
+    end
+    subgraph IN_SG2E["2e · Slack"]
+      IN_SL_SRC[/"Slack workspace<br/>channels: finance · deals · cs-escalations<br/>account owners seeded as users · bot token xoxb-<br/>+ app-level token xapp- (connections:write)"/]
+      IN_SL_SOCK["SOCKET MODE: apps.connections.open → WebSocket<br/>no public URL or tunnel needed (brief correction<br/>to sandboxes-and-connectors.md) · carries events<br/>AND block_actions · ack envelope_id · dedupe event_id"]
+      IN_SL_OBJ["messages and thread replies · HR departure notice<br/>users → person nodes · button clicks on escalations<br/>backfill: conversations.history + replies (Tier 3)<br/>search.messages UNVERIFIED → index locally"]
+    end
+    subgraph IN_SG2F["2f · Files"]
+      IN_FL_SRC[/"contracts PDF · board consent ·<br/>policy memo markdown · Q2 close workbook ·<br/>grants ledger"/]
+      IN_FL_SCAN["directory scan, sha256 per file = cursor<br/>whole file = one trace + child traces:<br/>clause, grant row, workbook cell range, memo section"]
+      IN_FL_MEMO["policy memo sections → company-tier<br/>POLICY CANDIDATES (materiality $500,<br/>approval matrix, accrual rules)"]
+      IN_FL_WB{{"Q2 workbook: cells recording the human outcome →<br/>human_outcome_json, scoring only, no agent tool<br/>other cells: workbook.lookup (spec 8), as-of T in replay"}}
+    end
+    subgraph IN_SG2G["2g · Processor payout file (STRETCH)"]
+      IN_PP_SRC[/"processor payout file<br/>STRETCH: undecided scope (A-07 / H-2)<br/>Stripe integration itself is out of scope"/]
+      IN_PP_OBJ["payout → charges, fees, refunds<br/>one deposit = three rows: bank at net,<br/>revenue at gross, fee as expense · file sha256"]
+    end
+    subgraph IN_SG2H["2h · Supplier portal (STRETCH)"]
+      IN_PT_SRC[/"supplier portal with no API (H-4 / B-25)<br/>STRETCH · hackathon target: local seeded mini-site"/]
+      IN_PT_AUTO["browser automation: Playwright, persistent<br/>storageState · on demand via portal.fetch(vendor, po)<br/>runs OUTSIDE the agent sandbox · domain allow-list<br/>read-only"]
+      IN_PT_OBJ["delivery note: DOM text + SCREENSHOT<br/>every page read is screenshotted and hashed<br/>into a trace"]
+    end
+    IN_RAWITEM["common contract · stage 0-1<br/>RawItem: source_system, source_id, fetched_at,<br/>bytes, content_hash, source_event_time,<br/>source_recorded_time"]
+    IN_RAWBLOB[("raw_blob(hash, bytes, mime)<br/>byte-exact, immutable, sha256<br/>(proposed table)")]
+    IN_SHAPE{{"shape of the item?<br/>tabular file · API JSON record · unstructured"}}
+  end
+
+  subgraph IN_SG3["3 · Structural validation BEFORE content (code) · stage 2-3"]
+    IN_V_HDR{{"F-12 malformed export<br/>header present and not blank · no merged cells ·<br/>no footer / total row"}}
+    IN_V_FIELDS{{"F-01 field count of EVERY row eq header count<br/>unquoted 1,240.00 splits into two fields<br/>(would read twelve hundred as 1)"}}
+    IN_V_DATE{{"F-02 date format inferred from the WHOLE file<br/>any day gt 12 decides DD/MM vs MM/DD<br/>still undecidable → refuse the file, not half"}}
+    IN_V_SIGN["F-04 sign convention DETECTED from the data<br/>(debits negative or positive), never assumed"]
+    IN_V_CTRL{{"F-04 assert against a control total<br/>opening + sum of lines eq statement closing balance<br/>QBO rows vs TB / aged report total"}}
+    IN_V_API{{"API JSON records: zod schema per entity<br/>required ids, amounts, dates present and typed"}}
+    IN_V_NORM["F-13 normalise: NFKC, NBSP and trailing-tab strip,<br/>encoding detected, case-fold for KEYS only<br/>raw_value kept beside norm_value as evidence"]
+    IN_REF_ROW(("REFUSE row<br/>stated reason"))
+    IN_REF_FILE(("REFUSE file<br/>stated reason"))
+    IN_REFLOG[("ingest_run.status = refused, reason text stored<br/>event topic ingest.refused → console<br/>file held incomplete: nothing half-loaded")]
+  end
+
+  subgraph IN_SG4["4 · Canonicalisation (code) · stage 4-5"]
+    IN_C_MONEY["F-07 amounts: decimal string → INTEGER MINOR<br/>UNITS, never a float (0.1 + 0.2 problem)<br/>F-08 currency exponent: out of scope for 24h,<br/>USD exponent 2 asserted, non-USD refused"]
+    IN_C_DATES["F-03 bank lines store BOTH posted_date and<br/>value_date · match on value, report on posted<br/>(bank_txn +posted_date, value_date proposed)"]
+    IN_C_IDEM{{"content_hash = sha256 of the canonical record<br/>idempotency key (source_system, source_id)<br/>already in trace?"}}
+    IN_C_DEDUPE(("AUTO<br/>dedupe no-op"))
+    IN_C_TYPED["typed domain rows (spec §7 world tables)<br/>customer vendor contract invoice po receipt<br/>bill bank_txn payroll_run"]
+  end
+
+  subgraph IN_SG5["5 · Extraction (model, unstructured only) · stage 6-7"]
+    IN_X_OCR["PDF bills · remittance advices · contract terms ·<br/>board consents · email bodies<br/>text layer, else OCR with per-page confidence<br/>F-14: the system must KNOW its confidence is low"]
+    IN_X_MODEL["small model tier: claude-haiku-4-5<br/>→ JSON against a zod schema<br/>quoted span + confidence PER FIELD"]
+    IN_X_EMPTY{{"F-10 guard: finish_reason eq length<br/>or empty content → raise<br/>never render an empty model response"}}
+    IN_X_QUOTE{{"every quoted span is a substring<br/>of the raw trace text"}}
+    IN_X_HDRLINES{{"B-15 free validator: header total eq sum of<br/>line items, integer cents, computed in code<br/>(1,250.00 vs 1,205.00 → never accept)"}}
+    IN_X_WINDOW{{"F-09 date sanity: every extracted date inside<br/>the open fiscal window or the contract term<br/>(model invents 2024 in a 2026 close)"}}
+    IN_X_CONF["extraction_confidence on the trace<br/>= min(field confidence, OCR confidence)<br/>a checklist score, not a model self-report (G-11)"]
+    IN_X_LOW{{"below the configured confidence floor?"}}
+    IN_X_CAP["confidence CAPS the route: forbids the router<br/>tier 0 no-model path and forbids AUTO<br/>kernel E marks read the same field"]
+    IN_REF_X(("REFUSE<br/>stated reason"))
+    IN_ESC_X(("ESCALATE<br/>F-14"))
+  end
+
+  subgraph IN_SG6["6 · Entity resolution · stage 8 · PROPOSED SCHEMA ADDITION (spec §7 has customer + vendor only, no employee, no alias)"]
+    IN_E_PARTY[("party · proposed<br/>id (stable key), kind: customer / vendor / employee<br/>/ bank / processor, legal_name, norm_name,<br/>status, merged_into_party_id")]
+    IN_E_EXTID[("party_external_id · proposed<br/>party_id, system, external_id: QBO Id, HubSpot id,<br/>email domain, ACH originator id, debtor acct hash")]
+    IN_E_ALIAS[("party_alias · proposed<br/>party_id, alias_raw, alias_norm, source,<br/>first_seen, last_seen, confidence, confirmed_by")]
+    IN_E_LINK[("party_link · proposed<br/>parent_party_id, child_party_id,<br/>kind: parent_of / pays_for / same_group,<br/>valid_from, valid_to")]
+    IN_E_R1{{"rung 1 · external id hit<br/>(party_external_id)"}}
+    IN_E_R2{{"rung 2 · structured identifier<br/>ACH originator id, wire debtor account, sender<br/>domain, invoice number in remittance text"}}
+    IN_E_R3{{"rung 3 · exact hit on alias_norm<br/>A-09 / H-3: GUSTO PAYROLL and GUSTO TAX<br/>COLLECTION = two aliases of ONE party_id"}}
+    IN_E_R4["rung 4 · fuzzy on norm_name<br/>token-set + edit distance<br/>yields CANDIDATES only"]
+    IN_E_R5["rung 5 · model tier chooses among the<br/>candidates or abstains (A-11 no lexical overlap)"]
+    IN_E_R6(("ESCALATE<br/>unresolved party"))
+    IN_E_STAMP["stamp trace: party_id, party_match_method,<br/>party_match_confidence · first hit wins<br/>rungs 4-5 can NEVER yield AUTO"]
+    IN_E_PAYS{{"cash from parent P on subsidiary S invoice<br/>pays_for link covers the date? else escalate,<br/>and the answer creates the link"}}
+    IN_E_DUP{{"B-18 duplicate vendor detection<br/>block on norm_name stem, then compare bank<br/>fingerprint, tax id, address, domain"}}
+    IN_E_MERGE(("ESCALATE<br/>vendor merge"))
+    IN_E_HUMAN(["Human confirms the match<br/>or approves the merge (Slack)"])
+    IN_E_LEARN["confirmed match → new party_alias row<br/>(confirmed_by) → next month resolves at rung 3<br/>approved merge sets merged_into_party_id, no deletes"]
+  end
+
+  subgraph IN_SG7["7 · As-of trace store · stage 9 commit"]
+    IN_T_COMMIT["COMMIT in ONE SQLite transaction<br/>trace rows + domain rows + graph edges +<br/>cursor advance + event topic ingest.committed"]
+    IN_T_TRACE[("trace · spec §7<br/>id, source, kind, external_id, event_time,<br/>recorded_time, party_id, payload_json")]
+    IN_T_PLUS["proposed trace additions<br/>ingested_at · version · content_hash ·<br/>supersedes_trace_id · extraction_confidence ·<br/>party_match fields · raw_blob_hash · visible_to_json"]
+    IN_T_CLK1["clock 1 · event_time<br/>when it happened in the world: TxnDate, email<br/>Date header, value date · event_time lt recorded_time<br/>is normal (July bill arriving 8 Aug) → cutoff checks"]
+    IN_T_CLK2["clock 2 · recorded_time<br/>when the COMPANY could first have known it<br/>seeded sources: read from the manifest by the ingestion<br/>layer, never an agent · Gmail: internalDate natively"]
+    IN_T_CLK3["clock 3 · ingested_at (proposed)<br/>when Footnote pulled it, wall clock"]
+    IN_T_ASOF["as-of read: latest version per<br/>(source_system, source_id) with recorded_time lte T<br/>every read tool takes T · live passes now,<br/>replay passes decision_point.decided_at"]
+    IN_T_KNOW["what did the human know, and when<br/>traces with recorded_time lte decided_at,<br/>filtered by visible_to_json (a private mailbox<br/>is not shared knowledge)"]
+    IN_T_GUARD{{"NO-LOOK-AHEAD guard for replay, enforced twice<br/>1 SQL filter in the tool layer: recorded_time lte T<br/>2 kernel E: trace recorded by T"}}
+  end
+
+  subgraph IN_SG8["8 · Evidence versioning · stage 10 (F-06 · A-24 · H-6)"]
+    IN_R_NEWVER["same key, DIFFERENT content_hash<br/>→ new trace version n+1, supersedes_trace_id set<br/>old version kept immutable, never overwritten"]
+    IN_R_WALK["walk EVIDENCED_BY edges from the OLD version<br/>find decisions, workpapers and facts citing it"]
+    IN_R_INVAL["invalidate downstream state<br/>workpaper stale · decision needs_rerun ·<br/>fact status → candidate (sheet 05): stops suppressing drift"]
+    IN_R_EVENT["emit event topic evidence.reversioned<br/>payload: old and new trace ids, affected<br/>decision ids, intent ids"]
+    IN_R_REOPEN["reopen: intent reopened or new intent<br/>reconciliation marked stale and re-run<br/>close cannot lock with stale workpapers"]
+    IN_R_ESC(("ESCALATE<br/>evidence changed"))
+  end
+
+  subgraph IN_SG9["9 · Run safety"]
+    IN_S_RUN[("ingest_run · proposed<br/>id, connector, cursor_before, cursor_after,<br/>stage, status, counts_json, started_at, finished_at")]
+    IN_S_CURSOR[("sync cursor per connector · read at stage 0<br/>QBO changedSince · Gmail historyId · Increase<br/>event cursor · HubSpot hs_lastmodifieddate ·<br/>Slack ts · file sha256")]
+    IN_S_BACKOFF["rate limits and backoff<br/>429 → exponential backoff with jitter, honour<br/>Retry-After · per-connector token bucket<br/>(QBO 500 req/min, HubSpot search 5 req/s)"]
+    IN_S_CKPT{{"F-11 checkpoint and resume<br/>cursor advances ONLY inside the commit txn<br/>crash → rollback → resume from cursor_before"}}
+    IN_S_PARTIAL{{"any ingest_run for the period not finished?<br/>→ close checklist item blocked<br/>never present a partial close as finished"}}
+    IN_S_ESC(("ESCALATE<br/>F-11"))
+    IN_S_HEALTH["connector health on the console<br/>last sync, cursor lag, refused count,<br/>429 count, token expiry, resync in progress"]
+  end
+
+  subgraph IN_SG10["10a · Outbound: what flows on"]
+    IN_O_EVENT[("event · topic ingest.committed<br/>payload: trace ids, party ids and accounts touched")]
+    IN_TO_GRAPH["to context graph (diagram 02)"]
+    IN_TO_DRIFT["to drift monitor (diagram 03)"]
+  end
+
+  subgraph IN_SG10B["10b · One-way QuickBooks MIRROR coming back from posting (echo-suppressed on ingest)"]
+    IN_FROM_POST["from post and ripple (diagram 04)"]
+    IN_M_MIRROR["ONE-WAY QuickBooks mirror writer (code)<br/>accepted gl_entry → QBO object with fn: id<br/>local ledger stays the truth, our own writes<br/>are never read back as a source"]
+    IN_M_CM["quirk: credit memo applied via a Payment<br/>with TotalAmt 0 whose lines link BOTH the<br/>Invoice and the CreditMemo (no apply call)"]
+    IN_M_ATT["quirk: workpaper attached via Attachable<br/>multipart upload, AttachableRef.EntityRef<br/>type + value"]
+    IN_M_DATE["quirk: TxnDate backdated to the entry date<br/>PrivateNote carries the decision id<br/>SyncToken optimistic lock on update"]
+    IN_M_MAIL["quirk: sandbox sends at most 40 emails a day<br/>→ customer mail goes through Gmail"]
+    IN_M_QBO["QuickBooks Online sandbox objects<br/>JournalEntry · CreditMemo · Payment · Attachable"]
+    IN_M_ART[("artifact<br/>id, decision_id, intent_id, function, system,<br/>external_id, kind, created_at, unwound_at")]
+  end
+
+  %% 1 seeded world
+  IN_PLANT --> IN_WORLD
+  IN_PLANT -- "key written at generation time" --> IN_ANSKEY
+  IN_WORLD --> IN_SEEDER
+  IN_SEEDCMD --> IN_SEEDER
+  IN_SEEDER -- "confirmed external id" --> IN_MANIFEST
+  IN_CLOCKGAP -- "rule: seeder writes world recorded_time" --> IN_MANIFEST
+
+  %% seeding each target
+  IN_SEEDER -- "seed, backdated TxnDate" --> IN_QBO_SRC
+  IN_SEEDER -- "Q2 file + July simulations" --> IN_BANK_SRC
+  IN_SEEDER -- "seed" --> IN_HS_SRC
+  IN_SEEDER -- "seed" --> IN_GM_SRC
+  IN_SEEDER -- "seed" --> IN_SL_SRC
+  IN_SEEDER -- "write files" --> IN_FL_SRC
+
+  %% 2 lanes
+  IN_QBO_SRC --> IN_QBO_AUTH --> IN_QBO_CDC --> IN_QBO_OBJ --> IN_QBO_ECHO
+  IN_BANK_SRC --> IN_BANK_SIM --> IN_BANK_POLL
+  IN_BANK_SRC --> IN_BANK_FILE --> IN_BANK_QUIRK
+  IN_BANK_SIM -. "cannot backdate" .-> IN_BANK_QUIRK
+  IN_HS_SRC --> IN_HS_POLL --> IN_HS_OBJ
+  IN_GM_SRC --> IN_GM_AUTH --> IN_GM_SEED --> IN_GM_SYNC --> IN_GM_OBJ
+  IN_SL_SRC --> IN_SL_SOCK --> IN_SL_OBJ
+  IN_FL_SRC --> IN_FL_SCAN --> IN_FL_MEMO
+  IN_FL_SCAN --> IN_FL_WB
+  IN_PP_SRC --> IN_PP_OBJ
+  IN_PT_SRC --> IN_PT_AUTO --> IN_PT_OBJ
+
+  IN_QBO_ECHO -- "not ours" --> IN_RAWITEM
+  IN_BANK_POLL --> IN_RAWITEM
+  IN_BANK_QUIRK --> IN_RAWITEM
+  IN_HS_OBJ --> IN_RAWITEM
+  IN_GM_OBJ --> IN_RAWITEM
+  IN_SL_OBJ --> IN_RAWITEM
+  IN_FL_MEMO --> IN_RAWITEM
+  IN_FL_WB --> IN_RAWITEM
+  IN_PP_OBJ -.-> IN_RAWITEM
+  IN_PT_OBJ -.-> IN_RAWITEM
+  IN_RAWITEM -- "stage 1 land raw" --> IN_RAWBLOB
+  IN_RAWBLOB --> IN_SHAPE
+
+  %% 3 structural validation
+  IN_SHAPE -- "tabular file" --> IN_V_HDR
+  IN_SHAPE -- "API JSON" --> IN_V_API
+  IN_SHAPE -- "unstructured" --> IN_X_OCR
+  IN_V_HDR -- "ok" --> IN_V_FIELDS
+  IN_V_HDR -- "fail" --> IN_REF_FILE
+  IN_V_FIELDS -- "all rows ok" --> IN_V_DATE
+  IN_V_FIELDS -- "mismatch: say which row and why" --> IN_REF_ROW
+  IN_V_DATE -- "decided" --> IN_V_SIGN
+  IN_V_DATE -- "undecidable" --> IN_REF_FILE
+  IN_V_SIGN --> IN_V_CTRL
+  IN_V_CTRL -- "ties" --> IN_V_NORM
+  IN_V_CTRL -- "mismatch" --> IN_REF_FILE
+  IN_V_API -- "valid" --> IN_V_NORM
+  IN_V_API -- "invalid" --> IN_REF_ROW
+  IN_REF_ROW --> IN_REFLOG
+  IN_REF_FILE --> IN_REFLOG
+
+  %% 4 canonicalisation
+  IN_V_NORM --> IN_C_MONEY --> IN_C_DATES --> IN_C_IDEM
+  IN_C_IDEM -- "F-05 same key, same hash" --> IN_C_DEDUPE
+  IN_C_IDEM -- "new key: version 1" --> IN_C_TYPED
+  IN_C_IDEM -- "same key, different hash" --> IN_R_NEWVER
+
+  %% 5 extraction
+  IN_X_OCR --> IN_X_MODEL --> IN_X_EMPTY
+  IN_X_EMPTY -- "has content" --> IN_X_QUOTE
+  IN_X_EMPTY -- "empty or truncated" --> IN_REF_X
+  IN_X_QUOTE -- "ok" --> IN_X_HDRLINES
+  IN_X_QUOTE -- "quote not in source" --> IN_REF_X
+  IN_X_HDRLINES -- "ties" --> IN_X_WINDOW
+  IN_X_HDRLINES -- "header ne lines" --> IN_REF_X
+  IN_X_WINDOW -- "inside window" --> IN_X_CONF
+  IN_X_WINDOW -- "outside window" --> IN_REF_X
+  IN_X_CONF --> IN_X_LOW
+  IN_X_LOW -- "yes" --> IN_X_CAP
+  IN_X_CAP --> IN_ESC_X
+  IN_X_LOW -- "no: extracted fields join the pipeline" --> IN_C_MONEY
+  IN_X_CAP -. "trace still stored, flagged" .-> IN_C_MONEY
+  IN_REF_X --> IN_REFLOG
+
+  %% 6 entity resolution
+  IN_C_TYPED --> IN_E_R1
+  IN_E_R1 -. "lookup" .-> IN_E_EXTID
+  IN_E_R1 -- "miss" --> IN_E_R2
+  IN_E_R2 -- "miss" --> IN_E_R3
+  IN_E_R3 -. "lookup" .-> IN_E_ALIAS
+  IN_E_R3 -- "miss" --> IN_E_R4
+  IN_E_R4 -- "candidates" --> IN_E_R5
+  IN_E_R4 -- "no candidates" --> IN_E_R6
+  IN_E_R5 -- "abstains" --> IN_E_R6
+  IN_E_R1 -- "hit" --> IN_E_STAMP
+  IN_E_R2 -- "hit" --> IN_E_STAMP
+  IN_E_R3 -- "hit" --> IN_E_STAMP
+  IN_E_R5 -- "chosen, capped: never AUTO" --> IN_E_STAMP
+  IN_E_R6 -- "party_id null, flagged" --> IN_E_STAMP
+  IN_E_EXTID --> IN_E_PARTY
+  IN_E_ALIAS --> IN_E_PARTY
+  IN_E_LINK --> IN_E_PARTY
+  IN_E_PAYS -. "lookup" .-> IN_E_LINK
+  IN_E_STAMP --> IN_E_PAYS
+  IN_E_PAYS -- "no covering link: ESCALATE, the answer creates it" --> IN_E_HUMAN
+  IN_E_STAMP -- "new or changed vendor" --> IN_E_DUP
+  IN_E_DUP -- "probable duplicate" --> IN_E_MERGE
+  IN_E_R6 --> IN_E_HUMAN
+  IN_E_MERGE --> IN_E_HUMAN
+  IN_E_HUMAN -. "answer" .-> IN_E_LEARN
+  IN_E_LEARN -. "asked once" .-> IN_E_ALIAS
+
+  %% 7 trace store
+  IN_E_PAYS --> IN_T_COMMIT
+  IN_E_DUP -- "no duplicate" --> IN_T_COMMIT
+  IN_T_COMMIT --> IN_T_TRACE
+  IN_T_PLUS --> IN_T_TRACE
+  IN_T_CLK1 --> IN_T_TRACE
+  IN_T_CLK2 --> IN_T_TRACE
+  IN_T_CLK3 --> IN_T_TRACE
+  IN_MANIFEST -. "world recorded_time per fn: id" .-> IN_T_CLK2
+  IN_T_TRACE --> IN_T_ASOF
+  IN_T_ASOF --> IN_T_KNOW
+  IN_T_ASOF --> IN_T_GUARD
+
+  %% 8 evidence versioning
+  IN_R_NEWVER --> IN_R_WALK
+  IN_R_NEWVER -- "new version also committed" --> IN_T_COMMIT
+  IN_R_WALK -- "each citing row (none → nothing to reopen)" --> IN_R_INVAL
+  IN_R_INVAL --> IN_R_EVENT --> IN_R_REOPEN --> IN_R_ESC
+
+  %% 9 run safety
+  IN_T_COMMIT -- "cursor advance in the same txn" --> IN_S_CKPT
+  IN_S_CKPT --> IN_S_CURSOR
+  IN_S_CKPT --> IN_S_RUN
+  IN_S_BACKOFF --> IN_S_RUN
+  IN_REFLOG --> IN_S_RUN
+  IN_S_RUN --> IN_S_PARTIAL
+  IN_S_PARTIAL -- "yes" --> IN_S_ESC
+  IN_S_RUN --> IN_S_HEALTH
+
+  %% 10 outbound and mirror
+  IN_T_COMMIT --> IN_O_EVENT
+  IN_O_EVENT -- "traces, parties, edges" --> IN_TO_GRAPH
+  IN_O_EVENT -- "stage 11: run comparators on parties touched" --> IN_TO_DRIFT
+  IN_R_EVENT -. "evidence.reversioned" .-> IN_TO_DRIFT
+  IN_T_GUARD -. "as-of reads serve graph and replay" .-> IN_TO_GRAPH
+  IN_FROM_POST == "accepted gl_entry" ==> IN_M_MIRROR
+  IN_M_MIRROR --> IN_M_CM
+  IN_M_MIRROR --> IN_M_ATT
+  IN_M_MIRROR --> IN_M_DATE
+  IN_M_MIRROR --> IN_M_MAIL
+  IN_M_CM ==> IN_M_QBO
+  IN_M_ATT --> IN_M_QBO
+  IN_M_DATE ==> IN_M_QBO
+  IN_M_QBO -- "external_id recorded" --> IN_M_ART
+  IN_M_QBO -. "mirror writes land in the same sandbox company" .-> IN_QBO_SRC
+  IN_M_MAIL -- "Gmail message id" --> IN_M_ART
+  IN_M_ART -. "lookup by fn: id: is this write ours?" .-> IN_QBO_ECHO
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class IN_WORLD,IN_QBO_SRC,IN_BANK_SRC,IN_BANK_FILE,IN_HS_SRC,IN_GM_SRC,IN_SL_SRC,IN_FL_SRC,IN_FROM_POST src
+  class IN_PLANT,IN_SEEDCMD,IN_SEEDER,IN_CLOCKGAP,IN_QBO_AUTH,IN_QBO_CDC,IN_QBO_OBJ,IN_BANK_SIM,IN_BANK_POLL,IN_BANK_QUIRK,IN_HS_POLL,IN_HS_OBJ,IN_GM_AUTH,IN_GM_SEED,IN_GM_SYNC,IN_GM_OBJ,IN_SL_SOCK,IN_SL_OBJ,IN_FL_SCAN,IN_FL_MEMO,IN_RAWITEM code
+  class IN_V_SIGN,IN_V_NORM,IN_C_MONEY,IN_C_DATES,IN_C_TYPED,IN_X_OCR,IN_X_CONF,IN_X_CAP,IN_E_R4,IN_E_STAMP,IN_T_COMMIT,IN_T_PLUS,IN_T_CLK1,IN_T_CLK2,IN_T_CLK3,IN_T_ASOF,IN_T_KNOW,IN_R_NEWVER,IN_R_WALK,IN_R_INVAL,IN_R_EVENT,IN_R_REOPEN,IN_S_BACKOFF,IN_S_HEALTH,IN_TO_GRAPH,IN_TO_DRIFT,IN_M_MIRROR,IN_M_CM,IN_M_ATT,IN_M_DATE,IN_M_MAIL code
+  class IN_X_MODEL,IN_E_R5 model
+  class IN_E_HUMAN human
+  class IN_ANSKEY,IN_MANIFEST,IN_RAWBLOB,IN_REFLOG,IN_E_PARTY,IN_E_EXTID,IN_E_ALIAS,IN_E_LINK,IN_T_TRACE,IN_S_RUN,IN_S_CURSOR,IN_O_EVENT,IN_M_ART store
+  class IN_QBO_ECHO,IN_FL_WB,IN_SHAPE,IN_V_HDR,IN_V_FIELDS,IN_V_DATE,IN_V_CTRL,IN_V_API,IN_C_IDEM,IN_X_EMPTY,IN_X_QUOTE,IN_X_HDRLINES,IN_X_WINDOW,IN_X_LOW,IN_E_R1,IN_E_R2,IN_E_R3,IN_E_PAYS,IN_E_DUP,IN_T_GUARD,IN_S_CKPT,IN_S_PARTIAL gate
+  class IN_E_LEARN learn
+  class IN_M_QBO ext
+  class IN_C_DEDUPE rAuto
+  class IN_E_R6,IN_E_MERGE,IN_ESC_X,IN_R_ESC,IN_S_ESC rEscalate
+  class IN_REF_ROW,IN_REF_FILE,IN_REF_X rRefuse
+  class IN_PP_SRC,IN_PP_OBJ,IN_PT_SRC,IN_PT_AUTO,IN_PT_OBJ stretch

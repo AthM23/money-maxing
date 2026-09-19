@@ -1,0 +1,354 @@
+flowchart TB
+
+  subgraph CL_SG1["1 · Inputs and triggers: close calendar, bus events, period status"]
+    CL_CAL[/"Close calendar (July 2026 close):<br/>T-3 pre-close Tue 28 Jul · T+0 cutoff Fri 31 Jul<br/>BD1 Mon 3 Aug to BD5 · target lock Fri 7 Aug<br/>(lock date is an assumption)"/]
+    CL_EV_IN[/"Bus events from every function:<br/>ar.* · ap.* · bankrec.reconciled · rev.recognised<br/>payroll.* · audit.finding.raised"/]
+    CL_PERIOD[("period(id, status)<br/>open → closing → locked")]
+    CL_WORLD[/"World tables: po, receipt, bill, bank_txn,<br/>payroll_run · policy memo (markdown)<br/>Q2 close workbook (workbook.lookup)"/]
+    CL_DRIFT["Drift comparators for close (code):<br/>AR and AP subledger vs GL control · schedule vs GL<br/>payroll register vs bank debit · recurring-vendor gap<br/>unreversed accrual · cutoff scan"]
+  end
+
+  subgraph CL_SG2["2 · Close conductor: checklist_item DAG, done and stuck board, checkpoint and resume"]
+    CL_CHK[("checklist_item: id, period, function, name,<br/>depends_on_json, status, blocked_reason,<br/>decision_ids_json")]
+    CL_TOPO{{"Topological order over depends_on_json<br/>item is ready when every parent is done<br/>a cycle in the DAG is a config error at seed time"}}
+    subgraph CL_SG2A["depends_on across functions (function: item)"]
+      CL_I_BANK["bank rec: bank rec done<br/>(bankrec.reconciled)"]
+      CL_I_CASH["close: cash tie-out"]
+      CL_I_APCUT["ap: AP cutoff"]
+      CL_I_ACCR["close: accruals"]
+      CL_I_REV["revenue: July recognition run<br/>(rev.recognised)"]
+      CL_I_DEF["close: deferred revenue tie-out"]
+      CL_I_FLUX["reporting: flux review"]
+      CL_I_LOCK["close: lock period"]
+    end
+    CL_STATUS{{"status: todo → doing → blocked → done<br/>written only by close.mark(item, status, reason)<br/>blocked requires a blocked_reason"}}
+    CL_BOARD["What is done and what is stuck board (console):<br/>per function: item, status, blocked_reason,<br/>owner (= intent.owner), blocked age,<br/>critical path computed in code"]
+    CL_STUCK(["Spec plant: one stuck item waiting on a human<br/>status blocked, blocked_reason = open escalation<br/>owner asked once in Slack"])
+    CL_RESUME{{"F-11 checkpoint and resume: each close.mark commits<br/>per item · on restart, doing items with no finished<br/>decision return to todo · a partial close is never<br/>presented as finished → ESCALATE to controller"}}
+    CL_DISPATCH["Ready item → intent (function close)<br/>→ agent router → close pack investigator<br/>function read tool: close.checklist"]
+  end
+
+  subgraph CL_SG3["3 · Accruals for bills not yet received (code + model)"]
+    CL_AC_PO["Candidate A: open po with receipt and no bill<br/>(received-not-invoiced)<br/>ap.po, ap.receipt, ap.bills"]
+    CL_AC_GAP{{"Candidate B: recurring-vendor gap<br/>billed 3+ consecutive months, no bill this month<br/>(ap.vendor_history)"}}
+    CL_AC_USAGE[/"Candidate C: usage export (cloud console)<br/>spec plant: July cloud bill arrives 3 Aug (D-01)"/]
+    CL_AC_ENDED["Model: did the service end or is the bill late?<br/>mail.search + chat.search for a termination notice<br/>quote it, or say none was found"]
+    CL_AC_D04{{"D-04 recurring cost that stopped:<br/>no evidence either way → ESCALATE<br/>do not accrue silently, do not ignore silently"}}
+    CL_AC_METHOD{{"Estimation method hierarchy (code):<br/>1 receipt qty x PO price · 2 usage x contract rate<br/>3 contract fee x elapsed fraction<br/>4 trailing 3-month run-rate · 5 none → ask owner"}}
+    CL_AC_ENTRY["Accrual entry: Dr expense / Cr accrued liabilities<br/>Proposal.kind = accrual · method stated in workpaper<br/>evidence: usage export, PO or receipt trace_id"]
+    CL_AC_TABLE[("PROPOSED schema addition (not in spec section 7):<br/>accrual: id, vendor_id, period, method, amount_cents,<br/>reversal_mode, reversal_entry_id, matched_bill_id,<br/>owner, intent_id")]
+    CL_AC_AUTOREV["reversal_mode = auto_reverse (bill not received):<br/>reversing entry Dr accrued liabilities / Cr expense<br/>created atomically, dated day 1 of the next period,<br/>linked, exactly one per accrual"]
+    CL_AC_ACCUM["reversal_mode = accumulate_trueup:<br/>balance accumulates monthly, quarterly true-up<br/>spec P-check (accruals flagged to reverse)<br/>would wrongly fail this mode"]
+    CL_AC_30K[/"Spec plant: $30,000-a-month accrual with a<br/>quarterly true-up · the owner has left<br/>the reason exists only in her old emails"/]
+    CL_AC_30K_M["Model: mail.search the departed owner mailbox<br/>quote the rationale and the true-up rule<br/>intent reconstructed (replay of Q2)"]
+    CL_AC_30K_H(["Controller confirms once in Slack:<br/>method, accumulate_trueup, new owner<br/>→ fact candidate with scope and valid_from"])
+    CL_AC_UNREV{{"D-02 unreversed accrual detector:<br/>auto_reverse accrual with no posted reversal<br/>and the bill already expensed → cost lands twice<br/>→ ESCALATE with a proposed correcting entry"}}
+    CL_AC_TRUEUP{{"Bill lands: match on vendor_id + service period<br/>→ matched_bill_id · diff = bill - accrued<br/>to the same account, current period (D-03)<br/>AUTO if immaterial, else PROPOSE"}}
+  end
+
+  subgraph CL_SG4["4 · Prepaids and fixed assets (code)"]
+    CL_PP_IN[/"Annual software prepaid (spec plant) and<br/>insurance starting mid-month (D-05):<br/>bill with cover_start, cover_end, total_cents"/]
+    CL_PP_SCHED["Amortisation schedule (code):<br/>daily rate = total_cents / days covered<br/>month = rate x covered days in the month<br/>final month takes the residual cents"]
+    CL_PP_CONV["D-05 convention stated in the workpaper:<br/>actual day count, start day inclusive<br/>Dr software or insurance expense / Cr prepaid<br/>Proposal.kind = amortization"]
+    CL_FA_DEP["D-06 asset placed in service mid-period:<br/>convention from policy_memo.lookup<br/>(half-month or mid-quarter), applied consistently<br/>straight-line computed in code"]
+    CL_FA_CAPEX{{"D-08 capitalise or expense ($42,000 internal<br/>software development) → REFUSE to decide alone<br/>present policy text (policy_memo.lookup), project facts<br/>with quotes, both treatments computed in code"}}
+  end
+
+  subgraph CL_SG5["5 · Payroll accrual (code)"]
+    CL_PR_CALC["Days worked but unpaid, from the payroll calendar:<br/>last payroll_run register daily cost x unpaid working<br/>days to period end + employer tax · Dr wages expense /<br/>Cr accrued payroll · kind = payroll_accrual, auto_reverse"]
+  end
+
+  subgraph CL_SG6["6 · Cutoff testing"]
+    CL_CO_SCAN["Cutoff scan (code, continuous): bills, receipts,<br/>disbursements in the first N days after period end<br/>whose service date falls in the prior period<br/>(search for unrecorded liabilities · N from policy)"]
+    CL_CO_SVC["Model: service period from the bill PDF<br/>quote the line stating the service dates<br/>(kernel E: quote is a substring of the trace)"]
+    CL_CO_A23{{"A-23 statement crossing the period boundary<br/>(for example 25 Jul to 5 Aug): split rows on cutoff<br/>BLOCK the wrong-period half"}}
+    CL_CO_B23{{"B-23 bill dated into a closed period:<br/>route to the current period with a stated reason,<br/>or BLOCK"}}
+    CL_CO_D07{{"D-07 shipment cutoff: FOB shipping point,<br/>shipped on the last day, invoiced after period end<br/>use the shipping record, not the invoice date<br/>→ ESCALATE"}}
+  end
+
+  subgraph CL_SG6X["3 to 6 · Hand-off from the pre-close work to the shared exit (section 11)"]
+    CL_X_PROP["Proposal assembled per checklist item:<br/>kind accrual, amortization or payroll_accrual,<br/>entries in integer cents, evidence trace_ids,<br/>policy_refs, fact_refs"]
+    CL_X_ESC["Non-posting outcomes leave through tools:<br/>escalate(question) with the investigation pack,<br/>close.mark(item, blocked, reason)<br/>route is stated on each incoming edge"]
+  end
+
+  subgraph CL_SG7["7 · Balance-sheet tie-outs: tie every balance-sheet account to evidence"]
+    CL_TO_RUN["Tie-out run, one per balance-sheet account family:<br/>gl_cents from ledger.trial_balance<br/>support_cents from the subledger, schedule or register"]
+    CL_TO_CASH["Cash ↔ bank rec two-sided proof<br/>(book to bank and bank to book,<br/>every bank line matched exactly once)"]
+    CL_TO_AR["AR control ↔ AR subledger aging<br/>(ledger.open_invoices)"]
+    CL_TO_AP["AP control ↔ AP subledger (ap.bills)"]
+    CL_TO_PP["Prepaid ↔ amortisation schedule<br/>(unamortised remainder)"]
+    CL_TO_DEF["Deferred revenue ↔ revenue schedules<br/>(rev.schedule roll-forward closing)"]
+    CL_TO_ACL["Accrued liabilities ↔ accrual workpapers"]
+    CL_TO_PAY["Payroll liabilities ↔ payroll register"]
+    CL_TO_EQ["STRETCH (equity-lite):<br/>equity and stock comp ↔ grants ledger"]
+    CL_TO_DIFF{{"diff_cents = gl_cents - support_cents,<br/>recomputed by the kernel · 0 → certify GREEN<br/>trivial → log with a note (D-09) · else honestly RED:<br/>on the board with the diff, never plugged"}}
+    CL_TO_RECON[("PROPOSED table recon: account, period, type,<br/>gl_cents, support_cents, diff_cents,<br/>evidence_trace_ids, certified_by, evidence_version")]
+    CL_TO_STALE{{"F-06 / H-6: evidence_version changed after<br/>certification → certification invalidated,<br/>re-run the recon → ESCALATE to preparer"}}
+  end
+
+  subgraph CL_SG8["8 · Materiality: THREE thresholds, not one"]
+    CL_M_POL[/"Materiality policy in the policy memo (approved,<br/>in scope, kernel J) · three thresholds<br/>the agent can never loosen them (G-08 clamp)"/]
+    CL_M_T1{{"Threshold 1 · approval threshold $500<br/>(spec kernel P): above it, or anything new,<br/>approval is required"}}
+    CL_M_T2{{"Threshold 2 · flux investigation threshold:<br/>dual dollar AND percent per account class,<br/>tighter for revenue and payroll<br/>values from the policy memo (not set yet)"}}
+    CL_M_T3{{"Threshold 3 · SAB 99 style assessment for<br/>out-of-period items: percent is a first step only<br/>qualitative overrides: masks a trend, flips loss to<br/>income, covenant or compensation, unlawful act"}}
+    CL_M_D10{{"D-10 pattern beats threshold: same small diff,<br/>fraud-sensitive account, third month running<br/>→ ESCALATE the recurrence (kernel rule)"}}
+  end
+
+  subgraph CL_SG9["9 · Lock: flux review gates it, humans sign it, the kernel enforces it"]
+    CL_LK_FLUX["Flux review runs BEFORE lock (checklist item<br/>reporting: flux review) on the close.tb.final snapshot<br/>→ report.flux.cleared (cleared or unexplained)"]
+    CL_LK_PRE{{"Lock preconditions (code): all items done or<br/>explicitly carried forward · all recons certified on<br/>current evidence versions · no open escalation<br/>trial balance balanced · report.flux.cleared = cleared"}}
+    CL_LK_H(["Human controller signs the lock<br/>(preparer is not certifier)"])
+    CL_LK_SET["period.status closing → locked<br/>event close.period.locked"]
+    CL_LK_KP{{"Kernel P-check period open: refuses ANY post<br/>to a locked period, even human-approved<br/>(G-03 BLOCK, persisted with the rule name)"}}
+    CL_LK_REOPEN(["Reopening a period is a human-only action<br/>agents have no tool for it"])
+  end
+
+  subgraph CL_SG10["10 · After lock: the reopened-close plant"]
+    CL_AL_INV[/"Spec plant: $47,000 vendor invoice dated in July<br/>surfaces 8 Aug, after the lock"/]
+    CL_AL_BLOCK{{"Post to July → BLOCK (period locked)"}}
+    CL_AL_AUG["Propose August entry: Dr expense / Cr AP $47,000<br/>tagged belongs_to_period 2026-07<br/>(out_of_period_item, proposed table)"]
+    CL_AL_MAT["Materiality workpaper (code + checklist):<br/>quantitative percent of July measures<br/>+ SAB 99 qualitative checklist<br/>material → ESCALATE, else PROPOSE"]
+    CL_AL_REPORT["Report what it did to July:<br/>as-reported vs as-adjusted (expense, net income, AP)<br/>event close.out_of_period"]
+    CL_AL_UNVER["UNVERIFIED accounting frame (secondary sources):<br/>ASC 855 recognised subsequent event · ASC 250 error<br/>vs estimate · SAB 108 dual test<br/>reopening stays a human decision"]
+  end
+
+  subgraph CL_SG11["11 · Shared exit: propose_entry → kernel with close checks → five routes"]
+    CL_PROPOSE["propose_entry + workpaper"]
+    CL_K_FE{{"Close F: schedules sum · reversal pairs net to zero<br/>recon diff recomputed · Close E: usage export, PO or<br/>receipt cited · service-date quote is a substring"}}
+    CL_K_PJ{{"Close P: period open · reversal linked per<br/>reversal_mode · lock signed by a human · preparer is<br/>not certifier · Close J: accrual method allowed by<br/>policy memo · materiality policy in scope"}}
+    CL_K_BLOCK{{"Close BLOCK rules: post to a locked period ·<br/>wrong-period half of a statement · lock with a<br/>stale recon · an agent reopening a period"}}
+    CL_KERNEL{{"Kernel F·E·P·J + pack checks"}}
+    CL_R_AUTO(("AUTO"))
+    CL_R_PROPOSE(("PROPOSE"))
+    CL_R_ESCALATE(("ESCALATE"))
+    CL_R_REFUSE(("REFUSE"))
+    CL_R_BLOCK(("BLOCK"))
+    CL_POST["Post to local ledger (gl_entry, gl_line)<br/>→ one-way QuickBooks mirror (JournalEntry)<br/>close.mark(item, done)"]
+  end
+
+  subgraph CL_SG11B["11 · OUTPUT CASES: outcome → route → entry (Dr/Cr) → who is notified · unlabelled arrows continue the list under a route"]
+    CL_O1["D-01 cloud bill not received, usage data exists<br/>→ PROPOSE · Dr cloud expense / Cr accrued<br/>liabilities + linked day-1 reversal<br/>notify controller"]
+    CL_O2["D-03 true-up, immaterial → AUTO<br/>diff Dr or Cr to the same expense account<br/>vs accrued liabilities, current period<br/>notify none (checklist tick)"]
+    CL_O3["D-02 accrual never reversed → ESCALATE<br/>proposed correction: Dr accrued liabilities /<br/>Cr expense · notify controller"]
+    CL_O4["D-04 recurring vendor went silent → ESCALATE<br/>no entry · question: missing or ended?<br/>notify vendor owner · answer stored as vendor fact"]
+    CL_O5["D-05 mid-month prepaid · D-06 depreciation → AUTO<br/>Dr expense / Cr prepaid · Dr depreciation /<br/>Cr accumulated depreciation · notify none"]
+    CL_O6["D-08 capitalise or expense → REFUSE<br/>no entry · policy text + facts pack<br/>notify controller"]
+    CL_O7["D-09 trivial recon difference → AUTO (log)<br/>no entry · recon certified with a note<br/>notify none"]
+    CL_O8["D-10 trivial but recurring, sensitive account<br/>→ ESCALATE · no entry · recurrence evidence<br/>notify audit and controller"]
+    CL_O9["D-07 shipment cutoff → ESCALATE<br/>proposed Dr AR / Cr revenue in the shipping<br/>period · notify controller"]
+    CL_O10["Orphaned $30k accrual (spec plant)<br/>→ ESCALATE once, then AUTO · Dr expense /<br/>Cr accrued liabilities monthly, quarterly true-up<br/>notify controller"]
+    CL_O11["$47k July invoice found 8 Aug (spec plant)<br/>→ BLOCK July + PROPOSE August (ESCALATE if<br/>material) · Dr expense / Cr AP + materiality<br/>workpaper · notify controller and CFO"]
+    CL_O12["A-23 · B-23 · G-03 post into a locked period<br/>→ BLOCK · no July entry · corrected by a new entry<br/>in the current period · persisted with the rule<br/>notify requester"]
+    CL_O13["F-11 worker died mid-close · F-06 evidence changed<br/>→ ESCALATE · no entry · resume from checkpoint<br/>or re-run the recon · notify controller, preparer"]
+  end
+
+  subgraph CL_SG12["12 · Events emitted, learnable vs never learned, metrics"]
+    CL_EM["Events emitted: close.accrual.posted (forecast:<br/>expected bill + terms) · close.tb.final (reporting)<br/>close.period.locked (all, kernel reads it)<br/>close.out_of_period (reporting, audit)"]
+    CL_LEARN1["Learnable (fact or policy, scoped per vendor): accrual<br/>estimation method, reversal_mode and owner ·<br/>recurring-entry patterns, recurring-vendor watchlist<br/>applied at router tier 0 next close, asked once"]
+    CL_NEVER{{"Never learned: period lock and reopen authority ·<br/>cutoff · materiality loosened by the agent (G-08) ·<br/>a rule from a single correction (G-05)"}}
+    CL_METRICS["Metrics, TO BE MEASURED (nothing has run):<br/>close duration in hours · items blocked on humans<br/>(age, owner) · balance-sheet accounts tied (n of N)"]
+  end
+
+  %% 1 to 2
+  CL_CAL -- "T-3: instantiate the July checklist" --> CL_CHK
+  CL_CAL -- "T+0 cutoff: open → closing" --> CL_PERIOD
+  CL_EV_IN -- "function events tick items done" --> CL_CHK
+  CL_WORLD --> CL_DRIFT
+  CL_DRIFT -- "unexplained difference opens an intent" --> CL_DISPATCH
+
+  %% 2 conductor
+  CL_CHK --> CL_TOPO
+  CL_CHK --> CL_STATUS
+  CL_CHK --> CL_BOARD
+  CL_RESUME -- "restart re-reads state" --> CL_CHK
+  CL_RESUME -- "F-11 partial close: ESCALATE" --> CL_X_ESC
+  CL_STATUS -- "blocked" --> CL_STUCK
+  CL_STUCK -. "answer → fact → item unblocked" .-> CL_STATUS
+  CL_TOPO --> CL_I_BANK
+  CL_TOPO --> CL_I_APCUT
+  CL_TOPO --> CL_I_REV
+  CL_I_BANK --> CL_I_CASH
+  CL_I_APCUT --> CL_I_ACCR
+  CL_I_REV --> CL_I_DEF
+  CL_I_CASH --> CL_I_FLUX
+  CL_I_ACCR --> CL_I_FLUX
+  CL_I_DEF --> CL_I_FLUX
+  CL_I_FLUX --> CL_I_LOCK
+  CL_TOPO -- "ready items" --> CL_DISPATCH
+
+  %% dispatch into the pack
+  CL_DISPATCH --> CL_AC_PO
+  CL_DISPATCH --> CL_AC_GAP
+  CL_DISPATCH --> CL_AC_USAGE
+  CL_DISPATCH --> CL_PP_IN
+  CL_DISPATCH --> CL_FA_DEP
+  CL_DISPATCH --> CL_FA_CAPEX
+  CL_DISPATCH --> CL_PR_CALC
+  CL_DISPATCH --> CL_CO_SCAN
+
+  %% 3 accruals
+  CL_AC_PO --> CL_AC_METHOD
+  CL_AC_USAGE --> CL_AC_METHOD
+  CL_AC_GAP --> CL_AC_ENDED
+  CL_AC_ENDED --> CL_AC_D04
+  CL_AC_D04 -- "bill is late, evidence quoted" --> CL_AC_METHOD
+  CL_AC_D04 -- "ESCALATE: missing or ended?" --> CL_X_ESC
+  CL_AC_METHOD -- "rank 1 to 4" --> CL_AC_ENTRY
+  CL_AC_METHOD -- "rank 5: ESCALATE, ask the owner" --> CL_X_ESC
+  CL_AC_ENTRY --> CL_AC_TABLE
+  CL_AC_TABLE -- "auto_reverse" --> CL_AC_AUTOREV
+  CL_AC_TABLE -- "accumulate_trueup" --> CL_AC_ACCUM
+  CL_AC_30K --> CL_AC_30K_M
+  CL_AC_30K_M --> CL_AC_30K_H
+  CL_AC_30K_H -. "fact: mode and true-up rule" .-> CL_AC_ACCUM
+  CL_AC_AUTOREV --> CL_AC_UNREV
+  CL_AC_AUTOREV --> CL_AC_TRUEUP
+  CL_AC_UNREV -- "ESCALATE" --> CL_X_ESC
+  CL_AC_ENTRY --> CL_X_PROP
+  CL_AC_ACCUM -- "quarterly true-up entry" --> CL_X_PROP
+  CL_AC_TRUEUP --> CL_X_PROP
+
+  %% 4 prepaids and fixed assets
+  CL_PP_IN --> CL_PP_SCHED
+  CL_PP_SCHED --> CL_PP_CONV
+  CL_PP_CONV --> CL_X_PROP
+  CL_FA_DEP --> CL_X_PROP
+  CL_FA_CAPEX -- "REFUSE" --> CL_X_ESC
+
+  %% 5 payroll
+  CL_PR_CALC --> CL_X_PROP
+
+  %% 6 cutoff
+  CL_CO_SCAN --> CL_CO_SVC
+  CL_CO_SCAN --> CL_CO_A23
+  CL_CO_SVC --> CL_CO_B23
+  CL_CO_SVC --> CL_CO_D07
+  CL_CO_SVC -. "prior-period service, period still closing: accrue" .-> CL_AC_METHOD
+  CL_CO_A23 -- "BLOCK wrong-period half" --> CL_X_ESC
+  CL_CO_B23 -- "period locked: BLOCK" --> CL_X_ESC
+  CL_CO_B23 -- "current period, reason stated" --> CL_X_PROP
+  CL_CO_D07 -- "ESCALATE" --> CL_X_ESC
+
+  %% 7 tie-outs
+  CL_X_PROP -. "adjusting entries posted: tie-out items ready" .-> CL_TO_RUN
+  CL_TO_RUN --> CL_TO_CASH
+  CL_TO_RUN --> CL_TO_AR
+  CL_TO_RUN --> CL_TO_AP
+  CL_TO_RUN --> CL_TO_PP
+  CL_TO_RUN --> CL_TO_DEF
+  CL_TO_RUN --> CL_TO_ACL
+  CL_TO_RUN --> CL_TO_PAY
+  CL_TO_RUN --> CL_TO_EQ
+  CL_TO_CASH --> CL_TO_DIFF
+  CL_TO_AR --> CL_TO_DIFF
+  CL_TO_AP --> CL_TO_DIFF
+  CL_TO_PP --> CL_TO_DIFF
+  CL_TO_DEF --> CL_TO_DIFF
+  CL_TO_ACL --> CL_TO_DIFF
+  CL_TO_PAY --> CL_TO_DIFF
+  CL_TO_EQ --> CL_TO_DIFF
+  CL_TO_DIFF -- "one row per account and period" --> CL_TO_RECON
+  CL_TO_DIFF -- "RED: never plugged, intent opened, ESCALATE if unexplained" --> CL_X_ESC
+  CL_TO_RECON --> CL_TO_STALE
+  CL_TO_STALE -- "certification invalidated: ESCALATE (F-06)" --> CL_PROPOSE
+
+  %% 8 materiality
+  CL_M_POL --> CL_M_T1
+  CL_M_POL --> CL_M_T2
+  CL_M_POL --> CL_M_T3
+  CL_M_POL --> CL_M_D10
+  CL_TO_DIFF -- "trivial diff: check recurrence" --> CL_M_D10
+  CL_M_D10 -- "recon_certification artifact: D-09 AUTO log · D-10 ESCALATE" --> CL_PROPOSE
+  CL_M_T1 -. "approval required above $500" .-> CL_KERNEL
+  CL_M_T2 -. "which variances need a flux note" .-> CL_LK_FLUX
+  CL_M_T3 -. "out-of-period assessment" .-> CL_AL_MAT
+
+  %% 9 lock
+  CL_LK_FLUX -- "report.flux.cleared = cleared gates the lock" --> CL_LK_PRE
+  CL_TO_RECON -- "all certified, current versions" --> CL_LK_PRE
+  CL_LK_PRE -- "period_lock artifact → PROPOSE" --> CL_LK_H
+  CL_LK_H --> CL_LK_SET
+  CL_LK_SET --> CL_LK_KP
+  CL_LK_REOPEN -. "only a human can set locked → closing" .-> CL_LK_SET
+  CL_I_LOCK -. "item ready" .-> CL_LK_PRE
+  CL_LK_PRE -. "not met: period stays closing, item blocked" .-> CL_BOARD
+  CL_LK_SET -. "writes period.status" .-> CL_PERIOD
+
+  %% 10 after lock
+  CL_AL_INV --> CL_AL_BLOCK
+  CL_LK_KP --> CL_AL_BLOCK
+  CL_AL_BLOCK -. "persisted with rule name period_locked" .-> CL_K_BLOCK
+  CL_AL_BLOCK -- "correct via the current period" --> CL_AL_AUG
+  CL_AL_AUG --> CL_AL_MAT
+  CL_AL_MAT --> CL_AL_REPORT
+  CL_AL_UNVER -.-> CL_AL_MAT
+  CL_AL_REPORT --> CL_PROPOSE
+
+  %% 11 shared exit
+  CL_X_PROP ==> CL_PROPOSE
+  CL_X_ESC -- "D-04, D-02, D-07, F-11, rank 5, RED recon" --> CL_R_ESCALATE
+  CL_X_ESC -- "D-08" --> CL_R_REFUSE
+  CL_X_ESC -- "A-23, B-23" --> CL_R_BLOCK
+  CL_PROPOSE ==> CL_KERNEL
+  CL_K_FE -.-> CL_KERNEL
+  CL_K_PJ -.-> CL_KERNEL
+  CL_K_BLOCK -.-> CL_KERNEL
+  CL_KERNEL ==> CL_R_AUTO
+  CL_KERNEL --> CL_R_PROPOSE
+  CL_KERNEL --> CL_R_ESCALATE
+  CL_KERNEL --> CL_R_REFUSE
+  CL_KERNEL --> CL_R_BLOCK
+  CL_R_AUTO ==> CL_POST
+  CL_R_PROPOSE -- "after human approve" --> CL_POST
+
+  %% output cases
+  CL_R_AUTO --> CL_O2
+  CL_O2 --> CL_O5
+  CL_O5 --> CL_O7
+  CL_R_PROPOSE --> CL_O1
+  CL_R_PROPOSE --> CL_O11
+  CL_R_ESCALATE --> CL_O3
+  CL_O3 --> CL_O4
+  CL_O4 --> CL_O8
+  CL_R_ESCALATE --> CL_O9
+  CL_O9 --> CL_O10
+  CL_O10 --> CL_O13
+  CL_R_REFUSE --> CL_O6
+  CL_R_BLOCK --> CL_O11
+  CL_O11 --> CL_O12
+
+  %% 12 events, learning, metrics
+  CL_POST --> CL_EM
+  CL_POST --> CL_METRICS
+  CL_O4 -. "answer → vendor fact" .-> CL_LEARN1
+  CL_O10 -. "answer → fact, asked once" .-> CL_LEARN1
+  CL_NEVER -. "clamps what may be learned" .-> CL_LEARN1
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class CL_M_POL,CL_CAL,CL_EV_IN,CL_WORLD,CL_AC_USAGE,CL_AC_30K,CL_PP_IN,CL_AL_INV src
+  class CL_X_PROP,CL_X_ESC,CL_TO_RUN,CL_DRIFT,CL_I_BANK,CL_I_CASH,CL_I_APCUT,CL_I_ACCR,CL_I_REV,CL_I_DEF,CL_I_FLUX,CL_I_LOCK,CL_BOARD,CL_DISPATCH,CL_AC_PO,CL_AC_ENTRY,CL_AC_AUTOREV,CL_AC_ACCUM,CL_PP_SCHED,CL_PP_CONV,CL_FA_DEP,CL_PR_CALC,CL_CO_SCAN,CL_TO_CASH,CL_TO_AR,CL_TO_AP,CL_TO_PP,CL_TO_DEF,CL_TO_ACL,CL_TO_PAY,CL_LK_FLUX,CL_LK_SET,CL_AL_AUG,CL_AL_MAT,CL_AL_REPORT,CL_PROPOSE,CL_POST,CL_EM,CL_METRICS code
+  class CL_AC_ENDED,CL_AC_30K_M,CL_CO_SVC model
+  class CL_STUCK,CL_AC_30K_H,CL_LK_H,CL_LK_REOPEN human
+  class CL_PERIOD,CL_CHK store
+  class CL_TOPO,CL_STATUS,CL_RESUME,CL_AC_GAP,CL_AC_D04,CL_AC_METHOD,CL_AC_UNREV,CL_AC_TRUEUP,CL_FA_CAPEX,CL_CO_A23,CL_CO_B23,CL_CO_D07,CL_TO_DIFF,CL_TO_STALE,CL_M_T1,CL_M_T2,CL_M_T3,CL_M_D10,CL_LK_PRE,CL_LK_KP,CL_AL_BLOCK,CL_K_FE,CL_K_PJ,CL_K_BLOCK,CL_KERNEL,CL_NEVER gate
+  class CL_LEARN1 learn
+  class CL_R_AUTO,CL_O2,CL_O5,CL_O7 rAuto
+  class CL_R_PROPOSE,CL_O1 rPropose
+  class CL_R_ESCALATE,CL_O3,CL_O4,CL_O8,CL_O9,CL_O10,CL_O13 rEscalate
+  class CL_R_REFUSE,CL_O6 rRefuse
+  class CL_R_BLOCK,CL_O11,CL_O12 rBlock
+  class CL_AC_TABLE,CL_TO_RECON,CL_TO_EQ,CL_AL_UNVER stretch

@@ -1,0 +1,360 @@
+flowchart TB
+
+  subgraph M_SG_WORLD["0 · Seeded world and test harness (sheets 01, 23)"]
+    direction LR
+    M_SEED["seed → world/northwind.json<br/>$60M SaaS · 12 customers · 10 vendors<br/>Q2 human-closed · July live"]
+    M_SEEDER["seeder per target · fn: external ids<br/>manifest · pnpm seed --reset"]
+    M_KEY[("planted-drift answer key<br/>corpus labels · held-out set<br/>OUTSIDE agent reach")]
+    M_SEED --> M_SEEDER
+    M_SEED --> M_KEY
+  end
+
+  subgraph M_SG_SRC["1 · Company systems — real sandboxes, seeded (sheet 01)"]
+    direction LR
+    M_QBO[/"QuickBooks Online sandbox<br/>poll Change Data Capture<br/>invoices · bills · payments · JEs"/]
+    M_BANK[/"Bank feed<br/>Increase sandbox ACH and wire<br/>Q2 history from file"/]
+    M_HUB[/"HubSpot test account<br/>companies · deals · owners · notes"/]
+    M_MAIL[/"Gmail<br/>side letters · remittances<br/>vendor bills PDF · phish"/]
+    M_SLACK[/"Slack · Socket Mode<br/>finance · deals · cs-escalations<br/>HR departure notice"/]
+    M_FILES[/"Files<br/>contracts · board consent · policy memo<br/>Q2 close workbook · grants ledger"/]
+    M_PAYOUT[/"Processor payout file<br/>gross · fee · net<br/>undecided scope A-07"/]
+    M_PORTAL[/"Supplier portal, no API<br/>browser automation + screenshots<br/>stretch H-4"/]
+  end
+
+  subgraph M_SG_ING["2 · Ingestion — refuse loudly, never guess (sheet 01)"]
+    direction LR
+    M_STRUCT{{"Structural validation before content<br/>field count · date format · sign vs control total<br/>F-01 F-02 F-04 F-12 → REFUSE with reason"}}
+    M_CANON["Canonicalise<br/>integer cents · posted and value date<br/>idempotent on source_system + source_id<br/>content hash"]
+    M_EXTRACT["Extraction, small model tier<br/>bills · remittances · contract terms → JSON<br/>field confidence propagated · F-09 F-10 guards"]
+    M_ER["Entity resolution<br/>party master · stable keys · alias table<br/>parent-subsidiary · duplicate vendors"]
+    M_TRACE[("As-of trace store<br/>event_time · recorded_time · ingested_at<br/>versioned evidence · no look-ahead")]
+    M_REVERSION{{"Evidence re-versioned · evidence.reversioned<br/>invalidate dependent decisions<br/>F-06 A-24 H-6 → intent reopened, ESCALATE"}}
+    M_STRUCT --> M_CANON --> M_EXTRACT --> M_ER --> M_TRACE
+    M_TRACE -.-> M_REVERSION
+  end
+
+  subgraph M_SG_STATE["3 · Shared picture of the company — context graph (sheet 02)"]
+    direction LR
+    M_LEDGER[("Local double-entry ledger<br/>system of record for the run<br/>gl_entry · gl_line · period")]
+    M_ENT[("Entity layer<br/>party · contract · deal · invoice · po<br/>receipt · bill · bank_txn · payroll_run")]
+    M_DTRACE[("Decision-trace layer<br/>intent → decision → workpaper → artifact<br/>escalation · cites evidence with quotes")]
+    M_TIER1["Universal tier<br/>law · GAAP · period lock · SoD<br/>code and kernel, changes by release"]
+    M_TIER2["Vertical tier<br/>B2B SaaS norms · ratable revenue<br/>portable policy pack"]
+    M_TIER3[("Company tier<br/>policy memo · approval matrix<br/>learned facts and policies, scoped")]
+    M_FACT[("fact<br/>scope · valid_from · valid_to · learned_at<br/>stated_by · approved_by · authority ceiling")]
+    M_POLICY[("policy<br/>condition · action · intent_text · tier<br/>backtest · approved like a pull request")]
+    M_TIER1 -- "lower tiers may narrow, never override" --> M_TIER2 --> M_TIER3
+    M_TIER3 --> M_FACT
+    M_TIER3 --> M_POLICY
+  end
+
+  subgraph M_SG_DRIFT["4 · Drift monitor — deterministic comparators on every sync (sheet 03)"]
+    direction LR
+    M_CMP1{{"CRM deal vs contract vs invoice run-rate<br/>missed escalator · unbilled expansion"}}
+    M_CMP2{{"invoice vs cash received<br/>bank vs ledger cash"}}
+    M_CMP3{{"AR and AP subledgers vs GL<br/>deferred revenue schedule vs GL"}}
+    M_CMP4{{"forecast opening cash vs GL cash<br/>vendor bank details vs last paid"}}
+    M_CMP5{{"payroll register vs bank debit<br/>grants ledger vs stock-comp expense"}}
+    M_TRIAGE{{"Difference triage in code<br/>timing item · materiality · recurrence<br/>dedupe against open intents"}}
+    M_SUPPRESS{{"Known fact explains it<br/>suppress only the explained amount<br/>log explained_by fact_id"}}
+    M_CMP1 --> M_TRIAGE
+    M_CMP2 --> M_TRIAGE
+    M_CMP3 --> M_TRIAGE
+    M_CMP4 --> M_TRIAGE
+    M_CMP5 --> M_TRIAGE
+    M_TRIAGE --> M_SUPPRESS
+  end
+
+  subgraph M_SG_COORD["5 · Coordination fabric (sheet 03)"]
+    direction LR
+    M_INTENT[("intent · first-class state<br/>question · owner · end_condition<br/>parent_id · every artifact links back")]
+    M_BUS[("event bus<br/>ar.credit_memo.posted · ap.bill.approved<br/>hr.departure_detected · close.period.locked")]
+    M_COND["Close conductor<br/>checklist_item DAG · depends_on<br/>done and stuck board"]
+    M_CAL["Calendar triggers<br/>T-3 pre-close · payment-run day<br/>weekly forecast refresh"]
+  end
+
+  subgraph M_SG_PACKS["6 · Agent finance team — nine thin function packs on one judgment layer (sheets 10-18)"]
+    direction LR
+    subgraph M_SG_AR["AR and collections · sheet 10"]
+      M_AR1["in: bank credits · remittances<br/>open invoices · facts"]
+      M_AR2["compare: advice → exact → near-ref → typed delta<br/>(fact · discount · fee band, 1:1 only)<br/>→ bounded subset-sum, exact cents, no tolerance<br/>uniqueness gates AUTO"]
+      M_AR3["out: apply payment · credit memo<br/>dispute hold · customer credit · dunning"]
+      M_AR1 --> M_AR2 --> M_AR3
+    end
+    subgraph M_SG_AP["AP · sheet 12"]
+      M_AP1["in: bill PDFs by email · PO · receipt<br/>vendor master · approval matrix"]
+      M_AP2["compare: three-way match · UOM<br/>obligation-key duplicate defence<br/>bank-detail change → BLOCK"]
+      M_AP3["out: approve · hold · short-pay<br/>payment-run selection vs cash floor"]
+      M_AP1 --> M_AP2 --> M_AP3
+    end
+    subgraph M_SG_BR["Cash and bank rec · sheet 11"]
+      M_BR1["in: bank lines · GL cash activity<br/>carried-forward reconciling items"]
+      M_BR2["compare: typed match groups 1:1 1:n n:1<br/>two-sided proof to the cent<br/>timing items are not entries"]
+      M_BR3["out: adjustments · reconciling items<br/>unmatched → AR or AP · the $12.40"]
+      M_BR1 --> M_BR2 --> M_BR3
+    end
+    subgraph M_SG_RV["Revenue · sheet 13"]
+      M_RV1["in: contracts · deals · invoices<br/>acceptance and usage · facts"]
+      M_RV2["compute: ASC 606 steps · schedule engine<br/>in code · modifications prospective<br/>double-hit guard"]
+      M_RV3["out: recognition entries · revised schedules<br/>leakage flags to billing"]
+      M_RV1 --> M_RV2 --> M_RV3
+    end
+    subgraph M_SG_CL["Close · sheet 14"]
+      M_CL1["in: events from every function<br/>close calendar · period status"]
+      M_CL2["compute: accruals with reversal_mode<br/>prepaids day-count · payroll accrual<br/>cutoff · tie-outs · 3 materiality thresholds"]
+      M_CL3["out: accrual and amortisation entries<br/>tie-out sheet · lock signed by a human<br/>late invoice → current period, never the locked one"]
+      M_CL1 --> M_CL2 --> M_CL3
+    end
+    subgraph M_SG_FC["13-week forecast · sheet 15"]
+      M_FC1["in: GL cash · AR behaviour · AP due<br/>payroll calendar · facts"]
+      M_FC2["compute: direct method · 13 buckets<br/>versioned as_of snapshots<br/>miss attribution timing vs amount"]
+      M_FC3["out: forecast_line · forecast_miss<br/>cash floor to AP · narrative artifact"]
+      M_FC1 --> M_FC2 --> M_FC3
+    end
+    subgraph M_SG_RP["Reporting · sheet 16"]
+      M_RP1["in: trial balance this vs prior vs plan<br/>ledger snapshot hash"]
+      M_RP2["compute: dual threshold $ and %<br/>variance → gl_lines → decisions → intents"]
+      M_RP3["out: flux notes · board pack draft<br/>every numeral bound to the ledger"]
+      M_RP1 --> M_RP2 --> M_RP3
+    end
+    subgraph M_SG_AU["Audit and controls · sheet 17"]
+      M_AU1["in: entries · workpapers · evidence<br/>FENCED OFF from preparer memory"]
+      M_AU2["test: sampling · rerun kernel<br/>JE screens · SoD · control tests"]
+      M_AU3["out: findings · evidence pack<br/>autonomy demotion on failure"]
+      M_AU1 --> M_AU2 --> M_AU3
+    end
+    subgraph M_SG_EQ["Equity-lite and payroll touchpoints · sheet 18 · stretch"]
+      M_EQ1["in: grants ledger · board consent<br/>409A report · HR notice · payroll register"]
+      M_EQ2["compute: ASC 718 schedule · forfeiture reversal<br/>4 compliance checks: 409A · strike<br/>ISO $100K · Rule 701"]
+      M_EQ3["out: stock-comp entries · compliance escalations<br/>never blocks expense recognition"]
+      M_EQ1 --> M_EQ2 --> M_EQ3
+    end
+  end
+
+  subgraph M_SG_JUDGE["7 · Shared judgment layer (sheet 04)"]
+    M_INTAKE["Intake<br/>decision row · budget caps · metering<br/>autonomy level per decision kind"]
+    subgraph M_SG_ROUTER["Agent router — cheapest tier that passes the kernel"]
+      direction LR
+      M_T0{{"Tier 0 · compiled policy or active fact<br/>applicability decided in code<br/>no model call"}}
+      M_T1["Tier 1 · small model<br/>claude-haiku-4-5 or fine-tuned<br/>open-weight model · abstains below threshold"]
+      M_T2["Tier 2 · claude-sonnet-5"]
+      M_T3["Tier 3 · claude-opus-5<br/>hard investigations"]
+      M_T0 -- "no hit" --> M_T1 -- "abstain or reject" --> M_T2 -- "reject" --> M_T3
+    end
+    M_INV["Investigator — find the reason<br/>facts → policy memo and contract → mail, chat, CRM<br/>→ similar decisions · quotes as evidence<br/>no post, no shell, no files"]
+    M_PROP["propose_entry(Proposal) + workpaper<br/>entries · applications · evidence quotes<br/>policy_refs · fact_refs · judgment notes"]
+    subgraph M_SG_KERNEL["Kernel — pure code, trusts nothing the agent says"]
+      direction LR
+      M_KF{{"F formal<br/>debits = credits · subledger = GL<br/>schedule sums · proof ties"}}
+      M_KE{{"E evidence<br/>trace exists as-of · quote is a substring<br/>party, amount, date tie"}}
+      M_KP{{"P process<br/>preparer is not approver · authority<br/>period open · escalations answered"}}
+      M_KJ{{"J judgment<br/>policy approved and matches<br/>fact active and in scope"}}
+      M_KB{{"Hard BLOCK rules, even if a human approves<br/>duplicate payment · locked period<br/>bank-detail change · over limit · SoD"}}
+    end
+    M_LADDER{{"Disposition<br/>autonomy ladder: auto gte 95% n gte 5 + cover<br/>review gte 80% · else shadow<br/>approval threshold $500"}}
+    M_CTRL["Controller agent on GPT<br/>independent reviewer<br/>different model family"]
+    M_INTAKE --> M_T0
+    M_T1 --> M_INV
+    M_T2 --> M_INV
+    M_T3 --> M_INV
+    M_T0 -- "hit" --> M_PROP
+    M_INV --> M_PROP
+    M_PROP --> M_KF
+    M_PROP --> M_KE
+    M_PROP --> M_KP
+    M_PROP --> M_KJ
+    M_PROP --> M_KB
+    M_KF --> M_LADDER
+    M_KE --> M_LADDER
+    M_KP --> M_LADDER
+    M_KJ --> M_LADDER
+    M_LADDER -- "review level, material or new" --> M_CTRL
+  end
+
+  subgraph M_SG_ROUTES["8 · Five routes — score the route, not the match"]
+    direction LR
+    M_R_AUTO(("AUTO"))
+    M_R_PROP(("PROPOSE"))
+    M_R_ESC(("ESCALATE"))
+    M_R_REF(("REFUSE"))
+    M_R_BLK(("BLOCK"))
+  end
+
+  subgraph M_SG_POST["9 · Post and ripple (sheets 04, 30)"]
+    direction LR
+    M_POST["Post to local ledger<br/>gl_entry + gl_line · artifact row<br/>trace closed"]
+    M_MIRROR["One-way QuickBooks mirror<br/>native objects else JournalEntry<br/>workpaper and source email attached"]
+    M_RIPPLE["Event on the bus → every function hears it<br/>same transaction, same meaning everywhere<br/>intent ripple view"]
+    M_BLOCKLOG[("blocked_attempt persisted<br/>with rule name · proposed schema addition")]
+    M_POST ==> M_MIRROR
+    M_POST --> M_RIPPLE
+  end
+
+  subgraph M_SG_HUMAN["10 · Human loop — asked once (sheet 05)"]
+    direction LR
+    M_ASK["Compose question<br/>what happened · where it looked<br/>what is unknown · 2-4 treatments"]
+    M_PERSON(["Person who knows, in Slack<br/>account owner · approver · controller"])
+    M_ANSWER["Answer parsed, verbatim kept as trace<br/>read-back if low confidence"]
+    M_GUARD{{"Memory guards in code<br/>scope clamp G-08 · stable keys G-09<br/>end date · authority ceiling G-04<br/>one correction is not a rule G-05"}}
+    M_ASK --> M_PERSON --> M_ANSWER --> M_GUARD
+  end
+
+  subgraph M_SG_LEARN["11 · Learning loops — one substrate, one fitness function (sheet 20)"]
+    direction LR
+    M_REPLAY["A · Reconstruct and replay Q2<br/>answers hidden · no look-ahead<br/>agreement by decision kind, with n"]
+    M_COMPILE["B · Compile repeated judgment → policy<br/>2 agreeing corrections · backtest<br/>runs as code at tier 0"]
+    M_ONLINE["C · Online within a run<br/>answer → fact · correction → example<br/>playbook delta lessons · run 1 vs run 2"]
+    M_RESEARCH["D · Overnight research loop (proposed)<br/>cluster failures → one change per branch<br/>→ eval → lexicographic gate → keep or reset"]
+    M_ZONES{{"Mutation zones<br/>mutable: prompts · playbooks · comparators<br/>human-approved: policies · facts · tool code<br/>read-only: kernel · scorer · labels · held-out"}}
+    M_CI{{"Replay suite + corpus as CI<br/>any false auto-post → exit non-zero<br/>regression blocks the change"}}
+    M_AUTON["Earned autonomy ladder<br/>shadow → review → auto<br/>demote on any false auto-post"]
+    M_REPLAY --> M_COMPILE --> M_CI
+    M_ONLINE --> M_COMPILE
+    M_RESEARCH --> M_ZONES --> M_CI
+    M_CI --> M_AUTON
+  end
+
+  subgraph M_SG_FT["12 · Open-weight fine-tune pipeline · stretch, first thing cut, routing never depends on it (sheet 21)"]
+    direction LR
+    M_FT_DATA["Export traces → JSONL<br/>kernel-verified · human corrections weigh more<br/>rejection sampling · real negatives"]
+    M_FT_SPLIT["Split by time and by entity<br/>train Apr-May · calibrate Jun · test Jul"]
+    M_FT_TRAIN["LoRA SFT on open-weight small model<br/>Claude as teacher · hosted trainer<br/>GBT pair-feature baseline to beat"]
+    M_FT_CAL["Evaluate · calibrate · abstain<br/>abstain threshold set for a TARGET of<br/>gte 99% precision · to be measured"]
+    M_FT_SHADOW{{"Shadow → promote per task and scope<br/>kernel still re-checks everything<br/>monitor · retrain triggers"}}
+    M_FT_DATA --> M_FT_SPLIT --> M_FT_TRAIN --> M_FT_CAL --> M_FT_SHADOW
+  end
+
+  subgraph M_SG_TEST["13 · Testing and benchmarking (sheet 23)"]
+    direction LR
+    M_TB_UNIT["Unit and property tests<br/>kernel checks · money invariants<br/>edit a quote → kernel rejects"]
+    M_TB_COMP["Component benchmarks<br/>matching · entity resolution · extraction<br/>every planted drift detected"]
+    M_TB_CORPUS["115-case edge corpus<br/>route scored · 22 min-fixture first<br/>learnable cases seeded twice"]
+    M_TB_E2E["Long-horizon runs<br/>full July close · sequential Q2 replay<br/>error compounding · pass^k over seeds"]
+    M_TB_ABL["Ablations and baselines<br/>rules off · memory off · frontier-only<br/>base vs fine-tuned vs Claude"]
+    M_TB_EXT["Sponsor reference benchmarks<br/>AccountingBench · APEX · BenchRec<br/>DABstep · Invoice Sandbox · FAB"]
+    M_TB_METRIC["Our measure of better<br/>safety → coverage → trust<br/>→ learning → efficiency"]
+    M_TB_UNIT --> M_TB_COMP --> M_TB_CORPUS --> M_TB_E2E --> M_TB_ABL --> M_TB_METRIC
+    M_TB_EXT --> M_TB_METRIC
+  end
+
+  subgraph M_SG_OBS["14 · Proof and visibility (sheet 22)"]
+    direction LR
+    M_OBS_TRACE[("Decision traces<br/>step · tool call · evidence · mark<br/>tier · tokens · dollars · latency")]
+    M_OBS_CONSOLE["Console<br/>drift board · function board · ripple view<br/>workpaper · trace timeline · policy approval"]
+    M_OBS_SCORE["Scoreboard by function · TO BE MEASURED<br/>share with no human · escalations<br/>wrong posts unreviewed (target 0)<br/>cost per decision"]
+    M_OBS_TIE["Balance-sheet tie-out<br/>every account tied to evidence<br/>green or honestly red"]
+    M_OBS_TRACE --> M_OBS_CONSOLE
+    M_OBS_TRACE --> M_OBS_SCORE
+  end
+
+  M_SEEDER --> M_QBO
+  M_SEEDER --> M_MAIL
+  M_SEEDER --> M_BANK
+  M_SEEDER --> M_HUB
+  M_SEEDER --> M_SLACK
+  M_SEEDER --> M_FILES
+  M_QBO --> M_STRUCT
+  M_BANK --> M_STRUCT
+  M_HUB --> M_STRUCT
+  M_MAIL --> M_STRUCT
+  M_SLACK --> M_STRUCT
+  M_FILES --> M_STRUCT
+  M_PAYOUT --> M_STRUCT
+  M_PORTAL --> M_STRUCT
+  M_ER --> M_ENT
+  M_TRACE --> M_DTRACE
+  M_TRACE --> M_CMP1
+  M_ENT --> M_CMP2
+  M_LEDGER --> M_CMP3
+  M_LEDGER --> M_CMP4
+  M_ENT --> M_CMP5
+  M_FACT -. "explains expected difference" .-> M_SUPPRESS
+  M_SUPPRESS -- "unexplained → open intent" --> M_INTENT
+  M_CAL --> M_INTENT
+  M_BUS --> M_INTENT
+  M_REVERSION -.-> M_INTENT
+  M_INTENT --> M_AR1
+  M_INTENT --> M_AP1
+  M_INTENT --> M_BR1
+  M_INTENT --> M_RV1
+  M_INTENT --> M_CL1
+  M_INTENT --> M_FC1
+  M_INTENT --> M_RP1
+  M_INTENT --> M_AU1
+  M_INTENT --> M_EQ1
+  M_AR3 --> M_INTAKE
+  M_AP3 --> M_INTAKE
+  M_BR3 --> M_INTAKE
+  M_RV3 --> M_INTAKE
+  M_CL3 --> M_INTAKE
+  M_FC3 --> M_INTAKE
+  M_RP3 --> M_INTAKE
+  M_AU3 --> M_INTAKE
+  M_EQ3 --> M_INTAKE
+  M_POLICY -.-> M_T0
+  M_FACT -.-> M_T0
+  M_DTRACE -.-> M_INV
+  M_KF -. "any mark fails: reject → next tier" .-> M_T1
+  M_KB --> M_R_BLK
+  M_LADDER == "accept, auto level" ==> M_R_AUTO
+  M_CTRL -- "agrees, needs click" --> M_R_PROP
+  M_CTRL -- "unsure" --> M_R_ESC
+  M_INV -- "blocked on context · several fits, will not pick" --> M_R_ESC
+  M_INV -- "no supportable proposal: lists everywhere it looked" --> M_R_REF
+  M_STRUCT -- "malformed file: REFUSE with reason" --> M_R_REF
+  M_R_AUTO ==> M_POST
+  M_R_PROP -- "human approves · post gate re-runs P marks + hard BLOCKs" --> M_POST
+  M_R_PROP -. "approved but a hard rule hits (G-01, H-1)" .-> M_R_BLK
+  M_R_BLK --> M_BLOCKLOG
+  M_R_ESC --> M_ASK
+  M_R_REF --> M_ASK
+  M_GUARD -- "scoped fact, asked once" --> M_FACT
+  M_POST --> M_LEDGER
+  M_MIRROR -.-> M_QBO
+  M_RIPPLE --> M_BUS
+  M_RIPPLE --> M_COND
+  M_COND -. "checklist state" .-> M_CL1
+  M_AU3 -. "audit.finding.raised" .-> M_BUS
+  M_POST --> M_OBS_TRACE
+  M_LEDGER --> M_OBS_TIE
+  M_OBS_TRACE -.-> M_REPLAY
+  M_OBS_TRACE -.-> M_ONLINE
+  M_OBS_TRACE -.-> M_RESEARCH
+  M_OBS_TRACE -.-> M_FT_DATA
+  M_COMPILE -. "approved policy" .-> M_POLICY
+  M_AUTON -.-> M_LADDER
+  M_FT_SHADOW -. "promoted model" .-> M_T1
+  M_KEY -.-> M_TB_CORPUS
+  M_TB_METRIC --> M_OBS_SCORE
+  M_CI -.-> M_TB_CORPUS
+  M_FT_CAL -.-> M_TB_ABL
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class M_QBO,M_BANK,M_HUB,M_MAIL,M_SLACK,M_FILES,M_AR1,M_AP1,M_BR1,M_RV1,M_CL1,M_FC1,M_RP1,M_AU1,M_EQ1 src
+  class M_PAYOUT,M_PORTAL stretch
+  class M_SEED,M_SEEDER,M_CANON,M_ER,M_AR2,M_AP2,M_BR2,M_RV2,M_CL2,M_FC2,M_RP2,M_AU2,M_EQ2,M_COND,M_CAL,M_INTAKE,M_POST,M_TIER1,M_TIER2 code
+  class M_EXTRACT,M_T1,M_T2,M_T3,M_INV,M_PROP,M_CTRL,M_ANSWER,M_ASK model
+  class M_PERSON human
+  class M_KEY,M_TRACE,M_LEDGER,M_ENT,M_DTRACE,M_TIER3,M_FACT,M_POLICY,M_INTENT,M_BUS,M_BLOCKLOG,M_OBS_TRACE store
+  class M_STRUCT,M_REVERSION,M_CMP1,M_CMP2,M_CMP3,M_CMP4,M_CMP5,M_TRIAGE,M_SUPPRESS,M_T0,M_KF,M_KE,M_KP,M_KJ,M_KB,M_LADDER,M_GUARD,M_ZONES,M_CI,M_FT_SHADOW gate
+  class M_REPLAY,M_COMPILE,M_ONLINE,M_RESEARCH,M_AUTON,M_FT_DATA,M_FT_SPLIT,M_FT_TRAIN,M_FT_CAL,M_TB_UNIT,M_TB_COMP,M_TB_CORPUS,M_TB_E2E,M_TB_ABL,M_TB_EXT,M_TB_METRIC learn
+  class M_AR3,M_AP3,M_BR3,M_RV3,M_CL3,M_FC3,M_RP3,M_AU3,M_EQ3,M_MIRROR,M_RIPPLE,M_OBS_CONSOLE,M_OBS_SCORE,M_OBS_TIE ext
+  class M_R_AUTO rAuto
+  class M_R_PROP rPropose
+  class M_R_ESC rEscalate
+  class M_R_REF rRefuse
+  class M_R_BLK rBlock

@@ -1,0 +1,296 @@
+flowchart TB
+
+  subgraph D_SG1["1 · Triggers and intake — what wakes the system"]
+    D_T_SYNC[/"connector sync completed<br/>QuickBooks · HubSpot · Gmail · Slack · bank · files<br/>new rows land in trace · recorded_time per sheet 01:<br/>manifest time for seeded history, else now"/]
+    D_T_TRACE[/"new trace recorded<br/>trace(source, kind, external_id,<br/>event_time, recorded_time, party_id)"/]
+    D_T_REVERSION[/"evidence re-versioned<br/>same source + external_id, new recorded_time,<br/>payload hash differs (A-24, F-06, H-6)"/]
+    D_T_CAL_T3[/"calendar: month-end T-3<br/>period open → closing,<br/>July checklist instantiated"/]
+    D_T_CAL_CLOSE[/"calendar: close day<br/>tie-outs, accrual sweep, lock attempt"/]
+    D_T_CAL_FCST[/"calendar: weekly forecast refresh<br/>13-week rebuild, explain last week miss"/]
+    D_T_CAL_PAYRUN[/"calendar: payment-run day<br/>decide what gets paid this week<br/>C7 vendor-bank check forced first"/]
+    D_T_EVENT[/"event-bus hand-off from another function<br/>event(topic, from_function, intent_id)"/]
+    D_T_SLACK(["human message in Slack<br/>finance · deals · cs-escalations"])
+    D_INTAKE{{"trigger intake (code) · sync or trace → drift monitor<br/>calendar or hand-off → standing or child intent<br/>human message → thread match · re-version → event<br/>idempotent on trigger kind + external_id (F-05)"}}
+  end
+
+  subgraph D_SG2["2 · Drift monitor — nine deterministic comparators, run on every sync (integer cents, no model call)"]
+    D_SNAP["as-of snapshot per comparator<br/>latest trace per source + external_id<br/>where recorded_time lte as_of"]
+    D_C1["C1 · deal value vs contract vs invoice run-rate<br/>HubSpot deal.amount vs contract annual value<br/>vs monthly invoice amount × 12<br/>join: customer_id + contract_id"]
+    D_C2["C2 · invoice vs cash received<br/>invoice open balance vs bank_txn credits applied<br/>join: customer_id + invoice no in remittance,<br/>else amount and date window"]
+    D_C3["C3 · bank vs ledger cash<br/>bank_txn lines vs gl_line on cash accounts<br/>join: bank_txn.id matched exactly once<br/>tolerance 0 cents"]
+    D_C4["C4 · AR and AP subledgers vs GL control accounts<br/>sum of open invoice and bill balances by party<br/>vs gl_line balance of AR and AP control<br/>join: control account + period"]
+    D_C5["C5 · deferred revenue schedule vs GL<br/>rev.schedule unrecognised cents remaining<br/>vs gl_line balance of deferred revenue<br/>join: contract_id + period"]
+    D_C6["C6 · forecast opening cash vs GL cash<br/>forecast_line week 1 opening at as_of<br/>vs trial_balance cash at the same as_of<br/>join: as_of date"]
+    D_C7["C7 · vendor bank details vs last paid<br/>vendor master remit-to vs account on last cleared<br/>payment vs remit-to on new bill or email<br/>join: vendor_id"]
+    D_C8["C8 · payroll register vs bank debit<br/>payroll_run net pay + taxes vs bank_txn debits<br/>join: payroll_run.id + pay date,<br/>stable payee key not descriptor text (A-09)"]
+    D_C9["C9 · grants ledger vs stock-comp expense (stretch)<br/>schedule-engine expense per active grant<br/>vs gl_line stock-comp expense<br/>join: employee_id + grant_id + period"]
+    D_P1[/"planted on C1<br/>Initech deal $144k vs invoices at $129.6k<br/>closed-won expansion with no invoice<br/>missed 4% escalator from month 13"/]
+    D_P2[/"planted on C2<br/>Wayne pays $3,300 short,<br/>no explanation anywhere"/]
+    D_P3[/"planted on C3<br/>parent pays for subsidiary (deposit not in ledger)<br/>refund posted twice<br/>the $12.40 difference"/]
+    D_P7[/"planted on C7<br/>vendor bank details changed by email<br/>two days before a payment run (B-17)"/]
+    D_P9[/"planted on C9 (stretch)<br/>departed employee still accruing stock comp<br/>HR departure notice in Slack"/]
+    D_DIFF["difference record, one per join key with delta not 0<br/>comparator, join_key, side_a_cents, side_b_cents,<br/>delta_cents, party_id, account, trace_ids<br/>delta 0 → tied, row on tie-out sheet only"]
+  end
+
+  subgraph D_SG3["3 · Difference triage — all in code, no model call"]
+    D_TR_MAT{{"abs(delta_cents) under comparator tolerance?<br/>C3 cash = 0 cents, so $12.40 is never immaterial<br/>others from policy_memo (approval materiality $500)"}}
+    D_TR_RECUR{{"recurrence check (D-10)<br/>same account + same sign, third period running,<br/>or account on the fraud-sensitive list?"}}
+    D_TR_LOG["immaterial: log, do not queue (D-09 · AUTO)<br/>event drift.logged_immaterial<br/>no intent, counted on the scoreboard"]
+    D_TR_TIMING{{"timing difference? (A-01, A-02)<br/>book-dated in period, bank value date after cutoff,<br/>same amount + counterparty, inside clearing window"}}
+    D_TR_RECITEM["reconciling item on the bank rec workpaper<br/>deposit in transit / outstanding check<br/>NOT a journal entry · carried forward,<br/>cleared once next period, never double-counted"]
+    D_TR_FACT{{"known-fact suppression<br/>fact.status active · valid_from lte as_of lte valid_to<br/>scope_json covers party + doc · expected delta<br/>recomputed in code equals observed delta?"}}
+    D_FACT[("fact<br/>party_id, predicate, value_json, scope_json,<br/>valid_from, valid_to, learned_at, approved_by")]
+    D_TR_SUPLOG["explained: no intent<br/>event drift.explained, explained_by fact_id<br/>e.g. Initech 10% off through renewal:<br/>$144k × 0.90 = $129.6k"]
+    D_TR_DEDUPE{{"dedupe vs open intents<br/>same function + party_id + comparator + join_key<br/>and status not closed or unwound?"}}
+    D_TR_ATTACH["attach new trace_ids to the existing intent<br/>delta changed → event drift.updated to its owner<br/>no second intent, no second question"]
+    D_TR_SEV["severity (code)<br/>abs(delta) vs $500 materiality · sensitive account<br/>days to payment run or close · recurrence flag<br/>C7 change before a run = always high"]
+    D_TR_OWNER["owner function by comparator map<br/>C1 C5 → revenue · C2 → AR · C3 → bank rec<br/>C4 C8 → close · C6 → forecast · C7 → AP<br/>C9 → equity-lite · human owner = crm.owner"]
+  end
+
+  subgraph D_SG4["4 · Intent as first-class state"]
+    D_SLACK_MATCH{{"slack_ts matches an open<br/>escalation thread?"}}
+    D_SLACK_CLASSIFY["tier 1 claude-haiku-4-5 classifies the message<br/>to function + question · code validates<br/>function enum, else asks back in thread"]
+    D_INT_CREATE["open_intent (code)<br/>question e.g. Resolve the $1,200 shortfall on INV-1042<br/>end_condition_json e.g. INV-1042 open balance = 0<br/>and comparator C2 delta = 0 for this join_key"]
+    D_INT_TABLE[("intent<br/>id, parent_id, function, question, owner,<br/>status, end_condition_json, created_at, closed_at")]
+    D_INT_PARENT["parent-child intents<br/>hand-off consumer opens a child with<br/>parent_id = event.intent_id · parent closes<br/>only when every child is closed"]
+    D_ST_OPEN["status: open<br/>queued for dispatch by function"]
+    D_ST_INVEST["status: investigating<br/>pack + router + investigator running"]
+    D_ST_PROPOSED["status: proposed<br/>propose_entry called, workpaper at kernel<br/>or with reviewer / approver"]
+    D_ST_WAIT["status: waiting_on_human<br/>escalate(question) → escalation row,<br/>asked_user, slack_ts"]
+    D_INT_ENDCOND{{"end condition evaluated in code<br/>after every post and event: re-run the<br/>opening comparator on this join_key,<br/>check balances named in end_condition_json"}}
+    D_ST_CLOSED["status: closed (closed_at set)<br/>end condition true, or REFUSE / BLOCK<br/>persisted with the rule name"]
+    D_ST_UNWOUND["status: unwound<br/>artifact.unwound_at set, reversing entry proposed<br/>(never delete) · a fresh child intent re-runs it"]
+    D_ARTIFACT[("artifact<br/>decision_id, intent_id, function, system,<br/>external_id, kind, created_at, unwound_at")]
+    D_RIPPLE["ripple view (console)<br/>select by intent_id incl. children: every decision,<br/>workpaper, gl_entry, QuickBooks doc, forecast_line,<br/>checklist tick, same amounts in every book"]
+  end
+
+  subgraph D_SG5["5 · Dispatch to the nine function packs (thin packs, one judgment layer)"]
+    D_DISPATCH{{"dispatch by intent.function (code)<br/>one worker per open intent · severity order<br/>pack = read tools + decision kinds +<br/>extra kernel checks + prompt"}}
+    D_PK_AR["1 AR and collections<br/>apply_payment · credit_memo · write_off<br/>customer_credit · dispute_hold"]
+    D_PK_AP["2 AP<br/>approve_bill · hold_bill · schedule_payment<br/>three-way match, bank-detail change BLOCK (B-17)"]
+    D_PK_BANK["3 Cash and bank rec<br/>bank_adjustment · reconciling items<br/>every bank line matched exactly once"]
+    D_PK_REV["4 Revenue<br/>rev_recognition · schedule revision<br/>schedules computed in code"]
+    D_PK_CLOSE["5 Close<br/>accrual · amortization · payroll_accrual<br/>owns the close conductor"]
+    D_PK_FCST["6 Forecast<br/>13-week forecast_line rebuild<br/>forecast_miss explained"]
+    D_PK_RPT["7 Reporting<br/>report.variance · flux note per material<br/>variance, traced to decisions and intents"]
+    D_PK_AUD["8 Audit and controls<br/>audit.sample · audit.rerun_kernel<br/>audit.control_test · findings"]
+    D_PK_EQ["9 Equity-lite (stretch, first pack cut)<br/>stock-comp schedule · forfeiture reversal<br/>four deterministic compliance checks"]
+    D_TO_JUDGMENT["to shared judgment layer (diagram 04)"]
+  end
+
+  subgraph D_SG6["6 · Event bus and role hand-offs"]
+    D_ROLE_PREP["preparer = the function agent<br/>decision.actor, proposal + workpaper"]
+    D_ROLE_SOD{{"kernel P: preparer is not approver<br/>approver authorized in approval matrix<br/>(G-02 · BLOCK at the storage layer)"}}
+    D_R_BLOCK(("BLOCK<br/>rule name<br/>persisted"))
+    D_ROLE_REV["reviewer = Controller agent<br/>(GPT, different model family)<br/>material gte $500 or new decision kind"]
+    D_ROLE_APPR(["approver<br/>controller within its authority, else<br/>human in Slack above materiality or anything new"])
+    D_ROLE_AUD["auditor = audit agent at month end<br/>samples posted entries, re-runs the kernel<br/>on their workpapers"]
+    D_EV_EMIT["emit (code)<br/>on kernel accept + post, on period lock, and on<br/>handoff(to_function, intent_id, note)<br/>always carries intent_id"]
+    D_EV_TABLE[("event<br/>id, ts, topic, from_function,<br/>intent_id, payload_json<br/>hand-offs and console feed")]
+    D_EV_T_ARCM["ar.credit_memo.posted<br/>→ revenue (revise schedule) · forecast (lower inflows)<br/>· reporting (flux line) · close (tick)"]
+    D_EV_T_APBILL["ap.bill.approved<br/>→ forecast (outflow week) · close (accrual<br/>or payable cut-off)"]
+    D_EV_T_UNMATCHED["bankrec.unmatched<br/>credit → AR (cash application)<br/>debit → AP (payment or duplicate, A-13)"]
+    D_EV_T_DEPART["hr.departure_detected<br/>→ payroll final pay and accrual (close)<br/>· equity-lite (forfeiture) · forecast (payroll out)"]
+    D_EV_T_LOCKED["close.period.locked<br/>→ all functions: kernel refuses posts<br/>to the locked period (G-03)"]
+    D_EV_T_REVERSION["evidence.reversioned<br/>→ the owning decision only: lookup<br/>workpaper evidence refs containing the trace_id"]
+    D_EV_STALE["mark workpaper stale, invalidate downstream<br/>artifacts, reconciliation re-run (A-24 · ESCALATE)"]
+    D_EV_FANOUT{{"subscription map in code: topic → consumers<br/>delivery idempotent on event.id + consumer<br/>each consumer gets a child intent"}}
+  end
+
+  subgraph D_SG7["7 · Close conductor — what is done and what is stuck"]
+    D_CL_TABLE[("checklist_item<br/>id, period, function, name, depends_on_json,<br/>status, blocked_reason, decision_ids_json")]
+    D_CL_DAG{{"DAG over depends_on_json<br/>topological sort and cycle check at instantiate<br/>item may go todo → doing only when<br/>every dependency is done"}}
+    D_CL_TICK["tick map (code) + close.mark(item, status, reason)<br/>ar.credit_memo.posted → AR concessions reviewed<br/>bankrec tie → bank rec complete · decision ids<br/>appended to decision_ids_json"]
+    D_CL_I1["bank rec complete (bank rec)<br/>C3 delta 0, reconciling items listed"]
+    D_CL_I2["AR ties to GL control · AR concessions<br/>reviewed · unapplied cash cleared (AR)"]
+    D_CL_I3["AP ties to GL control · accruals for bills not yet<br/>received (July cloud bill arrives 3 Aug)<br/>· prepaid amortization · payroll accrual (AP, close)"]
+    D_CL_I4["revenue recognised · deferred revenue<br/>schedule ties to GL, C5 delta 0 (revenue)"]
+    D_CL_I6["forecast opening cash equals GL cash,<br/>C6 delta 0 (forecast)"]
+    D_CL_I7["flux note per material variance,<br/>numbers tie to the ledger (reporting)"]
+    D_CL_I8["audit sample re-performed,<br/>control tests written up (audit)"]
+    D_CL_BLOCKED["status: blocked<br/>blocked_reason = open intent id + escalation id<br/>e.g. Wayne $3,300 short-pay waiting_on_human"]
+    D_CL_LOCKGATE{{"lock gate (code + approver)<br/>every item done · C3 to C6 deltas 0 ·<br/>no open July intents · approver signs"}}
+    D_PER_OPEN["period.status: open"]
+    D_PER_CLOSING["period.status: closing<br/>set by the month-end T-3 trigger"]
+    D_PER_LOCKED["period.status: locked<br/>late $47,000 July invoice found 8 Aug is booked<br/>in August, effect on July reported"]
+    D_CL_BOARD["done-and-stuck board (console polls SQLite)<br/>per function: todo / doing / blocked / done<br/>blocked_reason links to the intent ripple view"]
+  end
+
+  %% 1 triggers
+  D_T_SYNC --> D_INTAKE
+  D_T_TRACE --> D_INTAKE
+  D_T_CAL_T3 --> D_INTAKE
+  D_T_CAL_CLOSE --> D_INTAKE
+  D_T_CAL_FCST --> D_INTAKE
+  D_T_CAL_PAYRUN --> D_INTAKE
+  D_T_EVENT --> D_INTAKE
+  D_T_SLACK --> D_INTAKE
+  D_T_REVERSION --> D_INTAKE
+  D_INTAKE -- "human message" --> D_SLACK_MATCH
+  D_SLACK_MATCH -- "no: a new request" --> D_SLACK_CLASSIFY
+  D_SLACK_MATCH -- "yes: escalation.answer_json stored,<br/>fact candidate recorded" --> D_ST_WAIT
+  D_SLACK_CLASSIFY --> D_INT_CREATE
+  D_INTAKE -- "sync or trace" --> D_SNAP
+  D_INTAKE -- "calendar or hand-off:<br/>standing or child intent" --> D_INT_CREATE
+  D_INTAKE -. "evidence.reversioned" .-> D_EV_T_REVERSION
+
+  %% 2 drift monitor
+  D_SNAP --> D_C1
+  D_SNAP --> D_C2
+  D_SNAP --> D_C3
+  D_SNAP --> D_C4
+  D_SNAP --> D_C5
+  D_SNAP --> D_C6
+  D_SNAP --> D_C7
+  D_SNAP --> D_C8
+  D_SNAP --> D_C9
+  D_P1 -- "caught by" --> D_C1
+  D_P2 -- "caught by" --> D_C2
+  D_P3 -- "caught by" --> D_C3
+  D_P7 -- "caught by" --> D_C7
+  D_P9 -- "caught by" --> D_C9
+  D_C1 --> D_DIFF
+  D_C2 --> D_DIFF
+  D_C3 --> D_DIFF
+  D_C4 --> D_DIFF
+  D_C5 --> D_DIFF
+  D_C6 --> D_DIFF
+  D_C7 --> D_DIFF
+  D_C8 --> D_DIFF
+  D_C9 --> D_DIFF
+
+  %% 3 triage
+  D_DIFF --> D_TR_MAT
+  D_TR_MAT -- "under tolerance" --> D_TR_RECUR
+  D_TR_RECUR -- "no" --> D_TR_LOG
+  D_TR_RECUR -- "yes: pattern beats threshold,<br/>severity high" --> D_TR_DEDUPE
+  D_TR_MAT -- "over tolerance" --> D_TR_TIMING
+  D_TR_TIMING -- "yes" --> D_TR_RECITEM
+  D_TR_RECITEM -. "not cleared inside the window:<br/>re-enters as a difference" .-> D_DIFF
+  D_TR_TIMING -- "no" --> D_TR_FACT
+  D_FACT -. "memory.facts by party_id + predicate" .-> D_TR_FACT
+  D_TR_FACT -. "explained: suppress" .-> D_TR_SUPLOG
+  D_TR_FACT -- "unexplained, or only partly explained" --> D_TR_DEDUPE
+  D_TR_DEDUPE -- "already open" --> D_TR_ATTACH
+  D_TR_DEDUPE -- "new" --> D_TR_SEV
+  D_TR_SEV --> D_TR_OWNER
+  D_TR_OWNER --> D_INT_CREATE
+
+  %% 4 intent
+  D_INT_CREATE --> D_INT_TABLE
+  D_INT_CREATE --> D_ST_OPEN
+  D_INT_PARENT --> D_INT_CREATE
+  D_ST_OPEN -- "dispatched" --> D_ST_INVEST
+  D_ST_INVEST -- "propose_entry" --> D_ST_PROPOSED
+  D_ST_INVEST -- "blocked on context: escalate" --> D_ST_WAIT
+  D_ST_WAIT -- "answered" --> D_ST_INVEST
+  D_ST_PROPOSED -. "kernel reject: back, one router tier up" .-> D_ST_INVEST
+  D_ST_PROPOSED -- "accepted and posted" --> D_INT_ENDCOND
+  D_INT_ENDCOND -- "true" --> D_ST_CLOSED
+  D_ST_INVEST -. "REFUSE or BLOCK: persisted with reason or rule name" .-> D_ST_CLOSED
+  D_INT_ENDCOND -. "false: residual remains" .-> D_ST_INVEST
+  D_ST_CLOSED -. "evidence re-versioned or fact retired" .-> D_ST_UNWOUND
+  D_ST_UNWOUND -. "child intent" .-> D_INT_PARENT
+  D_ST_PROPOSED -- "every artifact carries intent_id" --> D_ARTIFACT
+  D_ARTIFACT --> D_RIPPLE
+  D_INT_TABLE --> D_RIPPLE
+
+  %% 5 dispatch
+  D_ST_OPEN --> D_DISPATCH
+  D_DISPATCH --> D_PK_AR
+  D_DISPATCH --> D_PK_AP
+  D_DISPATCH --> D_PK_BANK
+  D_DISPATCH --> D_PK_REV
+  D_DISPATCH --> D_PK_CLOSE
+  D_DISPATCH --> D_PK_FCST
+  D_DISPATCH --> D_PK_RPT
+  D_DISPATCH --> D_PK_AUD
+  D_DISPATCH --> D_PK_EQ
+  D_PK_AR --> D_TO_JUDGMENT
+  D_PK_AP --> D_TO_JUDGMENT
+  D_PK_BANK --> D_TO_JUDGMENT
+  D_PK_REV --> D_TO_JUDGMENT
+  D_PK_CLOSE --> D_TO_JUDGMENT
+  D_PK_FCST --> D_TO_JUDGMENT
+  D_PK_RPT --> D_TO_JUDGMENT
+  D_PK_AUD --> D_TO_JUDGMENT
+  D_PK_EQ --> D_TO_JUDGMENT
+
+  %% 6 roles and event bus
+  D_TO_JUDGMENT -- "proposal + workpaper" --> D_ROLE_PREP
+  D_ROLE_PREP --> D_ROLE_SOD
+  D_ROLE_SOD -- "kernel accept, under materiality,<br/>autonomy level auto" --> D_EV_EMIT
+  D_ROLE_SOD -- "material or new" --> D_ROLE_REV
+  D_ROLE_SOD -- "preparer equals approver, or approver<br/>not authorized: a human click cannot lift it" --> D_R_BLOCK
+  D_ROLE_REV -. "disagrees: ESCALATE, both views handed over" .-> D_ST_WAIT
+  D_ROLE_REV -- "agrees within authority, else hands up" --> D_ROLE_APPR
+  D_ROLE_APPR -- "approved: kernel P re-run with approver identity,<br/>hard BLOCK rules still hold, then post" --> D_EV_EMIT
+  D_EV_EMIT --> D_EV_TABLE
+  D_EV_TABLE -. "topic" .-> D_EV_T_ARCM
+  D_EV_TABLE -. "topic" .-> D_EV_T_APBILL
+  D_EV_TABLE -. "topic" .-> D_EV_T_UNMATCHED
+  D_EV_TABLE -. "topic" .-> D_EV_T_DEPART
+  D_EV_TABLE -. "topic" .-> D_EV_T_LOCKED
+  D_EV_TABLE -. "all posted topics, month end" .-> D_ROLE_AUD
+  D_EV_T_ARCM -.-> D_EV_FANOUT
+  D_EV_T_APBILL -.-> D_EV_FANOUT
+  D_EV_T_UNMATCHED -.-> D_EV_FANOUT
+  D_EV_T_DEPART -.-> D_EV_FANOUT
+  D_EV_T_LOCKED -.-> D_EV_FANOUT
+  D_EV_T_REVERSION -.-> D_EV_STALE
+  D_EV_STALE -. "owning intent unwound" .-> D_ST_UNWOUND
+  D_EV_FANOUT -. "delivered as an event-bus hand-off trigger" .-> D_INTAKE
+  D_EV_FANOUT -. "every posted topic ticks its items" .-> D_CL_TICK
+
+  %% 7 close conductor
+  D_CL_TICK --> D_CL_TABLE
+  D_CL_TABLE --> D_CL_DAG
+  D_CL_DAG --> D_CL_I1
+  D_CL_I1 -- "depends_on" --> D_CL_I2
+  D_CL_I1 -- "depends_on" --> D_CL_I3
+  D_CL_I1 -- "depends_on" --> D_CL_I6
+  D_CL_I2 -- "depends_on" --> D_CL_I4
+  D_CL_I3 -- "depends_on" --> D_CL_I7
+  D_CL_I4 -- "depends_on" --> D_CL_I7
+  D_CL_I7 -- "depends_on" --> D_CL_I8
+  D_CL_I6 --> D_CL_LOCKGATE
+  D_CL_I8 --> D_CL_LOCKGATE
+  D_CL_I2 -. "open intent or unanswered escalation" .-> D_CL_BLOCKED
+  D_CL_BLOCKED -. "answer arrives, intent closes: doing" .-> D_CL_I2
+  D_PER_OPEN -- "month-end T-3" --> D_PER_CLOSING
+  D_PER_CLOSING --> D_CL_LOCKGATE
+  D_CL_LOCKGATE -- "all green" --> D_PER_LOCKED
+  D_CL_LOCKGATE -. "not yet: stuck items named" .-> D_CL_BOARD
+  D_CL_TABLE --> D_CL_BOARD
+  D_CL_BLOCKED --> D_CL_BOARD
+  D_PER_LOCKED -. "emits close.period.locked" .-> D_EV_EMIT
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class D_T_SYNC,D_T_TRACE,D_T_REVERSION,D_T_CAL_T3,D_T_CAL_CLOSE,D_T_CAL_FCST,D_T_CAL_PAYRUN,D_T_EVENT,D_P1,D_P2,D_P3,D_P7 src
+  class D_T_SLACK,D_ROLE_APPR human
+  class D_SLACK_CLASSIFY,D_ROLE_REV model
+  class D_SNAP,D_C1,D_C2,D_C3,D_C4,D_C5,D_C6,D_C7,D_C8,D_DIFF code
+  class D_TR_LOG,D_TR_RECITEM,D_TR_ATTACH,D_TR_SEV,D_TR_OWNER code
+  class D_TR_SUPLOG learn
+  class D_INT_CREATE,D_INT_PARENT,D_ST_OPEN,D_ST_INVEST,D_ST_PROPOSED,D_ST_WAIT,D_ST_CLOSED,D_ST_UNWOUND,D_RIPPLE code
+  class D_PK_AR,D_PK_AP,D_PK_BANK,D_PK_REV,D_PK_CLOSE,D_PK_FCST,D_PK_RPT,D_PK_AUD,D_TO_JUDGMENT,D_ROLE_PREP,D_ROLE_AUD model
+  class D_EV_EMIT,D_EV_T_ARCM,D_EV_T_APBILL,D_EV_T_UNMATCHED,D_EV_T_DEPART,D_EV_T_LOCKED,D_EV_T_REVERSION,D_EV_STALE code
+  class D_CL_TICK,D_CL_I1,D_CL_I2,D_CL_I3,D_CL_I4,D_CL_I6,D_CL_I7,D_CL_I8,D_CL_BLOCKED,D_PER_OPEN,D_PER_CLOSING,D_PER_LOCKED,D_CL_BOARD code
+  class D_FACT,D_INT_TABLE,D_ARTIFACT,D_EV_TABLE,D_CL_TABLE store
+  class D_INTAKE,D_SLACK_MATCH,D_TR_MAT,D_TR_RECUR,D_TR_TIMING,D_TR_FACT,D_TR_DEDUPE,D_INT_ENDCOND,D_DISPATCH,D_ROLE_SOD,D_EV_FANOUT,D_CL_DAG,D_CL_LOCKGATE gate
+  class D_C9,D_P9,D_PK_EQ stretch
+  class D_R_BLOCK rBlock

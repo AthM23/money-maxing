@@ -1,0 +1,327 @@
+flowchart TB
+
+  subgraph L_SG1["1 · Substrate: decision traces (one store, every loop reads it)"]
+    L_TRACE[("trace<br/>source, kind, event_time, recorded_time, payload_json<br/>every step, tool call, evidence hit, cost, latency")]
+    L_DECISION[("decision<br/>mode live or replay, kind, proposal_json, actor<br/>autonomy_level, model_calls, cost_micros")]
+    L_WORKPAPER[("workpaper<br/>marks_json F · E · P · J, kernel_verdict<br/>checkable_num / checkable_den")]
+    L_ESCALATION[("escalation<br/>question_json, answer_json, asked_user<br/>asked_at, answered_at, slack_ts")]
+    L_CORRECTION[("controller corrections<br/>decision row with actor = controller<br/>plus diff vs the original proposal_json")]
+    L_REPLAYRES[("replay_result<br/>decision_point_id, decision_id<br/>agrees, diff_json, triage")]
+    L_CORPUSRES[("corpus run results<br/>tests/cases.csv: expected_route vs actual route<br/>status per case, scoreboard in RESULTS.md")]
+    L_COSTLAT[("cost and latency per router tier<br/>tokens, dollars, ms per decision<br/>tier 0 · 1 · 2 · 3")]
+  end
+
+  subgraph L_SG2["2 · Loop A: Reconstruct and Replay (before going live)"]
+    L_A_Q2[/"human-closed Q2, Apr-Jun 2026<br/>gl_entry and gl_line, Q2 close workbook<br/>mail, Slack, bank, contracts"/]
+    L_A_DP["Reconstruct: build decision_point rows<br/>function, period, kind, trace_ids_json, decided_at = T<br/>kinds: short-pay treatment · wire-fee write-offs<br/>· AP account coding"]
+    L_A_HIDE{{"hide human_outcome_json<br/>never reachable from any agent tool<br/>scoring key lives outside the tool layer"}}
+    L_A_ASOF{{"as-of guard: only traces with recorded_time lte T<br/>same tool names in replay and live (spec 8)<br/>kernel E: every trace_id recorded by T"}}
+    L_A_PERDEC["per-decision replay<br/>each decision_point starts from the<br/>human-closed state just before T"]
+    L_A_SEQ["sequential whole-quarter replay: Apr → May → Jun<br/>agent carries its OWN postings forward<br/>tie-outs at each period end (errors compound)"]
+    L_A_AGENT["agent decides: router → investigator →<br/>propose_entry + workpaper<br/>decision.mode = replay"]
+    L_A_KERNEL{{"Kernel F · E · P · J<br/>same pure code as live"}}
+    L_A_DIFF["diff vs human outcome (code)<br/>proposal kind, accounts, amount_cents, party, period<br/>→ replay_result.agrees, diff_json"]
+    L_A_AGREE["agreement by decision kind, always with n<br/>e.g. wire-fee write-offs: agree / n<br/>no percentages without counts"]
+    L_A_TRIAGE["triage every disagreement<br/>model drafts the reason, a human confirms<br/>→ replay_result.triage"]
+    L_A_T_AGENT["agent wrong"]
+    L_A_T_CTX["missing context<br/>human knew something that is in no trace"]
+    L_A_T_AMBIG["ambiguous: both defensible<br/>reported separately, not counted as agree"]
+    L_A_INCONS["human inconsistent → inconsistent-human flag<br/>same condition, different human outcomes across Apr-Jun<br/>shown to the controller with both entries"]
+  end
+
+  subgraph L_SG3["3 · Loop B: Compile (repeated judgment → policy)"]
+    L_B_MINE["mine repeated agreeing decisions and corrections<br/>group by function, kind, stable party key,<br/>condition features (amount band, account, clause)"]
+    L_B_G05{{"G-05: at least two agreeing corrections<br/>both cited verbatim<br/>one example is an anecdote"}}
+    L_B_REFUSE(("REFUSE<br/>to learn"))
+    L_B_DRAFT["draft policy (model)<br/>condition_json, action_json, intent_text, tier<br/>status = proposed"]
+    L_B_G08{{"G-08 clamp scope (code)<br/>never wider than the class ceiling<br/>never narrower than the source case<br/>pinned to the counterparty"}}
+    L_B_G09{{"G-09 stable keys<br/>vendor_id or party_id, never a statement descriptor<br/>(A-09, H-3: GUSTO PAYROLL vs GUSTO TAX COLLECTION)"}}
+    L_B_BACKTEST["backtest on EVERY closed period Apr, May, Jun<br/>would-fire count, agrees, mis-clears<br/>→ policy.backtest_json"]
+    L_B_G06{{"G-06: any mis-clear in backtest<br/>= cannot be adopted at all"}}
+    L_B_BLOCK(("BLOCK<br/>rule name<br/>persisted"))
+    L_B_G04{{"G-04 authority ceiling<br/>policy inherits the approval-matrix ceiling<br/>of whoever approved it"}}
+    L_B_PR(["Controller approves like a pull request<br/>sees diff, cited corrections, backtest_json<br/>→ approved_by, approved_at"])
+    L_B_POLICY[("policy<br/>status proposed → approved → superseded<br/>condition_json, action_json, intent_text, tier")]
+    L_B_G07["G-07 contradicting correction<br/>→ NEW version, old row stays, marked superseded<br/>route PROPOSE, never edit in place"]
+    L_B_PT_UNI["policy.tier = universal<br/>holds for any company<br/>e.g. block a duplicate payment"]
+    L_B_PT_VERT["policy.tier = vertical<br/>holds across SaaS companies<br/>e.g. annual prepaid → ratable schedule"]
+    L_B_PT_CO["policy.tier = company-specific<br/>Northwind only, pinned to a party<br/>e.g. wire-fee short-pay of one customer"]
+  end
+
+  subgraph L_SG4["4 · Loop C: Online, within a run (corrections one at a time)"]
+    L_C_RUN1["July run 1 from seed S<br/>live close, all packs"]
+    L_C_GEN["generator = pack agent (model)<br/>prompt + pack playbook + k few-shot examples"]
+    L_C_HUMAN(["Human in Slack<br/>answers escalate(question) once"])
+    L_C_FACT["record_fact_candidate → fact<br/>scope_json, valid_from, valid_to, learned_at<br/>stated_by, source_trace_ids_json · approved_by =<br/>authorised answerer, else the controller (sheet 05)"]
+    L_C_APPLY{{"code decides if the fact applies (kernel J)<br/>active on the date and in scope<br/>→ applied automatically, asked once"}}
+    L_C_CTRL(["Controller agent (GPT) or human reviewer<br/>corrects a proposal"])
+    L_C_EXAMPLE["labelled example stored IMMEDIATELY<br/>context trace_ids, rejected proposal,<br/>corrected proposal, reason"]
+    L_C_SIMILAR["memory.similar_decisions<br/>k most similar past decisions as few-shot<br/>same function and kind, kernel-accepted only"]
+    L_C_REFL["reflector (model)<br/>reads trace + correction + kernel reject reasons<br/>writes ONE one-line lesson"]
+    L_C_CUR["curator (code): ACE-style DELTA edit<br/>append, merge duplicate, bump helpful / harmful count<br/>no wholesale rewrites (avoids context collapse)"]
+    L_C_PLAYBOOK[("pack playbook<br/>one lesson per line: id, text, source decision_id<br/>helpful and harmful counters")]
+    L_C_COLLECT["collect after run 1<br/>human answers + controller corrections<br/>→ hand to Loop B compile"]
+    L_C_RUN2["July run 2 from the SAME seed S<br/>facts, policies, playbook now in place"]
+    L_C_COMPARE["run 1 vs run 2 (counts)<br/>questions asked and repeat questions<br/>model calls, cost_micros, decisions per tier"]
+    L_C_BOOKS{{"and the books still match<br/>run 2 trial balance = run 1 trial balance<br/>all tie-outs pass"}}
+  end
+
+  subgraph L_SG5["5 · Loop D: Overnight autonomous research loop (proposed), autoresearch-style"]
+    L_D_COLLECT["collect failed + escalated traces<br/>from replay_result and corpus runs<br/>DEV split only"]
+    L_D_CLUSTER["error analysis<br/>open-code 30-100 traces → taxonomy → count<br/>pick the largest cluster, FIRST upstream failure"]
+    L_D_HYP["root-cause hypothesis (model)<br/>attribution is unreliable, so it stays a hypothesis<br/>that the eval confirms or rejects"]
+
+    subgraph L_SG5B["5b · failure class → kind of fix"]
+      L_D_M_CTX["missing context<br/>→ new scoped fact, or an escalation rule"]
+      L_D_M_RETR["retrieval miss<br/>→ comparator or index change"]
+      L_D_M_REASON["reasoning error<br/>→ prompt lesson as an ACE-style delta<br/>to the pack playbook"]
+      L_D_M_POLICY["wrong or absent policy<br/>→ PROPOSED policy, needs human approval"]
+      L_D_M_TOOL["tool bug<br/>→ code fix + unit test"]
+      L_D_M_THRESH["threshold<br/>→ router threshold change<br/>only if NO case moves to AUTO"]
+      L_D_M_REGRESS["every failure<br/>→ a DRAFT regression case, add only, never delete<br/>expected_route is set by a human, not the loop"]
+    end
+
+    L_D_PROPOSE["proposer (model): ONE change per experiment<br/>on its own git branch exp/NNN<br/>no new deps, simpler is better"]
+    L_D_GEPA["GEPA batch proposer (optional)<br/>reflects on traces, mutates prompt text<br/>offline batch only, live use rejected 09-19"]
+    L_D_BUDGET{{"fixed wall-clock and dollar budget per experiment<br/>hard kill on overrun<br/>nightly dollar cap on the whole loop"}}
+    L_D_CASCADE["run eval as a cascade: cheap cases first<br/>tier-0 and T1 cases, then model-heavy T2 / T3<br/>stop at the first false auto-post"]
+    L_D_G1{{"gate 1: false auto-posts = 0"}}
+    L_D_G2{{"gate 2: no pass-to-fail flips<br/>kernel reject rate does not rise"}}
+    L_D_G3{{"gate 3: routing accuracy<br/>+ replay agreement go UP"}}
+    L_D_G4{{"gate 4: fewer escalations<br/>ties → the simpler change wins"}}
+    L_D_NOISE{{"noisy-gain re-run<br/>on 115 cases a 1-2 case gain is noise<br/>re-run, keep only if it repeats"}}
+    L_D_KEEP["KEEP: commit stays on the branch"]
+    L_D_DISCARD["DISCARD: git reset<br/>never stop to ask the human"]
+    L_D_LOG[("results log, results.tsv-style, in the trace store<br/>commit, lexicographic metrics, status,<br/>description, dollars, seconds")]
+    L_D_HELDOUT{{"held-out check, once per night, survivors only<br/>25-30% of cases, stratified by route<br/>held-out traces never shown to the proposer"}}
+    L_D_QUEUE(["human approval queue<br/>controller reviews each survivor: diff,<br/>dev + held-out scores, traces"])
+
+    subgraph L_SG5M["zone MUTABLE: the loop may edit"]
+      L_Z_M_PROMPT["prompts and<br/>playbook lessons"]
+      L_Z_M_THRESH["router thresholds<br/>CONSERVATIVE direction only"]
+      L_Z_M_COMP["comparators<br/>(drift monitor and matching)"]
+    end
+    subgraph L_SG5H["zone HUMAN-APPROVAL: loop drafts, a human applies"]
+      L_Z_H_POLICY["policies, scoped facts and<br/>draft regression cases (a human sets the label)"]
+      L_Z_H_TOOL["tool code and anything<br/>that widens what can AUTO-post"]
+    end
+    subgraph L_SG5R["zone READ-ONLY: never touched, outside the mutable tree"]
+      L_Z_R_KERNEL{{"kernel and scorer"}}
+      L_Z_R_LABELS{{"corpus labels, held-out set,<br/>answer key"}}
+      L_Z_WHY["why: the optimizer WILL attack the checker<br/>DGM fabricated test logs, AccountingBench models<br/>pulled in unrelated transactions to force a tie"]
+    end
+  end
+
+  subgraph L_SG6["6 · Shared fitness and CI (one scorer for every loop)"]
+    L_F_TRIGGER["CI trigger<br/>every policy, prompt, playbook,<br/>comparator or model change"]
+    L_F_SUITE["replay suite<br/>Q2 decision_points, per-decision + sequential"]
+    L_F_CORPUS[/"115-case corpus, tests/cases.csv<br/>expected_route: AUTO 18 · PROPOSE 26 · ESCALATE 39<br/>REFUSE 12 · BLOCK 15 · INVARIANT 5"/]
+    L_F_BASELINE["falsifiable baseline flag<br/>deterministic tier disabled,<br/>everything routed through the model"]
+    L_F_METRICS["section J, five numbers: auto-clear rate,<br/>auto-clear precision, false auto-posts, exception recall,<br/>cost per 1,000 transactions<br/>→ written to cases.csv status and RESULTS.md"]
+    L_F_EXIT{{"eval exits NON-ZERO on any false auto-post<br/>(G-10) precision is the number<br/>that must not move"}}
+    L_F_SHIP{{"a change that lowers Q2 agreement<br/>does not ship"}}
+  end
+
+  subgraph L_SG7["7 · Earned autonomy ladder, per decision kind"]
+    L_AL_SHADOW["shadow: every decision kind starts here<br/>agent decides, nothing posts"]
+    L_AL_G80{{"replay agreement gte 80%<br/>counts shown: agree / n"}}
+    L_AL_REVIEW["post-with-review: reviewer signs every entry<br/>(controller agent · human approver when<br/>gte $500 or new, per sheet 04)"]
+    L_AL_G95{{"agreement gte 95% and n gte 5<br/>and a covering policy or fact"}}
+    L_AL_AUTO["auto-post<br/>sets decision.autonomy_level<br/>read by kernel P checks"]
+    L_AL_DEMOTE{{"demotion on ANY false auto-post, or on drift<br/>agreement falls below the bar in CI, or the fire<br/>count of a policy drops to 0 (H-3 decay)"}}
+  end
+
+  subgraph L_SG8["8 · Outputs back into the running system"]
+    L_O_TIER0["router tier 0 rules: approved policy or active fact<br/>runs as CODE, no model call<br/>inference is expensive freedom, compile it away"]
+    L_O_PLAYBOOK["pack playbooks<br/>versioned lesson lists per function pack"]
+    L_O_COMP["comparator versions<br/>drift monitor and matching comparators"]
+    L_O_REGRESS["new regression cases, human-labelled<br/>added to the dev split, add-only<br/>the 115 corpus labels are never edited"]
+    L_TO_FINETUNE["to fine-tune pipeline (diagram 21) · STRETCH<br/>open-weight tier 1 model · never trains on the<br/>115-case corpus, held-out set or answer key"]
+    L_O_COST["cost per decision falling run over run<br/>share of decisions at tier 0 rises<br/>reported as counts, from real runs only"]
+  end
+
+  L_TRACE --> L_A_DP
+  L_DECISION -- "index of kernel-accepted decisions" --> L_C_SIMILAR
+  L_CORRECTION --> L_C_EXAMPLE
+  L_REPLAYRES -- "agreeing decisions" --> L_B_MINE
+  L_REPLAYRES -- "disagreements" --> L_D_COLLECT
+  L_WORKPAPER -- "failed marks" --> L_D_COLLECT
+  L_ESCALATION -- "escalated" --> L_D_COLLECT
+  L_CORPUSRES -- "wrong routes" --> L_D_COLLECT
+  L_COSTLAT --> L_C_COMPARE
+
+  L_A_Q2 --> L_A_DP
+  L_A_DP --> L_A_HIDE
+  L_A_HIDE --> L_A_ASOF
+  L_A_ASOF --> L_A_PERDEC
+  L_A_ASOF --> L_A_SEQ
+  L_A_PERDEC --> L_A_AGENT
+  L_A_SEQ --> L_A_AGENT
+  L_A_AGENT --> L_A_KERNEL
+  L_A_KERNEL -- "verdict + proposal" --> L_A_DIFF
+  L_A_DIFF -- "agrees" --> L_A_AGREE
+  L_A_DIFF -- "disagrees" --> L_A_TRIAGE
+  L_A_DIFF -. "writes (code, outside the tool layer)" .-> L_REPLAYRES
+  L_A_T_AMBIG -. "reported as its own count" .-> L_A_AGREE
+  L_A_TRIAGE --> L_A_T_AGENT
+  L_A_TRIAGE --> L_A_INCONS
+  L_A_TRIAGE --> L_A_T_CTX
+  L_A_TRIAGE --> L_A_T_AMBIG
+  L_A_T_AGENT -. "failure trace" .-> L_D_COLLECT
+  L_A_T_CTX -. "fact candidate or seeding gap" .-> L_C_FACT
+  L_A_INCONS -. "controller picks one treatment before mining" .-> L_B_MINE
+
+  L_B_MINE --> L_B_G05
+  L_B_G05 -- "only one" --> L_B_REFUSE
+  L_B_G05 -- "two or more" --> L_B_DRAFT
+  L_B_DRAFT --> L_B_G08
+  L_B_G08 --> L_B_G09
+  L_B_G09 --> L_B_BACKTEST
+  L_B_BACKTEST --> L_B_G06
+  L_B_G06 -- "fails" --> L_B_BLOCK
+  L_B_G06 -- "passes" --> L_B_G04
+  L_B_G04 -- "ceiling attached" --> L_B_PR
+  L_B_G04 -- "fires above ceiling at run time" --> L_B_BLOCK
+  L_B_PR -- "approve or reject, both recorded" --> L_B_POLICY
+  L_B_G07 -- "new version drafted" --> L_B_DRAFT
+  L_B_POLICY --> L_B_PT_UNI
+  L_B_POLICY --> L_B_PT_VERT
+  L_B_POLICY --> L_B_PT_CO
+
+  L_C_RUN1 --> L_C_GEN
+  L_C_GEN -- "blocked on context" --> L_C_HUMAN
+  L_C_HUMAN -- "answer_json" --> L_C_FACT
+  L_C_FACT --> L_C_APPLY
+  L_C_GEN -- "proposal reviewed" --> L_C_CTRL
+  L_C_CTRL --> L_C_EXAMPLE
+  L_C_CTRL -. "contradicts an existing policy" .-> L_B_G07
+  L_C_EXAMPLE --> L_C_SIMILAR
+  L_C_EXAMPLE --> L_C_REFL
+  L_C_REFL --> L_C_CUR
+  L_C_CUR --> L_C_PLAYBOOK
+  L_C_SIMILAR -. "few-shot, next decision" .-> L_C_GEN
+  L_C_PLAYBOOK -. "lessons, next decision (proposed) · within-run only,<br/>kernel still gates · kept across runs only after CI" .-> L_C_GEN
+  L_C_APPLY --> L_C_COLLECT
+  L_C_EXAMPLE --> L_C_COLLECT
+  L_C_COLLECT -. "compile" .-> L_B_MINE
+  L_C_COLLECT --> L_C_RUN2
+  L_C_RUN2 --> L_C_COMPARE
+  L_C_COMPARE --> L_C_BOOKS
+  L_C_BOOKS -- "match" --> L_O_COST
+  L_C_BOOKS -. "mismatch: failure trace" .-> L_D_COLLECT
+
+  L_D_COLLECT --> L_D_CLUSTER
+  L_D_CLUSTER --> L_D_HYP
+  L_D_HYP --> L_D_M_CTX
+  L_D_HYP --> L_D_M_RETR
+  L_D_HYP --> L_D_M_REASON
+  L_D_HYP --> L_D_M_POLICY
+  L_D_HYP --> L_D_M_TOOL
+  L_D_HYP --> L_D_M_THRESH
+  L_D_HYP --> L_D_M_REGRESS
+  L_D_M_CTX --> L_D_PROPOSE
+  L_D_M_RETR --> L_D_PROPOSE
+  L_D_M_REASON --> L_D_PROPOSE
+  L_D_M_POLICY --> L_D_PROPOSE
+  L_D_M_TOOL --> L_D_PROPOSE
+  L_D_M_THRESH --> L_D_PROPOSE
+  L_D_M_REGRESS --> L_D_PROPOSE
+  L_D_GEPA -. "candidate prompt text" .-> L_D_PROPOSE
+  L_D_PROPOSE -- "writes only here" --> L_Z_M_PROMPT
+  L_D_PROPOSE -- "writes only here" --> L_Z_M_THRESH
+  L_D_PROPOSE -- "writes only here" --> L_Z_M_COMP
+  L_D_PROPOSE -- "drafts, cannot apply" --> L_Z_H_POLICY
+  L_D_PROPOSE -- "drafts, cannot apply" --> L_Z_H_TOOL
+  L_D_PROPOSE -. "no write access, path-protected" .-> L_Z_R_KERNEL
+  L_Z_R_KERNEL --> L_Z_WHY
+  L_Z_R_LABELS --> L_Z_WHY
+  L_Z_M_PROMPT --> L_D_BUDGET
+  L_Z_M_THRESH --> L_D_BUDGET
+  L_Z_M_COMP --> L_D_BUDGET
+  L_Z_H_POLICY --> L_D_BUDGET
+  L_Z_H_TOOL --> L_D_BUDGET
+  L_D_BUDGET --> L_D_CASCADE
+  L_D_CASCADE --> L_D_G1
+  L_D_G1 -- "pass" --> L_D_G2
+  L_D_G2 -- "pass" --> L_D_G3
+  L_D_G3 -- "pass" --> L_D_G4
+  L_D_G4 -- "better or simpler" --> L_D_NOISE
+  L_D_G1 -- "fail" --> L_D_DISCARD
+  L_D_G2 -- "fail" --> L_D_DISCARD
+  L_D_G3 -- "fail" --> L_D_DISCARD
+  L_D_G4 -- "neither" --> L_D_DISCARD
+  L_D_QUEUE -- "rejected" --> L_D_DISCARD
+  L_D_NOISE -- "gain repeats" --> L_D_KEEP
+  L_D_NOISE -- "gain vanishes" --> L_D_DISCARD
+  L_D_KEEP --> L_D_LOG
+  L_D_DISCARD --> L_D_LOG
+  L_D_LOG -. "history, so nothing is tried twice" .-> L_D_PROPOSE
+  L_D_KEEP -- "survivors" --> L_D_HELDOUT
+  L_D_HELDOUT -- "fails held-out" --> L_D_DISCARD
+  L_D_HELDOUT -- "holds up" --> L_D_QUEUE
+  L_D_M_REGRESS -. "case text" .-> L_O_REGRESS
+
+  L_F_SUITE -- "dev split" --> L_D_CASCADE
+  L_F_CORPUS -- "dev split 70-75%" --> L_D_CASCADE
+  L_F_CORPUS -. "held-out split 25-30%: scorer only, never the proposer" .-> L_D_HELDOUT
+  L_Z_R_LABELS -- "scores, read-only" --> L_F_METRICS
+  L_B_POLICY -- "policy change" --> L_F_TRIGGER
+  L_C_PLAYBOOK -- "playbook change" --> L_F_TRIGGER
+  L_D_QUEUE -- "approved change" --> L_F_TRIGGER
+  L_F_TRIGGER --> L_F_SUITE
+  L_F_TRIGGER --> L_F_CORPUS
+  L_F_BASELINE -- "same cases, compared side by side" --> L_F_METRICS
+  L_F_SUITE --> L_F_METRICS
+  L_F_CORPUS --> L_F_METRICS
+  L_F_METRICS --> L_F_EXIT
+  L_F_EXIT -- "zero false auto-posts" --> L_F_SHIP
+  L_F_SHIP -. "lowers agreement: does not ship, logged" .-> L_D_LOG
+
+  L_A_AGREE -- "agree / n per kind" --> L_AL_SHADOW
+  L_AL_SHADOW --> L_AL_G80
+  L_AL_G80 -- "yes" --> L_AL_REVIEW
+  L_AL_G80 -. "no: stays shadow" .-> L_AL_SHADOW
+  L_AL_REVIEW --> L_AL_G95
+  L_AL_G95 -- "yes" --> L_AL_AUTO
+  L_AL_G95 -. "no: stays post-with-review" .-> L_AL_REVIEW
+  L_AL_AUTO --> L_AL_DEMOTE
+  L_AL_DEMOTE -. "back to shadow" .-> L_AL_SHADOW
+  L_F_EXIT -. "false auto-post" .-> L_AL_DEMOTE
+
+  L_F_SHIP -- "ships" --> L_O_TIER0
+  L_F_SHIP -- "ships" --> L_O_PLAYBOOK
+  L_F_SHIP -- "ships" --> L_O_COMP
+  L_O_TIER0 -- "covering policy or fact" --> L_AL_G95
+  L_O_REGRESS -. "add-only, after human labelling" .-> L_F_CORPUS
+  L_C_EXAMPLE -. "gold: corrections + human answers" .-> L_TO_FINETUNE
+  L_WORKPAPER -. "kernel_verdict accept, not later corrected" .-> L_TO_FINETUNE
+  L_A_DP -. "Q2 human outcomes: training job only, never an agent tool" .-> L_TO_FINETUNE
+  L_O_TIER0 --> L_O_COST
+  L_B_PT_UNI -. "reused at the next deployment" .-> L_O_COST
+  L_B_PT_VERT -. "reused at the next deployment" .-> L_O_COST
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class L_A_Q2,L_F_CORPUS src
+  class L_TRACE,L_DECISION,L_WORKPAPER,L_ESCALATION,L_CORRECTION,L_REPLAYRES,L_CORPUSRES,L_COSTLAT,L_B_POLICY,L_C_PLAYBOOK,L_D_LOG store
+  class L_A_HIDE,L_A_ASOF,L_A_KERNEL,L_B_G05,L_B_G08,L_B_G09,L_B_G06,L_B_G04,L_C_APPLY,L_C_BOOKS,L_D_BUDGET,L_D_G1,L_D_G2,L_D_G3,L_D_G4,L_D_NOISE,L_D_HELDOUT,L_Z_R_KERNEL,L_Z_R_LABELS,L_F_EXIT,L_F_SHIP,L_AL_G80,L_AL_G95,L_AL_DEMOTE gate
+  class L_A_AGENT,L_B_DRAFT,L_C_GEN,L_C_REFL,L_D_HYP,L_D_PROPOSE model
+  class L_B_PR,L_C_HUMAN,L_C_CTRL,L_D_QUEUE human
+  class L_A_DIFF,L_A_PERDEC,L_A_SEQ,L_B_BACKTEST,L_C_CUR,L_C_SIMILAR,L_C_RUN1,L_C_RUN2,L_C_COMPARE,L_D_CASCADE,L_D_KEEP,L_D_DISCARD,L_F_TRIGGER,L_F_SUITE,L_F_BASELINE,L_F_METRICS,L_O_TIER0,L_O_COMP,L_AL_SHADOW,L_AL_REVIEW,L_AL_AUTO code
+  class L_A_DP,L_A_AGREE,L_A_TRIAGE,L_A_T_AGENT,L_A_T_CTX,L_A_T_AMBIG,L_A_INCONS,L_B_MINE,L_B_G07,L_B_PT_UNI,L_B_PT_VERT,L_B_PT_CO,L_C_FACT,L_C_EXAMPLE,L_C_COLLECT,L_D_COLLECT,L_D_CLUSTER,L_D_M_CTX,L_D_M_RETR,L_D_M_REASON,L_D_M_POLICY,L_D_M_TOOL,L_D_M_THRESH,L_D_M_REGRESS,L_Z_M_PROMPT,L_Z_M_THRESH,L_Z_M_COMP,L_Z_H_POLICY,L_Z_H_TOOL,L_Z_WHY,L_O_PLAYBOOK,L_O_REGRESS,L_O_COST learn
+  class L_B_REFUSE rRefuse
+  class L_B_BLOCK rBlock
+  class L_D_GEPA,L_TO_FINETUNE stretch

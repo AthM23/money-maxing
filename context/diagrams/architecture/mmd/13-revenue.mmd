@@ -1,0 +1,319 @@
+flowchart TB
+
+  subgraph RV_SG1["1 · Inputs and triggers: what the revenue pack reads, and the drift comparators that open its intents"]
+    RV_IN_CONTRACT[/"Contract PDFs and amendments (files)<br/>contracts.get · contracts.find_clause<br/>each version → trace(kind=contract_version)<br/>contract(id, customer_id, version, supersedes)"/]
+    RV_IN_CRM[/"HubSpot deal (seeded test account)<br/>amount, close date, owner, stage closed_won<br/>crm.owner · crm.notes"/]
+    RV_IN_INV[/"QuickBooks invoices and credit memos<br/>invoice(id, customer_id, date, amount_cents)<br/>ledger.open_invoices · ledger.party_history"/]
+    RV_IN_DELIV[/"Delivery, usage and acceptance records<br/>usage export · shipping record (FOB date)<br/>signed acceptance doc → trace"/]
+    RV_IN_FACT[("fact (active, in scope)<br/>predicate=concession · value pct_off=10<br/>scope customer=Initech · valid_to=renewal<br/>stated_by CEO · approved_by controller")]
+    RV_IN_EVT[("event consumed + calendar<br/>ar.credit_memo.posted · crm.deal.closed_won<br/>fact.activated · evidence.reversioned<br/>month-end run: checklist_item revenue recognised")]
+    RV_CMP_RUNRATE{{"Comparator · CRM deal value vs contract ACV<br/>vs invoice run-rate x 12 (integer cents)<br/>Initech: $144k HubSpot vs $129.6k invoiced"}}
+    RV_CMP_ESC{{"Comparator · billing_expectation vs invoices<br/>4% escalator from month 13 never billed<br/>fires on the FIRST under-billed invoice"}}
+    RV_CMP_EXP{{"Comparator · closed-won expansion vs<br/>amendment vs invoice: deal won, no invoice<br/>→ revenue leakage candidate"}}
+    RV_CMP_DEF{{"Comparator · deferred revenue schedule vs GL<br/>sum of unrecognised rev_schedule_line<br/>vs deferred revenue account balance"}}
+    RV_SUPPRESS{{"Known fact explains the difference?<br/>code checks scope, valid_from, valid_to, amount<br/>yes → suppressed, logged · no → open intent"}}
+    RV_INTENT[("intent(function=revenue, question, owner,<br/>end_condition_json) → Agent router<br/>tier 0 policy or fact → haiku → sonnet → opus<br/>→ Investigator (read tools, rev.schedule)")]
+  end
+
+  subgraph RV_SG2["2 · Contract term extraction: MODEL returns typed terms with quoted spans, CODE verifies every span"]
+    RV_X_MODEL["Extraction call · claude-haiku-4-5<br/>prompt: return each term with the verbatim<br/>span and page · zod-typed output<br/>no arithmetic asked of the model"]
+    RV_X_PARTIES["parties and term<br/>customer legal name, both signatures<br/>start, end, non-cancellable period"]
+    RV_X_PRICE["price and billing cadence<br/>fee per period, currency, stated total<br/>monthly or annual in advance, net terms"]
+    RV_X_ESCAL["escalator and renewal<br/>4% from month 13 · fixed vs index-linked<br/>auto-renew, notice window"]
+    RV_X_ACCEPT["acceptance clause (C-10)<br/>revenue recognised upon written customer<br/>acceptance → PO gate=acceptance"]
+    RV_X_BUNDLE["bundled elements (C-01)<br/>platform + implementation, 27,000<br/>no stated prices per element"]
+    RV_X_VARCON["variable consideration / rebates (C-12)<br/>annual volume rebate tiers<br/>earned retroactively"]
+    RV_X_CANCEL["cancellation and refund terms (C-04)<br/>termination for convenience, notice,<br/>pro-rata refund formula"]
+    RV_X_QUOTE{{"Quote check (kernel E, run here too)<br/>quote is a substring of the payload of ITS<br/>contract_version trace · page recorded<br/>no quote → term rejected"}}
+    RV_X_VALID{{"Typed validation in code<br/>dates inside fiscal window (F-09) · end after start<br/>fee x periods = stated total · single currency<br/>extraction_confidence low → escalate (F-14)"}}
+    RV_X_STORE[("contract_term(contract_id, version, field,<br/>value, trace_id, quote, page,<br/>extraction_confidence)")]
+  end
+
+  subgraph RV_SG3["3 · ASC 606 five steps: which parts are CODE, which need JUDGMENT"]
+    RV_S1{{"Step 1 · contract exists · CODE checklist<br/>both signatures, payment terms, customer active<br/>modification counts only when approved by<br/>both parties (606-10-25-10)"}}
+    RV_S2["Step 2 · performance obligations · CODE for catalog<br/>SKU → catalog template sets pattern and series<br/>performance_obligation(sku, pattern, series, gate)<br/>JUDGMENT: non-catalog distinctness → human"]
+    RV_S3["Step 3 · transaction price · CODE<br/>fixed fees summed over non-cancellable term<br/>usage to the period earned (606-10-32-40)<br/>JUDGMENT: rebate estimate (C-12) → human"]
+    RV_S4["Step 4 · allocation · CODE<br/>relative SSP ratio from ssp_table<br/>largest-remainder rounding in integer cents<br/>parts sum exactly to the transaction price"]
+    RV_SSP[("ssp_table(sku, low, high, approved_by)<br/>a policy object · bands approved by controller<br/>never widened by the agent (G-08)")]
+    RV_S_C01{{"Unknown SKU, or bundle with no stated prices<br/>and no approved SSP band → STOP (C-01)<br/>code computes allocation under each candidate<br/>SSP pair → ESCALATE, controller picks"}}
+    RV_S5["Step 5 · recognise · CODE<br/>pattern: ratable / point_in_time / usage<br/>gate: none / acceptance / delivery<br/>→ schedule engine"]
+  end
+
+  subgraph RV_SG4["4 · Schedule engine, IN CODE (integer cents, no model call)"]
+    RV_E_RATABLE["Ratable proration, daily or monthly<br/>line(n) = floor(total x cumdays(n) / D)<br/>minus floor(total x cumdays(n-1) / D)<br/>D = days in service term"]
+    RV_E_CENTS{{"Remainder allocation<br/>cumulative floor differencing: last period<br/>takes the residual cents<br/>sum(lines) = allocated_cents EXACTLY"}}
+    RV_E_PIT["Point-in-time and usage items<br/>point_in_time fires on its gate event<br/>(acceptance, delivery) · usage fires on the<br/>usage record, in the period earned"]
+    RV_E_ESCAL{{"Escalator policy (controller-approved, part-verified)<br/>total fixed consideration time-elapsed over<br/>whole term → contract asset in early years<br/>index-linked: per year · NOT a model call"}}
+    RV_E_LINES[("rev_schedule_line(po_id, period,<br/>amount_cents, schedule_version, status)<br/>read via rev.schedule")]
+    RV_E_BILLEXP[("billing_expectation(contract_id, date,<br/>amount_cents) · carries escalators<br/>and fact-adjusted concessions")]
+    RV_E_CASSET["Contract asset for unbilled (C-03, C-09)<br/>contract_balance net = billed_cum<br/>minus recognized_cum, net per contract<br/>(606-10-45-1) · negative net = contract asset"]
+    RV_E_ROLL{{"Deferred revenue roll-forward<br/>opening + billings - recognised<br/>+/- modifications, credits, refunds<br/>= closing = GL deferred revenue"}}
+  end
+
+  subgraph RV_SG5["5 · Contract modifications: decision tree in CODE (606-10-25-12, 25-13)"]
+    RV_M_TRIG["Modification detected → contract_modification(<br/>id, contract_id, date, type, treatment,<br/>delta_cents, decision_id)<br/>amendment · CEO side letter · closed-won expansion"]
+    RV_M_APPR{{"Approved by both parties?<br/>CEO email quote + approval-matrix authority<br/>(policy_memo.lookup) · no → not a modification<br/>yet, escalate to account owner"}}
+    RV_M_Q1{{"Adds DISTINCT goods AND price within the<br/>ssp_table band (low lte price lte high)?<br/>price-only and scope decrease can never<br/>pass (KPMG G110, G120)"}}
+    RV_M_SEP["Yes → SEPARATE CONTRACT (25-12)<br/>new contract row + its own schedule<br/>original schedule untouched"]
+    RV_M_Q2{{"Remaining services distinct?<br/>SaaS series: always yes<br/>in-process implementation: no"}}
+    RV_M_PROSP["PROSPECTIVE (25-13(a))<br/>(unrecognised consideration + delta_cents)<br/>re-spread from the modification date<br/>schedule_version + 1, old lines superseded"]
+    RV_M_CATCH["CUMULATIVE CATCH-UP (25-13(b))<br/>remaining not distinct: re-measure progress,<br/>one catch-up line in the current period"]
+    RV_M_BOTH["Mid-term upsell, 10 seats in month 7 (C-02)<br/>code computes BOTH candidate schedules and the<br/>dollar difference, plus SSP comparison<br/>non-catalog distinctness → ESCALATE"]
+    RV_M_CM[/"Initech AR credit memo (ar.credit_memo.posted)<br/>Dr contract liability (deferred revenue) $1,200<br/>Cr accounts receivable $1,200<br/>debits what the invoice credited, NOT revenue"/]
+    RV_M_REV["Initech schedule revision: price-only concession<br/>on remaining SaaS term = PROSPECTIVE<br/>July line $12,000 → $10,800, through valid_to<br/>the ONLY movement in recognised revenue"]
+    RV_M_TRAP{{"DOUBLE-HIT GATE · one revenue-reducing<br/>posting per contract_modification.id<br/>credit memo line on a revenue account AND a<br/>schedule delta = revenue cut $2,400 → reject"}}
+    RV_M_CANCEL["Cancellation with refund (C-04)<br/>reversing entry for remaining deferred revenue<br/>refund computed from the refund clause<br/>posted entries never deleted or edited"]
+    RV_M_REBATE["Volume rebate (C-12)<br/>estimate accrued against revenue, true-up at<br/>year end · code computes each tier outcome<br/>the estimate itself is a human decision"]
+    RV_M_TAINT{{"Concession count per customer<br/>a pattern of price reductions taints future<br/>contracts as variable consideration (KPMG)<br/>count gte 2 → escalate the pattern"}}
+    RV_M_PACK["Modification pack (code-built)<br/>treatment, candidate schedules side by side,<br/>delta_cents, policy and clause citations<br/>Proposal.kind schedule_revision (to be added)"]
+  end
+
+  subgraph RV_SG6["6 · Monthly recognition run (calendar trigger, per open period)"]
+    RV_R_LOOP["For each rev_schedule_line where<br/>period = run period, status = scheduled,<br/>schedule_version = latest"]
+    RV_R_PERIOD{{"period.status open AND contract version current?<br/>locked → BLOCK (G-03)<br/>superseded version → invalidate, re-run,<br/>ESCALATE (F-06, H-6)"}}
+    RV_R_ACC{{"PO gate = acceptance:<br/>acceptance trace exists and is quoted?<br/>(C-10)"}}
+    RV_R_HOLD["No acceptance document → REFUSE to recognise<br/>line status stays gated, no entry proposed<br/>search log: mail, chat, files, crm.notes<br/>account owner notified"]
+    RV_R_CUT{{"Cutoff checks<br/>usage through period end billed next month<br/>(C-03) → contract asset this period<br/>FOB shipping point (D-07): shipping record date"}}
+    RV_R_ENTRY["Entry per line (kind rev_recognition)<br/>Dr deferred revenue / Cr revenue<br/>unbilled: Dr contract asset / Cr revenue,<br/>reversed when the invoice is raised"]
+  end
+
+  subgraph RV_SG7["7 · Leakage checks feeding billing (revenue already right, billing wrong)"]
+    RV_L_ESC["Escalator not billed<br/>expected = prior fee x 104 / 100 from month 13<br/>invoice issued at old fee → catch-up<br/>invoice draft for the shortfall"]
+    RV_L_EXP["Expansion not invoiced<br/>closed-won in HubSpot, no order form, no invoice<br/>ask the deal owner: is there a signed<br/>order form? (no revenue booked until yes)"]
+    RV_L_FACT["Fact-adjusted future invoices (Initech)<br/>billing_expectation $12,000 → $10,800 per month<br/>until fact.valid_to (renewal), then reverts"]
+    RV_L_HAND["handoff(to_function=ar, intent_id, note)<br/>events: rev.leakage.found (AR)<br/>billing.expectation.changed (AR, forecast)<br/>AR / billing drafts the invoice in QuickBooks"]
+  end
+
+  subgraph RV_SG8["8 · Where a MODEL is used vs CODE"]
+    RV_MC_MODEL["MODEL (three uses only)<br/>1 term extraction with verbatim span and page<br/>2 non-catalog distinctness: quote the clause<br/>3 reason for drift: side letter, Slack, pct, end date"]
+    RV_MC_CODE["CODE (everything with a number)<br/>five-step checklist · SSP allocation · proration<br/>roll-forward · modification tree · comparators<br/>cutoff · tie-outs · kernel"]
+    RV_MC_RULE{{"Models never add numbers<br/>every amount in Proposal.entries is computed by<br/>code from contract_term values (integer cents)<br/>model output = typed terms + quotes only"}}
+  end
+
+  subgraph RV_SG9["9 · Shared exit: propose → kernel → five routes → output cases"]
+    RV_PROPOSE["propose_entry + workpaper<br/>marks F · E · P · J · evidence(claim, trace_id, quote)<br/>policy_refs, fact_refs · agents never post directly<br/>blocked on context → escalate(question)"]
+    RV_K_SUM{{"Pack check F · schedule sums to contract value<br/>sum(rev_schedule_line) = allocated_cents and<br/>sum(allocated_cents) = transaction price"}}
+    RV_K_GL{{"Pack check F · deferred revenue schedule<br/>equals GL after posting (roll-forward ties)<br/>one revenue-reducing posting per modification"}}
+    RV_K_QUOTE{{"Pack check E · every extracted term has a<br/>verified quote in its contract version<br/>customer, amount, dates tie across<br/>contract, CRM and invoice"}}
+    RV_K_POLICY{{"Pack check P and J · modification treatment<br/>cites the policy (SSP band, escalator policy)<br/>approver authorised · preparer not approver<br/>fact active on the date and in scope"}}
+    RV_K_HARD{{"Hard BLOCK backstops · locked period (G-03)<br/>recognise on a gated PO with no acceptance trace<br/>post on a superseded contract version<br/>delete or edit of a posted entry"}}
+    RV_KERNEL{{"Kernel F·E·P·J + pack checks<br/>pure code · accept only if no mark fails<br/>reject → router goes up one tier"}}
+    RV_AUTO(("AUTO"))
+    RV_PROP(("PROPOSE"))
+    RV_ESCALATE(("ESCALATE"))
+    RV_REFUSE(("REFUSE"))
+    RV_BLOCK(("BLOCK"))
+    RV_POST[("Post to local ledger: gl_entry, gl_line<br/>source_decision_id set · artifact row<br/>→ one-way QuickBooks mirror (JournalEntry)")]
+    RV_CTRL["Controller agent (GPT, different model family)<br/>reviews every PROPOSE, approves within its<br/>authority · above $500 or new treatment → human"]
+    RV_HUMAN(["Human in Slack<br/>controller · account owner · deal owner<br/>answer → fact candidate with scope,<br/>valid_from, valid_to, approved_by"])
+
+    subgraph RV_SG9B["OUTPUT CASES · outcome → route → entry or artifact → who is notified"]
+      RV_OC_MONTHLY["Monthly recognition from an approved schedule<br/>AUTO · Dr deferred revenue / Cr revenue<br/>notified: none (close checklist tick) · spine"]
+      RV_OC_INITECH2["Initech concession, run 2 (fact in scope)<br/>AUTO · same schedule_revision, tier 0, no question<br/>notified: none · learning demo"]
+      RV_OC_INITECH1["Initech concession found, run 1 (spec plant)<br/>PROPOSE · credit memo Dr deferred rev / Cr AR $1,200<br/>+ prospective schedule_revision<br/>notified: controller"]
+      RV_OC_C03["Usage straddling cutoff (C-03)<br/>PROPOSE · Dr contract asset / Cr revenue<br/>reversed on billing · notified: controller"]
+      RV_OC_ESCAL["Missed 4% escalator (spec plant)<br/>PROPOSE · catch-up invoice draft, no revenue JE<br/>notified: AR, account owner"]
+      RV_OC_C02["Mid-term seat upsell (C-02)<br/>ESCALATE · both treatments computed side by side<br/>+ SSP comparison · notified: controller"]
+      RV_OC_C01["Bundle, no stated prices (C-01)<br/>ESCALATE · allocation under candidate SSPs<br/>notified: controller"]
+      RV_OC_C09["Delivered not invoiced (C-09) · FOB cutoff (D-07)<br/>ESCALATE · Dr contract asset / Cr revenue derived<br/>from delivery or shipping record<br/>notified: account owner"]
+      RV_OC_C04["Cancellation with refund (C-04)<br/>ESCALATE · Dr deferred revenue / Cr refund payable<br/>reversing entry, nothing deleted<br/>notified: controller, AR"]
+      RV_OC_C12["Volume rebate (C-12)<br/>ESCALATE · Dr revenue / Cr rebate liability estimate<br/>+ true-up plan · notified: controller"]
+      RV_OC_EXP["Closed-won expansion, no invoice (spec plant)<br/>ESCALATE · question: is there a signed order form?<br/>no entry · notified: deal owner"]
+      RV_OC_C10["Acceptance clause, no acceptance doc (C-10)<br/>REFUSE · gate stays closed, search log, no entry<br/>notified: account owner"]
+      RV_OC_F09["Extracted date outside fiscal window (F-09)<br/>REFUSE · no entry · notified: preparer<br/>low OCR confidence (F-14) → ESCALATE instead"]
+      RV_OC_BLOCK["Locked period (G-03) · post on a superseded<br/>version · delete or edit of a posted entry<br/>BLOCK · persisted with the rule name,<br/>holds even if a human approves"]
+    end
+  end
+
+  subgraph RV_SG10["10 · Events emitted, what is learnable, metrics"]
+    RV_EV_REVISED[("event rev.schedule.revised<br/>→ forecast (inflows lowered through renewal)<br/>→ reporting (flux line) → close (checklist)")]
+    RV_EV_RECOG[("event rev.recognised<br/>→ close: ticks revenue recognised,<br/>deferred revenue recon vs GL")]
+    RV_LEARN["LEARNABLE → fact and policy rows, read back in<br/>stage 1 via memory.facts (asked once)<br/>SSP bands per SKU · escalator policy · concession<br/>facts with end date · who answers per account"]
+    RV_NEVER{{"NEVER LEARNED<br/>treatment class for non-catalog modifications<br/>granting concessions · a rule from one<br/>correction (G-05) · wider SSP bands (G-08)"}}
+    RV_METRICS["METRICS · all to be measured, nothing run yet<br/>contracts scheduled with no human (n of N)<br/>extraction field agreement vs answer key<br/>leakage $ found and days-to-detect · false AUTO = 0"]
+  end
+
+  %% 1 · inputs → comparators → intent
+  RV_IN_CRM --> RV_CMP_RUNRATE
+  RV_IN_CONTRACT --> RV_CMP_RUNRATE
+  RV_IN_INV --> RV_CMP_RUNRATE
+  RV_IN_CONTRACT --> RV_CMP_ESC
+  RV_IN_INV --> RV_CMP_ESC
+  RV_IN_CRM --> RV_CMP_EXP
+  RV_IN_INV --> RV_CMP_EXP
+  RV_IN_INV --> RV_CMP_DEF
+  RV_CMP_RUNRATE --> RV_SUPPRESS
+  RV_CMP_ESC --> RV_SUPPRESS
+  RV_CMP_EXP --> RV_SUPPRESS
+  RV_CMP_DEF --> RV_SUPPRESS
+  RV_IN_FACT -. "memory.facts" .-> RV_SUPPRESS
+  RV_SUPPRESS -- "no fact explains it" --> RV_INTENT
+  RV_IN_EVT -- "bus or calendar trigger" --> RV_INTENT
+  RV_IN_DELIV --> RV_INTENT
+
+  %% 2 · extraction
+  RV_INTENT -- "new or changed contract version" --> RV_X_MODEL
+  RV_X_MODEL --> RV_X_PARTIES
+  RV_X_MODEL --> RV_X_PRICE
+  RV_X_MODEL --> RV_X_ESCAL
+  RV_X_MODEL --> RV_X_ACCEPT
+  RV_X_MODEL --> RV_X_BUNDLE
+  RV_X_MODEL --> RV_X_VARCON
+  RV_X_MODEL --> RV_X_CANCEL
+  RV_X_PARTIES --> RV_X_QUOTE
+  RV_X_PRICE --> RV_X_QUOTE
+  RV_X_ESCAL --> RV_X_QUOTE
+  RV_X_ACCEPT --> RV_X_QUOTE
+  RV_X_BUNDLE --> RV_X_QUOTE
+  RV_X_VARCON --> RV_X_QUOTE
+  RV_X_CANCEL --> RV_X_QUOTE
+  RV_X_QUOTE -- "all spans verified" --> RV_X_VALID
+  RV_X_VALID -- "pass" --> RV_X_STORE
+  RV_X_QUOTE -. "span not found: term rejected, retry one tier up" .-> RV_X_MODEL
+  RV_X_VALID -. "F-14 low confidence" .-> RV_ESCALATE
+
+  %% 3 · five steps
+  RV_X_STORE --> RV_S1
+  RV_S1 -- "contract exists" --> RV_S2
+  RV_S2 -- "catalog SKU" --> RV_S3
+  RV_S2 -- "unknown SKU or bundle" --> RV_S_C01
+  RV_S3 --> RV_S4
+  RV_SSP --> RV_S4
+  RV_SSP -.-> RV_S_C01
+  RV_S4 --> RV_S5
+
+  %% 4 · schedule engine
+  RV_S5 -- "ratable" --> RV_E_RATABLE
+  RV_S5 -- "point_in_time or usage" --> RV_E_PIT
+  RV_E_ESCAL -. "policy_refs" .-> RV_E_RATABLE
+  RV_E_RATABLE --> RV_E_CENTS
+  RV_E_CENTS --> RV_E_LINES
+  RV_E_PIT --> RV_E_LINES
+  RV_E_CENTS --> RV_E_BILLEXP
+  RV_E_LINES --> RV_E_CASSET
+  RV_E_BILLEXP --> RV_E_CASSET
+  RV_E_CASSET --> RV_E_ROLL
+
+  %% 5 · modifications
+  RV_E_ROLL -- "when a modification arrives" --> RV_M_TRIG
+  RV_M_TRIG --> RV_M_APPR
+  RV_M_APPR -- "approved" --> RV_M_Q1
+  RV_M_APPR -- "not approved by both parties" --> RV_ESCALATE
+  RV_M_Q1 -- "yes" --> RV_M_SEP
+  RV_M_Q1 -- "no" --> RV_M_Q2
+  RV_M_Q1 -- "non-catalog item: cannot decide in code" --> RV_M_BOTH
+  RV_M_Q2 -- "distinct" --> RV_M_PROSP
+  RV_M_Q2 -- "not distinct" --> RV_M_CATCH
+  RV_M_PROSP -- "Initech" --> RV_M_REV
+  RV_M_PROSP -. "AR side of the same concession" .-> RV_M_CM
+  RV_M_CM -- "posting 1: balance sheet only" --> RV_M_TRAP
+  RV_M_REV -- "posting 2: the revenue delta" --> RV_M_TRAP
+  RV_M_TRIG -- "type = cancellation" --> RV_M_CANCEL
+  RV_M_TRIG -- "type = rebate" --> RV_M_REBATE
+  RV_M_TRIG -- "type = concession" --> RV_M_TAINT
+  RV_M_SEP --> RV_M_PACK
+  RV_M_CATCH --> RV_M_PACK
+  RV_M_BOTH --> RV_M_PACK
+  RV_M_TRAP -- "exactly one hit" --> RV_M_PACK
+  RV_M_CANCEL --> RV_M_PACK
+  RV_M_REBATE --> RV_M_PACK
+  RV_M_TAINT --> RV_M_PACK
+  RV_M_TRAP -- "revised lines, schedule_version + 1" --> RV_R_LOOP
+
+  %% 6 · monthly run (main money path)
+  RV_E_LINES == "month-end run" ==> RV_R_LOOP
+  RV_R_LOOP ==> RV_R_PERIOD
+  RV_R_PERIOD == "open, current" ==> RV_R_ACC
+  RV_R_PERIOD -- "locked period (G-03)" --> RV_BLOCK
+  RV_R_PERIOD -- "superseded version: stale, re-run (F-06, H-6)" --> RV_ESCALATE
+  RV_R_ACC -- "no acceptance trace" --> RV_R_HOLD
+  RV_R_ACC == "accepted, or gate = none" ==> RV_R_CUT
+  RV_R_CUT ==> RV_R_ENTRY
+
+  %% 7 · leakage
+  RV_E_BILLEXP -- "expected vs issued" --> RV_L_ESC
+  RV_E_BILLEXP --> RV_L_EXP
+  RV_E_BILLEXP --> RV_L_FACT
+  RV_L_ESC --> RV_L_HAND
+  RV_L_EXP --> RV_L_HAND
+  RV_L_FACT --> RV_L_HAND
+
+  %% 8 · model vs code
+  RV_MC_MODEL --> RV_MC_RULE
+  RV_MC_CODE --> RV_MC_RULE
+  RV_R_ENTRY ==> RV_MC_RULE
+
+  %% 9 · shared exit
+  RV_MC_RULE ==> RV_PROPOSE
+  RV_M_PACK -- "schedule_revision or escalation pack" --> RV_PROPOSE
+  RV_S_C01 -- "candidate allocations" --> RV_PROPOSE
+  RV_L_HAND -- "catch-up invoice draft" --> RV_PROPOSE
+  RV_PROPOSE ==> RV_KERNEL
+  RV_K_SUM --> RV_KERNEL
+  RV_K_GL --> RV_KERNEL
+  RV_K_QUOTE --> RV_KERNEL
+  RV_K_POLICY --> RV_KERNEL
+  RV_K_HARD --> RV_KERNEL
+  RV_KERNEL == "accept, covering policy or fact" ==> RV_AUTO
+  RV_KERNEL -- "accept, material or new" --> RV_PROP
+  RV_KERNEL -- "judgment mark open" --> RV_ESCALATE
+  RV_KERNEL -- "hard rule hit" --> RV_BLOCK
+  RV_X_VALID -. "F-09 fail: decline to propose" .-> RV_REFUSE
+  RV_R_HOLD -. "C-10" .-> RV_REFUSE
+  RV_AUTO ==> RV_POST
+  RV_PROP --> RV_CTRL
+  RV_CTRL -- "approved" --> RV_POST
+  RV_CTRL -- "above its authority or new treatment" --> RV_HUMAN
+  RV_HUMAN -- "human approves a kernel-accepted PROPOSE" --> RV_POST
+  RV_ESCALATE --> RV_HUMAN
+
+  RV_AUTO --> RV_OC_MONTHLY
+  RV_AUTO --> RV_OC_INITECH2
+  RV_PROP --> RV_OC_INITECH1
+  RV_PROP --> RV_OC_C03
+  RV_PROP --> RV_OC_ESCAL
+  RV_ESCALATE --> RV_OC_C02
+  RV_ESCALATE --> RV_OC_C01
+  RV_ESCALATE --> RV_OC_C09
+  RV_ESCALATE --> RV_OC_C04
+  RV_ESCALATE --> RV_OC_C12
+  RV_ESCALATE --> RV_OC_EXP
+  RV_REFUSE --> RV_OC_C10
+  RV_REFUSE --> RV_OC_F09
+  RV_BLOCK --> RV_OC_BLOCK
+
+  %% 10 · events, learning, metrics
+  RV_POST -. "schedule_revision posted" .-> RV_EV_REVISED
+  RV_POST -. "rev_recognition posted" .-> RV_EV_RECOG
+  RV_HUMAN -. "answer → approved fact or policy" .-> RV_LEARN
+  RV_LEARN -. "clamped by" .-> RV_NEVER
+  RV_LEARN -. "approved fact, asked once" .-> RV_IN_FACT
+  RV_POST -. "counts from real runs only" .-> RV_METRICS
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class RV_IN_CONTRACT,RV_IN_CRM,RV_IN_INV,RV_IN_DELIV,RV_M_CM src
+  class RV_IN_FACT,RV_IN_EVT,RV_INTENT,RV_X_STORE,RV_SSP,RV_E_LINES,RV_E_BILLEXP,RV_POST,RV_EV_REVISED,RV_EV_RECOG store
+  class RV_CMP_RUNRATE,RV_CMP_ESC,RV_CMP_EXP,RV_CMP_DEF,RV_SUPPRESS,RV_X_QUOTE,RV_X_VALID,RV_S1,RV_S_C01,RV_E_CENTS,RV_E_ESCAL,RV_E_ROLL,RV_M_APPR,RV_M_Q1,RV_M_Q2,RV_M_TRAP,RV_M_TAINT,RV_R_PERIOD,RV_R_ACC,RV_R_CUT,RV_MC_RULE,RV_K_SUM,RV_K_GL,RV_K_QUOTE,RV_K_POLICY,RV_K_HARD,RV_KERNEL,RV_NEVER gate
+  class RV_X_MODEL,RV_X_PARTIES,RV_X_PRICE,RV_X_ESCAL,RV_X_ACCEPT,RV_X_BUNDLE,RV_X_VARCON,RV_X_CANCEL,RV_MC_MODEL,RV_CTRL model
+  class RV_S2,RV_S3,RV_S4,RV_S5,RV_E_RATABLE,RV_E_PIT,RV_E_CASSET,RV_M_TRIG,RV_M_SEP,RV_M_PROSP,RV_M_CATCH,RV_M_BOTH,RV_M_REV,RV_M_CANCEL,RV_M_REBATE,RV_M_PACK,RV_R_LOOP,RV_R_HOLD,RV_R_ENTRY,RV_L_ESC,RV_L_EXP,RV_L_FACT,RV_L_HAND,RV_MC_CODE,RV_PROPOSE,RV_METRICS code
+  class RV_HUMAN human
+  class RV_LEARN learn
+  class RV_AUTO,RV_OC_MONTHLY,RV_OC_INITECH2 rAuto
+  class RV_PROP,RV_OC_INITECH1,RV_OC_C03,RV_OC_ESCAL rPropose
+  class RV_ESCALATE,RV_OC_C02,RV_OC_C01,RV_OC_C09,RV_OC_C04,RV_OC_C12,RV_OC_EXP rEscalate
+  class RV_REFUSE,RV_OC_C10,RV_OC_F09 rRefuse
+  class RV_BLOCK,RV_OC_BLOCK rBlock

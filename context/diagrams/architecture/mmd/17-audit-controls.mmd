@@ -1,0 +1,306 @@
+flowchart TB
+
+  subgraph AU_SG1["1 · Triggers and inputs, behind the independence fence"]
+    AU_T_LOCK[/"event close.period.locked (closing → locked): final pass ·<br/>open → closing: interim pass · month-end calendar:<br/>checklist_item audit sample and control tests"/]
+    AU_T_CONT[/"Continuous: every entry.posted and<br/>entry.blocked event runs the JE screens<br/>(cheap, code only, no model call)"/]
+    AU_T_DRIFT[/"Drift monitor audit intents: vendor bank<br/>details vs last paid · vendor self-join ·<br/>accrual unreversed by day 5 (D-02) · D-10"/]
+    AU_T_WHY(["External auditor or controller<br/>asks an ad hoc why? about an<br/>artifact, entry or balance"])
+    AU_INTENT[("intent: function audit, question,<br/>owner, end_condition_json<br/>one intent id on every audit artifact")]
+    AU_IN_GL[("gl_entry (id, period, date, memo,<br/>source_decision_id) and gl_line<br/>(account, debit_cents, credit_cents)")]
+    AU_IN_DEC[("decision (actor, kind, autonomy_level)<br/>+ workpaper.marks_json, kernel_verdict<br/>+ artifact (system, external_id)")]
+    AU_IN_TRACE[("trace = the evidence, read as-of:<br/>payload_json versioned by recorded_time<br/>sha256 of payload kept at posting")]
+    AU_IN_APPR[("approval (decision_id, approver, role, limit_cents,<br/>approved_at, channel_ref) and blocked_attempt (id,<br/>decision_id, rule, attempted_by, approved_by, at)<br/>both PROPOSED SCHEMA ADDITIONS, not in spec 7")]
+    AU_IN_MASTER[("vendor master, bill, bank_txn · vendor<br/>needs tax_id, bank_hash, address_norm,<br/>created_by (proposed schema addition)")]
+    AU_IN_MATRIX[/"Policy memo (markdown): approval matrix,<br/>$500 approval threshold, accrual rules<br/>read via policy_memo.lookup"/]
+    subgraph AU_SG1F["INDEPENDENCE FENCE · enforced in the tool and storage layer, not in a prompt"]
+      AU_F_MODEL{{"Auditor model family is not the preparer<br/>family (preparer = Claude tiers) · agent<br/>identity distinct from the GPT controller"}}
+      AU_F_NOMEM{{"Tool allow-list: NO memory.facts, memory.policies,<br/>memory.similar_decisions (no why-it-is-fine notes) ·<br/>NO propose_entry, no fact or policy write ·<br/>only the non-posting audit.write_finding"}}
+      AU_F_ORDER{{"Forms its view from evidence and workpapers<br/>BEFORE it may read preparer judgment notes ·<br/>sample seed never visible to preparers · sample size<br/>falls only on own control tests, never on replay agreement"}}
+      AU_F_PROV["audit.fact_provenance(fact_id) only: tests<br/>the fact as a control · approver had authority,<br/>in scope, valid on date, quote is a substring"]
+      AU_F_NOSUPP{{"May never suppress a screen: no fact can<br/>disable one · an explained hit is annotated<br/>and STAYS eligible for selection"}}
+    end
+    AU_MEM[("Preparer memory: fact, policy · memory.* is<br/>shared read for every OTHER function ·<br/>NOT in the auditor allow-list: no read path")]
+    AU_READER["Auditor read layer (read-only tools):<br/>audit.sample · audit.rerun_kernel ·<br/>audit.control_test · ledger.* · bank.*"]
+  end
+
+  subgraph AU_SG2["2 · Population and sampling (code): three lanes, never mixed"]
+    AU_P_DEF["Define population per assertion: occurrence,<br/>completeness, cutoff, accuracy, authorisation<br/>= all gl_entry in the period, definition_json"]
+    AU_P_COMPLETE{{"Completeness proof: opening TB + sum of lines<br/>= closing TB per account · entry id sequence has<br/>no gaps · every entry has source_decision_id"}}
+    AU_P_FREEZE[("audit_population (id, period, definition_json,<br/>n, total_abs_cents, content_hash)<br/>frozen and immutable after selection")]
+    AU_P_CARVE["Carve out 100 percent items: entry gte tolerable<br/>misstatement or gte sampling interval, examined<br/>in full, NOT part of the sample (AS 2315.21)"]
+    AU_P_RANDOM["Random lane: seeded PRNG, seed = H(period,<br/>population hash, auditor secret) · stratified by<br/>function · every item can be picked (AS 2315.24)"]
+    AU_P_MUS["Monetary-unit (PPS, AS 2315 fn 4) lane: n = ceil(BV x<br/>factor / tolerable) · factor 3.0 = 95 percent, zero expected<br/>misstatement (AICPA table, UNVERIFIED) · interval = BV / n ·<br/>random start · walk cumulative abs cents"]
+    AU_P_RISK{{"Risk-based / judgmental lane: every entry that hit<br/>a stage 4 screen, selection_reason = screen name ·<br/>NOT a representative sample: never projected to the<br/>population, reported separately (follows AS 2315.24)"}}
+    AU_P_SAMPLE[("audit_sample (population_id, method, seed,<br/>params_json) + audit_item (gl_entry_id,<br/>selection_reason, stratum) · n stated per lane")]
+  end
+
+  subgraph AU_SG3["3 · Re-performance: audit.rerun_kernel on the stored workpapers"]
+    AU_R_RERUN["audit.rerun_kernel(decision_id): re-fetch<br/>evidence from the trace store by trace_id,<br/>never the preparer cached quotes"]
+    AU_R_QUOTE{{"E: every quote re-verified as a substring<br/>of its versioned trace payload · every<br/>trace_id still exists"}}
+    AU_R_FOOT{{"F: every sum re-footed in integer cents:<br/>debits = credits · applications fit ·<br/>schedule sums · subledger = GL control"}}
+    AU_R_APPR{{"P: approval re-checked vs the approval matrix<br/>AS OF the posting date: approver is not actor,<br/>limit_cents gte amount, period was open"}}
+    AU_R_JUDG{{"J: each policy approved and each fact active<br/>and in scope on the entry date, checked<br/>through audit.fact_provenance only"}}
+    AU_R_HASH{{"evidence_hash_then vs evidence_hash_now:<br/>evidence changed since posting ?<br/>(H-6, F-06, A-24) yes → finding"}}
+    AU_R_ROW[("reperformance (item_id, original_verdict,<br/>rerun_verdict, mark_diffs_json, evidence_hash_then,<br/>evidence_hash_now) · re-run marks diffed<br/>against workpaper.marks_json")]
+  end
+
+  subgraph AU_SG4["4 · Journal-entry and control screens (code, criteria from AS 2401.61)"]
+    AU_S_RUN["Screen runner: every entry.posted and<br/>entry.blocked, plus a full-period sweep<br/>at close.period.locked"]
+    AU_S_DUPV["Duplicate vendors via entity resolution (track<br/>doc, B-18): normalise case, suffixes, NBSP (F-13) ·<br/>block on tax_id, bank_hash, phone, address"]
+    AU_S_DUPSCORE{{"Jaro-Winkler on name + exact bank or tax hit ·<br/>same bank_hash, different name = always a hit ·<br/>gt 0.95 code · 0.85-0.95 model · below dropped"}}
+    AU_S_ROUND["Round-number payments (track doc):<br/>amount_cents mod 100000 = 0, or<br/>mod 10000 = 0 above materiality"]
+    AU_S_POSTCLOSE["Posted after the period closed (track doc):<br/>posted_at gt period.locked_at, date in locked period<br/>posted_at, locked_at: PROPOSED SCHEMA ADDITION"]
+    AU_S_SELF["Self-approved request (track doc, G-02):<br/>approval.approver = decision.actor, or approver =<br/>vendor.created_by · approval table is proposed"]
+    AU_S_LATE["Weekend or late-night posting: posted_at on<br/>Sat/Sun or outside 07:00-20:00 local · weighted<br/>toward period end (AS 2401.62) · also thin memo<br/>(under 15 chars on a manual entry)"]
+    AU_S_PAIR["Unusual account pair: (debit, credit) account<br/>frequency over Q2 + July below 1st percentile,<br/>or never seen"]
+    AU_S_ACCR["Accrual with no reversal (D-02): kind accrual<br/>flagged to reverse, no reversing gl_entry<br/>by day 5 of the next period"]
+    AU_S_CEIL["Learned rule fired above its approver ceiling<br/>(G-04): policy.approved_by limit_cents<br/>lt entry amount"]
+    AU_S_BLOCKLOG["Blocked-attempts log review (G-01, H-1):<br/>every blocked_attempt has rule name, approver<br/>click, original payment and bank line"]
+    AU_S_BENFORD["STRETCH: Benford first-digit screen, MAD and<br/>chi-square vs log10(1 + 1/d) · n of order 1,000<br/>(floor UNVERIFIED, secondary source) · Northwind has<br/>10 vendors → prints insufficient n, not a verdict"]
+    AU_S_HITS[("Screen hit list: gl_entry_id, screen, detail ·<br/>hits are annotated, never deleted ·<br/>feeds the risk-based lane")]
+  end
+
+  subgraph AU_SG5["5 · Control tests: test of design + test of operating effectiveness (audit.control_test)"]
+    AU_C_ATTR["Attribute sampling per control: n from the<br/>tolerable deviation rate · count deviations<br/>(AS 2315.31-.43) · n stated"]
+    AU_C_SOD["Segregation of duties (COSO P10, G-02)<br/>Design: storage layer rejects preparer = approver<br/>Operating: n approvals, approver vs decision.actor"]
+    AU_C_LIMIT["Approval limits (B-24, G-04)<br/>Design: matrix in memo, rule inherits ceiling<br/>Operating: n entries, limit_cents gte amount"]
+    AU_C_LOCK["Period lock (G-03)<br/>Design: kernel P mark period open<br/>Operating: 0 post-close hits + block rows exist"]
+    AU_C_3WAY["Three-way match operating (AP)<br/>Design: kernel E mark within tolerance<br/>Operating: n paid bills re-matched to po, receipt"]
+    AU_C_BANKCHG["Bank-detail change verification (B-17)<br/>Design: email change refused, out-of-band confirm<br/>Operating: each ap.vendor.change_requested has a confirm trace"]
+    AU_C_ONCE["Asked once: no repeat questions<br/>Design: answer → scoped fact applied by code<br/>Operating: escalation rows, same party + predicate = 0"]
+    AU_C_DEPART["Departed employee holds no approval authority<br/>(consumes hr.departure_detected)<br/>Operating: approvals dated after end_date = 0"]
+    AU_C_ROW[("control_test (id, control_id, period, attribute,<br/>n_tested, deviations) + sample evidence refs ·<br/>deviations compared to the tolerable deviation rate")]
+  end
+
+  subgraph AU_SG6["6 · Where a model is used vs code"]
+    AU_EVAL{{"CODE evaluates: project misstatement from the<br/>random and MUS lanes only (AS 2315.26) + actual<br/>misstatement in 100 percent items, vs tolerable<br/>misstatement · classify each exception"}}
+    AU_M_RATIONALE["MODEL: business-rationale read of a screen hit:<br/>does a contract or PO in the trace store explain<br/>it ? must quote it · no quote = no clearance"]
+    AU_M_VENDOR["MODEL: borderline vendor cluster (0.85-0.95):<br/>same legal entity ? must cite the<br/>matching fields"]
+    AU_M_CODEFILL["CODE fills condition, criteria and effect<br/>amounts from audit_item, reperformance<br/>and control_test rows"]
+    AU_M_WRITE["MODEL writes cause and recommendation only<br/>(IIA five attributes) · must cite gl_entry.id,<br/>trace_id and a quote · recorded as judgment"]
+    AU_M_WALK["CODE walks the chain by id: artifact →<br/>decision → workpaper mark → evidence quote<br/>in trace → approval.approver"]
+    AU_M_WHY["MODEL answers the why? in the terms of the asker<br/>from the walked chain only · broken link =<br/>REFUSE, lists everywhere it looked"]
+  end
+
+  subgraph AU_SG7["7 · Shared exit and output cases"]
+    AU_PROPOSE["audit.write_finding + workpaper<br/>(the auditor non-posting stand-in for<br/>propose_entry + workpaper)"]
+    AU_KERNEL{{"Kernel F·E·P·J + pack checks"}}
+    AU_K_PACK{{"Pack checks: population hash unchanged · sample<br/>reproducible from seed · projection recomputed ·<br/>finding cites existing ids, quotes are substrings ·<br/>auditor is not preparer, reviewer or approver"}}
+    AU_FINDING[("finding (control_id, condition, criteria, cause,<br/>effect, recommendation, severity, item_ids_json,<br/>status) · closes only with a remediation decision")]
+    AU_O_TICK["No exception: re-performs identically → tick,<br/>re-performance workpaper, evidence pack entry ·<br/>round amount backed by a PO quote: annotated"]
+    AU_O_IMMAT["Exception immaterial: logged finding, low severity,<br/>nobody paged · D-10 counter + 1 (third same-sign<br/>period in a fraud-sensitive account escalates)"]
+    AU_O_MAT["Exception material, mark differs or evidence<br/>hash changed (H-6, F-06, A-24): finding +<br/>downstream state invalidated"]
+    AU_O_CTRL["Control failure (self-approved entry found posted,<br/>deviations gt tolerable, block row missing):<br/>high-severity finding + autonomy demotion"]
+    AU_O_DUP["Duplicate vendor cluster or near-duplicate<br/>payment across it (B-18, B-14): cluster report<br/>with both payment histories"]
+    AU_O_BLOCKED["Attempt to post to a locked period, self-approve<br/>or exceed a limit: BLOCK already persisted by the<br/>kernel · audit confirms the blocked_attempt row"]
+    AU_O_NOTIE["Population fails completeness:<br/>cannot audit, population does not tie,<br/>differences listed"]
+    AU_O_REMED["Remediation: audit.finding.raised opens an intent<br/>in the owning function · it corrects via its own<br/>propose_entry in the current open period ·<br/>human approves with the finding attached"]
+    AU_H_CTRL(["Controller"])
+    AU_H_CFO(["CFO (never the approver<br/>under test)"])
+    AU_H_OWNER(["AP owner / close owner"])
+    AU_RT_AUTO(("AUTO"))
+    AU_RT_PROPOSE(("PROPOSE"))
+    AU_RT_ESCALATE(("ESCALATE"))
+    AU_RT_REFUSE(("REFUSE"))
+    AU_RT_BLOCK(("BLOCK"))
+    subgraph AU_SG7P["Evidence pack (PBC list): a third party re-runs it from the seed"]
+      AU_PBC_ACCT["Per balance-sheet<br/>account"]
+      AU_PBC_TIE["Tie-out sheet: GL balance<br/>= subledger, bank or schedule"]
+      AU_PBC_WP["Workpapers + re-performance<br/>diffs + approvals"]
+      AU_PBC_SRC["Source documents:<br/>trace copies with sha256"]
+      AU_PBC[("pbc_pack (id, period, manifest_json, sha256)<br/>+ population file and hash, sample seed and<br/>params, control matrix, findings")]
+    end
+  end
+
+  subgraph AU_SG8["8 · Events and effects"]
+    AU_E_BUS[("event (ts, topic, from_function = audit,<br/>intent_id, payload_json)")]
+    AU_E_FINDING["topic audit.finding.raised<br/>(severity, control_id, item_ids)"]
+    AU_E_PACK["topics audit.pack.ready (pbc_pack id, sha256)<br/>and audit.evidence.invalidated<br/>(decision_id, trace_id, hashes)"]
+    AU_E_CHECK[("checklist_item for the close: audit findings<br/>reviewed · blocked_reason while a high-severity<br/>finding is open · pack ready ticks it")]
+    AU_E_REGR["Learning loops: each finding becomes a new<br/>regression case in the replay suite run as CI<br/>(and a planted-exception recall check)"]
+    AU_E_LADDER["Autonomy ladder: that decision kind demoted<br/>to post-with-review or shadow until replay<br/>agreement and n are re-earned"]
+    AU_E_LEARN["Learnable by the auditor: confirmed vendor alias<br/>clusters (AP-owned master data), account-pair<br/>baseline, screen weights · NEVER a suppression"]
+    AU_E_METRICS1["Metrics, TO BE MEASURED (nothing run yet): sample<br/>size n by lane · re-performance pass rate · findings<br/>by severity · checkable fraction re-verified · control<br/>tests passed of n · blocks verified / attempted"]
+  end
+
+  %% 1 triggers, fence, inputs
+  AU_T_LOCK --> AU_INTENT
+  AU_T_DRIFT --> AU_INTENT
+  AU_T_CONT --> AU_S_RUN
+  AU_T_WHY -- "why? query" --> AU_M_WALK
+  AU_INTENT --> AU_F_MODEL
+  AU_MEM -- "provenance fields of one fact_id only, no rationale text" --> AU_F_PROV
+  AU_F_NOMEM --> AU_F_ORDER
+  AU_F_ORDER --> AU_READER
+  AU_F_PROV --> AU_READER
+  AU_IN_GL --> AU_READER
+  AU_IN_DEC --> AU_READER
+  AU_IN_TRACE --> AU_READER
+  AU_IN_APPR --> AU_READER
+  AU_IN_MASTER --> AU_READER
+  AU_IN_MATRIX --> AU_READER
+
+  %% 2 population and sampling
+  AU_READER --> AU_P_DEF
+  AU_P_DEF --> AU_P_COMPLETE
+  AU_P_COMPLETE -- "ties" --> AU_P_FREEZE
+  AU_P_COMPLETE -- "does not tie" --> AU_O_NOTIE
+  AU_P_FREEZE --> AU_P_CARVE
+  AU_P_CARVE -- "remainder" --> AU_P_RANDOM
+  AU_P_CARVE -- "remainder" --> AU_P_MUS
+  AU_S_HITS -- "screen hits" --> AU_P_RISK
+  AU_P_CARVE -- "100 percent items: own stratum, not sampled, not projected" --> AU_P_SAMPLE
+  AU_P_RANDOM --> AU_P_SAMPLE
+  AU_P_MUS --> AU_P_SAMPLE
+
+  %% 3 re-performance
+  AU_P_SAMPLE --> AU_R_RERUN
+  AU_R_RERUN --> AU_R_QUOTE
+  AU_R_RERUN --> AU_R_FOOT
+  AU_R_RERUN --> AU_R_APPR
+  AU_R_RERUN --> AU_R_JUDG
+  AU_R_RERUN --> AU_R_HASH
+  AU_R_HASH --> AU_R_ROW
+
+  %% 4 screens
+  AU_READER --> AU_S_RUN
+  AU_S_RUN --> AU_S_DUPV
+  AU_S_DUPV --> AU_S_DUPSCORE
+  AU_S_RUN --> AU_S_ROUND
+  AU_S_RUN --> AU_S_POSTCLOSE
+  AU_S_RUN --> AU_S_SELF
+  AU_S_RUN --> AU_S_LATE
+  AU_S_RUN --> AU_S_PAIR
+  AU_S_RUN --> AU_S_ACCR
+  AU_S_RUN --> AU_S_CEIL
+  AU_S_RUN --> AU_S_BLOCKLOG
+  AU_S_RUN -. "stretch" .-> AU_S_BENFORD
+  AU_S_DUPSCORE --> AU_S_HITS
+  AU_S_ROUND --> AU_S_HITS
+  AU_S_POSTCLOSE --> AU_S_HITS
+  AU_S_SELF --> AU_S_HITS
+  AU_S_LATE --> AU_S_HITS
+  AU_S_PAIR --> AU_S_HITS
+  AU_S_ACCR --> AU_S_HITS
+  AU_S_CEIL --> AU_S_HITS
+  AU_S_BLOCKLOG --> AU_S_HITS
+  AU_S_BENFORD -. "verdict only when n is large" .-> AU_S_HITS
+  AU_F_NOSUPP -. "no fact can switch a screen off" .-> AU_S_RUN
+
+  %% 5 control tests
+  AU_P_SAMPLE --> AU_C_ATTR
+  AU_C_ATTR --> AU_C_SOD
+  AU_C_ATTR --> AU_C_LIMIT
+  AU_C_ATTR --> AU_C_LOCK
+  AU_C_ATTR --> AU_C_3WAY
+  AU_C_ATTR --> AU_C_BANKCHG
+  AU_C_ATTR --> AU_C_ONCE
+  AU_C_ATTR --> AU_C_DEPART
+  AU_C_SOD --> AU_C_ROW
+  AU_C_LIMIT --> AU_C_ROW
+  AU_C_LOCK --> AU_C_ROW
+  AU_C_3WAY --> AU_C_ROW
+  AU_C_BANKCHG --> AU_C_ROW
+  AU_C_ONCE --> AU_C_ROW
+  AU_C_DEPART --> AU_C_ROW
+
+  %% 6 model vs code
+  AU_R_ROW --> AU_EVAL
+  AU_S_HITS --> AU_M_RATIONALE
+  AU_S_DUPSCORE -- "band 0.85-0.95" --> AU_M_VENDOR
+  AU_M_RATIONALE --> AU_EVAL
+  AU_M_VENDOR --> AU_EVAL
+  AU_EVAL -- "exception" --> AU_M_CODEFILL
+  AU_M_CODEFILL --> AU_M_WRITE
+  AU_M_WALK --> AU_M_WHY
+  AU_M_WHY -- "chain broken" --> AU_RT_REFUSE
+
+  %% 7 shared exit and output cases
+  AU_M_WRITE --> AU_PROPOSE
+  AU_PROPOSE --> AU_KERNEL
+  AU_KERNEL --> AU_K_PACK
+  AU_KERNEL -. "reject: cited quote not a substring → rewrite" .-> AU_M_WRITE
+  AU_K_PACK -- "accept" --> AU_FINDING
+  AU_EVAL -- "no exception" --> AU_O_TICK
+  AU_FINDING --> AU_O_IMMAT
+  AU_FINDING --> AU_O_MAT
+  AU_FINDING --> AU_O_CTRL
+  AU_FINDING --> AU_O_DUP
+  AU_S_BLOCKLOG -- "block row present" --> AU_O_BLOCKED
+  AU_S_BLOCKLOG -- "block row missing" --> AU_O_CTRL
+  AU_O_TICK --> AU_RT_AUTO
+  AU_O_IMMAT --> AU_RT_AUTO
+  AU_O_MAT --> AU_RT_ESCALATE
+  AU_O_CTRL --> AU_RT_ESCALATE
+  AU_O_DUP --> AU_RT_ESCALATE
+  AU_O_BLOCKED --> AU_RT_BLOCK
+  AU_O_NOTIE --> AU_RT_REFUSE
+  AU_O_REMED --> AU_RT_PROPOSE
+  AU_RT_ESCALATE -- "material finding" --> AU_H_CTRL
+  AU_RT_ESCALATE -- "control failure" --> AU_H_CFO
+  AU_RT_ESCALATE -- "vendor cluster, D-02" --> AU_H_OWNER
+  AU_RT_REFUSE --> AU_H_CTRL
+  AU_RT_BLOCK -- "notified" --> AU_H_CTRL
+  AU_O_TICK --> AU_PBC_ACCT
+  AU_PBC_ACCT --> AU_PBC_TIE
+  AU_PBC_TIE --> AU_PBC_WP
+  AU_PBC_WP --> AU_PBC_SRC
+  AU_PBC_SRC --> AU_PBC
+  AU_FINDING --> AU_PBC
+
+  %% 8 events and effects
+  AU_FINDING --> AU_E_FINDING
+  AU_PBC --> AU_E_PACK
+  AU_E_FINDING --> AU_E_BUS
+  AU_E_PACK --> AU_E_BUS
+  AU_E_BUS -. "audit.finding.raised, audit.pack.ready" .-> AU_E_CHECK
+  AU_E_BUS -. "audit.finding.raised" .-> AU_E_REGR
+  AU_O_CTRL -. "demote decision kind" .-> AU_E_LADDER
+  AU_O_DUP -. "confirmed alias cluster" .-> AU_E_LEARN
+  AU_E_BUS --> AU_E_METRICS1
+
+  %% re-wired after merges
+  AU_F_MODEL --> AU_F_NOMEM
+  AU_P_RISK -- "own lane, own report" --> AU_P_SAMPLE
+  AU_R_QUOTE --> AU_R_ROW
+  AU_R_FOOT --> AU_R_ROW
+  AU_R_APPR --> AU_R_ROW
+  AU_R_JUDG --> AU_R_ROW
+  AU_C_ROW --> AU_EVAL
+  AU_O_MAT --> AU_E_PACK
+  AU_E_BUS -. "audit.finding.raised" .-> AU_O_REMED
+
+  %% added in review
+  AU_O_IMMAT -- "third same-sign period (D-10)" --> AU_RT_ESCALATE
+  AU_RT_PROPOSE -- "approves with the finding attached" --> AU_H_CTRL
+  AU_M_WHY -- "chain intact: answer cites ids and quotes" --> AU_RT_AUTO
+  AU_READER -. "read-only tools" .-> AU_M_WALK
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class AU_T_LOCK,AU_T_CONT,AU_T_DRIFT,AU_IN_MATRIX src
+  class AU_T_WHY,AU_H_CTRL,AU_H_CFO,AU_H_OWNER human
+  class AU_INTENT,AU_IN_GL,AU_IN_DEC,AU_IN_TRACE,AU_IN_APPR,AU_IN_MASTER,AU_MEM,AU_P_FREEZE,AU_P_SAMPLE,AU_R_ROW,AU_S_HITS,AU_C_ROW,AU_FINDING,AU_PBC,AU_E_BUS,AU_E_CHECK store
+  class AU_F_MODEL,AU_F_NOMEM,AU_F_NOSUPP,AU_F_ORDER,AU_P_COMPLETE,AU_P_RISK,AU_R_QUOTE,AU_R_FOOT,AU_R_APPR,AU_R_JUDG,AU_R_HASH,AU_S_DUPSCORE,AU_EVAL,AU_KERNEL,AU_K_PACK gate
+  class AU_F_PROV,AU_READER,AU_P_DEF,AU_P_CARVE,AU_P_RANDOM,AU_P_MUS,AU_R_RERUN,AU_S_RUN,AU_S_DUPV,AU_S_ROUND,AU_S_POSTCLOSE,AU_S_SELF,AU_S_LATE,AU_S_PAIR,AU_S_ACCR,AU_S_CEIL,AU_S_BLOCKLOG,AU_C_ATTR,AU_C_SOD,AU_C_LIMIT,AU_C_LOCK,AU_C_3WAY,AU_C_BANKCHG,AU_C_ONCE,AU_C_DEPART,AU_M_CODEFILL,AU_M_WALK,AU_PROPOSE,AU_O_TICK,AU_O_IMMAT,AU_O_MAT,AU_O_CTRL,AU_O_DUP,AU_O_BLOCKED,AU_O_NOTIE,AU_O_REMED,AU_PBC_ACCT,AU_PBC_TIE,AU_PBC_WP,AU_PBC_SRC,AU_E_FINDING,AU_E_PACK,AU_E_METRICS1 code
+  class AU_M_RATIONALE,AU_M_VENDOR,AU_M_WRITE,AU_M_WHY model
+  class AU_E_REGR,AU_E_LADDER,AU_E_LEARN learn
+  class AU_S_BENFORD stretch
+  class AU_RT_AUTO rAuto
+  class AU_RT_PROPOSE rPropose
+  class AU_RT_ESCALATE rEscalate
+  class AU_RT_REFUSE rRefuse
+  class AU_RT_BLOCK rBlock

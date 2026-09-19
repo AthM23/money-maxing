@@ -1,0 +1,285 @@
+flowchart TB
+  FT_FROM_LEARNING["from learning loops (diagram 20)<br/>corrections, human answers,<br/>replay results, decision traces"]
+
+  subgraph FT_SG0["21 · STRETCH (first cut) · Open-weight fine-tune pipeline feeding router tier 1 · decided 09-19 · nothing trained yet · routing itself never depends on it"]
+
+    subgraph FT_SG1["1 · Label sources (SQLite · read by the TRAINING job only)"]
+      FT_L_WALL{{"access wall (spec 7): human_outcome_json<br/>and the scoring key are reachable by the<br/>TRAINING job only, never by an agent tool"}}
+      FT_L_Q2[("decision_point.human_outcome_json<br/>human-closed Q2 (Apr-Jun 2026)<br/>short-pay, wire-fee write-off, AP coding")]
+      FT_L_KPASS[("workpaper.kernel_verdict = accept<br/>join decision.proposal_json + trace<br/>AND not later corrected or unwound")]
+      FT_L_GOLD[("GOLD: controller corrections<br/>+ escalation.answer_json (human answers)<br/>agent original proposal_json = REJECTED<br/>side of a preference pair")]
+      FT_L_TEACH["teacher outputs (distillation)<br/>claude-sonnet-5 / claude-opus-5 answers<br/>kept only if schema + kernel passed"]
+      FT_L_NOTE["NOTE: kernel pass = structurally valid,<br/>NOT judgment-correct<br/>→ human corrections are weighted higher"]
+      FT_L_WEIGHT["sample weight per row (proposed, untuned)<br/>gold correction 3 · Q2 human outcome 2<br/>kernel-pass or teacher 1"]
+      FT_L_EXCL{{"EXCLUDED from training, always:<br/>115-case corpus tests/cases.csv = TEST set<br/>planted-drift answer key (spec 6b)<br/>FinBalance benchmark = eval only"}}
+    end
+
+    subgraph FT_SG2["2 · Task heads of the ONE open-weight tier 1 model (task tag in prompt) · each with its CPU baseline"]
+      subgraph FT_SG2B["(b) bank line → open-invoice match adjudication"]
+        FT_HB_IN["input: one bank_txn line + top-k REAL<br/>candidates from ledger.open_invoices<br/>labels: Q2 matches + kernel-pass matches"]
+        FT_HB_FEAT["pair features computed in CODE, put in prompt<br/>amount_delta_cents · date_delta_days<br/>name_similarity · ref_number_hit<br/>n_open_candidates"]
+        FT_HB_MODEL["open model → JSON: invoice_id or NONE,<br/>cited reason, trace_id + quote<br/>A-05 many-to-one still routes PROPOSE"]
+        FT_HB_BASE["CPU BASELINE to beat: gradient-boosted<br/>trees (LightGBM) on the same pair<br/>features → score → rank"]
+      end
+      subgraph FT_SG2C["(c) descriptor normalisation / entity resolution"]
+        FT_HC_ALIAS{{"alias table FIRST (no model)<br/>fact predicate = descriptor_alias<br/>pinned to stable party_id (G-09)"}}
+        FT_HC_RETR["miss → char n-gram (3-gram TF-IDF)<br/>retrieval of top-k parties, after<br/>whitespace / encoding clean (F-13)"]
+        FT_HC_MODEL["open model → party_id or NONE + reason<br/>labels: Q2 + human corrections<br/>20-50 per vendor · case A-09"]
+        FT_HC_BASE["CPU BASELINE to beat:<br/>GBT re-rank of the retrieved candidates"]
+      end
+      subgraph FT_SG2D["(d) GL account coding of AP bills"]
+        FT_HD_IN["input: vendor_id, memo, amount_cents,<br/>po present, ap.vendor_history, chart of<br/>accounts · labels: Q2 booked gl_line.account"]
+        FT_HD_MODEL["open model → account + reason<br/>constrained to the chart of accounts<br/>50+ examples per account, else abstain"]
+        FT_HD_BASE["CPU BASELINE to beat: GBT on TF-IDF<br/>+ categorical features<br/>(or encoder classifier, ModernBERT)"]
+      end
+      subgraph FT_SG2F["(f) exception-type triage"]
+        FT_HF_MODEL["drift comparator features + trace text<br/>→ open model → class: short-pay, wire fee,<br/>duplicate, timing, unknown<br/>labels: trace outcomes, 50-100 per class"]
+        FT_HF_BASE["CPU BASELINE to beat:<br/>GBT or encoder classifier"]
+      end
+      subgraph FT_SG2E["(e) structured extraction → JSON"]
+        FT_HE_IN[/"contract terms · remittance advice (C-05,<br/>C-06) · vendor bills · labels: teacher<br/>JSON passing schema + kernel, 200-500"/]
+        FT_HE_MODEL["open model → JSON in the zod schema<br/>amounts as integer cents, dates ISO"]
+        FT_HE_CHECK{{"every quote is a substring of its trace<br/>(kernel E) · baseline to beat:<br/>claude-haiku-4-5 extraction"}}
+      end
+      subgraph FT_SG2A["(a) route classification · CROSSED OUT · NOT LEARNED"]
+        FT_HA_NOT["X · AUTO / PROPOSE / ESCALATE / REFUSE /<br/>BLOCK is deliberately NOT learned<br/>ESCALATE is about MISSING information<br/>a wrong AUTO has asymmetric cost"]
+        FT_HA_KEEP{{"stays: rules + calibrated threshold<br/>+ kernel F·E·P·J + autonomy ladder<br/>(95% replay agreement, n gte 5)"}}
+      end
+    end
+
+    subgraph FT_SG3["3 · Dataset build (deterministic code)"]
+      FT_DS_EXPORT["export SQLite → JSONL per task head<br/>inputs, candidate set, proposal, kernel verdict,<br/>human correction, period, entity ids"]
+      FT_DS_FEAT["feature extraction in code, one function<br/>shared by training and serving<br/>integer cents · models never add numbers"]
+      FT_DS_NEG["negatives = the OTHER real open candidates<br/>for that bank line on that date, plus NONE<br/>rows · NOT random pairs (those look easy)"]
+      FT_DS_DEDUP["de-duplicate templated seed cases<br/>hash of normalised text + features<br/>one row per template family"]
+      FT_DS_REJ{{"rejection-sampling filter (STaR / ReST-EM)<br/>kernel = verifier · Claude = teacher<br/>keep verifier-passing, uncorrected samples"}}
+      FT_DS_SFT["SFT rows in chat format: task-tagged<br/>prompt → assistant JSON · count tokens<br/>(job cost = tokens x epochs x price)"]
+      FT_DS_PAIRS[("preference pairs JSONL<br/>chosen = human · rejected = agent<br/>kept for a LATER DPO pass")]
+      FT_DS_STORE[("dataset files + manifest<br/>dataset_hash, rows per label source,<br/>feature_schema_version")]
+    end
+
+    subgraph FT_SG4["4 · Split · by TIME and by ENTITY"]
+      FT_SP_TIME["split by period (decision.created_at)<br/>no shuffling across months"]
+      FT_SP_TRAIN[("TRAIN: Apr-May 2026")]
+      FT_SP_CAL[("CALIBRATE: June 2026")]
+      FT_SP_TEST[("TEST: July 2026 (live close)")]
+      FT_SP_ENT["ALSO hold out WHOLE customers and vendors<br/>(every row of a held-out party_id leaves<br/>train) so names cannot be memorised"]
+      FT_SP_LEAK{{"leakage check: no party_id, decision_point<br/>id or template hash on both sides · no feature dated<br/>after the decision · ladder replay agreement for this<br/>model: only periods AFTER its train cutoff"}}
+      FT_SP_RISK["RISK: fixtures are seeded (spec 6b)<br/>→ model learns the seed generator<br/>→ held-out-entity score is the honest one"]
+    end
+
+    subgraph FT_SG5["5 · Train · open-weight LoRA is PRIMARY · GBT is the CPU baseline"]
+      FT_TR_OPENAI["NOTE · team decision 09-19: fine-tuning uses an<br/>OPEN-WEIGHT model · spec 6 line (OpenAI is the<br/>lowest-friction route) is SUPERSEDED · OpenAI FT is<br/>closed to orgs that never fine-tuned (deprecations<br/>page, checked directly 09-19)"]
+      FT_TR_BASE["base model (proposed): Qwen3.5-4B or 9B<br/>alternatives: Gemma 4 · Llama 3.1 8B<br/>one multi-task LoRA adapter"]
+      FT_TR_NOGPU["team laptop has NO NVIDIA GPU<br/>→ training is hosted, pick one trainer"]
+      FT_TR_TOGETHER["Together LoRA SFT<br/>upload JSONL → job → adapter<br/>built-in shadow experiments"]
+      FT_TR_FIREWORKS["Fireworks LoRA SFT<br/>(models up to 16B)<br/>LoRA serves on on-demand GPU"]
+      FT_TR_MODAL["Modal + Unsloth / TRL<br/>QLoRA on one A100-80GB<br/>weights stay downloadable"]
+      FT_TR_HP["LoRA / QLoRA SFT, 1-3 epochs<br/>loss on assistant JSON tokens only<br/>gte 100 rows, 1000+ preferred · under an hour"]
+      FT_TR_DPO["LATER: DPO pass on preference pairs<br/>only once enough human corrections exist"]
+      FT_TR_GBT["CPU GBT BASELINE lane<br/>LightGBM / sklearn, minutes on a laptop<br/>the model the fine-tune must beat"]
+      FT_TR_ART[("artifacts: LoRA adapter id or merged weights<br/>· GBT model file / ONNX<br/>each with dataset_hash + schema version")]
+    end
+
+    subgraph FT_SG6["6 · Evaluate on July + held-out entities · a falsifiable comparison"]
+      FT_EV_BASE0["non-LLM baselines: router tier 0 compiled<br/>rules · CPU GBT pair-feature models"]
+      FT_EV_BASEM["base open model, NO adapter<br/>(same prompts, zero-shot)"]
+      FT_EV_BASEC["Claude tiers: claude-haiku-4-5 ·<br/>claude-sonnet-5 · claude-opus-5"]
+      FT_EV_RANK["match and entity heads (b)(c)<br/>top-1 accuracy and recall-at-3"]
+      FT_EV_F1["coding and triage heads (d)(f)<br/>macro-F1 across classes"]
+      FT_EV_JSON["extraction head (e): schema-valid rate,<br/>field exact-match, quote-substring pass"]
+      FT_EV_PREC["precision at the auto-clear threshold<br/>(a wrong AUTO is the costly error)"]
+      FT_EV_COST["cost (decision.cost_micros) and<br/>latency per decision, per system"]
+      FT_EV_HELD["held-out customers and vendors<br/>reported as a SEPARATE row, with n"]
+      FT_EV_GATE{{"per head: fine-tuned beats GBT AND base<br/>model, and holds Claude precision at the<br/>threshold? no → that head keeps GBT / Claude"}}
+      FT_TO_BENCH["to testing and benchmarking (diagram 23)<br/>base vs fine-tuned vs Claude tiers<br/>on the SAME held-out sets"]
+    end
+
+    subgraph FT_SG7["7 · Calibrate and abstain"]
+      FT_CAL_CONF["confidence = normalised log-prob over the<br/>allowed options (candidate ids, accounts,<br/>classes) via constrained decoding"]
+      FT_CAL_FIT["fit temperature scaling or isotonic<br/>regression on June only"]
+      FT_CAL_THR{{"threshold per task (proposed): lowest score giving<br/>gte 99% precision on June<br/>· confirmed on July"}}
+      FT_CAL_DEC{{"calibrated confidence gte threshold?"}}
+      FT_CAL_ABSTAIN["below → ABSTAIN → next router tier<br/>(claude-haiku-4-5, then claude-sonnet-5,<br/>then claude-opus-5)"]
+    end
+
+    subgraph FT_SG8["8 · Shadow → promote → serve"]
+      FT_REG[("model registry: model_id, task, version,<br/>base model, dataset_hash, threshold,<br/>status shadow / promoted / demoted")]
+      FT_SH_RUN["SHADOW mode: predicts on every decision<br/>logs agreement with the accepted answer<br/>posts nothing, changes no route"]
+      FT_SH_LOG[("shadow log: decision_id, model version,<br/>prediction, confidence, accepted answer,<br/>agrees, latency, cost_micros")]
+      FT_PR_GATE{{"promotion gate per TASK and per SCOPE:<br/>gte N shadow decisions · agreement above<br/>bar · zero kernel failures"}}
+      FT_PR_HUMAN(["controller approves promotion<br/>(same approval path as a policy)"])
+      FT_SRV_ENDPOINT["serve A: hosted dedicated endpoint for the<br/>demo · bills while idle → tear down after"]
+      FT_SRV_LOCAL["serve B: merged + quantised GGUF via Ollama<br/>· or vLLM on Modal (scale to zero)"]
+      FT_SRV_GBT["GBT baseline: Python sidecar or ONNX in<br/>Node · serves a head only if it won stage 6"]
+      FT_INV{{"INVARIANT: Kernel F·E·P·J re-checks<br/>everything a promoted model proposes<br/>nothing bypasses propose_entry"}}
+      FT_KREJ["kernel reject → escalate one tier<br/>and count it against the model version"]
+    end
+
+    subgraph FT_SG9["9 · Monitor and retrain"]
+      FT_MON_KREJ["kernel-reject rate per model version"]
+      FT_MON_OVR["human-override rate (controller<br/>corrections on tier 1 decisions)"]
+      FT_MON_CONF["confidence distribution shift<br/>vs the June calibration set"]
+      FT_MON_NEW["share of new vendors and customers<br/>(party_id unseen in training)"]
+      FT_MON_ZERO["rule-fired-zero-times<br/>(tier 0 policy decay, case H-3)"]
+      FT_MON_TRIG{{"retrain trigger: override rate crosses<br/>threshold OR K new corrections"}}
+      FT_MON_DEMOTE["demotion: registry status → shadow<br/>tier 1 falls back to claude-haiku-4-5"]
+      FT_MON_RETRAIN["new version rebuilt from stage 3<br/>→ back through SHADOW, never<br/>straight to promoted"]
+    end
+
+    subgraph FT_SG10["10 · Scoreboard · every number: to be measured, nothing run yet"]
+      FT_SC_AGREE["shadow agreement rate, with n,<br/>per task head"]
+      FT_SC_SHARE["share of decisions served by tier 1<br/>(vs tiers 0, 2, 3)"]
+      FT_SC_COST["dollars and latency per decision<br/>fine-tuned tier 1 vs Claude tiers"]
+    end
+  end
+
+  FT_TO_ROUTER["to agent router tier 1 (diagram 04)<br/>fine-tuned open-weight model<br/>beside claude-haiku-4-5"]
+
+  FT_FROM_LEARNING -. "corrections and answers" .-> FT_L_GOLD
+  FT_FROM_LEARNING -. "accepted decisions" .-> FT_L_KPASS
+  FT_FROM_LEARNING -. "Q2 replay set" .-> FT_L_Q2
+
+  FT_L_WALL -- "guards" --> FT_L_Q2
+  FT_L_KPASS --> FT_L_NOTE
+  FT_L_TEACH --> FT_L_NOTE
+  FT_L_NOTE --> FT_L_WEIGHT
+  FT_L_GOLD --> FT_L_WEIGHT
+  FT_L_Q2 --> FT_L_WEIGHT
+  FT_L_EXCL -. "test only, so (a) has no training data" .-> FT_HA_NOT
+  FT_L_EXCL -. "exclusion list enforced at export" .-> FT_DS_EXPORT
+
+  FT_L_WEIGHT -- "weighted labels" --> FT_HB_IN
+  FT_L_WEIGHT --> FT_HC_ALIAS
+  FT_L_WEIGHT --> FT_HD_IN
+  FT_L_WEIGHT --> FT_HF_MODEL
+  FT_L_WEIGHT -- "teacher JSON" --> FT_HE_IN
+
+  FT_HB_IN --> FT_HB_FEAT
+  FT_HB_FEAT --> FT_HB_MODEL
+  FT_HB_FEAT --> FT_HB_BASE
+  FT_HC_ALIAS -- "miss" --> FT_HC_RETR
+  FT_HC_RETR --> FT_HC_MODEL
+  FT_HC_RETR --> FT_HC_BASE
+  FT_HD_IN --> FT_HD_MODEL
+  FT_HD_IN --> FT_HD_BASE
+  FT_HF_MODEL -. "same input, compared in stage 6" .-> FT_HF_BASE
+  FT_HE_IN --> FT_HE_MODEL --> FT_HE_CHECK
+  FT_HA_NOT --> FT_HA_KEEP
+
+  FT_HB_MODEL -- "head spec" --> FT_DS_EXPORT
+  FT_HC_MODEL --> FT_DS_EXPORT
+  FT_HD_MODEL --> FT_DS_EXPORT
+  FT_HF_BASE --> FT_DS_EXPORT
+  FT_HE_CHECK --> FT_DS_EXPORT
+
+  FT_DS_EXPORT --> FT_DS_FEAT --> FT_DS_NEG --> FT_DS_DEDUP --> FT_DS_REJ
+  FT_DS_REJ -- "kept" --> FT_DS_SFT
+  FT_DS_SFT --> FT_DS_STORE
+  FT_DS_REJ -. "corrected traces" .-> FT_DS_PAIRS
+
+  FT_DS_STORE --> FT_SP_TIME
+  FT_SP_TIME --> FT_SP_TRAIN
+  FT_SP_TIME --> FT_SP_CAL
+  FT_SP_TIME --> FT_SP_TEST
+  FT_DS_STORE --> FT_SP_ENT
+  FT_SP_ENT --> FT_SP_LEAK
+  FT_SP_TRAIN --> FT_SP_LEAK
+  FT_SP_RISK -. "why the entity hold-out exists" .-> FT_SP_ENT
+
+  FT_TR_OPENAI -. "reason" .-> FT_TR_BASE
+  FT_SP_LEAK -- "clean train set" --> FT_TR_BASE
+  FT_SP_LEAK -- "same rows, pair features" --> FT_TR_GBT
+  FT_TR_BASE --> FT_TR_NOGPU
+  FT_TR_NOGPU --> FT_TR_TOGETHER
+  FT_TR_NOGPU --> FT_TR_FIREWORKS
+  FT_TR_NOGPU --> FT_TR_MODAL
+  FT_TR_TOGETHER --> FT_TR_HP
+  FT_TR_FIREWORKS --> FT_TR_HP
+  FT_TR_MODAL --> FT_TR_HP
+  FT_TR_HP --> FT_TR_ART
+  FT_TR_GBT --> FT_TR_ART
+  FT_DS_PAIRS -. "later" .-> FT_TR_DPO
+  FT_TR_DPO -. "new adapter version" .-> FT_TR_ART
+
+  FT_TR_ART -- "fine-tuned + GBT" --> FT_EV_RANK
+  FT_TR_ART --> FT_EV_F1
+  FT_TR_ART --> FT_EV_JSON
+  FT_SP_TEST -- "July rows" --> FT_EV_RANK
+  FT_EV_BASE0 --> FT_EV_PREC
+  FT_EV_BASEM --> FT_EV_PREC
+  FT_EV_BASEC --> FT_EV_COST
+  FT_EV_RANK --> FT_EV_PREC
+  FT_EV_F1 --> FT_EV_PREC
+  FT_EV_JSON --> FT_EV_PREC
+  FT_EV_PREC --> FT_EV_HELD
+  FT_EV_COST --> FT_EV_HELD
+  FT_EV_HELD --> FT_EV_GATE
+  FT_EV_HELD -. "same held-out sets" .-> FT_TO_BENCH
+
+  FT_EV_GATE -- "yes" --> FT_CAL_CONF
+  FT_EV_GATE -. "no: tier 1 stays claude-haiku-4-5 (or GBT head)" .-> FT_TO_ROUTER
+  FT_SP_CAL -- "June rows" --> FT_CAL_FIT
+  FT_CAL_CONF --> FT_CAL_FIT --> FT_CAL_THR --> FT_REG
+  FT_CAL_DEC -- "no" --> FT_CAL_ABSTAIN
+  FT_CAL_DEC -- "yes" --> FT_INV
+
+  FT_REG -- "status = shadow" --> FT_SH_RUN
+  FT_SH_RUN --> FT_SH_LOG --> FT_PR_GATE
+  FT_PR_GATE -- "fail: stay in shadow" --> FT_SH_RUN
+  FT_PR_GATE -- "pass" --> FT_PR_HUMAN
+  FT_PR_HUMAN -- "status = promoted" --> FT_SRV_ENDPOINT
+  FT_PR_HUMAN --> FT_SRV_LOCAL
+  FT_PR_HUMAN -- "head won by GBT" --> FT_SRV_GBT
+  FT_SRV_ENDPOINT --> FT_CAL_DEC
+  FT_SRV_LOCAL --> FT_CAL_DEC
+  FT_SRV_GBT --> FT_CAL_DEC
+  FT_INV -- "reject" --> FT_KREJ
+  FT_INV -- "accept: tier 1 served it" --> FT_TO_ROUTER
+  FT_CAL_ABSTAIN -. "next tier" .-> FT_TO_ROUTER
+  FT_KREJ -. "next tier" .-> FT_TO_ROUTER
+
+  FT_KREJ -.-> FT_MON_KREJ
+  FT_SH_LOG -.-> FT_MON_CONF
+  FT_SH_LOG -.-> FT_MON_NEW
+  FT_FROM_LEARNING -. "tier 0 fire counts" .-> FT_MON_ZERO
+  FT_FROM_LEARNING -. "new corrections" .-> FT_MON_OVR
+  FT_MON_KREJ --> FT_MON_TRIG
+  FT_MON_OVR --> FT_MON_TRIG
+  FT_MON_CONF --> FT_MON_TRIG
+  FT_MON_NEW --> FT_MON_TRIG
+  FT_MON_ZERO --> FT_MON_TRIG
+  FT_MON_TRIG -- "fires" --> FT_MON_DEMOTE
+  FT_MON_TRIG -- "fires" --> FT_MON_RETRAIN
+  FT_MON_DEMOTE -. "status = shadow" .-> FT_REG
+  FT_MON_RETRAIN -. "rebuild dataset" .-> FT_DS_EXPORT
+
+  FT_SH_LOG -.-> FT_SC_AGREE
+  FT_MON_KREJ -.-> FT_SC_SHARE
+  FT_EV_COST -.-> FT_SC_COST
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class FT_FROM_LEARNING,FT_L_NOTE,FT_L_WEIGHT,FT_DS_SFT,FT_TR_TOGETHER,FT_TR_FIREWORKS,FT_TR_MODAL,FT_TR_HP,FT_SH_RUN,FT_MON_RETRAIN,FT_MON_DEMOTE learn
+  class FT_L_Q2,FT_L_KPASS,FT_L_GOLD,FT_DS_PAIRS,FT_DS_STORE,FT_SP_TRAIN,FT_SP_CAL,FT_SP_TEST,FT_TR_ART,FT_REG,FT_SH_LOG store
+  class FT_L_WALL,FT_L_EXCL,FT_HC_ALIAS,FT_HE_CHECK,FT_HA_KEEP,FT_DS_REJ,FT_SP_LEAK,FT_EV_GATE,FT_CAL_THR,FT_CAL_DEC,FT_PR_GATE,FT_INV,FT_MON_TRIG gate
+  class FT_L_TEACH,FT_HB_MODEL,FT_HC_MODEL,FT_HD_MODEL,FT_HF_MODEL,FT_HE_MODEL,FT_TR_BASE,FT_EV_BASEM,FT_EV_BASEC,FT_SRV_ENDPOINT,FT_SRV_LOCAL model
+  class FT_HB_IN,FT_HD_IN,FT_HE_IN src
+  class FT_HB_FEAT,FT_HB_BASE,FT_HC_RETR,FT_HC_BASE,FT_HD_BASE,FT_HF_BASE,FT_DS_EXPORT,FT_DS_FEAT,FT_DS_NEG,FT_DS_DEDUP,FT_SP_TIME,FT_SP_ENT,FT_TR_GBT,FT_EV_BASE0,FT_EV_RANK,FT_EV_F1,FT_EV_JSON,FT_EV_PREC,FT_EV_COST,FT_EV_HELD,FT_CAL_CONF,FT_CAL_FIT,FT_CAL_ABSTAIN,FT_SRV_GBT,FT_KREJ,FT_MON_KREJ,FT_MON_OVR,FT_MON_CONF,FT_MON_NEW,FT_MON_ZERO,FT_SC_AGREE,FT_SC_SHARE,FT_SC_COST,FT_TO_BENCH code
+  class FT_PR_HUMAN human
+  class FT_TR_DPO,FT_TO_ROUTER stretch
+  class FT_HA_NOT rRefuse
+  class FT_SP_RISK,FT_TR_OPENAI,FT_TR_NOGPU ext

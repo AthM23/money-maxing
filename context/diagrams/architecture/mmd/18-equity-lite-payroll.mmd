@@ -1,0 +1,298 @@
+flowchart TB
+
+  subgraph EQ_SG0["0 · Pack 9 · Equity-lite (STRETCH) + payroll touchpoints · status and scope"]
+    EQ_NOTE["STRETCH · pack 9 equity-lite: LAST in build order,<br/>SECOND in the cut order (after the fine-tuned model).<br/>Payroll is NOT a pack: 2 comparators, 1 proposal kind<br/>payroll_accrual (third in cut order) and events"]
+    EQ_DISCLAIM["NOT tax or legal advice. Four deterministic checks<br/>only flag and escalate to a human. Equity as THE function<br/>is in Tried and rejected. Nothing built or measured yet"]
+  end
+
+  subgraph EQ_SG1["1 · STRETCH · Inputs and triggers"]
+    EQ_IN_LEDGER[/"Grants ledger file: grant id, employee,<br/>type ISO or NSO, shares, strike, grant date,<br/>vesting schedule (cliff_months, vest_months)"/]
+    EQ_IN_CONSENT[/"Board consent PDF approving a grant<br/>(grantee, type, shares, strike, date, vesting text)"/]
+    EQ_IN_409A[/"409A valuation report PDF:<br/>valuation_date, FMV per share, appraiser"/]
+    EQ_IN_FILES[/"Plan document (post-termination exercise window)<br/>+ valuation assumptions file"/]
+    EQ_IN_SLACK[/"Slack HR departure notice<br/>(seeded in Slack, spec 6b)"/]
+    EQ_IN_REG[/"Payroll register: payroll_run + lines<br/>gross, ee_tax, er_tax, benefits, net per employee"/]
+    EQ_IN_BANK[/"bank_txn: payroll debits (net pay, tax, fee)<br/>and option-exercise cash credit"/]
+    EQ_IN_CAL[/"Calendar triggers: month-end expense run ·<br/>409A age reaches 10 and 12 months · 1 Jan ISO year roll ·<br/>every grant (Rule 701 sum) · exercise expiry"/]
+    EQ_TRACE[("trace: id, source, kind, external_id,<br/>event_time, recorded_time, payload_json")]
+    EQ_CMP_GRANTS{{"Drift comparator: grants ledger vs stock-comp<br/>expense · per grant, schedule-expected<br/>cumulative expense vs GL (cents)"}}
+    EQ_CMP_PAYROLL{{"Drift comparator: payroll register vs bank debit<br/>on every bank sync · residual must be 0 cents"}}
+    EQ_CMP_DEPARTED{{"Planted drift: departed employee still accruing<br/>employee.end_date set but sbc_schedule rows<br/>and GL expense continue after it"}}
+    EQ_SUPPRESS{{"Known active fact explains the difference ?<br/>yes → suppressed · no → open an intent"}}
+    EQ_INTENT[("intent: function = equity or close,<br/>question, owner, end_condition_json<br/>→ agent router → investigator")]
+  end
+
+  subgraph EQ_SG7["7 · STRETCH · Where a MODEL is used (everything else is code)"]
+    EQ_M_CONSENT["Board-consent extraction (claude-haiku-4-5):<br/>grantee, type, shares, strike, date, vesting text<br/>each field carries a quoted span"]
+    EQ_M_409A["409A report extraction: valuation_date,<br/>fmv_cents, appraiser · each with quoted span<br/>→ valuation_409a.report_trace_id"]
+    EQ_M_HR["HR notice parsing: employee, last day,<br/>voluntary or not · quote required"]
+    EQ_M_EVENT["Material-event search since valuation_date:<br/>priced round, term sheet, acquisition offer, major<br/>contract · cites hit or lists where it looked ·<br/>NEVER concludes the valuation is still good"]
+    EQ_M_QUOTE{{"Kernel E: every quote is a substring of its trace<br/>AND extracted shares, strike, date equal<br/>the grants ledger row"}}
+    EQ_M_CODE["CODE, never a model: Black-Scholes, schedules,<br/>day counts, tax tables, bank matching, thresholds.<br/>No model computes pay. Models never add numbers"]
+  end
+
+  subgraph EQ_SG5["5 · STRETCH · Four deterministic compliance checks · NOT tax or legal advice (universal tier, hard-coded with citations)"]
+    EQ_C_RUN["Run on every proposed grant, BEFORE anything posts,<br/>and on the calendar triggers"]
+    EQ_C_409A{{"1 · 409A safe-harbour window<br/>grant_date minus valuation_date lte 12 months<br/>REBUTTABLE PRESUMPTION, not a rule<br/>(verified: 26 CFR 1.409A-1(b)(5)(iv)(B))"}}
+    EQ_C_409A_EVT{{"1b · second limb: ALSO fails if information after<br/>the valuation may materially affect value.<br/>Any material-event hit always escalates"}}
+    EQ_C_STRIKE{{"2 · strike_cents gte fmv_cents of the 409A in force<br/>on the grant date (verified: 1.409A-1(b)(5)(i)(A)(1),<br/>and IRC 422(b)(4) for ISOs)"}}
+    EQ_C_ISO{{"3 · ISO $100,000 limit (verified: IRC 422(d))<br/>per employee and calendar year: sum tranche shares<br/>x grant-date FMV over tranches FIRST exercisable<br/>that year, in grant order · uses FMV, not strike"}}
+    EQ_C_ISO_SPLIT["Excess over $100,000 treated as NSO:<br/>ISO / NSO split per tranche · early-exercise grant<br/>counts in full in grant year · acceleration re-runs"]
+    EQ_C_701{{"4 · Rule 701(e) (verified: 17 CFR 230.701(e))<br/>sum over ANY consecutive 12 months, BEFORE each grant:<br/>over $10M → enhanced disclosure due · warn at 80%<br/>options count at grant, at exercise price (d)(3)"}}
+    EQ_C_701_CAP{{"4b · (d)(2) exemption cap, OMITTED by the spec:<br/>greatest of $1M, 15% of total assets,<br/>or 15% of the outstanding class"}}
+    EQ_C_RULE{{"OUTPUT RULE: a compliance failure ESCALATES to a<br/>human and is PERSISTED as a flag, but NEVER blocks<br/>expense recognition (accounting follows the grant as made)"}}
+    EQ_C_FLAG[("event equity.compliance_flag (→ audit)<br/>persistent flag on the grant, check name,<br/>citation, inputs, n")]
+    EQ_H_CFO(["CFO and outside counsel<br/>decide what to do about a flag"])
+  end
+
+  subgraph EQ_SG2["2 · STRETCH · ASC 718 expense schedule engine (CODE · reuses the revenue schedule engine)"]
+    EQ_GRANT[("grant (PROPOSED table): employee_id, type, shares,<br/>strike_cents, board_approval_date, vest_start,<br/>cliff_months, vest_months, gdfv_cents_per_share")]
+    EQ_ASSUME["Inputs from the assumptions file ONLY: 409A FMV,<br/>strike, expected term (simplified-method midpoint,<br/>UNVERIFIED), peer volatility, Treasury rate, 0 dividends"]
+    EQ_GDFV["Grant-date fair value: Black-Scholes in code<br/>→ gdfv_cents_per_share · the model picks no input"]
+    EQ_METHOD{{"Attribution election (policy fact, approved):<br/>straight-line or graded ? (ASC 718-10-35-8,<br/>secondary source)"}}
+    EQ_SL["Straight-line: total award cost<br/>evenly over the whole service period"]
+    EQ_GRADED["Graded: each vest_tranche treated as its own<br/>award → front-loaded expense"]
+    EQ_FLOOR{{"Floor in BOTH methods: cumulative cost at any<br/>date gte grant-date value of the vested portion"}}
+    EQ_FORF["ASSUMPTION (policy election, ASC 718-10-35-3):<br/>forfeitures recognised AS THEY OCCUR · no estimated<br/>rate, deterministic · stored as a fact with approver"]
+    EQ_SCHED[("sbc_schedule(grant_id, month, expense_cents, method)<br/>+ vest_tranche(grant_id, vest_date, shares, status)<br/>integer cents · last month absorbs rounding")]
+    EQ_MONTHLY["Monthly run · ONE stock_comp_expense proposal<br/>per period:<br/>Dr Stock-comp expense (by department)<br/>Cr APIC (additional paid-in capital)"]
+  end
+
+  subgraph EQ_SG3["3 · STRETCH · Termination ripple (the scene) · one intent id on every artifact"]
+    EQ_T_CAND["fact candidate: predicate employment_end,<br/>value = last day, source_trace_ids = Slack notice<br/>(record_fact_candidate)"]
+    EQ_T_CORR{{"Kernel E: end date corroborated by a SECOND source<br/>(payroll register or HRIS) before any reversal posts ?"}}
+    EQ_H_HR(["HR owner in Slack · asked ONCE ·<br/>answer stored as a scoped fact"])
+    EQ_T_EVENT["event hr.departure_detected<br/>employee.end_date set · intent_id carried"]
+    EQ_T_FINAL["Payroll final pay: prorated salary to end_date<br/>+ accrued PTO payout per policy<br/>Dr Salaries expense · Dr Accrued PTO liability<br/>Cr Accrued payroll (cash on pay date)"]
+    EQ_T_STATE{{"Final-pay due date = STATE-scoped fact known ?<br/>(federal law sets no immediate deadline, verified DOL)<br/>unknown → escalate once"}}
+    EQ_T_FORFEIT["Unvested forfeited: every vest_tranche with<br/>vest_date after end_date → status forfeited"]
+    EQ_T_REV["Forfeiture reversal (current OPEN period):<br/>reversal = recognised_to_date minus gdfv(vested tranches)<br/>Dr APIC · Cr Stock-comp expense<br/>vested cost is NEVER reversed"]
+    EQ_T_STOP["Stop future sbc_schedule rows · set exercise expiry<br/>from the plan · ISO loses ISO status if exercised<br/>more than 3 months after end (IRC 422(a)(2), UNVERIFIED)"]
+    EQ_T_FCST["13-week forecast updated: payroll outflow drops from<br/>next run · final pay inserted · exercise window<br/>shown as a memo line, not an inflow"]
+    EQ_T_CLOSE[("checklist_item: terminations processed<br/>(close pack) · reporting gets flux lines<br/>on payroll and stock comp")]
+    EQ_T_AUDIT["Audit pack: reversal JE enters the sample ·<br/>control test: no departed employee holds<br/>approval authority after end_date"]
+  end
+
+  subgraph EQ_SG4["4 · STRETCH · Option exercise"]
+    EQ_X_MATCH{{"Bank rec match (exercise notice trace or event<br/>bankrec.unmatched): expected cash =<br/>shares x strike_cents · bank credit must equal<br/>it exactly · bank line matched once"}}
+    EQ_X_VESTED{{"shares exercised lte vested (unless<br/>early_exercise) AND date lte exercise expiry ?<br/>fail → BLOCK"}}
+    EQ_X_ENTRY["Exercise entry:<br/>Dr Cash<br/>Cr Common stock (par) · Cr APIC (excess over par)<br/>→ exercise(id, grant_id, shares, cash_cents, bank_txn_id)"]
+    EQ_X_TYPE{{"ISO or NSO ? (after the $100K split)"}}
+    EQ_X_NSO["NSO: event equity.nso_exercise →<br/>payroll withholding touchpoint ·<br/>no tax amount is computed here"]
+    EQ_H_PAY(["Payroll owner / equity admin:<br/>ISO vs NSO payroll-tax treatment<br/>is flagged to a human, never decided"])
+  end
+
+  subgraph EQ_SG6["6 · Payroll touchpoints, NOT a pack (payroll_accrual is third in the cut order) · inputs to close, forecast and equity-lite"]
+    EQ_P_KEY["Provider stable key = ACH originator company id,<br/>never the descriptor string (A-09, H-3:<br/>GUSTO PAYROLL vs GUSTO TAX COLLECTION)"]
+    EQ_P_TIE{{"Register vs bank debit tie: sum(net) = net-pay debit ·<br/>sum(ee_tax + er_tax) = tax debit · fee → expense ·<br/>each bank line matched once · residual 0 cents"}}
+    EQ_P_DAYS["Month-end accrual, day-count in CODE:<br/>working days from last period_end to month end<br/>x daily rate, per employee active on the date"]
+    EQ_P_TAX["Employer taxes and benefits liabilities: SS 6.2% to the<br/>$184,500 2026 wage base (base verified SSA), YTD tracked ·<br/>Medicare 1.45% · FUTA first $7,000 (rates UNVERIFIED) ·<br/>SUI and benefit rates from the policy memo"]
+    EQ_P_ACCR["payroll_accrual entry:<br/>Dr Salaries, employer tax and benefits expense<br/>Cr Accrued payroll · Cr Payroll tax and benefits liab.<br/>flagged to auto-reverse on day 1 (D-01 pattern, D-02)"]
+    EQ_P_BLOCK{{"Hard rules: pay to anyone after end_date → BLOCK ·<br/>payroll debit to an unknown originator id → BLOCK"}}
+    EQ_P_FCST[("forecast_line: payroll calendar in the 13-week<br/>forecast, rebuilt from the active roster<br/>(pay dates x net + tax debits)")]
+  end
+
+  subgraph EQ_SG8["8 · STRETCH · Shared exit: propose → kernel → route · OUTPUT CASES"]
+    EQ_PROPOSE["propose_entry + workpaper<br/>kinds: payroll_accrual (in spec) · PROPOSED:<br/>stock_comp_expense, forfeiture_reversal,<br/>option_exercise, final_pay"]
+    EQ_KERNEL{{"Kernel F·E·P·J + pack checks"}}
+    EQ_K_F1{{"F · schedule sums to grant-date fair value of<br/>awards expected to vest (gdfv x shares) ·<br/>cumulative gte vested floor"}}
+    EQ_K_F2{{"F · forfeiture reversal = recognised_to_date minus<br/>gdfv(vested tranches): UNVESTED only, lte recognised,<br/>vested cost never reversed ·<br/>exercise cash = shares x strike"}}
+    EQ_K_EP{{"E + P · grant approved in a board consent that is<br/>CITED (quote + trace_id) · period open: a July<br/>termination found in August books in August ·<br/>J: method and election facts active, approved"}}
+    EQ_R_AUTO(("AUTO"))
+    EQ_R_PROPOSE(("PROPOSE"))
+    EQ_R_ESCALATE(("ESCALATE"))
+    EQ_R_REFUSE(("REFUSE"))
+    EQ_R_BLOCK(("BLOCK"))
+    EQ_OC_AUTO["AUTO · monthly expense, all facts in force → stock-comp JE<br/>+ schedule workpaper · exercise cash = shares x strike → cash<br/>and equity JE · register = debits, or descriptor changed but<br/>originator same (A-09, H-3) · notified: nobody"]
+    EQ_OC_PROP1["PROPOSE · new grant ties to consent, checks pass →<br/>grant record + schedule · termination corroborated by two<br/>sources → forfeiture reversal JE · notified: controller"]
+    EQ_OC_PROP2["PROPOSE · ISO over $100K → ISO / NSO split per tranche<br/>(equity admin, payroll) · Rule 701 at 80% → rolling-sum<br/>workpaper (CFO, counsel) · month-end payroll_accrual with<br/>reversal, AUTO once it climbs the ladder (controller)"]
+    EQ_OC_ESC1["ESCALATE · 409A older than 12 months or material event ·<br/>strike below FMV · Rule 701 would be crossed by this grant →<br/>compliance flag, EXPENSE STILL RUNS · notified: CFO, counsel"]
+    EQ_OC_ESC2["ESCALATE · termination seen only in Slack → question to<br/>HR owner · final-pay due date unknown for the state (once) ·<br/>debit differs from register → itemised difference (payroll<br/>owner) · accrual not reversed D-02 (close owner)"]
+    EQ_OC_BLOCK["BLOCK · exercise over vested shares or after expiry ·<br/>expense run with an unapproved method · backdated grant ·<br/>pay after end_date · unknown originator →<br/>blocked_attempt row with rule name · notified: equity admin"]
+    EQ_OC_REFUSE["REFUSE · asked: is this valuation defensible ? or<br/>what tax does the holder owe ? → declines,<br/>lists everywhere it looked · notified: CFO"]
+    EQ_POST[("Post: gl_entry + gl_line (local ledger)<br/>→ one-way QuickBooks mirror ·<br/>material or new → controller agent (GPT)")]
+  end
+
+  subgraph EQ_SG9["9 · STRETCH · Events, proposed schema, learning, metrics"]
+    EQ_EV_IN["Consumes (event table): hr.departure_detected ·<br/>bankrec.unmatched · board.consent_ingested"]
+    EQ_EV_OUT["Emits: equity.forfeiture · equity.expense_revised (close,<br/>reporting flux) · equity.exercise_expected (bank rec,<br/>forecast memo line) · equity.nso_exercise (payroll) ·<br/>equity.compliance_flag (audit)"]
+    EQ_SCHEMA1[("PROPOSED schema additions (spec 7 lacks them):<br/>employee(id, state, start, end_date) ·<br/>grant(...) · vest_tranche · valuation_409a ·<br/>exercise · sbc_schedule")]
+    EQ_SCHEMA2[("PROPOSED: payroll_line(run_id, employee_id, gross,<br/>ee_tax, er_tax, benefits, net) ·<br/>blocked_attempt(decision_id, rule, at, evidence_json) ·<br/>4 new Proposal.kind values")]
+    EQ_LEARN["LEARNABLE (company tier facts, with approver):<br/>department and account mapping · who confirms<br/>terminations · the elections, stated once ·<br/>originator ids · benefit rates · state final-pay facts"]
+    EQ_FACT[("fact: predicate, value_json, scope_json,<br/>valid_from, valid_to, learned_at, approved_by<br/>→ applied automatically next time, asked once")]
+    EQ_NEVER{{"NEVER LEARNED (universal tier = code + citation):<br/>compliance thresholds, windows, statutory wording ·<br/>tax rates and wage bases (versioned table) · volatility<br/>or term · counsel said fine, widened past one grant"}}
+    EQ_METRICS["METRICS · TO BE MEASURED (nothing run yet):<br/>grants scheduled · schedule-to-GL tie (cents) · days from<br/>termination to reversal · over-accrual caught ($) ·<br/>four checks run and flagged with n · Rule 701 headroom"]
+    EQ_METRICS2["PAYROLL METRICS · TO BE MEASURED: runs tied to the<br/>cent · accrual vs actual next run (abs error) ·<br/>departures processed within one pay cycle ·<br/>repeat questions (target 0) · exercises matched"]
+  end
+
+  EQ_NOTE --> EQ_DISCLAIM
+  EQ_DISCLAIM -. "applies to everything below" .-> EQ_IN_CONSENT
+
+  EQ_IN_CONSENT --> EQ_TRACE
+  EQ_IN_409A --> EQ_TRACE
+  EQ_IN_SLACK --> EQ_TRACE
+  EQ_IN_LEDGER --> EQ_CMP_GRANTS
+  EQ_IN_REG --> EQ_CMP_PAYROLL
+  EQ_IN_BANK --> EQ_CMP_PAYROLL
+  EQ_CMP_GRANTS --> EQ_CMP_DEPARTED
+  EQ_CMP_DEPARTED --> EQ_SUPPRESS
+  EQ_CMP_PAYROLL --> EQ_SUPPRESS
+  EQ_SUPPRESS -- "unexplained difference" --> EQ_INTENT
+  EQ_IN_CAL --> EQ_INTENT
+
+  EQ_TRACE -- "board.consent_ingested" --> EQ_M_CONSENT
+  EQ_TRACE --> EQ_M_409A
+  EQ_TRACE -- "Slack notice" --> EQ_M_HR
+  EQ_TRACE -. "search after valuation_date" .-> EQ_M_EVENT
+  EQ_M_CONSENT --> EQ_M_QUOTE
+  EQ_M_409A --> EQ_M_QUOTE
+  EQ_IN_LEDGER -- "ledger row to tie" --> EQ_M_QUOTE
+  EQ_M_QUOTE -- "ties" --> EQ_GRANT
+  EQ_M_QUOTE -- "new grant" --> EQ_C_RUN
+  EQ_M_CODE --> EQ_M_QUOTE
+
+  EQ_C_RUN --> EQ_C_409A
+  EQ_C_RUN --> EQ_C_STRIKE
+  EQ_C_RUN --> EQ_C_ISO
+  EQ_C_RUN --> EQ_C_701
+  EQ_C_409A -- "within 12 months: still test limb 2" --> EQ_C_409A_EVT
+  EQ_M_EVENT -. "hit or where it looked" .-> EQ_C_409A_EVT
+  EQ_C_ISO -- "excess" --> EQ_C_ISO_SPLIT
+  EQ_C_701 --> EQ_C_701_CAP
+  EQ_C_409A -- "older than 12 months: fail" --> EQ_C_RULE
+  EQ_C_409A_EVT -- "material event hit: fail" --> EQ_C_RULE
+  EQ_C_STRIKE -- "fail" --> EQ_C_RULE
+  EQ_C_701 -- "grant would cross $10M: fail" --> EQ_C_RULE
+  EQ_C_701 -- "gte 80%: rolling-sum workpaper" --> EQ_PROPOSE
+  EQ_C_701_CAP -- "over the (d)(2) cap: fail" --> EQ_C_RULE
+  EQ_C_RULE --> EQ_C_FLAG
+  EQ_C_RULE -- "compliance flag" --> EQ_R_ESCALATE
+  EQ_C_RULE -- "notified" --> EQ_H_CFO
+  EQ_C_RULE -- "expense recognition continues" --> EQ_GDFV
+  EQ_C_ISO_SPLIT --> EQ_PROPOSE
+
+  EQ_GRANT --> EQ_GDFV
+  EQ_IN_FILES --> EQ_ASSUME
+  EQ_ASSUME --> EQ_GDFV
+  EQ_GDFV --> EQ_METHOD
+  EQ_METHOD -- "straight-line" --> EQ_SL
+  EQ_METHOD -- "graded" --> EQ_GRADED
+  EQ_SL --> EQ_FLOOR
+  EQ_GRADED --> EQ_FLOOR
+  EQ_FORF --> EQ_FLOOR
+  EQ_FLOOR --> EQ_SCHED
+  EQ_SCHED --> EQ_MONTHLY
+  EQ_CMP_GRANTS -. "reads schedule-expected cumulative" .-> EQ_SCHED
+  EQ_MONTHLY == "stock_comp_expense" ==> EQ_PROPOSE
+
+  EQ_M_HR --> EQ_T_CAND
+  EQ_T_CAND --> EQ_T_CORR
+  EQ_IN_REG -. "second source" .-> EQ_T_CORR
+  EQ_T_CORR -- "Slack only" --> EQ_H_HR
+  EQ_T_CORR -. "Slack only: route" .-> EQ_R_ESCALATE
+  EQ_H_HR -. "answer → fact" .-> EQ_T_CORR
+  EQ_T_CORR -- "corroborated" --> EQ_T_EVENT
+  EQ_T_EVENT -- "a · payroll" --> EQ_T_FINAL
+  EQ_T_FINAL --> EQ_T_STATE
+  EQ_T_STATE -- "unknown" --> EQ_H_HR
+  EQ_T_STATE -. "due date unknown: route" .-> EQ_R_ESCALATE
+  EQ_T_EVENT -- "b · equity-lite" --> EQ_T_FORFEIT
+  EQ_T_FORFEIT --> EQ_T_REV
+  EQ_T_REV --> EQ_T_STOP
+  EQ_T_STOP --> EQ_T_FCST
+  EQ_T_FCST --> EQ_T_CLOSE
+  EQ_T_CLOSE --> EQ_T_AUDIT
+  EQ_CMP_DEPARTED -. "safety net if the notice is missed" .-> EQ_T_FORFEIT
+  EQ_T_STATE == "known: final_pay" ==> EQ_PROPOSE
+  EQ_T_REV == "forfeiture_reversal" ==> EQ_PROPOSE
+
+  EQ_IN_BANK -- "exercise cash credit" --> EQ_X_MATCH
+  EQ_X_MATCH --> EQ_X_VESTED
+  EQ_X_VESTED -- "pass" --> EQ_X_ENTRY
+  EQ_X_ENTRY --> EQ_X_TYPE
+  EQ_X_TYPE -- "NSO" --> EQ_X_NSO
+  EQ_X_NSO --> EQ_H_PAY
+  EQ_X_TYPE -- "ISO: treatment question" --> EQ_H_PAY
+  EQ_X_ENTRY == "option_exercise" ==> EQ_PROPOSE
+  EQ_T_STOP -. "exercise expiry date" .-> EQ_X_VESTED
+
+  EQ_CMP_PAYROLL --> EQ_P_KEY
+  EQ_P_KEY --> EQ_P_TIE
+  EQ_IN_CAL -- "month end" --> EQ_P_DAYS
+  EQ_P_DAYS --> EQ_P_TAX
+  EQ_P_TAX --> EQ_P_ACCR
+  EQ_P_TIE --> EQ_P_BLOCK
+  EQ_P_ACCR --> EQ_P_BLOCK
+  EQ_P_TIE --> EQ_P_FCST
+  EQ_T_FCST -. "departed drops out" .-> EQ_P_FCST
+  EQ_P_BLOCK == "pass: payroll_accrual" ==> EQ_PROPOSE
+
+  EQ_PROPOSE ==> EQ_KERNEL
+  EQ_KERNEL --> EQ_K_F1
+  EQ_KERNEL --> EQ_K_F2
+  EQ_KERNEL --> EQ_K_EP
+  EQ_KERNEL == "accept, covered, on the ladder" ==> EQ_R_AUTO
+  EQ_KERNEL -- "accept, new or material" --> EQ_R_PROPOSE
+  EQ_KERNEL -- "context missing or compliance flag" --> EQ_R_ESCALATE
+  EQ_KERNEL -- "advice question" --> EQ_R_REFUSE
+  EQ_KERNEL -- "hard rule hit" --> EQ_R_BLOCK
+  EQ_R_AUTO --> EQ_OC_AUTO
+  EQ_R_PROPOSE --> EQ_OC_PROP1
+  EQ_R_PROPOSE --> EQ_OC_PROP2
+  EQ_R_ESCALATE --> EQ_OC_ESC1
+  EQ_R_ESCALATE --> EQ_OC_ESC2
+  EQ_R_BLOCK --> EQ_OC_BLOCK
+  EQ_R_REFUSE --> EQ_OC_REFUSE
+  EQ_OC_AUTO ==> EQ_POST
+  EQ_OC_PROP1 -- "after approval" --> EQ_POST
+  EQ_OC_PROP2 -- "after approval" --> EQ_POST
+
+  EQ_POST --> EQ_EV_OUT
+  EQ_EV_IN --> EQ_EV_OUT
+  EQ_EV_OUT --> EQ_SCHEMA1
+  EQ_SCHEMA1 --> EQ_SCHEMA2
+  EQ_OC_ESC2 -. "human answer" .-> EQ_LEARN
+  EQ_LEARN -.-> EQ_FACT
+  EQ_SUPPRESS -. "reads active facts: a learned fact suppresses next time" .-> EQ_FACT
+  EQ_NEVER --> EQ_LEARN
+  EQ_EV_OUT --> EQ_METRICS
+  EQ_METRICS --> EQ_METRICS2
+
+  %% added in review
+  EQ_INTENT -- "calendar: 409A age, ISO year roll, Rule 701 sum" --> EQ_C_RUN
+  EQ_INTENT -- "month-end expense run" --> EQ_MONTHLY
+  EQ_M_QUOTE -. "still does not tie after tier retry" .-> EQ_R_ESCALATE
+  EQ_X_VESTED -- "fail" --> EQ_R_BLOCK
+  EQ_P_BLOCK -- "hard rule hit" --> EQ_R_BLOCK
+  EQ_P_TIE -- "residual not 0 cents" --> EQ_R_ESCALATE
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class EQ_NOTE,EQ_DISCLAIM stretch
+  class EQ_IN_LEDGER,EQ_IN_CONSENT,EQ_IN_409A,EQ_IN_FILES,EQ_IN_SLACK,EQ_IN_REG,EQ_IN_BANK,EQ_IN_CAL src
+  class EQ_M_CODE,EQ_C_RUN,EQ_C_ISO_SPLIT,EQ_ASSUME,EQ_GDFV,EQ_SL,EQ_GRADED,EQ_FORF,EQ_MONTHLY,EQ_T_CAND,EQ_T_EVENT,EQ_T_FINAL,EQ_T_FORFEIT,EQ_T_REV,EQ_T_STOP,EQ_T_FCST,EQ_T_AUDIT,EQ_X_ENTRY,EQ_X_NSO,EQ_P_KEY,EQ_P_DAYS,EQ_P_TAX,EQ_P_ACCR,EQ_PROPOSE,EQ_EV_IN,EQ_EV_OUT,EQ_METRICS,EQ_METRICS2 code
+  class EQ_M_CONSENT,EQ_M_409A,EQ_M_HR,EQ_M_EVENT model
+  class EQ_H_CFO,EQ_H_HR,EQ_H_PAY human
+  class EQ_TRACE,EQ_INTENT,EQ_C_FLAG,EQ_GRANT,EQ_SCHED,EQ_T_CLOSE,EQ_P_FCST,EQ_POST,EQ_SCHEMA1,EQ_SCHEMA2,EQ_FACT store
+  class EQ_CMP_GRANTS,EQ_CMP_PAYROLL,EQ_CMP_DEPARTED,EQ_SUPPRESS,EQ_M_QUOTE,EQ_C_409A,EQ_C_409A_EVT,EQ_C_STRIKE,EQ_C_ISO,EQ_C_701,EQ_C_701_CAP,EQ_C_RULE,EQ_METHOD,EQ_FLOOR,EQ_T_CORR,EQ_T_STATE,EQ_X_MATCH,EQ_X_VESTED,EQ_X_TYPE,EQ_P_TIE,EQ_P_BLOCK,EQ_KERNEL,EQ_K_F1,EQ_K_F2,EQ_K_EP,EQ_NEVER gate
+  class EQ_LEARN learn
+  class EQ_OC_AUTO,EQ_OC_PROP1,EQ_OC_PROP2,EQ_OC_ESC1,EQ_OC_ESC2,EQ_OC_BLOCK,EQ_OC_REFUSE ext
+  class EQ_R_AUTO rAuto
+  class EQ_R_PROPOSE rPropose
+  class EQ_R_ESCALATE rEscalate
+  class EQ_R_REFUSE rRefuse
+  class EQ_R_BLOCK rBlock
+  class EQ_SG0,EQ_SG1,EQ_SG2,EQ_SG3,EQ_SG4,EQ_SG5,EQ_SG6,EQ_SG7,EQ_SG8,EQ_SG9 stretch

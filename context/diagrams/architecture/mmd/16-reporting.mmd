@@ -1,0 +1,241 @@
+flowchart TB
+
+  subgraph RP_SG1["1 · Inputs and triggers (flux runs BEFORE lock and gates it · the board pack runs after lock)"]
+    RP_T_TB[/"Bus event: close.tb.final<br/>trial balance final for the period<br/>→ pre-lock flux review"/]
+    RP_T_CHK[("checklist_item: flux review (function = reporting)<br/>depends_on: recons certified, accruals posted<br/>period_lock depends_on this item")]
+    RP_T_LOCK[/"Bus event: close.period.locked<br/>+ board calendar → final board pack"/]
+    RP_T_ADHOC(["CFO ad hoc question in Slack:<br/>why did gross margin drop three points"])
+    RP_T_BUS[/"Bus events consumed: rev.schedule.revised ·<br/>forecast.miss.classified · forecast.updated ·<br/>close.out_of_period"/]
+    RP_IN_TB[("ledger.trial_balance, this period<br/>from gl_entry + gl_line")]
+    RP_IN_PRIOR[("ledger.trial_balance, prior period<br/>(locked, Q2 history seeded)")]
+    RP_IN_BUDGET[("Budget via workbook.lookup and<br/>frozen forecast_version via forecast.get")]
+    RP_IN_POLICY[("policy_memo.lookup: flux threshold bands<br/>per account class, coverage policy,<br/>sensitive-account list")]
+    RP_SNAP[("tb_snapshot(id, period, max_gl_entry_id)<br/>+ snapshot hash over gl_line rows<br/>up to max_gl_entry_id (proposed table)")]
+    RP_INTENT["intent: explain period-over-period movement<br/>end_condition: every material flux_line has<br/>a reviewed note or a named residual"]
+  end
+
+  subgraph RP_SG2["2 · Variance detection (CODE · report.variance)"]
+    RP_V_FLUX["Per account, per P and L line, per derived<br/>metric (gross margin %, opex ratio, DSO,<br/>deferred revenue, cash): base, current,<br/>delta_cents, delta_pct, for each comparator"]
+    RP_V_THREE["Three different thresholds, not one:<br/>$500 approval (kernel P) · flux investigation<br/>(this gate) · statement materiality (close,<br/>out-of-period items)"]
+    RP_V_DUAL{{"Dual threshold: abs(delta_cents) gte dollar band<br/>AND abs(delta_pct) gte percent band<br/>tighter bands for revenue and payroll<br/>bands come from the policy memo, never the agent"}}
+    RP_V_QUAL{{"Qualitative overrides (SAB 99 style):<br/>recurrence 3 months running · sign flip ·<br/>covenant-linked · sensitive account (D-10)<br/>a percent alone is never the sole test"}}
+    RP_V_BELOW["Below both bands and no flags<br/>→ flux line logged, not queued<br/>(D-09 analogue)"]
+    RP_V_STORE[("flux_line(snapshot_id, account or metric,<br/>comparator, base, current, delta_cents,<br/>delta_pct, threshold_id, material,<br/>qualitative_flags) (proposed table)")]
+  end
+
+  subgraph RP_SG3["3 · Decomposition (CODE): variance → accounts → gl_lines → decisions → intents → parties"]
+    RP_D_ACCTS["Variance → accounts<br/>P and L line or metric maps to its<br/>account set in the chart of accounts"]
+    RP_D_LINES["Accounts → gl_line rows in both periods<br/>via ledger.account_activity, grouped by<br/>gl_entry.source_decision_id"]
+    RP_D_NODEC{{"gl_line whose entry has no<br/>source_decision_id or intent behind it?<br/>(manual or imported entry)"}}
+    RP_D_DEC["Decision → intent_id → party<br/>(customer_id, vendor_id) and decision kind<br/>one join, already stored at decision time"]
+    RP_D_CONTRIB["contribution_cents = current - base per group<br/>ranked by absolute value"]
+    RP_D_ABSENT["absent_recurring drivers: vendor or customer<br/>present in base, nothing in current<br/>(recurring-vendor gap, D-04)"]
+    RP_D_BUCKET["Buckets where computable: price / volume / mix<br/>(needs invoice quantity x unit price) ·<br/>timing (same source in adjacent period) ·<br/>one-off (no recurrence in history)"]
+    RP_D_GM["Ratios in exactly additive form:<br/>driver i points = (dProfit_i - GM0 x dRevenue_i)<br/>/ Revenue_1 · contributions sum to GM1 - GM0"]
+    RP_D_EX["Track-doc example: gross margin down three<br/>points → ranked list of points per decision<br/>(e.g. Initech concession, cloud cost true-up)<br/>down to the transactions responsible"]
+    RP_D_COVER{{"coverage_pct = named drivers / delta<br/>gte coverage policy (e.g. 80%)?"}}
+    RP_D_RESID["Residual = delta - named drivers<br/>listed as UNEXPLAINED with its gl_line list"]
+    RP_D_STORE[("variance_driver(flux_line_id, rank, ref_type:<br/>decision, intent, party, absent_recurring,<br/>ref_id, contribution_cents,<br/>contribution_points) (proposed table)")]
+  end
+
+  subgraph RP_SG4["4 · Narrative (MODEL writes prose · CODE renders every number)"]
+    RP_N_CHAIN["Per driver, pull the stored intent chain:<br/>question, decision, quoted evidence, fact<br/>reporting does not re-investigate"]
+    RP_N_TIER{{"Router: full coverage and standard driver<br/>kinds → tier 0 template text, no model call<br/>else tier 1+ model"}}
+    RP_N_TEMPLATE["Tier 0 template note, numerals from bindings<br/>(spine: Initech line, July revenue -$1,200<br/>caused by the concession decision and fact)"]
+    RP_N_MODEL["Model prompt: explain this variance to a CFO<br/>using only these drivers, cite decision ids,<br/>no numerals outside placeholders"]
+    RP_N_G12{{"G-12: text must state the semantic link<br/>in reviewer terms, not restate the input"}}
+    RP_N_RENDER["Code renders placeholders from bindings_json<br/>each numeral → report_number row →<br/>query against the snapshot"]
+    RP_N_UNEXPL["Unexplained remainder stated explicitly<br/>in the note with its amount and gl_lines<br/>never papered over or plugged"]
+    RP_N_STORE[("flux_note(flux_line_id, template_text,<br/>bindings_json, coverage_pct) +<br/>report_number(artifact_id, label, query_hash,<br/>value_cents, snapshot_id) (proposed tables)")]
+  end
+
+  subgraph RP_SG5["5 · Board pack draft (after lock · every statement computed in CODE from the ledger)"]
+    RP_P_PL["P and L: this period, prior, budget<br/>from tb_snapshot"]
+    RP_P_BS["Balance sheet from tb_snapshot"]
+    RP_P_CF["Cash flow, indirect method: net income + non-cash<br/>items +/- working-capital deltas = operating ·<br/>operating + investing + financing = change in cash<br/>all from balance-sheet deltas, in code"]
+    RP_P_KPI["KPIs: ARR from contract · deferred revenue<br/>from the roll-forward · DSO = AR / revenue<br/>x days · gross margin %"]
+    RP_P_FC["Forecast summary from the latest frozen<br/>forecast_version: 13 closing balances,<br/>minimum-cash week, classified misses"]
+    RP_P_NOTES["Flux notes section + out-of-period items:<br/>as-reported vs as-adjusted"]
+    RP_P_TIE{{"Pack tie-outs: balance sheet balances · net income<br/>less distributions = change in retained earnings ·<br/>cash = bank rec = forecast opening ·<br/>deferred revenue = roll-forward closing"}}
+    RP_P_DRAFT["Board pack draft (document artifact)<br/>snapshot hash printed on every page<br/>draft on open period, final only on locked"]
+  end
+
+  subgraph RP_SG6["6 · Exit: artifact proposal → kernel → routes"]
+    RP_PROPOSE["propose_entry + workpaper<br/>entries = none: the output is an ARTIFACT<br/>(flux_note or board_pack)"]
+    RP_SCHEMA["PROPOSED SCHEMA ADDITION (not in spec section 8)<br/>Proposal.kind has no artifact kinds: add<br/>flux_note, board_pack"]
+    RP_KERNEL{{"Kernel F·E·P·J + pack checks<br/>(artifact checks, pure code)"}}
+    RP_K_NUM{{"F · every numeral in the rendered text maps<br/>to a binding that re-queries to the same value<br/>a human-typed override is rejected too"}}
+    RP_K_FOOT{{"F · statements foot and articulate:<br/>net income flows to equity · cash flow ties<br/>to change in cash · drivers + residual = delta"}}
+    RP_K_CAUSE{{"E · each causal claim cites a decision id<br/>that is among the drivers ·<br/>quotes are substrings of their trace"}}
+    RP_K_HASH{{"P · snapshot hash recorded on the artifact ·<br/>final pack only on a locked period"}}
+    RP_K_SIGN{{"P · J · reviewer sign-off present<br/>reviewer is not preparer"}}
+    RP_REVIEWER["Controller agent (GPT, different model family)<br/>reviews each material note"]
+    subgraph RP_SG6B["OUTPUT CASES"]
+      RP_OC_BELOW["Below threshold, no flags →<br/>flux line only (D-09 analogue)"]
+      RP_OC_FULL["Material, full coverage, template-only<br/>text → flux note (spine: Initech line)"]
+      RP_OC_GM["Gross margin down three points → note with<br/>ranked point contributions (track-doc plant)"]
+      RP_OC_PACK["Board pack with bound numbers → CFO"]
+      RP_OC_COVER["Material, coverage below policy → residual<br/>named, transactions listed → account owner"]
+      RP_OC_RECUR["Small but recurring, sensitive account →<br/>recurrence pack to audit (D-10)"]
+      RP_OC_NODEC["Entries with no decision or intent behind<br/>them → declines to state a cause,<br/>transaction list to controller"]
+      RP_OC_UNTIED["Number that does not tie, a manual override,<br/>or a final pack on an open period →<br/>persisted with the rule name (G-01 pattern)"]
+    end
+    RP_ROUTE_AUTO(("AUTO"))
+    RP_ROUTE_PROPOSE(("PROPOSE"))
+    RP_ROUTE_ESCALATE(("ESCALATE"))
+    RP_ROUTE_REFUSE(("REFUSE"))
+    RP_ROUTE_BLOCK(("BLOCK"))
+    RP_CFO(["Controller / CFO / account owner<br/>in Slack: approve, or answer the question"])
+  end
+
+  subgraph RP_SG7["7 · Events, effects, learning and metrics (nothing measured yet)"]
+    RP_EV_REVIEWED["event: report.flux.cleared (gates the close lock)<br/>period, snapshot_id, material n, explained n"]
+    RP_LOCKGATE{{"Close lock gate: period_lock precondition<br/>flux review item done, no open<br/>report.flux.unexplained in the period"}}
+    RP_EV_UNEXPL["event: report.flux.unexplained<br/>flux_line_id, residual_cents, gl_line ids"]
+    RP_NEWINTENT[("New intent for the owning function<br/>parent_id = the flux intent<br/>owner from the account-owner map")]
+    RP_EV_PACK["event: report.pack.published<br/>artifact id, snapshot hash"]
+    RP_L_FACT["Learnable: recurring explanations as facts<br/>with expiry (annual insurance renews in July,<br/>valid_to set) · account-owner map ·<br/>threshold bands as approved policy"]
+    RP_L_GUARD{{"Learning guards: two agreeing corrections<br/>(G-05) · clamp, never wider than the class<br/>ceiling (G-08) · stable account and party keys"}}
+    RP_L_NEVER["Never learned: numbers · causal claims<br/>without a decision link · thresholds<br/>widened by the agent"]
+    RP_M_COVER["TO BE MEASURED: material variances explained<br/>at or above coverage policy (n of N,<br/>and dollar coverage)"]
+    RP_M_BOUND["TO BE MEASURED: numbers bound to ledger<br/>queries (target 100%) · unexplained<br/>residuals escalated"]
+    RP_M_TIME["TO BE MEASURED: hours from final trial<br/>balance to flux pack · reviewer edits per note"]
+  end
+
+  RP_T_TB --> RP_T_CHK
+  RP_T_CHK --> RP_INTENT
+  RP_T_ADHOC --> RP_INTENT
+  RP_T_BUS --> RP_INTENT
+  RP_IN_TB --> RP_SNAP
+  RP_SNAP --> RP_INTENT
+
+  RP_INTENT --> RP_V_FLUX
+  RP_IN_PRIOR --> RP_V_FLUX
+  RP_IN_BUDGET --> RP_V_FLUX
+  RP_V_FLUX --> RP_V_DUAL
+  RP_IN_POLICY --> RP_V_DUAL
+  RP_V_THREE --> RP_V_DUAL
+  RP_V_DUAL -- "below" --> RP_V_QUAL
+  RP_V_DUAL -- "both exceeded: material" --> RP_V_STORE
+  RP_V_QUAL -- "flag set: material" --> RP_V_STORE
+  RP_V_QUAL -- "no flag" --> RP_V_BELOW
+
+  RP_V_STORE --> RP_D_ACCTS
+  RP_D_ACCTS --> RP_D_LINES
+  RP_D_LINES --> RP_D_NODEC
+  RP_D_NODEC -- "has decision" --> RP_D_DEC
+  RP_D_DEC --> RP_D_CONTRIB
+  RP_D_LINES --> RP_D_ABSENT
+  RP_D_ABSENT --> RP_D_CONTRIB
+  RP_D_CONTRIB --> RP_D_BUCKET
+  RP_D_CONTRIB --> RP_D_GM
+  RP_D_GM --> RP_D_EX
+  RP_D_BUCKET --> RP_D_COVER
+  RP_D_GM --> RP_D_COVER
+  RP_D_NODEC -- "none: no cause can be stated" --> RP_D_RESID
+  RP_D_COVER -- "below policy" --> RP_D_RESID
+  RP_D_COVER -- "covered" --> RP_D_STORE
+  RP_D_RESID --> RP_D_STORE
+
+  RP_D_STORE --> RP_N_CHAIN
+  RP_N_CHAIN --> RP_N_TIER
+  RP_N_TIER -- "tier 0" --> RP_N_TEMPLATE
+  RP_N_TIER -- "tier 1+" --> RP_N_MODEL
+  RP_N_MODEL --> RP_N_G12
+  RP_N_TEMPLATE --> RP_N_RENDER
+  RP_N_G12 --> RP_N_RENDER
+  RP_D_RESID --> RP_N_UNEXPL
+  RP_N_UNEXPL --> RP_N_RENDER
+  RP_N_RENDER --> RP_N_STORE
+
+  RP_T_LOCK --> RP_P_PL
+  RP_SNAP --> RP_P_PL
+  RP_SNAP --> RP_P_BS
+  RP_P_PL --> RP_P_CF
+  RP_P_BS --> RP_P_CF
+  RP_P_BS --> RP_P_KPI
+  RP_N_STORE --> RP_P_NOTES
+  RP_P_CF --> RP_P_TIE
+  RP_P_KPI --> RP_P_TIE
+  RP_IN_BUDGET -- "forecast_version" --> RP_P_FC
+  RP_P_FC --> RP_P_TIE
+  RP_P_NOTES --> RP_P_DRAFT
+  RP_P_TIE --> RP_P_DRAFT
+
+  RP_N_STORE --> RP_PROPOSE
+  RP_P_DRAFT --> RP_PROPOSE
+  RP_SCHEMA -.-> RP_PROPOSE
+  RP_PROPOSE --> RP_KERNEL
+  RP_KERNEL --> RP_K_NUM
+  RP_KERNEL --> RP_K_FOOT
+  RP_KERNEL --> RP_K_CAUSE
+  RP_KERNEL --> RP_K_HASH
+  RP_KERNEL --> RP_K_SIGN
+  RP_REVIEWER --> RP_K_SIGN
+  RP_KERNEL -. "reject: up one router tier" .-> RP_PROPOSE
+  RP_KERNEL -- "verdict + route" ---> RP_OC_BELOW
+  RP_KERNEL ---> RP_OC_FULL
+  RP_KERNEL ---> RP_OC_GM
+  RP_KERNEL ---> RP_OC_PACK
+  RP_KERNEL ---> RP_OC_COVER
+  RP_KERNEL ---> RP_OC_RECUR
+  RP_KERNEL ---> RP_OC_NODEC
+  RP_KERNEL ---> RP_OC_UNTIED
+  RP_OC_BELOW --> RP_ROUTE_AUTO
+  RP_OC_FULL --> RP_ROUTE_AUTO
+  RP_OC_GM --> RP_ROUTE_PROPOSE
+  RP_OC_PACK --> RP_ROUTE_PROPOSE
+  RP_OC_COVER --> RP_ROUTE_ESCALATE
+  RP_OC_RECUR --> RP_ROUTE_ESCALATE
+  RP_OC_NODEC --> RP_ROUTE_REFUSE
+  RP_OC_UNTIED --> RP_ROUTE_BLOCK
+  RP_ROUTE_PROPOSE --> RP_CFO
+  RP_ROUTE_ESCALATE --> RP_CFO
+
+  RP_ROUTE_AUTO --> RP_EV_REVIEWED
+  RP_CFO -- "approved" --> RP_EV_REVIEWED
+  RP_CFO -- "pack approved" --> RP_EV_PACK
+  RP_EV_REVIEWED -.-> RP_LOCKGATE
+  RP_ROUTE_ESCALATE --> RP_EV_UNEXPL
+  RP_ROUTE_REFUSE --> RP_EV_UNEXPL
+  RP_EV_UNEXPL -.-> RP_NEWINTENT
+  RP_EV_UNEXPL -. "holds the lock" .-> RP_LOCKGATE
+  RP_CFO -. "answer → fact candidate" .-> RP_L_GUARD
+  RP_L_GUARD --> RP_L_FACT
+  RP_L_GUARD --> RP_L_NEVER
+  RP_EV_REVIEWED --> RP_M_COVER
+  RP_EV_PACK --> RP_M_BOUND
+  RP_LOCKGATE --> RP_M_TIME
+
+  %% added in review
+  RP_V_BELOW --> RP_OC_BELOW
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class RP_T_TB,RP_T_LOCK,RP_T_BUS src
+  class RP_T_ADHOC,RP_CFO human
+  class RP_T_CHK,RP_IN_TB,RP_IN_PRIOR,RP_IN_BUDGET,RP_IN_POLICY,RP_SNAP,RP_V_STORE,RP_D_STORE,RP_N_STORE,RP_NEWINTENT store
+  class RP_INTENT,RP_V_FLUX,RP_V_THREE,RP_V_BELOW,RP_D_ACCTS,RP_D_LINES,RP_D_DEC,RP_D_CONTRIB,RP_D_ABSENT,RP_D_BUCKET,RP_D_GM,RP_D_EX,RP_D_RESID,RP_N_CHAIN,RP_N_TEMPLATE,RP_N_RENDER,RP_N_UNEXPL,RP_P_PL,RP_P_BS,RP_P_CF,RP_P_KPI,RP_P_FC,RP_P_NOTES,RP_PROPOSE code
+  class RP_N_MODEL,RP_REVIEWER model
+  class RP_V_DUAL,RP_V_QUAL,RP_D_NODEC,RP_D_COVER,RP_N_TIER,RP_N_G12,RP_P_TIE,RP_KERNEL,RP_K_NUM,RP_K_FOOT,RP_K_CAUSE,RP_K_HASH,RP_K_SIGN,RP_LOCKGATE,RP_L_GUARD gate
+  class RP_L_FACT,RP_L_NEVER,RP_M_COVER,RP_M_BOUND,RP_M_TIME learn
+  class RP_P_DRAFT,RP_OC_BELOW,RP_OC_FULL,RP_OC_GM,RP_OC_PACK,RP_OC_COVER,RP_OC_RECUR,RP_OC_NODEC,RP_OC_UNTIED,RP_EV_REVIEWED,RP_EV_UNEXPL,RP_EV_PACK ext
+  class RP_SCHEMA stretch
+  class RP_ROUTE_AUTO rAuto
+  class RP_ROUTE_PROPOSE rPropose
+  class RP_ROUTE_ESCALATE rEscalate
+  class RP_ROUTE_REFUSE rRefuse
+  class RP_ROUTE_BLOCK rBlock

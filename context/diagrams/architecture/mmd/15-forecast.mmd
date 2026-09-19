@@ -1,0 +1,278 @@
+flowchart TB
+
+  subgraph FC_SG1["1 · Inputs and triggers (the forecast is rebuilt from the ledger and facts, never typed in)"]
+    FC_T_WEEKLY[/"Calendar: weekly roll<br/>fires when the bank actuals for the week have<br/>landed and bank rec for that week is certified"/]
+    FC_T_ARREV[/"Bus events consumed (revenue side)<br/>ar.credit_memo.posted · ar.payment.applied<br/>billing.expectation.changed · rev.schedule.revised"/]
+    FC_T_APCLOSE[/"Bus events consumed (cost side)<br/>ap.bill.approved · ap.payment.scheduled<br/>close.accrual.posted · hr.departure_detected"/]
+    FC_T_FACT[/"Bus event: fact.activated<br/>predicate = concession, promise_to_pay,<br/>dispute_hold (scope, valid_from, valid_to)"/]
+    FC_IN_GL[("gl_entry + gl_line, cash accounts<br/>ledger.trial_balance → GL cash<br/>= opening balance of week 1")]
+    FC_IN_BANK[("bank_txn + bank rec result<br/>reconciled bank balance at as_of")]
+    FC_CMP_OPEN{{"Drift comparators (spec section 6)<br/>forecast opening cash vs GL cash vs<br/>reconciled bank: diff must be 0 cents<br/>AR and AP forecast base vs subledger totals"}}
+    FC_IN_AR[("invoice (open) via ledger.open_invoices<br/>customer_id, due_date, open amount_cents<br/>+ ledger.party_history: paid invoices with<br/>due_date, paid date, short-pay flag")]
+    FC_IN_BILLEXP[("billing_expectation(contract_id, date,<br/>amount_cents) from the revenue pack<br/>carries escalators and concessions<br/>(proposed table)")]
+    FC_IN_AP[("bill (approved, open) via ap.bills<br/>vendor_id, due_date, amount_cents,<br/>payment method, hold status")]
+    FC_IN_RUNCAL[("payment_run_calendar (proposed table)<br/>run weekday per vendor or method<br/>+ scheduled runs from AP")]
+    FC_IN_PAYROLL[("payroll_run (last register) +<br/>payroll_calendar (proposed table)<br/>pay dates, net pay, tax and benefit due dates")]
+    FC_IN_FACTS[("fact (memory.facts): active and in scope<br/>e.g. Initech concession 10% off,<br/>valid_to = renewal date<br/>code, not the model, decides if it applies")]
+    FC_INTENT["intent: rebuild forecast as_of T<br/>router tier 0: compiled code, no model call<br/>forecast.get returns the current version"]
+  end
+
+  subgraph FC_SG2["2 · Receipts model (CODE · direct method: receipts and disbursements, AFP)"]
+    FC_R_BEHAV["payment_behaviour(customer_id, n,<br/>median_days_beyond_terms, spread)<br/>over the last n paid invoices of the customer"]
+    FC_R_N{{"n gte 5 paid invoices for this customer?"}}
+    FC_R_DATE["Per open invoice: expected_date =<br/>due_date + median days beyond terms<br/>amount = open amount_cents"]
+    FC_R_PROMISE{{"Active promise_to_pay fact for this invoice?<br/>yes → expected_date = promised date<br/>until the fact reaches valid_to"}}
+    FC_R_DISPUTE{{"dispute_hold on the invoice?<br/>yes → excluded from base case (amount 0,<br/>line kept and labelled) or policy haircut"}}
+    FC_R_CONC["Concession fact in scope: inflow =<br/>billed x (1 - pct_off) until valid_to<br/>skipped once the credit memo is applied<br/>(reduce once only) · line carries fact_id"]
+    FC_R_FUTURE["Future billings from billing_expectation<br/>(escalators, concessions already inside)<br/>same per-customer lag applied"]
+    FC_R_PIPE{{"Source is a pipeline deal with<br/>no signed contract?<br/>never in base case → upside scenario only"}}
+    FC_R_LINES["Receipt lines, kind = ar_receipt or<br/>future_billing, source_ref = invoice id<br/>or billing_expectation id, method recorded"]
+  end
+
+  subgraph FC_SG3["3 · Disbursements model (CODE)"]
+    FC_D_HELD{{"Bill on hold? (duplicate, no receipt,<br/>price above PO, changed bank details)<br/>yes → excluded, listed as held"}}
+    FC_D_AP["Approved bill snapped to the last payment<br/>run on or before due_date, + clearing lag<br/>by method (policy table: ACH, check, wire)<br/>payments do not clear the day issued (AFP)"]
+    FC_D_ACCR["Accrual-backed expected bills<br/>from close.accrual.posted: vendor, amount,<br/>expected bill date + vendor terms"]
+    FC_D_PAYROLL["Payroll: payroll_calendar pay dates x last<br/>register net pay · payroll taxes and benefits<br/>by statutory due date (income tax out of scope)<br/>hr.departure_detected removes pay, adds final pay"]
+    FC_D_RECUR["Recurring items with no open bill (rent,<br/>subscriptions, debt service): trailing 3-month<br/>run-rate on usual day, method = run_rate,<br/>source_ref = vendor_id (close watchlist)"]
+    FC_D_LINES["Disbursement lines, kind = ap_payment,<br/>payroll, tax_benefit, recurring, accrual_bill<br/>each with source_ref and method"]
+  end
+
+  subgraph FC_SG4["4 · Build: 13 weekly buckets"]
+    FC_B_BUCKET["Bucket by value date (F-03) into<br/>13 Monday-Sunday weeks from as_of"]
+    FC_B_LINE[("forecast_line(id, as_of, week, kind,<br/>source_ref, amount_cents, fact_id)<br/>proposed adds: expected_date, method")]
+    FC_B_CHAIN["Per week, integer cents:<br/>opening + receipts - disbursements = closing<br/>closing(n) = opening(n+1)"]
+    FC_B_FLOOR{{"Minimum-cash floor (policy_memo.lookup)<br/>any of the 13 closing balances below floor?"}}
+    FC_B_DEFER["Deferrable-bill options in code:<br/>bills whose due_date allows a later run,<br/>ranked by days of slack, floor re-tested"]
+    FC_B_APRUN["Feeds AP payment-run selection<br/>what gets paid this week: bills due<br/>vs closing cash vs floor → AP pack"]
+  end
+
+  subgraph FC_SG5["5 · Re-forecast on new facts and events (every change is a versioned as_of snapshot)"]
+    FC_RF_DELTA["Event arrives → recompute only the lines<br/>whose source_ref or party the event touches<br/>cause recorded: trigger_event_id → event row,<br/>changed lines carry fact_id"]
+    FC_RF_VER[("forecast_version(as_of, trigger_event_id,<br/>frozen) (proposed table)<br/>older versions are immutable")]
+    FC_RF_DIFF["Version diff in code: per week and<br/>source_ref, old vs new amount_cents<br/>diff totals equal change in closing cash"]
+    FC_RF_INITECH["Spine example: Initech concession fact<br/>→ inflows -$1,200 a month through renewal<br/>valid_to ends the reduction, no model call"]
+  end
+
+  subgraph FC_SG6["6 · When actuals land: explain the miss"]
+    FC_A_JOIN["Weekly roll: freeze the version current at<br/>week start, join its lines to bank actuals<br/>through bank-rec applications on source_ref<br/>(invoice, bill, payroll_run)"]
+    FC_A_CLASS{{"Attribution in CODE, per source_ref"}}
+    FC_A_TIMING["TIMING: paid in a different week<br/>customer paid two weeks late →<br/>moved weeks, not lost"]
+    FC_A_AMOUNT["AMOUNT: right week, different cents<br/>(short-pay, partial, discount taken)"]
+    FC_A_UNFC["UNFORECAST ITEM: actual with no line<br/>(bank fee, one-off refund)"]
+    FC_A_NONOCC["MISSING ITEM (non-occurrence): line with<br/>no actual and no later expected date"]
+    FC_A_OPENING["OPENING: opening balance differed<br/>(late bank rec adjustment)"]
+    FC_A_SUM{{"Category totals sum exactly to<br/>week expected - actual (cents)"}}
+    FC_A_MISS[("forecast_miss(id, week, expected_cents,<br/>actual_cents, decision_id)<br/>proposed adds: source_ref, category")]
+    FC_A_INDATA{{"Cause already in the data?<br/>(applied payment date, credit memo,<br/>fact, hold) or miss inside the spread"}}
+    FC_A_SEARCH["Investigator (model, routed tier):<br/>mail.search, chat.search for the reason<br/>quote it → promise_to_pay fact_candidate<br/>with expiry"]
+    FC_A_NARR["Miss narrative (model, one paragraph):<br/>prose with placeholders only<br/>code renders each numeral from a table cell"]
+  end
+
+  subgraph FC_SG7["7 · Accuracy tracking and what is learned"]
+    FC_ACC_HORIZON["Error by week-ahead horizon (1, 4, 13):<br/>abs(expected - actual) for receipts,<br/>disbursements, net, from frozen versions"]
+    FC_ACC_BIAS["Bias by customer: signed mean of<br/>actual paid date - expected_date<br/>over the closed lines of that customer"]
+    FC_ACC_ONE{{"One late payment is not a rule (G-05)<br/>statistic moves only by recomputation<br/>spread clamped to class ceiling (G-08)"}}
+    FC_ACC_KEY{{"Parameters pinned to stable party keys<br/>customer_id, vendor_id: never a name or<br/>bank descriptor string (G-09)"}}
+    FC_ACC_UPDATE["Learnable: payment_behaviour recomputed<br/>(median, spread, n) after each applied payment<br/>vendor run calendars · promise facts + expiry"]
+    FC_ACC_NEVER["Never learned: plugging a line to hit<br/>a target · a lag rule from one payment ·<br/>dispute outcomes"]
+  end
+
+  subgraph FC_SG8["8 · Exit: artifact proposal → kernel → routes"]
+    FC_PROPOSE["propose_entry + workpaper<br/>entries = none: the output is an ARTIFACT<br/>(forecast_version, miss note,<br/>payment-run selection)"]
+    FC_SCHEMA["PROPOSED SCHEMA ADDITION (not in spec section 8)<br/>Proposal.kind has no artifact kinds: add<br/>forecast_version, forecast_miss_note"]
+    FC_KERNEL{{"Kernel F·E·P·J + pack checks<br/>(artifact checks, pure code)"}}
+    FC_K_OPEN{{"F · opening cash equals GL cash<br/>equals reconciled bank balance"}}
+    FC_K_FOOT{{"F · totals foot: weeks chain,<br/>lines sum to bucket totals,<br/>miss categories sum to the miss"}}
+    FC_K_SRC{{"F · every forecast_line has a source_ref<br/>or is a labelled overlay with<br/>stated_by, scope, expiry (J)"}}
+    FC_K_NUM{{"Every numeral in a generated note is<br/>bound to a forecast_line or forecast_miss<br/>cell and re-queries to the same value"}}
+    FC_K_FACT{{"E · J · fact-driven lines cite a fact<br/>active and in scope for that week<br/>(concession stops at valid_to)"}}
+    FC_K_FROZEN{{"Hard rule: a frozen forecast_version<br/>is never rewritten: new as_of only"}}
+    subgraph FC_SG8B["OUTPUT CASES"]
+      FC_OC_NOTE["NOTE: the corpus has no in-scope forecast<br/>min-fixture cases (E-04 to E-09 and H-5 are<br/>multi-entity treasury, out of scope)<br/>→ every case below is a SPEC PLANT"]
+      FC_OC_REBUILD["Routine rebuild from ledger + facts<br/>→ new forecast_version, nobody notified"]
+      FC_OC_CONC["Concession fact lowers inflows through<br/>renewal → lines carry fact_id"]
+      FC_OC_LATE["Customer pays two weeks late → TIMING<br/>miss note, payment_behaviour recomputed<br/>AR notified only if beyond the spread"]
+      FC_OC_APRUN["What gets paid this week → payment-run<br/>selection to AP and controller"]
+      FC_OC_BIGMISS["Large miss, no reason found → names what<br/>it does not know, asks account owner"]
+      FC_OC_FLOOR["Minimum-cash breach in the horizon →<br/>deferrable-bill options to the CFO"]
+      FC_OC_PIPE["Pipeline deal with no contract asked into<br/>the base case → upside scenario only"]
+      FC_OC_OPEN["Opening cash does not tie → version not<br/>published, intent opened for bank rec"]
+    end
+    FC_ROUTE_AUTO(("AUTO"))
+    FC_ROUTE_PROPOSE(("PROPOSE"))
+    FC_ROUTE_ESCALATE(("ESCALATE"))
+    FC_ROUTE_REFUSE(("REFUSE"))
+    FC_ROUTE_BLOCK(("BLOCK"))
+    FC_CFO(["CFO / controller / account owner<br/>in Slack"])
+  end
+
+  subgraph FC_SG9["9 · Events emitted and metrics (nothing measured yet)"]
+    FC_FACTCAND["record_fact_candidate → fact (candidate)<br/>promise_to_pay with scope and expiry<br/>approved in the human-loop pack → active fact<br/>re-enters stage 1, asked once"]
+    FC_EV_UPDATED["event: forecast.updated<br/>payload: as_of, trigger_event_id,<br/>13 closing balances, changed weeks"]
+    FC_EV_MISS["event: forecast.miss.classified<br/>week, source_ref, category, cents<br/>→ reporting and AR collections (chase list)"]
+    FC_EV_BREACH["event: forecast.min_cash.breach<br/>week, shortfall_cents, options"]
+    FC_TO_AP["AP pack: payment-run selection"]
+    FC_TO_RP["Reporting pack: forecast summary<br/>and vs-forecast flux comparator"]
+    FC_TO_CLOSE["Close pack: checklist_item<br/>forecast refreshed"]
+    FC_M_ERR["TO BE MEASURED: abs error by horizon<br/>(weeks 1, 4, 13), with n · share of miss<br/>dollars attributed to a named cause"]
+    FC_M_SRC["TO BE MEASURED: share of lines with a<br/>source_ref · lines driven by learned facts ·<br/>event → new version latency"]
+  end
+
+  FC_T_WEEKLY --> FC_INTENT
+  FC_T_ARREV --> FC_INTENT
+  FC_T_APCLOSE --> FC_INTENT
+  FC_T_FACT --> FC_INTENT
+  FC_IN_GL --> FC_CMP_OPEN
+  FC_IN_BANK --> FC_CMP_OPEN
+  FC_CMP_OPEN -- "ties" --> FC_INTENT
+
+  FC_INTENT --> FC_R_BEHAV
+  FC_R_BEHAV --> FC_R_N
+  FC_R_N -- "yes: customer median, n shown" --> FC_R_DATE
+  FC_R_N -- "no: portfolio median, method = portfolio" --> FC_R_DATE
+  FC_IN_AR --> FC_R_BEHAV
+  FC_R_DATE --> FC_R_PROMISE
+  FC_R_PROMISE --> FC_R_DISPUTE
+  FC_R_DISPUTE --> FC_R_CONC
+  FC_IN_FACTS --> FC_R_PROMISE
+  FC_IN_BILLEXP --> FC_R_FUTURE
+  FC_R_FUTURE --> FC_R_PIPE
+  FC_R_PIPE -- "contract-backed" --> FC_R_LINES
+  FC_R_CONC --> FC_R_LINES
+
+  FC_INTENT --> FC_D_HELD
+  FC_IN_AP --> FC_D_HELD
+  FC_D_HELD -- "not held" --> FC_D_AP
+  FC_D_AP --> FC_D_LINES
+  FC_D_PAYROLL --> FC_D_LINES
+  FC_IN_AP -- "bill history" --> FC_D_RECUR
+  FC_IN_RUNCAL --> FC_D_AP
+  FC_T_APCLOSE --> FC_D_ACCR
+  FC_D_ACCR --> FC_D_LINES
+  FC_IN_PAYROLL --> FC_D_PAYROLL
+  FC_D_RECUR --> FC_D_LINES
+
+  FC_R_LINES --> FC_B_BUCKET
+  FC_D_LINES --> FC_B_BUCKET
+  FC_B_BUCKET --> FC_B_LINE
+  FC_B_LINE --> FC_B_CHAIN
+  FC_B_CHAIN --> FC_B_FLOOR
+  FC_B_FLOOR -- "breach" --> FC_B_DEFER
+  FC_B_FLOOR -- "no breach" --> FC_B_APRUN
+  FC_B_DEFER --> FC_B_APRUN
+
+  FC_B_CHAIN --> FC_RF_VER
+  FC_T_FACT -. "re-forecast" .-> FC_RF_DELTA
+  FC_RF_DELTA --> FC_RF_VER
+  FC_RF_VER --> FC_RF_DIFF
+  FC_RF_VER --> FC_A_JOIN
+  FC_RF_DIFF --> FC_RF_INITECH
+
+  FC_A_JOIN --> FC_A_CLASS
+  FC_A_CLASS --> FC_A_TIMING
+  FC_A_CLASS --> FC_A_AMOUNT
+  FC_A_CLASS --> FC_A_UNFC
+  FC_A_CLASS --> FC_A_NONOCC
+  FC_A_CLASS --> FC_A_OPENING
+  FC_A_TIMING --> FC_A_SUM
+  FC_A_AMOUNT --> FC_A_SUM
+  FC_A_UNFC --> FC_A_SUM
+  FC_A_NONOCC --> FC_A_SUM
+  FC_A_OPENING --> FC_A_SUM
+  FC_A_SUM --> FC_A_MISS
+  FC_A_MISS --> FC_A_INDATA
+  FC_A_INDATA -- "no" --> FC_A_SEARCH
+  FC_A_INDATA -- "yes" --> FC_A_NARR
+  FC_A_SEARCH --> FC_A_NARR
+
+  FC_A_MISS --> FC_ACC_HORIZON
+  FC_A_MISS --> FC_ACC_BIAS
+  FC_ACC_BIAS --> FC_ACC_ONE
+  FC_ACC_ONE --> FC_ACC_KEY
+  FC_ACC_KEY --> FC_ACC_UPDATE
+  FC_ACC_UPDATE -. "learned parameters" .-> FC_R_BEHAV
+  FC_ACC_ONE --> FC_ACC_NEVER
+
+  FC_RF_DIFF --> FC_PROPOSE
+  FC_B_APRUN --> FC_PROPOSE
+  FC_A_NARR --> FC_PROPOSE
+  FC_SCHEMA -.-> FC_PROPOSE
+  FC_PROPOSE --> FC_KERNEL
+  FC_KERNEL --> FC_K_OPEN
+  FC_KERNEL --> FC_K_FOOT
+  FC_KERNEL --> FC_K_SRC
+  FC_KERNEL --> FC_K_NUM
+  FC_KERNEL --> FC_K_FACT
+  FC_KERNEL --> FC_K_FROZEN
+  FC_KERNEL -. "reject: up one router tier" .-> FC_PROPOSE
+  FC_KERNEL -- "verdict + route" ---> FC_OC_NOTE
+  FC_OC_NOTE --> FC_OC_REBUILD
+  FC_OC_NOTE --> FC_OC_CONC
+  FC_OC_NOTE --> FC_OC_LATE
+  FC_OC_NOTE --> FC_OC_APRUN
+  FC_OC_NOTE --> FC_OC_BIGMISS
+  FC_OC_NOTE --> FC_OC_FLOOR
+  FC_OC_NOTE --> FC_OC_PIPE
+  FC_OC_NOTE --> FC_OC_OPEN
+  FC_OC_REBUILD --> FC_ROUTE_AUTO
+  FC_OC_CONC --> FC_ROUTE_AUTO
+  FC_OC_LATE --> FC_ROUTE_AUTO
+  FC_OC_APRUN --> FC_ROUTE_PROPOSE
+  FC_OC_BIGMISS --> FC_ROUTE_ESCALATE
+  FC_OC_FLOOR --> FC_ROUTE_ESCALATE
+  FC_OC_PIPE --> FC_ROUTE_REFUSE
+  FC_OC_OPEN --> FC_ROUTE_BLOCK
+  FC_ROUTE_PROPOSE --> FC_CFO
+  FC_ROUTE_ESCALATE --> FC_CFO
+  FC_CFO -. "answer" .-> FC_FACTCAND
+  FC_A_SEARCH -. "quoted reason" .-> FC_FACTCAND
+  FC_IN_AR --> FC_CMP_OPEN
+  FC_IN_AP --> FC_CMP_OPEN
+
+  FC_ROUTE_AUTO --> FC_EV_UPDATED
+  FC_ROUTE_AUTO --> FC_EV_MISS
+  FC_ROUTE_ESCALATE --> FC_EV_BREACH
+  FC_EV_UPDATED -.-> FC_TO_AP
+  FC_EV_UPDATED -.-> FC_TO_RP
+  FC_EV_UPDATED -.-> FC_TO_CLOSE
+  FC_EV_MISS -.-> FC_TO_RP
+  FC_EV_BREACH -.-> FC_TO_AP
+  FC_TO_AP --> FC_M_SRC
+  FC_TO_RP --> FC_M_ERR
+
+  %% added in review
+  FC_CMP_OPEN -. "diff not 0 cents" .-> FC_OC_OPEN
+  FC_R_PIPE -. "no signed contract" .-> FC_OC_PIPE
+  FC_D_HELD -- "held: amount 0, listed as held" --> FC_D_LINES
+  FC_ACC_HORIZON -.-> FC_M_ERR
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class FC_T_WEEKLY,FC_T_ARREV,FC_T_APCLOSE,FC_T_FACT src
+  class FC_IN_GL,FC_IN_BANK,FC_IN_AR,FC_IN_BILLEXP,FC_IN_AP,FC_IN_RUNCAL,FC_IN_PAYROLL,FC_IN_FACTS,FC_B_LINE,FC_RF_VER,FC_A_MISS store
+  class FC_INTENT,FC_R_BEHAV,FC_R_DATE,FC_R_CONC,FC_R_FUTURE,FC_R_LINES,FC_D_AP,FC_D_ACCR,FC_D_PAYROLL,FC_D_RECUR,FC_D_LINES,FC_B_BUCKET,FC_B_CHAIN,FC_B_DEFER,FC_B_APRUN,FC_RF_DELTA,FC_RF_DIFF,FC_RF_INITECH,FC_A_JOIN,FC_A_TIMING,FC_A_AMOUNT,FC_A_UNFC,FC_A_NONOCC,FC_A_OPENING,FC_ACC_HORIZON,FC_ACC_BIAS,FC_PROPOSE code
+  class FC_A_SEARCH,FC_A_NARR model
+  class FC_CFO human
+  class FC_CMP_OPEN,FC_R_N,FC_R_PROMISE,FC_R_DISPUTE,FC_R_PIPE,FC_D_HELD,FC_B_FLOOR,FC_A_CLASS,FC_A_SUM,FC_A_INDATA,FC_ACC_KEY,FC_ACC_ONE,FC_KERNEL,FC_K_OPEN,FC_K_FOOT,FC_K_SRC,FC_K_NUM,FC_K_FACT,FC_K_FROZEN gate
+  class FC_ACC_UPDATE,FC_FACTCAND,FC_ACC_NEVER,FC_M_ERR,FC_M_SRC learn
+  class FC_EV_UPDATED,FC_EV_MISS,FC_EV_BREACH,FC_TO_AP,FC_TO_RP,FC_TO_CLOSE,FC_OC_REBUILD,FC_OC_CONC,FC_OC_LATE,FC_OC_APRUN,FC_OC_BIGMISS,FC_OC_FLOOR,FC_OC_PIPE,FC_OC_OPEN ext
+  class FC_SCHEMA,FC_OC_NOTE stretch
+  class FC_ROUTE_AUTO rAuto
+  class FC_ROUTE_PROPOSE rPropose
+  class FC_ROUTE_ESCALATE rEscalate
+  class FC_ROUTE_REFUSE rRefuse
+  class FC_ROUTE_BLOCK rBlock

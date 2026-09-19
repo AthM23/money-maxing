@@ -1,0 +1,4 @@
+node_modules/
+.board.json
+package-lock.json
+viewer.html

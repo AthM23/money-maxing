@@ -1,0 +1,319 @@
+flowchart TB
+
+  subgraph J_SG1["1 · Intake: intent, decision record, metering, budget, autonomy level"]
+    J_IN[/"Work arrives: drift monitor difference,<br/>event bus hand-off (event.topic),<br/>or close conductor checklist_item"/]
+    J_INTENT[("intent: id, parent_id, function, question,<br/>owner, status, end_condition_json,<br/>created_at, closed_at")]
+    J_DECISION[("decision row created: intent_id, function,<br/>mode live or replay, decision_point_id, kind,<br/>actor, autonomy_level, model_calls, cost_micros")]
+    J_METER["Trace and cost metering starts:<br/>every step, tool call, evidence hit, kernel mark,<br/>tokens, cost_micros, latency_ms per decision"]
+    J_BUDGET{{"Budget caps enforced in code:<br/>maxTurns 15 per tier run (Agent SDK option),<br/>dollar cap per decision in cost_micros<br/>cap hit → ESCALATE or REFUSE, never a guess"}}
+    J_AUTLOOKUP{{"Autonomy level lookup by decision kind:<br/>agreement and n from replay_result<br/>→ auto-post / post-with-review / shadow<br/>stored on decision.autonomy_level"}}
+  end
+
+  subgraph J_SG2["2 · Agent router: cheapest tier that the kernel accepts"]
+    subgraph J_SG2A["Tier 0 · compiled policy or active fact · CODE decides applicability · no model call"]
+      J_T0_LOOKUP["memory.policies + memory.facts<br/>keyed by function, kind, party_id, entry date"]
+      J_T0_VALID{{"policy.status = approved or fact.status = active<br/>AND valid_from lte entry date lte valid_to ?<br/>(in replay: learned_at lte T)"}}
+      J_T0_SCOPE{{"scope_json matches party, kind<br/>and amount ceiling ?<br/>policy.condition_json evaluates true ?"}}
+      J_T0_AUTH{{"Amount lte authority ceiling of approved_by<br/>in the approval matrix ? (G-04: a learned rule<br/>inherits the ceiling of its approver)"}}
+      J_T0_BUILD["Tier 0 builds the Proposal in code<br/>from policy.action_json or fact.value_json<br/>cost 0, model_calls 0, refs filled"]
+    end
+    J_TIER_PICK{{"Tier pick: lowest tier not yet rejected<br/>for this decision (tier 0 miss → tier 1)"}}
+    J_T1["Tier 1 · small model<br/>claude-haiku-4-5<br/>triage, extraction, routine matching"]
+    J_T1_FT["STRETCH (first cut): fine-tuned OPEN-WEIGHT small<br/>model (team decision 09-19, sheet 21), trained on<br/>kernel-verified traces · drop-in replacement for tier 1"]
+    J_T2["Tier 2 · claude-sonnet-5<br/>default investigator model"]
+    J_T3["Tier 3 · claude-opus-5<br/>hard investigations"]
+    J_TIER_METER["Per-tier metering: tokens in/out, dollars,<br/>latency → decision.model_calls, cost_micros<br/>reported per decision by tier"]
+  end
+
+  subgraph J_SG3["3 · Investigator: read-only tools, fixed retrieval order, quoted evidence"]
+    J_MAYNOT{{"Agents may NOT: post directly (only propose_entry<br/>writes) · use file or shell tools · see anything<br/>on disk (empty working directory)"}}
+    J_ASOF{{"As-of guard (mode = replay): tools return only<br/>trace.recorded_time lte T · human_outcome_json<br/>and the answer key unreachable from any tool"}}
+    J_INV["Investigator loop (Claude Agent SDK, TS)<br/>in-process MCP tools, same names in replay and live<br/>model = the tier the router chose"]
+    J_R1["1st · scoped facts<br/>memory.facts (party, predicate, as-of date)"]
+    J_R2["2nd · policy<br/>memory.policies · policy_memo.lookup<br/>workbook.lookup (Q2 close workbook)"]
+    subgraph J_SG3A["3rd · source documents"]
+      J_TL_LEDGER["ledger.* : open_invoices, get_invoice,<br/>party_history, trial_balance, account_activity<br/>bank.* : get_transaction, unmatched"]
+      J_TL_COMMS["mail.search · mail.get_thread · chat.search<br/>contracts.get · contracts.find_clause<br/>crm.owner · crm.notes"]
+      J_TL_FN["Function read tools: ap.bills/po/receipt/<br/>vendor_history · rev.schedule · close.checklist<br/>forecast.get · audit.* · report.variance"]
+    end
+    J_R4["4th · precedent<br/>memory.similar_decisions<br/>(same kind and party, kernel-accepted only)"]
+    J_EVID["Evidence capture: claim + trace_id<br/>+ quote = exact span copied from trace.payload_json<br/>each hit logged to the decision timeline"]
+  end
+
+  subgraph J_SG4["4 · Proposal + workpaper"]
+    J_EMPTY{{"Empty-model-response guard (F-10):<br/>raise on finish_reason = length or blank content<br/>never render an empty response"}}
+    J_WRITE{{"Which write tool ended the run ?<br/>propose_entry · escalate(question) · handoff<br/>close.mark · record_fact_candidate · finish"}}
+    J_PROPOSE["propose_entry(Proposal) · the ONLY write path<br/>Proposal: intent_id, function, party_id + fields"]
+    subgraph J_SG4A["Proposal type (spec §8) · money is integer cents"]
+      J_P_KIND["kind: apply_payment, credit_memo, write_off,<br/>customer_credit, dispute_hold, approve_bill,<br/>hold_bill, schedule_payment, bank_adjustment,<br/>rev_recognition, accrual, amortization, payroll_accrual, no_action"]
+      J_P_BODY["applications[]: doc_id, amount_cents<br/>entries[]: account, debit_cents, credit_cents, memo<br/>terms_change (optional): pct_off, until"]
+      J_P_EVID["evidence[]: claim, trace_id,<br/>quote (optional)"]
+      J_P_REFS["policy_refs[] · fact_refs[]<br/>judgment[]: note,<br/>confidence high / medium / low"]
+    end
+    J_ZOD{{"zod schema validation: enum kind, integer cents<br/>non-negative, required arrays, ISO dates<br/>fail → counts as a reject"}}
+    J_FISCAL{{"Fiscal-window date guard (F-09):<br/>every entry, fact and terms date inside the<br/>open fiscal window, else reject (invented year)"}}
+    J_WP[("workpaper: id, decision_id, marks_json,<br/>kernel_verdict, checkable_num, checkable_den<br/>Mark: cls F / E / P / J · check · status<br/>pass / fail / judgment · detail · refs[]")]
+  end
+
+  subgraph J_SG5["5 · Kernel (pure code, vitest-covered) · re-performs the workpaper"]
+    J_K_IN["kernel.run(proposal, workpaper, approver)<br/>deterministic, no model call<br/>+ pack-specific extra checks from the function pack"]
+    subgraph J_SG5F["F · formal"]
+      J_KF1{{"debits equal credits"}}
+      J_KF2{{"applications fit the bank amount<br/>and each open balance"}}
+      J_KF3{{"AR and AP subledgers equal their GL<br/>control accounts after posting"}}
+      J_KF4{{"schedules sum to contract<br/>or prepaid value"}}
+      J_KF5{{"every bank line matched exactly once"}}
+      J_KF6{{"forecast opening cash equals GL cash"}}
+    end
+    subgraph J_SG5E["E · evidence"]
+      J_KE1{{"every trace_id exists<br/>(in replay: recorded by T)"}}
+      J_KE2{{"every quote is a substring<br/>of its trace payload"}}
+      J_KE3{{"party, amount and date tie<br/>across documents"}}
+      J_KE4{{"three-way match within tolerance<br/>(po vs receipt vs bill)"}}
+      J_KE5{{"every non-standard line<br/>has evidence"}}
+    end
+    subgraph J_SG5P["P · process"]
+      J_KP1{{"preparer is not approver"}}
+      J_KP2{{"approval present when autonomy level<br/>or materiality ($500) requires it"}}
+      J_KP3{{"approver authorized<br/>in the approval matrix"}}
+      J_KP4{{"escalations answered before posting"}}
+      J_KP5{{"period open<br/>(nothing posts after lock)"}}
+      J_KP6{{"accruals flagged to reverse"}}
+    end
+    subgraph J_SG5J["J · judgment"]
+      J_KJ1{{"each policy in policy_refs approved<br/>and its condition matches"}}
+      J_KJ2{{"each fact in fact_refs active<br/>on the date and in scope"}}
+      J_KJ3{{"anything left recorded as status judgment<br/>→ needs reviewer sign-off"}}
+    end
+    subgraph J_SG5H["Hard BLOCK rules · hold even when a human approves"]
+      J_KH1{{"DUPLICATE_PAYMENT (G-01 / H-1): same vendor and<br/>amount_cents already paid, new invoice number"}}
+      J_KH2{{"PREPARER_EQUALS_APPROVER (G-02)<br/>also a storage-layer constraint"}}
+      J_KH3{{"PERIOD_LOCKED (G-03): period.status = locked<br/>correct via a new entry in the open period"}}
+      J_KH4{{"RULE_ABOVE_APPROVER_AUTHORITY (G-04):<br/>cited policy or fact exceeds approved_by ceiling"}}
+      J_KH5{{"BANK_DETAILS_CHANGED (B-17): vendor remit-to<br/>differs from last paid, needs out-of-band confirm"}}
+      J_KH6{{"OVER_APPROVER_LIMIT (B-24): 14,000 bill vs<br/>Controller limit 10,000 → next authority level"}}
+    end
+    J_K_VERDICT{{"Verdict: ACCEPT only if no mark fails<br/>leftover judgment marks → reviewer sign-off<br/>any fail → reject, failed marks written to<br/>workpaper.kernel_verdict"}}
+    J_K_FRAC["Checkable fraction =<br/>machine-re-performed marks / all marks<br/>→ checkable_num / checkable_den"]
+    J_ESC_RULE{{"Rule: a kernel reject escalates ONE tier<br/>0 → 1 → 2 → 3, failed marks passed as context<br/>after tier 3 rejects → ESCALATE or REFUSE"}}
+  end
+
+  subgraph J_SG6["6 · Disposition: autonomy ladder, reviewer, approver → five route terminals"]
+    J_D_MODE{{"decision.mode = replay ?<br/>yes → never posts, scored against the<br/>hidden human outcome → replay_result"}}
+    J_D_REPLAY[("replay_result: decision_point_id, decision_id,<br/>agrees, diff_json, triage · scored in CODE against<br/>human_outcome_json, which no agent tool can read")]
+    J_D_LADDER{{"Autonomy ladder for this decision kind<br/>(counts always shown)"}}
+    J_D_L_AUTO{{"auto-post: replay agreement gte 95%<br/>with n gte 5 AND a covering<br/>policy or fact in the refs"}}
+    J_D_L_REVIEW{{"post-with-review:<br/>replay agreement gte 80%"}}
+    J_D_L_SHADOW["shadow: everything else<br/>proposal shown beside the human work<br/>nothing posts without a human"]
+    J_D_MAT{{"Materiality: abs amount gte $500 (50000 cents)<br/>or new kind / new party<br/>or leftover judgment marks ?"}}
+    J_D_CTRL["Controller agent on GPT (different model family)<br/>independent reviewer: re-reads workpaper + evidence,<br/>signs J marks, approves within its authority"]
+    J_D_MATRIX{{"Approval matrix (policy memo): pick the approver<br/>whose limit gte amount · preparer excluded<br/>over limit → next authority level"}}
+    J_D_EXHAUST{{"Tier 3 rejected or budget cap hit:<br/>is there a candidate with named unknowns ?"}}
+    J_R_AUTO(("AUTO"))
+    J_R_PROPOSE(("PROPOSE"))
+    J_R_ESCALATE(("ESCALATE"))
+    J_R_REFUSE(("REFUSE"))
+    J_R_BLOCK(("BLOCK"))
+    J_PS_AUTO[("AUTO persists: decision actor = agent tier,<br/>autonomy_level auto, workpaper accept,<br/>no human touched it")]
+    J_PS_PROPOSE[("PROPOSE persists: decision pending approval,<br/>workpaper + evidence, controller note,<br/>then approver and approved_at")]
+    J_PS_ESCALATE[("ESCALATE persists: escalation row (asked_user from<br/>crm.owner, question_json naming what is NOT known,<br/>slack_ts), investigation trail,<br/>checklist_item.blocked_reason")]
+    J_PS_REFUSE[("REFUSE persists: decision kind no_action,<br/>every tool query and trace searched,<br/>guard or reason that fired · no proposal rendered")]
+    J_PS_BLOCK[("BLOCK persists: blocked attempt + rule name,<br/>approver click, the original payment and bank line,<br/>event entry.blocked")]
+    J_D_HUMAN(["Human approver in Slack<br/>approve / reject / correct<br/>workpaper and evidence attached"])
+    J_D_OWNER(["Context owner in Slack<br/>(the person who knows) answers once<br/>→ escalation.answer_json"])
+    J_D_REGATE{{"Post gate, EVERY post: kernel re-run with approver<br/>identity (human, controller agent, or none for AUTO)<br/>P marks + the 6 hard BLOCK rules<br/>a human click cannot override"}}
+  end
+
+  subgraph J_SG7["7 · Post and ripple"]
+    J_POST["Post: one SQLite transaction<br/>source_decision_id links entry → decision → intent"]
+    J_GL[("LOCAL LEDGER = system of record<br/>gl_entry: id, period, date, source_decision_id, memo<br/>gl_line: entry_id, account, debit_cents,<br/>credit_cents, customer_id, vendor_id")]
+    J_ART[("artifact: decision_id, intent_id, function,<br/>system, external_id, kind, created_at, unwound_at")]
+    J_QBO["One-way QuickBooks mirror (local → QBO only)<br/>native Invoice / Payment / CreditMemo / Bill<br/>where cheap · else JournalEntry<br/>idempotent on fn: external id"]
+    J_QBO_X["Credit memo applied via a zero-amount Payment<br/>linking both · workpaper + source email attached<br/>via Attachable (AttachableRef.EntityRef)"]
+    J_EVENT[("event on the bus: ts, topic, from_function,<br/>intent_id, payload_json · e.g. ar.credit_memo.posted<br/>consumed by revenue, forecast, close, audit")]
+    J_CHECK[("checklist_item ticked via close.mark:<br/>status, decision_ids_json")]
+    J_TRACE_CLOSE["Trace closed: model_calls, cost_micros,<br/>latency by tier finalised<br/>timeline visible in the console"]
+    J_FACTCAND["record_fact_candidate(fact): predicate,<br/>value_json, scope_json, valid_from / valid_to,<br/>learned_at, source_trace_ids_json, stated_by"]
+    J_FACT[("fact approved: approved_by = the authorised answerer,<br/>else the controller (sheet 05) · status → active<br/>inherits the authority ceiling of its approver (G-04)<br/>read by tier 0 and memory.* tools")]
+    J_INVALID{{"Evidence-changed hook (H-6 / F-06): a cited trace is<br/>re-versioned (same external_id, new recorded_time)<br/>→ decisions citing trace_id reopened, verdict stale,<br/>artifact.unwound_at set → re-run, route ESCALATE"}}
+  end
+
+  %% 1 intake
+  J_IN --> J_INTENT
+  J_INTENT --> J_DECISION
+  J_DECISION --> J_METER
+  J_METER --> J_BUDGET
+  J_BUDGET --> J_AUTLOOKUP
+  J_BUDGET -. "cap hit mid-run" .-> J_D_EXHAUST
+  J_AUTLOOKUP --> J_T0_LOOKUP
+
+  %% 2 router
+  J_T0_LOOKUP --> J_T0_VALID
+  J_T0_VALID -- "none, or expired" --> J_TIER_PICK
+  J_T0_VALID -- "yes" --> J_T0_SCOPE
+  J_T0_SCOPE -- "out of scope" --> J_TIER_PICK
+  J_T0_SCOPE -- "yes" --> J_T0_AUTH
+  J_T0_AUTH -- "above ceiling: rule not applied" --> J_TIER_PICK
+  J_T0_AUTH -- "yes" --> J_T0_BUILD
+  J_TIER_PICK --> J_T1
+  J_TIER_PICK --> J_T2
+  J_TIER_PICK --> J_T3
+  J_T1_FT -. "replaces when trained" .-> J_T1
+  J_T1 -. "usage" .-> J_TIER_METER
+  J_T2 -. "usage" .-> J_TIER_METER
+  J_T3 -. "usage" .-> J_TIER_METER
+  J_T1 --> J_INV
+  J_T2 --> J_INV
+  J_T3 --> J_INV
+  J_T0_BUILD -- "skips the investigator" --> J_PROPOSE
+
+  %% 3 investigator
+  J_MAYNOT --> J_INV
+  J_ASOF --> J_INV
+  J_INV --> J_R1
+  J_R1 --> J_R2
+  J_R2 --> J_TL_LEDGER
+  J_R2 --> J_TL_COMMS
+  J_R2 --> J_TL_FN
+  J_TL_LEDGER --> J_R4
+  J_TL_COMMS --> J_R4
+  J_TL_FN --> J_R4
+  J_R4 --> J_EVID
+  J_EVID --> J_EMPTY
+
+  %% 4 proposal + workpaper
+  J_EMPTY -- "content present" --> J_WRITE
+  J_EMPTY -- "empty or truncated" --> J_R_REFUSE
+  J_WRITE -- "propose_entry" --> J_PROPOSE
+  J_WRITE -- "escalate(question): blocked on context" --> J_R_ESCALATE
+  J_WRITE -- "finish, nothing found" --> J_R_REFUSE
+  J_PROPOSE --> J_P_KIND
+  J_PROPOSE --> J_P_BODY
+  J_PROPOSE --> J_P_EVID
+  J_PROPOSE --> J_P_REFS
+  J_P_KIND --> J_ZOD
+  J_P_BODY == "proposal_json" ==> J_ZOD
+  J_P_EVID --> J_ZOD
+  J_P_REFS --> J_ZOD
+  J_ZOD == "valid" ==> J_FISCAL
+  J_ZOD -- "schema fail" --> J_ESC_RULE
+  J_FISCAL -- "date outside window" --> J_R_REFUSE
+  J_FISCAL == "in window" ==> J_WP
+  J_WP == "marks to re-perform" ==> J_K_IN
+
+  %% 5 kernel
+  J_K_IN --> J_KF1
+  J_KF1 --> J_KF2
+  J_KF2 --> J_KF3
+  J_KF3 --> J_KF4
+  J_KF4 --> J_KF5
+  J_KF5 --> J_KF6
+  J_K_IN --> J_KE1
+  J_KE1 --> J_KE2
+  J_KE2 --> J_KE3
+  J_KE3 --> J_KE4
+  J_KE4 --> J_KE5
+  J_K_IN --> J_KP1
+  J_KP1 --> J_KP2
+  J_KP2 --> J_KP3
+  J_KP3 --> J_KP4
+  J_KP4 --> J_KP5
+  J_KP5 --> J_KP6
+  J_K_IN --> J_KJ1
+  J_KJ1 --> J_KJ2
+  J_KJ2 --> J_KJ3
+  J_K_IN --> J_KH1
+  J_KH1 --> J_KH2
+  J_KH2 --> J_KH3
+  J_KH3 --> J_KH4
+  J_KH4 --> J_KH5
+  J_KH5 --> J_KH6
+  J_KF6 -- "F marks" --> J_K_VERDICT
+  J_KE5 -- "E marks" --> J_K_VERDICT
+  J_KP6 -- "P marks" --> J_K_VERDICT
+  J_KJ3 -- "J marks" --> J_K_VERDICT
+  J_KH6 -- "no rule hit" --> J_K_VERDICT
+  J_KH6 -- "any rule hit" --> J_R_BLOCK
+  J_K_VERDICT --> J_K_FRAC
+  J_K_VERDICT -- "reject + failed marks" --> J_ESC_RULE
+  J_ESC_RULE -. "next tier re-runs the decision" .-> J_TIER_PICK
+  J_ESC_RULE -- "tier 3 already rejected" --> J_D_EXHAUST
+  J_K_VERDICT == "accept" ==> J_D_MODE
+
+  %% 6 disposition
+  J_D_MODE == "live" ==> J_D_LADDER
+  J_D_MODE -. "replay: never posts" .-> J_D_REPLAY
+  J_D_LADDER == "level auto" ==> J_D_L_AUTO
+  J_D_LADDER -- "level review" --> J_D_L_REVIEW
+  J_D_LADDER -- "else" --> J_D_L_SHADOW
+  J_D_L_AUTO == "holds" ==> J_D_MAT
+  J_D_L_AUTO -- "does not hold: no covering ref, or n under 5" --> J_D_L_REVIEW
+  J_D_MAT == "under $500, known, no J marks left" ==> J_R_AUTO
+  J_D_MAT -- "material, new, or J marks left" --> J_D_CTRL
+  J_D_L_REVIEW --> J_D_CTRL
+  J_D_L_SHADOW --> J_R_PROPOSE
+  J_D_CTRL -- "agrees, under $500, within its authority" --> J_R_AUTO
+  J_D_CTRL -- "agrees, needs a human approver" --> J_D_MATRIX
+  J_D_CTRL -- "disagrees: both views handed over" --> J_R_ESCALATE
+  J_D_MATRIX --> J_R_PROPOSE
+  J_D_EXHAUST -- "yes" --> J_R_ESCALATE
+  J_D_EXHAUST -- "no: lists everywhere it looked" --> J_R_REFUSE
+  J_R_AUTO --> J_PS_AUTO
+  J_R_PROPOSE --> J_PS_PROPOSE
+  J_R_ESCALATE --> J_PS_ESCALATE
+  J_R_REFUSE --> J_PS_REFUSE
+  J_R_BLOCK --> J_PS_BLOCK
+  J_PS_PROPOSE --> J_D_HUMAN
+  J_PS_ESCALATE --> J_D_OWNER
+  J_D_HUMAN -- "approve" --> J_D_REGATE
+  J_D_REGATE -- "hard rule hit, even if approved" --> J_R_BLOCK
+  J_D_REGATE == "passes" ==> J_POST
+  J_R_AUTO == "post unattended: same post gate" ==> J_D_REGATE
+  J_D_HUMAN -. "reject or correct → correction recorded" .-> J_FACTCAND
+  J_D_OWNER -. "answer" .-> J_FACTCAND
+  J_D_OWNER -. "answered: THIS decision resumes, answer cited as evidence (KP4)" .-> J_TIER_PICK
+
+  %% 7 post and ripple
+  J_POST == "gl_entry + gl_line" ==> J_GL
+  J_GL == "accepted entries only" ==> J_QBO
+  J_QBO --> J_QBO_X
+  J_POST --> J_ART
+  J_QBO_X -. "external_id" .-> J_ART
+  J_POST --> J_EVENT
+  J_POST --> J_CHECK
+  J_POST --> J_TRACE_CLOSE
+  J_POST -. "new context learned" .-> J_FACTCAND
+  J_FACTCAND -. "candidate → approval" .-> J_FACT
+  J_FACT -. "next time: tier 0 applies it, asked once" .-> J_T0_LOOKUP
+  J_ART -. "cited trace changed" .-> J_INVALID
+  J_INVALID -. "re-run" .-> J_R_ESCALATE
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class J_IN src
+  class J_METER,J_T0_LOOKUP,J_T0_BUILD,J_TIER_METER,J_R1,J_R2,J_R4,J_TL_LEDGER,J_TL_COMMS,J_TL_FN,J_EVID,J_PROPOSE,J_P_KIND,J_P_BODY,J_P_EVID,J_P_REFS,J_K_IN,J_K_FRAC,J_D_L_SHADOW,J_POST,J_TRACE_CLOSE code
+  class J_T1,J_T2,J_T3,J_INV,J_D_CTRL model
+  class J_D_HUMAN,J_D_OWNER human
+  class J_INTENT,J_DECISION,J_WP,J_PS_AUTO,J_PS_PROPOSE,J_PS_ESCALATE,J_PS_REFUSE,J_PS_BLOCK,J_GL,J_ART,J_EVENT,J_CHECK,J_D_REPLAY store
+  class J_BUDGET,J_AUTLOOKUP,J_T0_VALID,J_T0_SCOPE,J_T0_AUTH,J_TIER_PICK,J_ESC_RULE,J_MAYNOT,J_ASOF,J_EMPTY,J_WRITE,J_ZOD,J_FISCAL,J_KF1,J_KF2,J_KF3,J_KF4,J_KF5,J_KF6,J_KE1,J_KE2,J_KE3,J_KE4,J_KE5,J_KP1,J_KP2,J_KP3,J_KP4,J_KP5,J_KP6,J_KJ1,J_KJ2,J_KJ3,J_KH1,J_KH2,J_KH3,J_KH4,J_KH5,J_KH6,J_K_VERDICT,J_D_MODE,J_D_LADDER,J_D_L_AUTO,J_D_L_REVIEW,J_D_MAT,J_D_MATRIX,J_D_REGATE,J_D_EXHAUST gate
+  class J_FACTCAND,J_FACT,J_INVALID learn
+  class J_QBO,J_QBO_X ext
+  class J_R_AUTO rAuto
+  class J_R_PROPOSE rPropose
+  class J_R_ESCALATE rEscalate
+  class J_R_REFUSE rRefuse
+  class J_R_BLOCK rBlock
+  class J_T1_FT stretch

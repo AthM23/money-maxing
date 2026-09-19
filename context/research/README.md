@@ -12,6 +12,7 @@ Research behind the build, gathered on 19 Sep 2026 by Karan with a Claude Code s
 | [sandboxes-and-connectors.md](sandboxes-and-connectors.md) | QuickBooks, bank, Gmail, Slack, HubSpot, Stripe: what is confirmed, plus API quirks | Mixed; each line says which |
 | [plan-reasoning.md](plan-reasoning.md) | The earlier order-to-cash plan: how the slides and open questions map to the kernel, workpapers, intent, replay and compile | Superseded in scope, current in mechanism |
 | [finance-pain-points.md](finance-pain-points.md) | Ten finance-team pain points with sourced numbers, why each hurts a $50M-$500M company, a plantable demo scenario for each, and a list of circulating claims that failed verification | Research agent, every number linked; vendor surveys labeled |
+| [architecture-briefs/](architecture-briefs/) | Seven briefs written for the architecture board: ingestion and context graph, AR / bank rec / AP, revenue / close / forecast / reporting, audit / equity-lite / payroll, self-improvement loops, open-weight fine-tuning, testing and benchmarking. Each lists triggers, ordered deterministic stages, kernel checks, output cases mapped to corpus ids, and corrections to the spec | Research agents, web-checked against primary sources where they would load; unconfirmed items marked UNVERIFIED in each file |
 | [hackathon-logistics.md](hackathon-logistics.md) | Deadlines, judging, stackable prizes and what each needs | From HackMIT's docs |
 
 Corrections to earlier notes are recorded in the status log, not edited into other people's files.

@@ -1,0 +1,322 @@
+flowchart TB
+
+  CG_NOTE["schema ideas borrowed from Graphiti bi-temporal edges<br/>and Neo4j context-graph post<br/>products not used (rejected 09-19) · hand-rolled in SQLite"]
+
+  subgraph CG_SG6["6 · Write paths into the graph (agents never write tables directly)"]
+    CG_W_SYNC["Connector sync → ingestion commit (stage 9)<br/>one SQLite transaction: trace rows, domain rows,<br/>edge rows, cursor advance, event topic ingest.committed"]
+    CG_W_INVEST["Investigator evidence hits<br/>every read-tool hit kept on the decision trace:<br/>tool, query, trace_id, quoted span, cost, latency"]
+    CG_W_HUMAN(["Human answer in Slack<br/>verbatim reply kept as a trace, answer_json stored,<br/>then record_fact_candidate(fact)"])
+    CG_W_COMPILE["Compile (learning loop)<br/>2 or more agreeing decisions → policy candidate<br/>COMPILED_FROM edges + backtest_json"]
+    CG_W_POST["Posting: kernel accept → gl_entry + gl_line<br/>then one-way QuickBooks mirror → artifact row<br/>external_id tagged fn: (echo suppression on sync)"]
+    CG_W_REPLAY["Replay of human-closed Q2 (Apr-Jun 2026)<br/>writes decision_point and replay_result<br/>human_outcome_json never reachable by agent tools"]
+  end
+
+  subgraph CG_SG1["1 · Entity layer: what exists (SQLite tables are the nodes, relations are rows in edge, traversal by recursive CTE under 5 hops)"]
+    CG_DEAL[/"CRM deal (HubSpot test account)<br/>amount, closedate, stage, owner<br/>kept as trace kind deal, ABOUT party"/]
+    CG_CONTRACT[("contract<br/>terms, price escalator (month 13), renewal date,<br/>source_trace_id → clause traces")]
+    CG_PARTY[("party · proposed schema addition<br/>replaces customer and vendor, adds employee<br/>id = STABLE KEY, kind, legal_name, norm_name,<br/>status, merged_into_party_id (no deletes, B-18)")]
+    CG_PARTY_XID[("party_external_id · proposed schema addition<br/>party_id, system, external_id: QBO Id, HubSpot id,<br/>email domain, ACH originator id, debtor acct hash")]
+    CG_PARTY_ALIAS[("party_alias · proposed schema addition<br/>alias_raw, alias_norm, source, confidence, confirmed_by<br/>GUSTO PAYROLL and GUSTO TAX COLLECTION<br/>→ one party_id (A-09, H-3)")]
+    CG_PARTY_LINK[("party_link · proposed schema addition<br/>parent_party_id, child_party_id, valid_from, valid_to<br/>kind: parent_of / pays_for / same_group")]
+    CG_PERSON[("person and role · proposed schema addition<br/>slack_user_id, role, approval_ceiling_cents,<br/>functions_json, valid_from / valid_to<br/>loaded from the approval matrix in the policy memo")]
+    CG_INVOICE[("invoice<br/>party_id, contract_id, amount_cents, due date,<br/>open balance, source_trace_id")]
+    CG_PO[("po<br/>vendor party_id, lines, qty, unit price cents")]
+    CG_RECEIPT[("receipt<br/>po_id, qty received, received date")]
+    CG_BILL[("bill<br/>vendor party_id, bill number, amount_cents,<br/>bill date vs service period (cutoff)")]
+    CG_BANKTXN[("bank_txn<br/>amount_cents, descriptor, party_id<br/>proposed schema addition: posted_date, value_date,<br/>currency exponent (match on value, report on posted)")]
+    CG_PAYROLL[("payroll_run<br/>register total cents, pay date, employee party ids")]
+    CG_GRANT[("grant (STRETCH: equity-lite, pack 9)<br/>employee party, board consent trace,<br/>vesting schedule, 409A valuation date")]
+    CG_EDGE[("edge · proposed schema addition (generic, bi-temporal)<br/>src_type, src_id, rel, dst_type, dst_id,<br/>valid_from, valid_to (world) · recorded_at, expired_at<br/>(system) · source_trace_id, created_by_decision_id")]
+  end
+
+  subgraph CG_SG2["2 · Decision-trace layer: what happened and why"]
+    CG_TRACE[("trace (evidence, the raw episode, never lossy)<br/>id, source, kind, external_id, party_id, payload_json<br/>THREE CLOCKS: event_time · recorded_time ·<br/>ingested_at (proposed schema addition)")]
+    CG_TRACE_ADD[("trace · proposed schema addition<br/>version, content_hash, supersedes_trace_id,<br/>extraction_confidence, party_match_confidence,<br/>visible_to_json · UNIQUE(source, source_id, version)")]
+    CG_INTENT[("intent (first-class state: the question)<br/>id, parent_id, function, question, owner, status,<br/>end_condition_json, created_at, closed_at")]
+    CG_INTENT_CHILD[("child intent in another function (parent_id set)<br/>e.g. revenue: revise schedule for INV-1042<br/>forecast: minus $1,200 a month through renewal")]
+    CG_DPOINT[("decision_point (replay only)<br/>function, period, kind, trace_ids_json,<br/>human_outcome_json (hidden), decided_at")]
+    CG_DEC_PRIOR[("prior decision<br/>same kind, nearby features,<br/>with outcome and approver")]
+    CG_DECISION[("decision<br/>id, intent_id, function, kind, mode: live or replay,<br/>decision_point_id, proposal_json, actor,<br/>autonomy_level, model_calls, cost_micros")]
+    CG_DEC_ADD[("decision · proposed schema addition<br/>router tier used (0 to 3), as_of T,<br/>context_snapshot_json: open balance, active fact ids")]
+    CG_WORKPAPER[("workpaper<br/>decision_id, marks_json: F formal · E evidence ·<br/>P process · J judgment, kernel_verdict, checkable_num<br/>/ checkable_den · proposed schema addition: stale")]
+    CG_ARTIFACT[("artifact<br/>decision_id, intent_id, function, system, external_id,<br/>kind, created_at, unwound_at<br/>e.g. QBO CreditMemo, Gmail message, Slack post")]
+    CG_ESCALATION[("escalation<br/>decision_id, asked_user, question_json, answer_json,<br/>asked_at, answered_at, slack_ts")]
+    CG_RRESULT[("replay_result<br/>decision_point_id, decision_id, agrees,<br/>diff_json, triage")]
+  end
+
+  subgraph CG_SG1B["1b · Entity layer, local ledger: system of record for the run (integer cents)"]
+    CG_GLENTRY[("gl_entry<br/>id, period, date, source_decision_id, memo")]
+    CG_GLLINE[("gl_line<br/>entry_id, account, debit_cents, credit_cents,<br/>customer_id, vendor_id (→ party_id)")]
+    CG_PERIOD[("period<br/>id, status: open / closing / locked")]
+  end
+
+  subgraph CG_SG3["3 · Knowledge layer in three tiers (judge interview section 8)"]
+    subgraph CG_SG3A["3a · UNIVERSAL: law and GAAP, same for everyone"]
+      CG_U_FORMAL["debits = credits<br/>subledgers = GL control accounts<br/>(kernel F)"]
+      CG_U_606["ASC 606 five steps<br/>schedule sums to contract value,<br/>GAAP cutoff"]
+      CG_U_LOCK["period lock<br/>nothing posts after lock (G-03)<br/>(kernel P)"]
+      CG_U_SOD["segregation of duties<br/>preparer is not approver (G-02)<br/>enforced at the storage layer"]
+      CG_U_EQUITY["409A 12-month window · ISO $100K<br/>· Rule 701 checks<br/>(STRETCH: equity-lite)"]
+      CG_U_WHO{{"Who may change it: NOBODY at runtime<br/>shipped as kernel code and constants, release only<br/>no human answer can override · violation → BLOCK<br/>portable to every deployment"}}
+    end
+    subgraph CG_SG3B["3b · VERTICAL: B2B SaaS norms"]
+      CG_V_PREPAY["annual prepay → deferred revenue<br/>ratable recognition by default"]
+      CG_V_NET30["net-30 payment terms<br/>as the default expectation"]
+      CG_V_UPLIFT["renewal uplift<br/>month-13 price escalator"]
+      CG_V_USAGE["usage true-ups<br/>billed in arrears"]
+      CG_V_WHO["Who may change it: shipped policy pack<br/>policy rows with tier = vertical<br/>controller may override per company<br/>portable to the next SaaS deployment"]
+    end
+    subgraph CG_SG3C["3c · COMPANY-SPECIFIC: Northwind Systems"]
+      CG_C_MEMO[/"Northwind policy memo (markdown file)<br/>materiality $500 · approval matrix · accrual rules<br/>sections load as policy candidates"/]
+      CG_C_FACT["learned FACT<br/>Initech: 10% off through renewal<br/>stated by CEO, email of 28 Jun"]
+      CG_C_POLICY["learned POLICY<br/>wire-fee short-pay under a threshold → write_off<br/>to bank charges · compiled from Q2 replay"]
+      CG_C_ALIAS["learned master data<br/>confirmed aliases, pays_for links"]
+      CG_C_WHO["Who may change it: learned continuously<br/>always scoped, approved by a person with authority<br/>not portable by default"]
+    end
+    CG_PREC_TIER{{"Precedence 1 · a universal constraint ALWAYS wins<br/>a company fact can only NARROW a universal rule,<br/>never override it · vertical norms are defaults only<br/>for controls the most restrictive rule wins"}}
+    CG_PREC_SCOPE{{"Precedence 2 · among facts and policies<br/>most specific scope wins: party+contract, party,<br/>party class, company, vertical default<br/>then higher approver authority, then latest learned_at"}}
+    CG_PREC_ESC(("ESCALATE"))
+  end
+
+  subgraph CG_SG4["4 · Fact and policy anatomy (spec 7 fields + proposed additions)"]
+    subgraph CG_SG4A["4a · fact: one scoped, dated statement about one party"]
+      CG_FACT[("fact (spec 7)<br/>id, party_id, predicate, value_json, scope_json,<br/>valid_from, valid_to, learned_at,<br/>source_trace_ids_json, stated_by, approved_by, status")]
+      CG_F_SCOPE["scope_json: WHERE it may be applied<br/>party / contract / decision kind / document class,<br/>function, max amount"]
+      CG_F_VALID["valid_from / valid_to: TRUE IN THE WORLD<br/>e.g. 28 Jun 2026 → Initech renewal date<br/>must end: no open-ended facts"]
+      CG_F_LEARNED["learned_at: WHEN WE KNEW (system time)<br/>an answer given on 19 Sep about June<br/>has valid_from in June, learned_at 19 Sep"]
+      CG_F_BITEMP{{"Bi-temporal as-of query (code)<br/>what did we know on 30 June?<br/>valid_from lte date lt valid_to AND learned_at lte T<br/>→ no look-ahead in replay"}}
+      CG_F_PROV["source_trace_ids_json · stated_by · approved_by<br/>EVIDENCED_BY trace (quote is a substring)<br/>STATED_BY and APPROVED_BY person"]
+      CG_F_ADD_EXPL[("proposed schema addition<br/>explained_amount: predicate yields an expected delta<br/>pct_off 10 on $144,000 → $14,400<br/>a fact suppresses ONLY the amount it explains")]
+      CG_F_ADD_VER[("proposed schema addition<br/>tier on fact, expired_at, supersedes_fact_id,<br/>policy version + supersedes_policy_id")]
+      CG_F_ADD_CEIL[("proposed schema addition<br/>authority_ceiling_cents on fact and policy<br/>inherited from the approver at approval time (G-04)<br/>amount above the ceiling → does not apply")]
+    end
+    subgraph CG_SG4B["4b · policy: compiled repeated judgment, runs as code"]
+      CG_POLICY[("policy (spec 7)<br/>id, function, name, condition_json, action_json,<br/>intent_text, tier, backtest_json, status,<br/>approved_by, approved_at")]
+      CG_P_COND["condition_json → action_json, evaluated in code<br/>kind, party or class, amount band · intent_text = why<br/>e.g. wire-fee short-pay lte threshold → write_off"]
+      CG_P_BACKTEST["backtest_json + COMPILED_FROM decisions<br/>source decisions quoted verbatim,<br/>agreement over every closed period, with n"]
+      CG_P_ADD_FIRE[("proposed schema addition<br/>fire_count_by_period → decay detector: zero fires<br/>while the party still has bank activity<br/>→ drift row (A-09)")]
+      CG_F_ADD_PIN[("proposed schema addition<br/>stable-key pinning (G-09) on fact and policy:<br/>party_id or party class,<br/>never a bank descriptor substring")]
+    end
+  end
+
+  subgraph CG_SG5["5 · Lifecycle of a fact or policy (status column)"]
+    CG_L_CAND["candidate<br/>from record_fact_candidate, the compiler,<br/>or a policy-memo section · never applied"]
+    CG_L_GUARDS{{"Adoption guards (code) · fail → stays candidate<br/>policy: 2 agreeing decisions quoted (G-05, REFUSE),<br/>backtest passes all closed periods (G-06, BLOCK),<br/>tolerance clamped (G-08), stable-key pin (G-09)"}}
+    CG_L_APPROVER(["Approver with authority<br/>person.approval_ceiling_cents gte amount<br/>named on the row as approved_by"])
+    CG_L_APPROVED["approved<br/>approved_by + approved_at set<br/>authority ceiling copied from the approver (G-04)"]
+    CG_L_ACTIVE["active<br/>while valid_from lte date lt valid_to<br/>and learned_at lte T"]
+    CG_L_EXPIRED["expired<br/>valid_to passes (Initech renewal date)<br/>the drift it explained reappears by itself"]
+    CG_L_SUPERSEDED["superseded (G-07)<br/>contradicting answer → NEW row, supersedes id set<br/>old row gets valid_to / expired_at"]
+    CG_L_INVALID["invalidated / suspended (H-6, A-24)<br/>source trace re-versioned → walk EVIDENCED_BY:<br/>fact suspended, workpapers stale, intent opened"]
+    CG_L_NOEDIT{{"Versioning never edits in place (G-07)<br/>rows are append-only, history stays queryable<br/>one human statement about one party may become<br/>a fact, never a policy"}}
+  end
+
+  subgraph CG_SG7["7 · Read path: retrieval order for an investigator (all as-of T)"]
+    CG_R_START["Investigator receives an intent<br/>party_id, decision kind, document date, amount_cents"]
+    CG_R_ASOF{{"As-of filter on EVERY read<br/>live: T = now · replay: T = decision_point.decided_at<br/>recorded_time lte T and learned_at lte T<br/>enforced in tool SQL and again in kernel E"}}
+    CG_R_RULE{{"Hard rule: applicability is decided by CODE,<br/>never by the model · model output and precedent<br/>never outrank a fact or policy"}}
+    CG_R1{{"Step 1 · scope match IN CODE, no model<br/>SQL over active fact and policy rows: party (plus<br/>parents via party_link), kind, date in valid time,<br/>amount lte ceiling · memory.facts, memory.policies"}}
+    CG_R1_HIT["Hit → fact_refs / policy_refs on the Proposal<br/>router takes tier 0, no model call"]
+    CG_R2["Step 2 · written sources by key<br/>policy_memo.lookup · contracts.find_clause<br/>+ graph neighbourhood 1 to 2 hops: open invoices,<br/>recent bank_txn, open intents, prior escalations"]
+    CG_R3["Step 3a · lexical search over traces<br/>SQLite FTS5 / BM25 behind mail.search, chat.search,<br/>crm.notes · bounded by party_id and date window"]
+    CG_R3B["Step 3b · semantic search over trace chunks<br/>embeddings, in-process cosine · only where words<br/>do not overlap (A-11) · STRETCH"]
+    CG_R4["Step 4 · memory.similar_decisions (precedent)<br/>same kind, nearby features, outcome and approver<br/>ADVISORY: cannot authorise posting"]
+    CG_R_FOUND["Evidence found → propose_entry + workpaper<br/>evidence: claim, trace_id, quote<br/>and record_fact_candidate for what was learned"]
+    CG_R5["Step 5 · nothing found → escalate(question)<br/>lists every place searched, query and hit count"]
+    CG_R_ESC(("ESCALATE"))
+  end
+
+  subgraph CG_SG8["8 · Consumers of the graph"]
+    CG_C_HUB{{"Shared scope matcher (code), same SQL as read step 1<br/>same precedence, same as-of T, for every consumer<br/>returns active in-scope fact and policy rows<br/>never a model deciding what applies"}}
+    CG_C_DRIFT["Drift monitor comparators (pure code, joined on party_id)<br/>deal vs contract vs invoice · invoice vs cash ·<br/>bank vs ledger · schedule vs GL · payroll vs bank"]
+    CG_C_SUPPRESS{{"Suppression is arithmetic, in code<br/>residual = delta minus sum of explained amounts<br/>abs(residual) lte tolerance → explained, no intent<br/>fact above its authority ceiling does not suppress"}}
+    CG_C_DOBS[("drift_observation · proposed schema addition<br/>comparator, expected, actual, delta,<br/>explained_by_fact_id (EXPLAINS), residual_cents,<br/>intent_id · suppressed rows stay visible to audit")]
+    CG_C_OPEN["Unexplained residual → intent opened<br/>FOR THE RESIDUAL ONLY (OPENED edge)"]
+    CG_C_ROUTER["Agent router tier 0<br/>compiled policy or fact → no model call<br/>forbidden when extraction or party-match<br/>confidence is low"]
+    CG_C_KJ{{"Kernel J checks (re-run in code at posting)<br/>each policy approved and its condition matches<br/>each fact active on the date and in scope<br/>anything left = judgment, needs sign-off"}}
+    CG_C_FORECAST["13-week forecast<br/>forecast_line.fact_id: Initech minus $1,200 a month<br/>through valid_to (renewal)"]
+    CG_C_REV["Revenue schedules (rev.schedule)<br/>terms_change pct_off until → revised schedule<br/>July revenue minus $1,200, sums to contract value"]
+    subgraph CG_SG8B["8b · Auditor agent, FENCED OFF from preparer memory (audit brief 1.8)"]
+      CG_C_FENCE{{"INDEPENDENCE FENCE<br/>auditor tool layer omits memory.facts,<br/>memory.policies and memory.similar_decisions<br/>no why-it-is-fine rationale crosses"}}
+      CG_C_AUD_PROV["ONLY crossing: audit.fact_provenance(fact_id)<br/>tests the fact as a CONTROL: approver authority,<br/>in scope, valid on the date, quote is a substring"]
+      CG_C_AUD_MAY["MAY read: trace (evidence), workpaper marks,<br/>gl_entry / gl_line, artifact, suppressed drift rows<br/>an explained hit stays eligible for sampling"]
+      CG_C_AUDITOR["Auditor agent (different model family)<br/>audit.sample · audit.rerun_kernel · audit.control_test<br/>forms its view before reading judgment notes"]
+    end
+  end
+
+  subgraph CG_SG9["9 · Views over the graph (console)"]
+    CG_V_RIPPLE["Intent ripple view<br/>one intent → every artifact in every function:<br/>AR credit memo, revenue schedule, forecast lines,<br/>flux line, close tick · SAME AMOUNTS ($1,200)"]
+    CG_V_FORCE["Force-directed graph view (demo)<br/>react-force-graph over node tables + edge rows<br/>highlight the path from email to every artifact"]
+    CG_V_WHY["Why query for an auditor<br/>start: any artifact (system + external_id,<br/>e.g. a QBO CreditMemo)<br/>recursive CTE, under 5 hops"]
+    CG_Y2["decision (CREATED_BY)<br/>kind, actor, autonomy_level,<br/>workpaper marks"]
+    CG_Y3["evidence quote (CITES)<br/>trace_id + quoted span,<br/>substring-verified"]
+    CG_Y4(["approver (APPROVED_BY person)<br/>role and approval ceiling<br/>valid at the time"])
+  end
+
+  CG_NOTE -. "schema ideas only" .-> CG_EDGE
+
+  CG_W_SYNC -- "traces (versioned, three clocks)" ---> CG_TRACE
+  CG_W_SYNC -- "domain rows + edge rows, keyed by party_id" ---> CG_CONTRACT
+  CG_W_INVEST -- "evidence hits" ---> CG_DECISION
+  CG_W_HUMAN -- "answer_json" ---> CG_ESCALATION
+  CG_W_COMPILE -. "policy candidates" ..-> CG_L_CAND
+  CG_W_POST == "accepted decision is posted: gl rows + artifact rows stamped with decision id" ===> CG_DECISION
+  CG_W_REPLAY -- "decision points" ---> CG_DPOINT
+  CG_W_REPLAY -- "agreement rows" ---> CG_RRESULT
+
+  CG_DEAL -- "ABOUT" --> CG_PARTY
+  CG_DEAL -. "deal value vs contract (drift comparator)" .-> CG_CONTRACT
+  CG_CONTRACT -- "ABOUT" --> CG_PARTY
+  CG_CONTRACT -- "GOVERNS" --> CG_INVOICE
+  CG_INVOICE -- "SETTLED_BY (amount_cents)" --> CG_BANKTXN
+  CG_BILL -- "MATCHES" --> CG_PO
+  CG_BILL -- "MATCHES" --> CG_RECEIPT
+  CG_BILL -- "SETTLED_BY" --> CG_BANKTXN
+  CG_PAYROLL -- "SETTLED_BY (register vs bank debit)" --> CG_BANKTXN
+  CG_GRANT -. "ABOUT employee" .-> CG_PARTY
+  CG_PARTY -- "has external ids" --> CG_PARTY_XID
+  CG_PARTY -- "ALIAS_OF" --> CG_PARTY_ALIAS
+  CG_PARTY -- "PARENT_OF · PAYS_FOR (party → party, dated)" --> CG_PARTY_LINK
+  CG_GLENTRY -- "HAS lines" --> CG_GLLINE
+  CG_GLENTRY -- "IN period (must be open)" --> CG_PERIOD
+
+  CG_TRACE_ADD -- "extends" --> CG_TRACE
+  CG_TRACE -- "decision CITES trace (trace_id + quoted span)" --> CG_DECISION
+  CG_TRACE -. "drift or inbound event OPENED intent" .-> CG_INTENT
+  CG_INTENT -- "decision ANSWERS intent" --> CG_DECISION
+  CG_DECISION -- "handoff on event bus: intent CAUSED intent (ripple)" --> CG_INTENT_CHILD
+  CG_DPOINT -- "replay mode: decision_point_id" --> CG_DECISION
+  CG_DEC_PRIOR -- "PRECEDENT_FOR (advisory)" --> CG_DECISION
+  CG_DECISION -- "extended by" --> CG_DEC_ADD
+  CG_DECISION -- "workpaper DOCUMENTS decision" --> CG_WORKPAPER
+  CG_DECISION == "kernel accept · artifact CREATED_BY decision" ===> CG_ARTIFACT
+  CG_DECISION -- "escalate(question) when blocked on context" --> CG_ESCALATION
+  CG_DECISION -- "compared in code with the hidden human outcome" --> CG_RRESULT
+  CG_DECISION == "gl_entry POSTED_FROM decision (source_decision_id)" ======> CG_GLENTRY
+  CG_ESCALATION -- "RESOLVED_BY person" ---> CG_PERSON
+  CG_ESCALATION -. "YIELDED: answer → fact candidate (asked once)" ..-> CG_L_CAND
+  CG_DECISION -- "APPLIED fact (kernel J re-checks)" ------> CG_FACT
+  CG_DECISION -- "APPLIED policy" ------> CG_POLICY
+
+  CG_U_FORMAL --> CG_U_WHO
+  CG_U_606 --> CG_U_WHO
+  CG_U_LOCK --> CG_U_WHO
+  CG_U_SOD --> CG_U_WHO
+  CG_U_EQUITY --> CG_U_WHO
+  CG_U_WHO -- "beats" --> CG_V_PREPAY
+  CG_U_WHO -- "beats" --> CG_V_NET30
+  CG_U_WHO -- "beats" --> CG_V_UPLIFT
+  CG_U_WHO -- "beats" --> CG_V_USAGE
+  CG_V_PREPAY --> CG_V_WHO
+  CG_V_NET30 --> CG_V_WHO
+  CG_V_UPLIFT --> CG_V_WHO
+  CG_V_USAGE --> CG_V_WHO
+  CG_V_WHO -- "default under" --> CG_C_MEMO
+  CG_V_WHO -- "default under" --> CG_C_FACT
+  CG_V_WHO -- "default under" --> CG_C_POLICY
+  CG_V_WHO -- "default under" --> CG_C_ALIAS
+  CG_C_MEMO --> CG_C_WHO
+  CG_C_FACT --> CG_C_WHO
+  CG_C_POLICY --> CG_C_WHO
+  CG_C_ALIAS --> CG_C_WHO
+  CG_C_WHO --> CG_PREC_TIER
+  CG_PREC_TIER --> CG_PREC_SCOPE
+  CG_PREC_SCOPE -- "two active facts, same scope, overlapping valid time, contradictory → no winner" --> CG_PREC_ESC
+  CG_C_FACT -. "stored as a fact row" ..-> CG_FACT
+  CG_C_POLICY -. "stored as a policy row" ..-> CG_POLICY
+
+  CG_FACT --> CG_F_SCOPE
+  CG_FACT --> CG_F_VALID
+  CG_FACT --> CG_F_LEARNED
+  CG_FACT --> CG_F_PROV
+  CG_F_VALID --> CG_F_BITEMP
+  CG_F_LEARNED --> CG_F_BITEMP
+  CG_F_SCOPE --> CG_F_ADD_EXPL
+  CG_F_PROV --> CG_F_ADD_CEIL
+  CG_FACT --> CG_F_ADD_VER
+  CG_POLICY --> CG_P_COND
+  CG_POLICY --> CG_P_BACKTEST
+  CG_POLICY --> CG_P_ADD_FIRE
+  CG_P_COND --> CG_F_ADD_PIN
+
+  CG_F_ADD_VER -- "status column" ----> CG_L_CAND
+  CG_L_CAND --> CG_L_GUARDS
+  CG_L_GUARDS -- "pass" --> CG_L_APPROVER
+  CG_L_APPROVER -- "approves" --> CG_L_APPROVED
+  CG_L_APPROVED -- "emits fact.activated" --> CG_L_ACTIVE
+  CG_L_ACTIVE -- "date passes valid_to" --> CG_L_EXPIRED
+  CG_L_ACTIVE -- "contradicting correction" --> CG_L_SUPERSEDED
+  CG_L_ACTIVE -- "evidence re-versioned" --> CG_L_INVALID
+  CG_L_SUPERSEDED --> CG_L_NOEDIT
+  CG_L_INVALID --> CG_L_NOEDIT
+  CG_TRACE_ADD -. "supersedes_trace_id → stage 10 invalidation · evidence.reversioned" ..-> CG_L_INVALID
+
+  CG_R_START --> CG_R_ASOF
+  CG_R_ASOF --> CG_R1
+  CG_R_RULE --> CG_R1
+  CG_L_ACTIVE -- "active rows only" ---> CG_R1
+  CG_F_BITEMP -- "as-of predicate" ---> CG_R_ASOF
+  CG_PREC_SCOPE -- "precedence applied inside the matcher" ---> CG_R1
+  CG_R1 -- "hit" --> CG_R1_HIT
+  CG_R1 -- "miss" --> CG_R2
+  CG_R2 -- "miss" --> CG_R3
+  CG_R3 -- "miss" --> CG_R3B
+  CG_R3B -- "miss" --> CG_R4
+  CG_R3B -- "found" --> CG_R_FOUND
+  CG_R4 -- "miss" --> CG_R5
+  CG_R5 --> CG_R_ESC
+  CG_R2 -- "found" --> CG_R_FOUND
+  CG_R3 -- "found" --> CG_R_FOUND
+  CG_R4 -- "precedent informs the proposal" --> CG_R_FOUND
+  CG_R_FOUND -- "refs and quotes re-checked in code at posting" --> CG_C_KJ
+  CG_R1_HIT --> CG_C_ROUTER
+
+  CG_R1 -- "same matcher" ---> CG_C_HUB
+  CG_C_HUB -- "active in-scope facts for party and period" --> CG_C_DRIFT
+  CG_C_HUB -- "fact_refs and policy_refs re-checked" --> CG_C_KJ
+  CG_C_HUB -- "hit → tier 0" --> CG_C_ROUTER
+  CG_C_HUB -- "facts with terms_change" --> CG_C_REV
+  CG_C_HUB -- "fact_id" --> CG_C_FORECAST
+  CG_C_DRIFT -- "delta_cents + explained amounts" --> CG_C_SUPPRESS
+  CG_C_SUPPRESS -- "explained" --> CG_C_DOBS
+  CG_C_SUPPRESS -- "residual" --> CG_C_OPEN
+  CG_L_ACTIVE -. "rationale may NOT be read" ..-> CG_C_FENCE
+  CG_C_FENCE -- "provenance test only" --> CG_C_AUD_PROV
+  CG_C_AUD_PROV --> CG_C_AUDITOR
+  CG_C_AUD_MAY --> CG_C_AUDITOR
+  CG_C_DOBS -- "suppressed rows" --> CG_C_AUD_MAY
+  CG_WORKPAPER -- "evidence and workpapers" ---> CG_C_AUD_MAY
+
+  CG_C_REV -- "artifacts share intent_id" --> CG_V_RIPPLE
+  CG_C_FORECAST -- "artifacts share intent_id" --> CG_V_RIPPLE
+  CG_C_OPEN -. "nodes + edge rows" .-> CG_V_FORCE
+  CG_C_AUDITOR -- "asks why" --> CG_V_WHY
+  CG_V_WHY --> CG_Y2
+  CG_Y2 --> CG_Y3
+  CG_Y3 --> CG_Y4
+
+  classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+  classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+  classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+  classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+  classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+  classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+  classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+  classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+  classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+  classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+  classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+  classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+  classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+  classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+  class CG_NOTE ext
+  class CG_DEAL,CG_C_MEMO src
+  class CG_W_SYNC,CG_W_POST,CG_W_REPLAY,CG_R_START,CG_R1_HIT,CG_R2,CG_R3,CG_R_FOUND,CG_R5,CG_C_DRIFT,CG_C_OPEN,CG_C_ROUTER,CG_C_FORECAST,CG_C_REV,CG_C_AUD_PROV,CG_C_AUD_MAY,CG_V_RIPPLE,CG_V_FORCE,CG_V_WHY,CG_Y2,CG_Y3,CG_F_SCOPE,CG_F_VALID,CG_F_LEARNED,CG_F_PROV,CG_P_COND,CG_V_PREPAY,CG_V_NET30,CG_V_UPLIFT,CG_V_USAGE,CG_V_WHO code
+  class CG_W_INVEST,CG_C_AUDITOR,CG_R4 model
+  class CG_W_HUMAN,CG_L_APPROVER,CG_Y4 human
+  class CG_CONTRACT,CG_PARTY,CG_PARTY_XID,CG_PARTY_ALIAS,CG_PARTY_LINK,CG_PERSON,CG_INVOICE,CG_PO,CG_RECEIPT,CG_BILL,CG_BANKTXN,CG_PAYROLL,CG_GLENTRY,CG_GLLINE,CG_PERIOD,CG_EDGE,CG_TRACE,CG_TRACE_ADD,CG_INTENT,CG_INTENT_CHILD,CG_DPOINT,CG_DEC_PRIOR,CG_DECISION,CG_DEC_ADD,CG_WORKPAPER,CG_ARTIFACT,CG_ESCALATION,CG_RRESULT,CG_FACT,CG_POLICY,CG_F_ADD_CEIL,CG_F_ADD_PIN,CG_F_ADD_EXPL,CG_F_ADD_VER,CG_P_ADD_FIRE,CG_C_DOBS store
+  class CG_U_FORMAL,CG_U_606,CG_U_LOCK,CG_U_SOD,CG_U_WHO,CG_PREC_TIER,CG_PREC_SCOPE,CG_F_BITEMP,CG_L_GUARDS,CG_L_NOEDIT,CG_R_ASOF,CG_R_RULE,CG_R1,CG_C_SUPPRESS,CG_C_KJ,CG_C_FENCE,CG_C_HUB gate
+  class CG_W_COMPILE,CG_C_FACT,CG_C_POLICY,CG_C_ALIAS,CG_C_WHO,CG_P_BACKTEST,CG_L_CAND,CG_L_APPROVED,CG_L_ACTIVE,CG_L_EXPIRED,CG_L_SUPERSEDED,CG_L_INVALID learn
+  class CG_PREC_ESC,CG_R_ESC rEscalate
+  class CG_GRANT,CG_U_EQUITY,CG_R3B stretch
