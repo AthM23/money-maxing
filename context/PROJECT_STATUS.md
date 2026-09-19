@@ -9,7 +9,7 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~17:10 ET |
+| **Last updated** | 2026-09-19 ~17:40 ET |
 | **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
 | **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
@@ -118,3 +118,17 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
 - Tried and rejected table filled in with today's abandoned directions.
 - Not added on purpose: photos from the workshop (they show a person), and tracker files containing the venue Wi-Fi password and personal contact details.
 - Blocked on humans: team sign-off on the proposed direction; Intuit developer app and OAuth token; decision on the bank feed (Increase sandbox vs file); who owns which lane.
+
+### 2026-09-19 ~17:40 ET — Spec v3: the team's whiteboard plan folded in (Karan + Claude Code session)
+
+- The team's whiteboard plan had three stages: workflow context (emails, Slack, connectors, md files), finding the reason (off numbers, look through receipts), custom agents (low token cost, low latency); plus "compare data sets", equity, invoice generator, traces like LangSmith, fine-tune a model.
+- Mapped into [`PROJECT_SPEC.md`](./PROJECT_SPEC.md) v3:
+  - **Drift monitor** is now the front door ("compare data sets"): deterministic comparators across contract, CRM, invoice, bank, ledger and forecast; a known fact suppresses an expected difference, anything else opens an intent.
+  - **Real connectors, all seeded** from one canonical world file with planted drift, a manifest, a reset command and an answer key agents cannot read (spec section 6b). HubSpot moved from local to real.
+  - **Custom agent router**: compiled rule → small model → frontier model, escalating when the kernel rejects. Fine-tuning a small model on kernel-verified traces is a stretch item, first thing cut.
+  - **Decision traces** stored per decision and shown as a timeline; they are also the replay and training data.
+  - **Equity-lite** added as a ninth function, last in build order, labeled as a stretch.
+  - New section "What Maximor already ships, and what we add on top": the talk track.
+- Added [`diagrams/`](./diagrams/): architecture and one-slide Mermaid sources with PNG renders (both validated by rendering).
+- Feedback that prompted this: the short description sounded like a junior project. The differentiators are now stated against Maximor's shipping product and their CTO's open questions.
+- Pending: sourced finance pain-point numbers (research running).

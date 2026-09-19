@@ -1,4 +1,6 @@
-# Footnote — final project spec, v2 (written Sat 19 Sep 2026, 5:05 PM ET)
+# Footnote — final project spec, v3 (Sat 19 Sep 2026, 5:40 PM ET)
+
+> v3 folds in the team's whiteboard plan: a **drift monitor** as the front door, **real connectors seeded with planted drift**, a **custom agent router** for low token cost and latency, **decision traces**, and **equity-lite** as a ninth function. Architecture diagram: [diagrams/architecture.mmd](diagrams/architecture.mmd) ([png](diagrams/architecture.png)); one-slide version: [diagrams/pitch.mmd](diagrams/pitch.mmd).
 
 **Track:** Maximor, "Agentic Systems for the Office of the CFO". Also entering Ramp, Token Company, OpenAI.
 **Deadline:** submit on Plume by Sun 10:45 AM (hard stop 11:00). Plume project must exist by 11:59 PM tonight. Venue closed 1-7 AM.
@@ -14,7 +16,7 @@ Footnote is an agent finance team that closes a whole month for Northwind System
 
 > investigate → propose an entry → a deterministic kernel re-checks its workpaper → post, or escalate to the person who knows → learn
 
-Humans are pulled in only when an agent is blocked on context. Their answer is stored with its scope and end date, so it is asked once. Before running July live, the team **replays** Q2 (closed by humans) with the answers hidden, and **compiles** the humans' repeated judgment into policies a controller approves.
+Work starts from **drift**: the same fact lives in five systems (contract, CRM, invoice, bank, ledger, forecast), and when they disagree a drift monitor opens an intent for the right function. Humans are pulled in only when an agent is blocked on context. Their answer is stored with its scope and end date, so it is asked once. Before running July live, the team **replays** Q2 (closed by humans) with the answers hidden, and **compiles** the humans' repeated judgment into policies a controller approves.
 
 The output is the close itself, plus the answer to the track's question: for each function, how many decisions ran with no human, how many were escalated and why, and zero wrong entries posted unreviewed.
 
@@ -23,7 +25,21 @@ Closing line: *"You asked how much of a finance team an agentic system can run. 
 
 ---
 
-## 2. Why breadth is affordable: one layer, thin function packs
+## 2. What Maximor already ships, and what we add on top
+
+The doc's processes are the baseline we have to build anyway. This table is what we talk about.
+
+| Area | Maximor today (public) | What Footnote adds |
+|---|---|---|
+| Cash, revenue, close, AR/AP | Their core modules; they claim 98% of transactions with no human | A thin version as the baseline. Not the pitch. |
+| Human review | Escalate on low confidence; "nothing posts without approval" | **Proof-carrying entries.** A workpaper with four audit tick marks that a small deterministic kernel re-performs. The approval itself is a checked artifact. (CTO open question 1, "Lean for finance".) |
+| Learning policy | "Encodes your accounting logic" from systems and files | **Replay made measurable.** No-look-ahead replay of human-closed periods, agreement by decision kind, inconsistent humans flagged, the **replay suite run as CI** on every policy or prompt change, and an **earned autonomy ladder**. |
+| Cost | Not public | **Kernel-guarded routing.** Nothing can post without passing the kernel, so cheap paths are safe: compiled rule, else a small distilled model, else a frontier model. Cost per decision falls each month; policies carry portability tiers for the next deployment. (Open question 2.) |
+| Context | Gmail and Slack listed as sources | **Intent as state, plus a drift monitor.** Every artifact links to the question it answered and its end condition; cross-system drift opens intents; learned facts explain away expected drift. (Open question 3, and his contract-vs-CRM-vs-workbook-vs-ERP example.) |
+| Audit | Evidence packs | An auditor agent re-runs the kernel on sampled entries and tests controls, so a third party can re-perform without trusting us. |
+| The track's question | n/a | Answered with a number: share of a month's decisions, by function, that ran with no human, with zero wrong entries posted unreviewed. |
+
+## 2b. Why breadth is affordable: one layer, thin function packs
 
 The CTO's first slide: "Finance is not one workflow. The same judgment layer spans many functions." So we build that layer once and add functions as packs. A pack is: seed data with planted exceptions, a few read tools, its decision kinds, a few kernel checks, and a prompt. No function gets its own agent framework.
 
@@ -50,9 +66,12 @@ The CTO's first slide: "Finance is not one workflow. The same judgment layer spa
 | 5 | **Close** | Checklist with dependencies across functions; accruals "for bills not yet received"; prepaid amortization; payroll accrual; "tie every balance-sheet account to evidence"; "track what's done and what's stuck"; lock the period | July cloud bill arrives 3 Aug (accrue) · annual software prepaid · one stuck item waiting on a human |
 | 6 | **Forecast** | 13-week cash forecast "from receivables, payables and payroll", rebuilt as facts change; "when actuals land, explain the miss" | a customer pays two weeks late · learned concession lowers inflows through renewal |
 | 7 | **Reporting** | Flux note per material variance, traced to the decisions and intents behind it; numbers tie to the ledger | the doc's example: gross margin down three points, traced to the transactions responsible |
+| 9 | **Equity-lite** (stretch, labeled as such) | Stock-comp expense schedule per grant from a grants ledger (reuses the schedule engine); forfeiture reversal when someone leaves; option-exercise cash matched in bank rec; four deterministic compliance checks | employee termination in Slack → payroll final pay, forfeiture, expense reversal, forecast change · grant approved in a board consent PDF · 409A older than 12 months · strike below the 409A value |
 | 8 | **Audit and controls** | Sample entries, re-run the kernel on their workpapers, test controls, write findings | The doc's four, verbatim: duplicate vendor · round-number payment · entry posted after the period closed · self-approved request |
 
-Out of scope: equity, tax, FX, multi-entity, Stripe, HubSpot and Drive live, voice.
+Equity-lite is not tax or legal advice; the four checks are the 12-month 409A window, strike at or above the 409A value, the ISO $100K first-exercisable limit, and the Rule 701 $10M twelve-month threshold. Verify each rule's wording before it goes on a slide.
+
+Out of scope: tax, FX, multi-entity, Stripe, voice.
 
 **Team roles, as the doc lists them:** preparer (the function agent) · reviewer (controller on GPT, a different model family) · approver (controller within its authority; a human in Slack above materiality or for anything new) · auditor (the audit agent at month end). Hand-offs go through the event bus: AR tells revenue and forecast; AP tells forecast and close; everything tells close; audit samples everything.
 
@@ -83,7 +102,11 @@ Written policy also exists (a short accounting memo: materiality, approval matri
 | Topic | Decision |
 |---|---|
 | Periods | History Apr-Jun 2026 (human-closed). Live: July close. August only if everything else is done. |
-| Live systems | QuickBooks Online sandbox (mirror target), Gmail (evidence), Slack (humans). Bank feed is a file behind a tool unless Increase signup takes under 30 minutes. |
+| Live systems | QuickBooks Online sandbox, Gmail, Slack, **HubSpot test account**. Bank feed from the Increase sandbox, or a file behind the same tool if signup takes over 30 minutes. Contracts, board consents, policy memos (markdown) and the Q2 close workbook are files. **Every connector is seeded** (section 6b). |
+| Drift monitor | Deterministic comparators, run on every sync: CRM deal value vs contract vs invoice run-rate · invoice vs cash received · bank vs ledger cash · AR and AP subledgers vs GL · deferred revenue schedule vs GL · forecast opening cash vs GL · vendor bank details vs last paid · payroll register vs bank debit · grants ledger vs stock-comp expense. A known fact suppresses an expected difference; anything else opens an intent. |
+| Agent drift | Caught three ways: the kernel on every entry, tie-outs at every period end, and the replay suite as CI (a policy or prompt change that lowers Q2 agreement does not ship). |
+| Custom agent router | Per decision: compiled policy or fact (no model call) → small model (`claude-haiku-4-5`) → `claude-sonnet-5` → `claude-opus-5`. Escalate a tier when the kernel rejects. Stretch: fine-tune a small model on kernel-verified traces (OpenAI fine-tuning is the lowest-friction route) for triage and matching. Report tokens, dollars and latency per decision by tier. |
+| Traces | Every step, tool call, evidence hit, kernel mark, cost and latency is stored per decision and shown as a timeline in the console. Traces are also the replay and training substrate. |
 | Stack | TypeScript, one package, Node 22, pnpm. Claude Agent SDK (TS), in-process MCP tools. SQLite (better-sqlite3). Next.js console polling SQLite. zod. vitest. Integer cents everywhere. |
 | Models | `claude-sonnet-5` default; `claude-haiku-4-5-20251001` for extraction; `claude-opus-5` for hard investigations; GPT for the controller. |
 | Fallback | Agent SDK friction over 90 minutes: switch the loop to the Vercel AI SDK tool loop. Tools unchanged. |
@@ -93,6 +116,23 @@ Written policy also exists (a short accounting memo: materiality, approval matri
 QuickBooks quirks already checked: a credit memo is applied with a zero-amount Payment linking both; attachments are a multipart upload with `AttachableRef.EntityRef`; `TxnDate` can be backdated; sandbox email cap 40 a day, so mail goes through Gmail.
 
 ---
+
+## 6b. Seeding (it all has to work; first job of the World lane)
+
+One canonical world file (`world/northwind.json`, generated from a seed) drives everything, so every system tells the same story except where we plant drift.
+
+| Target | Seeded with |
+|---|---|
+| QuickBooks | customers, vendors, items, Q2 and July invoices, payments, bills, the humans' Q2 credit memos and write-offs, journal entries (backdated `TxnDate`) |
+| HubSpot | companies, deals (amount, close date, owner), notes |
+| Gmail | CEO side-letter threads, remittance advices, vendor bills as PDF attachments, a customer dispute, a changed-bank-details phish, noise |
+| Slack | #finance, #deals, #cs-escalations chatter, an HR departure notice, the account owners as users |
+| Bank | inbound ACH and wires with thin descriptions, vendor payments, payroll debit, bank fees |
+| Files | contracts, a board consent, the accounting policy memo (markdown), the Q2 close workbook, the grants ledger |
+
+Rules: idempotent (every record carries a `fn:` external id), a manifest maps world ids to external ids, `pnpm seed --target=<system|all> --reset` restores a clean state, and the **planted-drift answer key** lives outside anything an agent can read.
+
+**Planted drift (each one must be detected live):** Initech's deal is $144k in HubSpot but invoices run at $129.6k (CEO concession: explained once found) · Wayne pays $3,300 short with no explanation anywhere · bank shows a deposit the ledger doesn't (parent paying for a subsidiary) · a refund posted twice · the $12.40 difference · a vendor's bank details changed by email two days before a payment run · a closed-won expansion with no invoice · a departed employee still accruing stock comp.
 
 ## 7. Frozen schema (SQLite)
 
@@ -170,8 +210,9 @@ Accept only if no mark fails. Checkable fraction = machine-re-performed marks ov
 
 | Time | Checkpoint |
 |---|---|
-| **18:00** | Plume project created. Intuit app and token. Repo up with schema, tool stubs, tiny fixture database. Overnight machine named. |
-| **20:15** | Walking skeleton: seeded July, AR applies one clean payment through `propose_entry`, kernel accepts, local ledger and real QuickBooks both show it, console shows it. |
+| **18:15** | Plume project created. Intuit app and token, HubSpot test account, bank decision. Repo up with schema, tool stubs, world file v0. Overnight machine named. |
+| **19:15** | **Seed v0 is live:** July's clean data plus the Initech drift in QuickBooks, HubSpot, Gmail and Slack, with manifest and reset working. |
+| **20:30** | Walking skeleton: the drift monitor raises the Initech drift from the real systems; AR applies one clean payment through `propose_entry`, kernel accepts, local ledger and real QuickBooks both show it, console shows it. |
 | **22:30** | **The spine works:** Initech end to end (function 1), then revenue schedule revised (4), forecast moves (6), close checklist ticks (5), intent ripple view shows all of it. |
 | **00:45** | Bank rec with the doc's four cases (3). Slack escalation round trip (Wayne). AP pack (2). Pack up; venue closes 1 AM. |
 | **03:00** | Audit pack (8) and flux notes (7). Replay and compile for three decision kinds. Full July run 1 started on the overnight machine. |
@@ -179,13 +220,13 @@ Accept only if no mark fails. Checkable fraction = machine-re-performed marks ov
 | **10:15** | Backup video, README (results with n, limitations, how to run), four slides. |
 | **10:45** | Submitted on Plume: Maximor, Ramp, Token Company, OpenAI. |
 
-**Order of function packs:** 1 AR → 4 revenue → 6 forecast → 5 close → 3 bank rec → 2 AP → 8 audit → 7 reporting.
-**Cut from the bottom when behind:** payroll accrual · flux polish · AP payment-run choice · replay for AP coding · audit sampling depth · live Gmail (use the local mail store) · GPT controller (human approval in Slack instead).
+**Order of function packs:** 1 AR → 4 revenue → 6 forecast → 5 close → 3 bank rec → 2 AP → 8 audit → 7 reporting → 9 equity-lite.
+**Cut from the bottom when behind:** fine-tuned small model (keep routing) · equity-lite · payroll accrual · flux polish · AP payment-run choice · replay for AP coding · audit sampling depth · live Gmail (use the local mail store) · GPT controller (human approval in Slack instead).
 **Never cut:** the spine in section 4 across at least five functions on one ledger · kernel with four-mark workpapers · one Slack escalation that becomes a fact · scoreboard by function with real counts.
 
 ## 12. Demo (5 minutes; real QuickBooks, Gmail, Slack and the console open)
 
-1. **The question and the board.** Northwind's July close: eight functions, agents handing work to each other, one ledger.
+1. **The question and the drift board.** Northwind's July close: nine functions, one ledger. The drift monitor shows where the company's systems disagree right now, in the real sandboxes. Click the Initech row.
 2. **The spine** (section 4). End on the intent view: one transaction, every book.
 3. **Humans only when blocked.** Wayne's shortfall goes to the judge's phone in Slack; the answer becomes a fact. AP holds a duplicate. Audit catches the self-approved bill.
 4. **Learning.** Replay table, one policy pull request approved, July run 2 against run 1.

@@ -10,6 +10,7 @@ Shared source of truth for this project. Humans and agents both read from here
 | `PROJECT_STATUS.md` | Living log: current state, decisions, approaches tried (and abandoned), open questions. **Append here on every major change.** |
 | `judge-interview-2026-09-19.md` | Summary + raw transcript of our conversation with the hackathon judge. Defines what "good" looks like for this build. |
 | `PROJECT_SPEC.md` | Proposed final spec: what we build, frozen schema and tool interface, lanes, checkpoints, cut order, demo. Status is recorded in `PROJECT_STATUS.md`. |
+| `diagrams/` | Mermaid sources and PNG renders of the architecture and the one-slide pitch diagram. |
 | `research/` | Everything gathered before the build: track brief, workshop slides, sponsor intel, past winners, stack and sandbox notes. Start at `research/README.md`. |
 
 ## Rules for agents
