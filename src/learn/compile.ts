@@ -66,6 +66,7 @@ function draftFor(db: Db, clock: Clock, fn: string, all: Point[], group: Point[]
     { field: "shortfall_cents", op: ">", value: 0 },
     { field: "shortfall_cents", op: "<=", value: ceiling },
     { field: "method", op: "==", value: method },
+    { field: "party_id", op: "in", value: [...new Set(group.map(p => p.case_file.party_id))].sort() },
   ] };
   const backtest = { ...runBacktest(all, condition, action), ...leaveOneOut(group) };
   const [actionJson, conditionJson] = [JSON.stringify(action), JSON.stringify(condition)];
@@ -93,8 +94,9 @@ function draftFor(db: Db, clock: Clock, fn: string, all: Point[], group: Point[]
 function leaveOneOut(group: Point[]): Pick<Backtest, "held_out_n" | "held_out_covered"> {
   let covered = 0;
   for (const held of group) {
-    const others = group.filter((p) => p !== held).map((p) => p.case_file.shortfall_cents);
-    if (others.length > 0 && held.case_file.shortfall_cents <= Math.max(...others)) covered += 1;
+    const others = group.filter((p) => p !== held);
+    if (others.length >= MIN_AGREEING && others.some(p => p.case_file.party_id === held.case_file.party_id)
+      && held.case_file.shortfall_cents <= Math.max(...others.map(p => p.case_file.shortfall_cents))) covered += 1;
   }
   return { held_out_n: group.length, held_out_covered: covered };
 }

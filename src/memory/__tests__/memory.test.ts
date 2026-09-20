@@ -99,7 +99,7 @@ describe("escalations: asked once", () => {
     expect(answerEscalation(db, fixedClock, id, "U_SAM", { treatment: "credit_memo", uses: "standing", valid_to: "2027-06-30", reason: "failed SSO rollout" }).status).toBe("answered");
     expect(answerEscalation(db, fixedClock, id, "U_SAM", { treatment: "write_off" }).status).toBe("already_answered");
 
-    const again = openEscalation(db, fixedClock, base);
+    const again = openEscalation(db, fixedClock, { ...base, entry_date: "2026-07-14", amount_cents: 0 });
     expect(again).toMatchObject({ status: "already_answered", answer: { treatment: "credit_memo", answered_by: "U_SAM" } });
     expect(db.prepare("SELECT COUNT(*) AS n FROM escalation").get()).toEqual({ n: 1 });
     // A standing answer stops covering cases dated after it lapses: that is a new question, carrying the old answer.

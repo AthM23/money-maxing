@@ -22,6 +22,8 @@ export const HumanAnswer = z.object({
   /** For tax withheld at source: the rate the customer is required to deduct. */
   pct_withheld: z.number().min(0).max(100).optional(),
   valid_to: IsoDate.optional(),
+}).refine((a) => a.uses !== "standing" || a.valid_to !== undefined, {
+  message: "standing answers require an explicit end date", path: ["valid_to"],
 });
 export type HumanAnswer = z.infer<typeof HumanAnswer>;
 
@@ -42,6 +44,12 @@ const ADJUSTMENT_ACCOUNT: Record<"credit_memo" | "write_off" | "tax_withholding"
 export function recordHumanAnswer(
   db: Db, escalationId: string, answerer: string, input: unknown, deps: { clock?: Clock; config?: RuntimeConfig } = {},
 ): AnswerOutcome {
+  return db.transaction(() => recordAnswer(db, escalationId, answerer, input, deps)).immediate();
+}
+
+function recordAnswer(
+  db: Db, escalationId: string, answerer: string, input: unknown, deps: { clock?: Clock; config?: RuntimeConfig },
+): AnswerOutcome {
   const clock = deps.clock ?? systemClock;
   const parsed = HumanAnswer.safeParse(input);
   if (!parsed.success) return { status: "invalid", detail: parsed.error.issues.map((i) => i.message).join("; ") };
@@ -49,12 +57,13 @@ export function recordHumanAnswer(
   const ctx = loadEscalation(db, escalationId);
   if (!ctx) return { status: "not_found", detail: escalationId };
 
-  const traceId = writeAnswerTrace(db, clock, escalationId, answerer, answer.text, ctx.case_file.party_id);
+  const traceId = newId("tr");
   const recorded = answerEscalation(db, clock, escalationId, answerer, { ...answer, trace_id: traceId });
   if (recorded.status !== "answered") return { status: recorded.status, detail: "reason" in recorded ? recorded.reason : escalationId };
+  writeAnswerTrace(db, clock, escalationId, answerer, answer.text, ctx.case_file.party_id, traceId);
 
   const fact = rememberAnswer(db, clock, ctx.case_file, answer, answerer, traceId);
-  const proposal = resume(db, ctx.case_file, answer, traceId, fact.fact_id, { clock, config: deps.config ?? APP_CONFIG });
+  const proposal = resume(db, ctx.case_file, answer, traceId, fact.status === "active" ? fact.fact_id : null, { clock, config: deps.config ?? APP_CONFIG });
   // "Chase the customer" books nothing: the case stays with a person instead of going back to the agents.
   settleIntent(db, clock, ctx.case_file.intent_id);
   return { status: "answered", trace_id: traceId, fact_id: fact.fact_id, fact_status: fact.status, proposal };
@@ -68,8 +77,7 @@ function loadEscalation(db: Db, escalationId: string): { case_file: CaseFile } |
   return parsed?.success ? { case_file: parsed.data } : null;
 }
 
-function writeAnswerTrace(db: Db, clock: Clock, escalationId: string, answerer: string, text: string, partyId: string): string {
-  const id = newId("tr");
+function writeAnswerTrace(db: Db, clock: Clock, escalationId: string, answerer: string, text: string, partyId: string, id: string): string {
   const payload = JSON.stringify({ answerer, text });
   db.prepare(
     `INSERT INTO trace (id, source, kind, external_id, event_time, recorded_time, ingested_at, party_id, content_hash, payload_json)
@@ -83,7 +91,9 @@ function rememberAnswer(
   db: Db, clock: Clock, c: CaseFile, answer: HumanAnswer, answerer: string, traceId: string,
 ): { fact_id: string | null; status: "active" | "candidate" | "none" } {
   if (answer.treatment === "chase" || answer.treatment === "dispute_hold") return { fact_id: null, status: "none" };
-  const monthEnd = `${c.entry_date.slice(0, 7)}-31`;
+  const date = new Date(`${c.entry_date}T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + 1, 0);
+  const monthEnd = date.toISOString().slice(0, 10);
   const rec = recordFactCandidate(db, clock, {
     party_id: c.party_id, predicate: predicateFor(answer),
     value: valueFor(answer, c),

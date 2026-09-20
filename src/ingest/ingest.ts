@@ -5,6 +5,7 @@ import type { Db } from "../ledger/db.js";
 import { systemClock, type Clock } from "../runtime/config.js";
 import { canonicalJson } from "../runtime/persist.js";
 import { traceId } from "./ids.js";
+import { invalidateEvidence } from "./invalidate.js";
 import { buildResolver, type Resolver } from "./resolve.js";
 
 export interface IngestResult {
@@ -80,7 +81,8 @@ function ingestOne(db: Db, clock: Clock, resolver: Resolver, item: RawItem, resu
   const base = { trace_id: id, source: item.source, kind: item.kind, external_id: item.external_id, party_id: partyId, bank_txn_id: bankTxnId, version };
   emit(db, { topic: "ingest.committed", from_function: "ingest", intent_id: null, payload: base }, clock);
   if (latest) {
-    emit(db, { topic: "evidence.reversioned", from_function: "ingest", intent_id: null, payload: { ...base, supersedes_trace_id: latest.id } }, clock);
+    const affected = invalidateEvidence(db, latest.id, bankTxnId);
+    emit(db, { topic: "evidence.reversioned", from_function: "ingest", intent_id: null, payload: { ...base, supersedes_trace_id: latest.id, affected_decision_ids: affected } }, clock);
     result.reversioned++;
   } else {
     result.committed++;

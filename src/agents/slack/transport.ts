@@ -9,7 +9,7 @@ import { APP_CONFIG } from "../../packs/index.js";
 interface Action { action_id: string; value: string }
 interface InteractiveBody {
   type: string; trigger_id?: string; user: { id: string }; actions?: Action[];
-  view?: { private_metadata: string; state: { values: Record<string, Record<string, { value?: string; selected_option?: { value: string } }>> } };
+  view?: { private_metadata: string; state: { values: Record<string, Record<string, { value?: string; selected_date?: string; selected_option?: { value: string } }>> } };
 }
 
 /**
@@ -75,6 +75,8 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     const values = body.view.state.values;
     const out = recordHumanAnswer(db, meta.escalation_id, approverFor(db, body.user.id), {
       treatment: meta.treatment, text: values.why?.text?.value ?? "", uses: values.uses?.uses?.selected_option?.value ?? "one_time",
+      valid_to: values.expiry?.date?.selected_date ?? undefined,
+      ...(values.rate?.pct?.value?.trim() ? { [meta.treatment === "tax_withholding" ? "pct_withheld" : "pct_off"]: Number(values.rate.pct.value) } : {}),
     });
     await web.chat.postMessage({ channel: body.user.id, text: out.status === "answered" ? "Saved. I won't ask this again for cases it covers." : `Not saved: ${out.status}` } as never);
   }

@@ -1,4 +1,5 @@
 import type { Mark, Proposal } from "../contract/types.js";
+import { parseRemittance } from "../contract/remittance.js";
 import type { KernelContext } from "./types.js";
 import { failMark, isAfterAsOf, isControlAccount, naMark, normalizeWs, truncate, verdictMark } from "./util.js";
 
@@ -16,6 +17,7 @@ export function checkE1(proposal: Proposal, ctx: KernelContext): Mark {
     if (isAfterAsOf(ctx, trace.recorded_time)) {
       problems.push(`trace ${trace.id} recorded ${trace.recorded_time} is after as_of ${ctx.as_of}`);
     }
+    if (trace.superseded_by) problems.push(`trace ${trace.id} was superseded by ${trace.superseded_by}; re-investigate the current evidence`);
   }
   return verdictMark("E", "E1", problems, `${refs.length} cited trace(s) resolve within the replay window`, refs);
 }
@@ -111,5 +113,22 @@ function aboutThisParty(tracePartyId: string | null | undefined, partyId: string
 }
 
 export function evidenceMarks(proposal: Proposal, ctx: KernelContext): Mark[] {
-  return [checkE1(proposal, ctx), checkE2(proposal, ctx), checkE3(proposal, ctx), checkE5(proposal, ctx)];
+  return [checkE1(proposal, ctx), checkE2(proposal, ctx), checkE3(proposal, ctx), checkE5(proposal, ctx),
+    ...(proposal.remittance_trace_id ? [checkRemittance(proposal, ctx)] : [])];
+}
+
+/** Re-extract the instructions independently of the router; a correct total cannot hide wrong allocations. */
+function checkRemittance(proposal: Proposal, ctx: KernelContext): Mark {
+  const id = proposal.remittance_trace_id!;
+  const trace = ctx.getTrace(id);
+  const remit = trace ? parseRemittance(trace.payload_text) : null;
+  const bank = proposal.bank_txn_id ? ctx.getBankTxn(proposal.bank_txn_id) : undefined;
+  const problems: string[] = [];
+  if (!trace || trace.superseded_by || isAfterAsOf(ctx, trace.recorded_time) || trace.party_id !== proposal.party_id) problems.push("remittance source is missing, stale, outside the replay window or belongs to another party");
+  if (!proposal.evidence.some(e => e.trace_id === id)) problems.push("remittance must be cited in the workpaper");
+  if (proposal.kind !== "apply_payment" || !remit || !bank || remit.amount_cents !== bank.amount_cents || remit.date !== bank.posted_date
+    || !bank.descriptor?.split(/[^A-Za-z0-9-]+/).includes(remit.reference)) problems.push("remittance reference, date and total must agree to the bank receipt");
+  const sorted = (apps: Proposal["applications"]) => JSON.stringify([...apps].sort((a, b) => a.doc_id.localeCompare(b.doc_id)));
+  if (!remit || sorted(remit.applications) !== sorted(proposal.applications)) problems.push("per-invoice allocations differ from the remittance");
+  return verdictMark("E", "E_REMIT", problems, "remittance source, bank reference, total and every invoice allocation agree", [id]);
 }

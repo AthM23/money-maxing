@@ -1,4 +1,6 @@
 import { ACCOUNTS } from "../contract/accounts.js";
+import { getBill } from "../agents/ap/match.js";
+import { normalizeInvoiceNo, sameObligation } from "../agents/ap/obligation.js";
 import type { AutonomyLevel, Proposal } from "../contract/types.js";
 import type { ApprovalLite, ControlTotals, DocLite, ExtraCheck, KernelContext } from "../kernel/types.js";
 import type { RuntimeConfig } from "./config.js";
@@ -38,17 +40,30 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     standardAccounts: (kind) => config.standard_accounts[kind] ?? [],
     allowedAccounts: (kind) => config.allowed_accounts[kind] ?? [],
     features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
-    getTrace: (id) => getTrace(db, id),
+    getTrace: (id) => getTrace(db, id, meta.mode === "replay" ? meta.as_of : undefined),
     getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),
     getBankTxn: (id) => visibleBankTxn(db, id, meta),
-    bankTxnAppliedCents: (id) => bankTxnAppliedCents(db, id),
+    bankTxnAppliedCents: (id) => meta.mode === "replay" ? 0 : bankTxnAppliedCents(db, id),
     getFact: (id) => getFact(db, id),
     getPolicy: (id) => getPolicy(db, id),
     getApprover: (id) => getApprover(db, id),
-    findPaidDuplicate: (party, amount, exclude) => findPaidDuplicate(db, party, amount, exclude),
+    findPaidDuplicate: (party, _amount, exclude) => findPaidDuplicate(db, party, proposal.applications.map(a => a.doc_id), exclude),
     remitChangedUnverified: (party) => remitChangedUnverified(db, party),
-    extra_checks: [...(meta.extra_checks ?? []), ...packChecks(db, proposal, config)],
+    extra_checks: [...(meta.extra_checks ?? []), ...packChecks(db, proposal, config), ...legacyPolicyChecks(db, proposal, meta)],
   };
+}
+
+/** Older compiled rules generalized across every customer. Keep the record, but require a scoped replacement. */
+function legacyPolicyChecks(db: Db, proposal: Proposal, meta: ContextMeta): ExtraCheck[] {
+  if (meta.mode !== "live") return [];
+  const stale = proposal.policy_refs.filter(id => {
+    const row = db.prepare("SELECT code, condition_json FROM policy WHERE id = ?").get(id) as { code: string | null; condition_json: string } | undefined;
+    if (!row?.code) return false; // manually authored company policies retain their explicitly approved scope
+    const condition = safeJson(row.condition_json) as { all?: Array<{ field?: string; op?: string; value?: unknown }> } | null;
+    return !condition?.all?.some(c => c.field === "party_id" && c.op === "in" && Array.isArray(c.value) && c.value.length > 0);
+  });
+  return stale.length ? [() => [{ cls: "J", check: "J_SCOPE", status: "fail", refs: stale,
+    detail: "legacy compiled policy has no customer scope; compile and approve a scoped replacement before reuse" }]] : [];
 }
 
 /** Functions whose entries may not pass the kernel on its generic checks alone. */
@@ -77,11 +92,12 @@ function visibleBankTxn(db: Db, id: string, meta: ContextMeta): ReturnType<typeo
 export function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
   const row = db
     .prepare(
-      `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
-       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
-       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND json_extract(d.proposal_json, '$.bank_txn_id') = ?`,
+      `SELECT COALESCE(SUM(ABS((l.value ->> '$.debit_cents') - (l.value ->> '$.credit_cents'))), 0) AS n
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.entries')) l
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND json_extract(d.proposal_json, '$.bank_txn_id') = ?
+         AND l.value ->> '$.account' = ?`,
     )
-    .get(bankTxnId) as { n: number };
+    .get(bankTxnId, ACCOUNTS.cash) as { n: number };
   return row.n;
 }
 
@@ -127,12 +143,16 @@ export function readControlTotals(db: Db): ControlTotals {
   };
 }
 
-function findPaidDuplicate(db: Db, partyId: string, amountCents: number, exclude: string[]): { doc_id: string } | undefined {
-  const rows = db
-    .prepare("SELECT id FROM bill WHERE party_id = ? AND total_cents = ? AND status = 'paid'")
-    .all(partyId, amountCents) as { id: string }[];
-  const hit = rows.find((r) => !exclude.includes(r.id));
-  return hit ? { doc_id: hit.id } : undefined;
+function findPaidDuplicate(db: Db, partyId: string, proposed: string[], exclude: string[]): { doc_id: string } | undefined {
+  const paid = (db.prepare("SELECT id FROM bill WHERE party_id = ? AND status = 'paid'").all(partyId) as { id: string }[])
+    .filter(r => !exclude.includes(r.id)).map(r => getBill(db, r.id)!);
+  for (const id of proposed) {
+    const bill = getBill(db, id);
+    if (!bill || bill.party_id !== partyId) continue;
+    const hit = paid.find(other => sameObligation(bill, other) || normalizeInvoiceNo(bill.vendor_invoice_no) === normalizeInvoiceNo(other.vendor_invoice_no));
+    if (hit) return { doc_id: hit.id };
+  }
+  return undefined;
 }
 
 /** True while a bank-detail change request for this vendor has no out-of-band verification recorded. */

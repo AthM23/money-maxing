@@ -1,3 +1,28 @@
+# Audit correction — 19 September 2026
+
+The historical figures below use the old harness and are **not validated results for the corrected code**.
+The audit found that the GBT operating threshold was selected using test labels, arbitrary JSON was counted as
+schema-valid, malformed completions could crash scoring, and result rows could silently mix prompt conditions
+or datasets. Those defects are fixed. Missing cost information now reads `unknown`, not $0.
+
+Re-run each contender before quoting a score. `benchmark.py` now writes `benchmark_results_v2.json` with a
+`protocol` (scorer version, exact test-slice SHA-256, hint condition, n) and `models`. It refuses incompatible
+merges. Use separate `--out` files for bare and hinted prompts. The corrected field-F1 includes container
+structure and exact value types, so old scores are not directly comparable.
+
+`train_gbt.py` freezes its threshold from the calibration split, then reports actual test precision, coverage,
+and false clears, including transactions with no correct candidate. A 99% calibration target is not a guarantee
+of 99% test precision. Head B splits by hashed transaction ID; the time-split claim below applies to extraction,
+not this matching baseline. Calibration also fits the isotonic map, so a separate operating-point validation set
+would strengthen this small experiment.
+
+Verified locally: four dependency-free scoring/protocol tests and all 1,546 generated test labels self-grade as
+schema-valid exact matches. That checks the scorer, **not model accuracy or label inferability**. No model/API
+benchmark was run during this audit; `scikit-learn` is absent from the local Python environment.
+The production remittance path currently parses a defined email table; it does not invoke the fine-tune.
+
+---
+
 # NorthwindBench — the benchmark behind the fine-tune headline
 
 **Owner: Preet (lane C). Status: v1 defined 2026-09-19 ~22:00, per judge feedback v2 §4

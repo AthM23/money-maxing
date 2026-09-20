@@ -34,6 +34,10 @@ export function searchTraces(env: ToolEnv, sources: string[], query: string, par
   const args: Array<string | number> = [...sources];
   if (env.mode === "replay" && env.as_of) { where.push("recorded_time <= ?"); args.push(env.as_of); }
   if (partyId) { where.push("(party_id = ? OR party_id IS NULL)"); args.push(partyId); }
+  where.push(`NOT EXISTS (SELECT 1 FROM trace newer WHERE newer.source = trace.source
+    AND newer.external_id = trace.external_id AND newer.version > trace.version
+    ${env.mode === "replay" && env.as_of ? "AND newer.recorded_time <= ?" : ""})`);
+  if (env.mode === "replay" && env.as_of) args.push(env.as_of);
   const rows = env.db
     .prepare(`SELECT id, source, kind, recorded_time, party_id, payload_json FROM trace WHERE ${where.join(" AND ")} ORDER BY recorded_time DESC LIMIT ?`)
     .all(...args, CANDIDATE_LIMIT) as TraceRow[];
@@ -58,6 +62,10 @@ export function readTrace(env: ToolEnv, traceId: string): { trace_id: string; re
     .get(traceId) as { id: string; recorded_time: string; payload_json: string } | undefined;
   if (!row) return null;
   if (env.mode === "replay" && env.as_of && row.recorded_time > env.as_of) return null;
+  const newer = env.db.prepare(`SELECT 1 FROM trace n JOIN trace old ON old.id = ?
+    WHERE n.source = old.source AND n.external_id = old.external_id AND n.version > old.version
+    ${env.mode === "replay" && env.as_of ? "AND n.recorded_time <= ?" : ""} LIMIT 1`)
+    .get(...(env.mode === "replay" && env.as_of ? [traceId, env.as_of] : [traceId]));
+  if (newer) return null;
   return { trace_id: row.id, recorded_time: row.recorded_time, text: payloadText(row.payload_json) };
 }
-

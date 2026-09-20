@@ -121,6 +121,9 @@ describe("ingestion", () => {
     expect(() => parseBankCsv(`${header}\nB1,2026-07-01,1,240.00,ACH X,ach,2026-07-01T10:00:00Z,1240.00`)).toThrow(/8 fields/);
     expect(() => parseBankCsv(`${header}\nB1,2026-07-01,10.00,ACH X,ach,2026-07-01T10:00:00Z,10.00\nB2,2026-07-02,5.00,ACH Y,ach,2026-07-02T10:00:00Z,16.00`)).toThrow(/running balance/);
     expect(() => parseBankCsv(`${header}\nB1,2026-07-01,10.5,ACH X,ach,2026-07-01T10:00:00Z,10.50`)).toThrow(/two places/);
+    expect(() => parseBankCsv(`${header}\nB1,2026-02-31,10.00,ACH X,ach,2026-07-01T10:00:00Z,10.00`)).toThrow(/valid YYYY-MM-DD/);
+    expect(() => parseBankCsv(`${header}\nB1,2026-07-01,10.00,ACH X,ach,not-a-date,10.00`)).toThrow(/valid UTC timestamp/);
+    expect(() => parseBankCsv(`${header}\nB1,2026-07-01,9007199254740992.00,ACH X,ach,2026-07-01T10:00:00Z,9007199254740992.00`)).toThrow(/safe integer/);
 
     const { db, dir } = seeded();
     const path = join(dir, "bank", "operating.csv");

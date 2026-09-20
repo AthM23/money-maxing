@@ -25,9 +25,9 @@ export function escalationBlocks(escalationId: string, q: EscalationQuestion): B
   const checked = q.what_was_checked.map((c) => `• ${c.source}: “${c.query}” → ${c.hits} hit${c.hits === 1 ? "" : "s"}`).join("\n");
   const prior = q.prior_answer ? `\n*Last time you said:* ${String(q.prior_answer.text ?? JSON.stringify(q.prior_answer))}` : "";
   return [
-    { type: "section", text: { type: "mrkdwn", text: clip(`*I'm blocked and need one thing from you.*\n${q.what_happened}${prior}`, SECTION_MAX) } },
-    { type: "section", text: { type: "mrkdwn", text: clip(`*What I checked*\n${checked}`, SECTION_MAX) } },
-    { type: "section", text: { type: "mrkdwn", text: clip(`*What I don't know*\n${q.what_is_unknown}`, SECTION_MAX) } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Trigger*\n${q.what_happened}${prior}`, SECTION_MAX) } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Sources checked*\n${checked}`, SECTION_MAX) } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Why this could not resolve*\n${q.what_is_unknown}\n*Candidate treatments*\n${q.treatments.map(t => t.label).join(" · ")}`, SECTION_MAX) } },
     {
       type: "actions", block_id: `esc:${escalationId}`,
       elements: q.treatments.map((t) => ({ type: "button", text: { type: "plain_text", text: clip(t.label, BUTTON_MAX) }, action_id: `answer:${t.id}`, value: escalationId })),
@@ -47,6 +47,10 @@ export function answerModal(escalationId: string, treatment: string): Block {
       { type: "input", block_id: "uses", label: { type: "plain_text", text: "Does it apply again?" },
         element: { type: "radio_buttons", action_id: "uses", initial_option: option("one_time", "One time only"),
           options: [option("one_time", "One time only"), option("standing", "Standing, until an end date")] } },
+      { type: "input", block_id: "expiry", optional: true, label: { type: "plain_text", text: "End date (required for standing answers)" },
+        element: { type: "datepicker", action_id: "date" } },
+      { type: "input", block_id: "rate", optional: true, label: { type: "plain_text", text: "Agreed percentage, if any (0–100)" },
+        element: { type: "plain_text_input", action_id: "pct" } },
     ],
   };
 }

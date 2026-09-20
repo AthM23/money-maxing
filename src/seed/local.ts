@@ -80,6 +80,7 @@ function seedApprovers(db: Db, world: World): void {
   for (const p of world.people) if (p.limit_cents !== undefined) insert.run(p.id, p.name, p.role, p.id, p.limit_cents);
   // Person A's controller agent reviews below materiality only; without this row it approves nothing.
   insert.run("controller:gpt", "Controller agent (GPT)", "controller_agent", null, 49_999);
+  insert.run("controller:claude", "Controller agent (Claude fallback)", "controller_agent", null, 49_999);
 }
 
 function seedParties(db: Db, world: World, note: (kind: string, id: string) => void): number {

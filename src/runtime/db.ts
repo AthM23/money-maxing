@@ -17,6 +17,7 @@ export function openDb(path = ":memory:"): Db {
 
 /** Columns added to the contract after databases already existed. CREATE TABLE IF NOT EXISTS never adds them. */
 const ADDED_COLUMNS: ReadonlyArray<readonly [string, string, string]> = [
+  ["workpaper", "stale", "INTEGER NOT NULL DEFAULT 0 CHECK (stale IN (0,1))"],
   ["policy", "code", "TEXT"],
   ["policy", "version", "INTEGER NOT NULL DEFAULT 1"],
   ["policy", "supersedes", "TEXT REFERENCES policy(id)"],

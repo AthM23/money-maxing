@@ -48,7 +48,7 @@ function intentDetail(db: Db, id: string): unknown {
   const intent = db.prepare("SELECT * FROM intent WHERE id = ?").get(id) as Record<string, unknown> | undefined;
   if (!intent) return null;
   const decisions = (db.prepare("SELECT * FROM decision WHERE intent_id = ? ORDER BY created_at, rowid").all(id) as Array<Record<string, unknown>>).map((d) => {
-    const wp = db.prepare("SELECT marks_json, kernel_verdict, checkable_num, checkable_den FROM workpaper WHERE decision_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1").get(d.id) as Record<string, unknown> | undefined;
+    const wp = db.prepare("SELECT marks_json, kernel_verdict, checkable_num, checkable_den, stale FROM workpaper WHERE decision_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1").get(d.id) as Record<string, unknown> | undefined;
     const entry = db.prepare("SELECT id, date, memo, posted_at FROM gl_entry WHERE source_decision_id = ?").get(d.id) as { id: string } | undefined;
     return {
       ...d, proposal: parse(d.proposal_json as string | null), proposal_json: undefined,
@@ -92,4 +92,4 @@ createServer((req, res) => {
   } catch (err) {
     send(res, 500, "text/plain", err instanceof Error ? err.message : String(err));
   }
-}).listen(PORT, () => process.stdout.write(`Footnote console: http://localhost:${PORT}  (db ${dbPath()})\n`));
+}).listen(PORT, "127.0.0.1", () => process.stdout.write(`Footnote console: http://localhost:${PORT}  (db ${dbPath()})\n`));

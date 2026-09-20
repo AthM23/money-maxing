@@ -48,7 +48,7 @@ genuinely blocked, and the answer is remembered with its scope so it is not aske
 
 | What | Result |
 |---|---|
-| July receipts settled by code alone, after the rule was compiled from Q2 and approved | 8 of 11, 0 model calls, books tied |
+| Fresh July run after the safety audit | 6 of 11 resolved; 10 cash entries posted; 0 model calls, books tied. After policy approval, two write-offs park for review under earned autonomy. |
 | Replay of six Q2 decisions | 0 of 6 before the rule; 5 of 6 after, the sixth triaged as human inconsistency |
 | Initech ($1,200, reason in a CEO email), real models | Haiku, $0.069, proposed with two verbatim quotes, parked for a person |
 | Wayne ($3,300, nothing explains it), real models | handed up by Haiku, escalated by Sonnet to the account owner, $0.21, nothing posted |
@@ -56,10 +56,12 @@ genuinely blocked, and the answer is remembered with its scope so it is not aske
 | Auditor pack on the posted July entries | 12 of 12 re-performed clean; one character changed in a cited bank line afterwards: that entry flagged |
 | Same month twice in the test world (six wire fees) | run 1: 24 model calls, 6 approvals; run 2: 0 model calls, 6 posted with no person, 6 parked; run 3: all 12 post, books tied |
 | Edge-case corpus (`tests/cases.csv`, scored by route) | 11 of 110 routed cases run against the real system, 11 correct, 0 false auto-posts; 99 not run |
-| Test suite | 474 passing |
+| Test suite (audit revision) | 488 TypeScript tests; 4 Python scoring tests; clean typecheck |
+
+The [19 September audit and decisions](context/AUDIT_2026-09-19.md) record the new safety fixes, remittance rehearsal, and remaining launch checks. Earlier live-model rows above are historical observations, not fresh audit runs.
 
 Lane C's fine-tune and benchmark (NorthwindBench: tasks, held-out entities and templates, contenders) are in
-[`ft/BENCHMARK.md`](ft/BENCHMARK.md); its numbers are reported there by its owner.
+[`ft/BENCHMARK.md`](ft/BENCHMARK.md); the audit corrections there invalidate comparisons made with the old scorer and test-selected threshold until rerun.
 
 ## Limits, stated plainly
 
@@ -82,6 +84,8 @@ Lane C's fine-tune and benchmark (NorthwindBench: tasks, held-out entities and t
 ```bash
 pnpm install
 pnpm test && pnpm typecheck
+python3 -m unittest discover -s ft -p 'test_*.py'
+pnpm demo:remittance                       # isolated 14-invoice email-table rehearsal, no external calls
 
 # Code only: costs nothing. Blank the keys so nothing paid can run.
 export ANTHROPIC_API_KEY= OPENAI_API_KEY=

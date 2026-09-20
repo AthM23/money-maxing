@@ -1,4 +1,5 @@
 import { REDUCES_INVOICE_KINDS, type ProposalKind } from "../contract/types.js";
+import { ACCOUNTS } from "../contract/accounts.js";
 import type { DocLite, KernelContext } from "../kernel/types.js";
 import type { RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
@@ -149,12 +150,12 @@ function asOfEscalations(db: Db, subject: RerunSubject, live: number, neutralise
 function appliedByOthers(db: Db, subject: RerunSubject, bankTxnId: string, neutralised: string[]): number {
   const row = db
     .prepare(
-      `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
-       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
+      `SELECT COALESCE(SUM(ABS((l.value ->> '$.debit_cents') - (l.value ->> '$.credit_cents'))), 0) AS n
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.entries')) l
        WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.id <> ? AND d.posted_at <= ?
-         AND json_extract(d.proposal_json, '$.bank_txn_id') = ?`,
+         AND json_extract(d.proposal_json, '$.bank_txn_id') = ? AND l.value ->> '$.account' = ?`,
     )
-    .get(subject.decision_id, subject.posted_at, bankTxnId) as { n: number };
+    .get(subject.decision_id, subject.posted_at, bankTxnId, ACCOUNTS.cash) as { n: number };
   neutralised.push(`bank line ${bankTxnId} counted as ${row.n} cents applied, excluding this decision's own application`);
   return row.n;
 }

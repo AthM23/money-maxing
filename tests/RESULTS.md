@@ -4,8 +4,16 @@ Scoreboard for the edge-case corpus. Update this as cases move from `todo` to
 `passing`. Per-case status lives in [`cases.csv`](./cases.csv); this file is the
 summary and the history.
 
-**Nothing has been run yet — no system exists to run it against.** All 115 cases
-are `todo`.
+**19 September 2026 audit:** the runtime corpus adapter runs **11 of 110 routed cases**;
+all 11 match their expected routes, with **0 false auto-posts**. The remaining 99 routed cases are
+`NOT_RUN`; the other five corpus rows describe engineering invariants. This is limited fixture
+coverage, not evidence that the entire corpus passes.
+
+Separately: **488 TypeScript tests across 50 files**, clean typecheck, and **4 Python scoring tests**.
+A fresh eleven-receipt seeded run resolves six cases with zero model calls; ten posted entries
+re-perform cleanly. After approving the learned policy in the isolated fixture, two write-offs park
+for review rather than silently posting. The fourteen-invoice remittance rehearsal applies $13,505
+and leaves the stated $495 dispute open. See [the audit](../context/AUDIT_2026-09-19.md).
 
 ---
 
@@ -15,11 +23,11 @@ The five from the corpus's rubric (section J). These are what go on the slide.
 
 | Metric | Target | Current |
 |---|---|---|
-| Auto-clear rate | 70–85% (higher invites suspicion) | — |
-| **Auto-clear precision** | **100% — the number that must not move** | — |
-| **False auto-posts** | **0 — eval exits non-zero on any** | — |
-| Exception recall | 100% | — |
-| Cost per 1,000 transactions | beat the rules-disabled baseline | — |
+| Auto-clear rate | 70–85% (whole-corpus target) | 1/11 (9.1%, executed safety subset only) |
+| **Auto-clear precision** | **100% — the number that must not move** | 1/1 (one observed auto) |
+| **False auto-posts** | **0 — eval exits non-zero on any** | 0 among 11 executed |
+| Exception recall | 100% | 10/10 executed exceptions |
+| Cost per 1,000 transactions | beat the rules-disabled baseline | $0 for these code-only fixtures; model baseline unmeasured |
 
 Baseline comparison (deterministic tier disabled, everything through the model):
 
@@ -37,23 +45,22 @@ contradicts the design is still a finding; a diagram that was never tested isn't
 
 | | Seeded | Passing | Failing | Todo |
 |---|---|---|---|---|
-| Minimum fixture (22) | 0 | 0 | 0 | 22 |
-| All cases (115) | 0 | 0 | 0 | 115 |
+| All routed cases (110) | 11 | 11 | 0 | 99 |
+| Engineering invariant rows (5) | — | not scored by route | — | — |
 
 By tier:
 
 | Tier | Total | Passing |
 |---|---|---|
-| T1 | — | 0 |
-| T2 | — | 0 |
-| T3 | — | 0 |
+| T1 | — | 1 |
+| T2 | — | 4 |
+| T3 | — | 6 |
 
 ---
 
 ## Known failures
 
-Cases we have run and do not pass, with why. An empty table means nothing has been
-run — it does not mean everything passes.
+Cases we have run and do not pass, with why. No failing routed case was observed in the executed subset; the unexecuted cases remain unknown.
 
 | Case | Expected route | Actual route | Why it fails | Fixing? |
 |---|---|---|---|---|
@@ -83,4 +90,4 @@ Append a row per meaningful run. Keep the unflattering ones.
 
 | When | Commit | What changed | Auto-clear | Precision | False auto-posts | Notes |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | — |
+| 2026-09-19 | d602757 + audit changes | kernel-pack | 1/11 | 1/1 | 0 | 99 routed cases not run; no model baseline |

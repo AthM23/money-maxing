@@ -1,4 +1,4 @@
-import type { Mark, Proposal } from "../contract/types.js";
+import { NON_CASH_SETTLEMENT_KINDS, type Mark, type Proposal } from "../contract/types.js";
 import { evaluateCondition } from "./condition.js";
 import type { FactLite, KernelContext, PolicyLite } from "./types.js";
 import { isAfterAsOf, isControlAccount, mark, naMark, passMark, verdictMark } from "./util.js";
@@ -77,6 +77,16 @@ function factProblems(fact: FactLite, proposal: Proposal, ctx: KernelContext, ad
   }
   if (isAfterAsOf(ctx, fact.learned_at)) {
     problems.push(`fact ${id} learned ${fact.learned_at} is after as_of ${ctx.as_of}`);
+  }
+  if (NON_CASH_SETTLEMENT_KINDS.includes(proposal.kind)) {
+    const value = fact.value ?? {};
+    const pct = value[proposal.kind === "tax_withholding" ? "pct_withheld" : "pct_off"];
+    const docs = [...new Set(proposal.applications.map(a => a.doc_id))].map(id => ctx.getDoc(id));
+    const basis = docs.length > 0 && docs.every(Boolean) ? docs.reduce((n, d) => n + d!.total_cents, 0) : null;
+    const amount = typeof pct === "number" && Number.isFinite(pct) && pct >= 0 && pct <= 100 && basis !== null
+      ? Math.round(basis * pct / 100)
+      : Number.isSafeInteger(value.amount_cents) ? value.amount_cents : null;
+    if (amount !== adjustment) problems.push(`fact ${id} explains ${amount ?? "no verifiable amount"} cents, entry adjusts ${adjustment}`);
   }
   return problems;
 }

@@ -1026,3 +1026,34 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   scoreboard's cost line understates a run that includes reviews.
 - Paid spend this stretch: about $0.45 of investigator cost on the scoreboard, plus four Opus reviews not metered.
 - `pnpm test` → 48 files, **474 passing**; typecheck clean.
+
+### 2026-09-19 23:25 ET — Architecture/code audit, safety fixes, remittance scene and demo decisions (Codex)
+
+- Reviewed all twenty architecture sheets, GitHub/local code and the user's pasted storytelling artifact.
+  Incorporated concurrent code commits through `d602757` before validation and results-only `6a2bb33` afterward. Full findings, decisions,
+  reproduction and remaining work: `context/AUDIT_2026-09-19.md`.
+- Decision: avenue A → scoped learning → audit proof; keep synthetic Northwind and existing fixtures; defer FX,
+  multi-entity, ASC 606, equity and usage-revenue work. Fine-tune remains an extraction experiment.
+- Fixed transactional posting/approval, terminal declines and signer identity, full bank-cash consumption,
+  replay/live idempotency, superseded evidence and stale workpapers, poisoned/retried human answers, explicit
+  standing-answer expiry, fact amount verification, ambiguous cash matching, AP duplicate scope and malformed
+  bank files. Skeleton now uses earned autonomy. New seeds authorize the Claude reviewer below materiality.
+- Learned rules now name observed customers; an unseen strategic short-payer cannot inherit the bank-fee rule.
+  Legacy generated policies without customer scope fail J_SCOPE until a scoped replacement is approved.
+  Leave-one-out respects customer coverage and the three-case compilation minimum.
+- Added `pnpm demo:remittance`: a separate in-memory 14-invoice scene; $13,505 applied, $495 left on INV-3001,
+  with the kernel independently verifying the per-invoice remittance. Defined email-body format only; not XLSX
+  or the fine-tuned model. Wrong-allocation and ambiguous-match regressions covered.
+- Corrected benchmark schema scoring, malformed output handling, result provenance and test-set threshold leakage.
+  Prior model figures need rerun under v2. Four Python tests pass; no paid/GPU run or new GBT score claimed.
+- Validation: 488 TS tests / 50 files; typecheck clean; four Python tests. Fresh seeded world: 6/11 intents
+  resolved in code, ten cash entries, zero model calls; audit 10/10 clean. Approving the synthetic learned rule
+  leaves two write-offs proposed for review. This supersedes the earlier 8/11 AUTO claim under forced autonomy.
+  The controlled 24→0 model-call rerun test remains passing; run 2 still needs six approvals.
+- Console now binds loopback and flags stale workpapers; HTTP/API and script-syntax smoke pass. Browser visual
+  check and live Slack click are still unverified. Added CI workflow, not yet executed remotely.
+- Corpus remains 11/110 routed cases executed (all correct), 99 NOT_RUN, plus five invariant rows. Updated
+  `tests/RESULTS.md` and matching CSV statuses; passing unit tests do not imply full corpus coverage.
+- No live messages, paid model calls, accounting-system writes or production-data resets during this audit.
+  Already-posted source corrections remain explicit review holds; rematching existing CaseFiles and a reviewed
+  reversal/acknowledgement workflow remain follow-up work, described in the audit.

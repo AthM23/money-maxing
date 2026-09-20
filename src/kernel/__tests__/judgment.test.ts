@@ -85,6 +85,10 @@ describe("J1 policy holds", () => {
 });
 
 describe("J2 facts are in scope", () => {
+  it("a percentage fact cannot cover a larger adjustment just because it is under the authority ceiling", () => {
+    const ctx = makeCtx({ ...world, facts: [fact("fact:10pct", { value: { pct_off: 10 }, max_amount_cents: 200_000 })] });
+    expect(statusOf(runKernel(memo({ fact_refs: ["fact:10pct"] }), ctx, "proposal"), "J2")).toBe("fail");
+  });
   const inScope = fact("fact:terms", { kinds: ["credit_memo"], max_amount_cents: 200_000 });
 
   it("passes a fact that covers this party, kind, date and amount", () => {

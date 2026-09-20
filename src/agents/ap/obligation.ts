@@ -46,7 +46,7 @@ function duplicateBandCents(bill: BillRow, other: BillRow, tol: Tolerance): numb
 }
 
 /** One charge twice: the key agrees and the totals are inside the band E4 would have let through anyway. */
-function sameObligation(bill: BillRow, other: BillRow, tol: Tolerance): boolean {
+export function sameObligation(bill: BillRow, other: BillRow, tol: Tolerance = DEFAULT_TOLERANCE): boolean {
   if (obligationKey(bill) !== obligationKey(other)) return false;
   return Math.abs(bill.total_cents - other.total_cents) <= duplicateBandCents(bill, other, tol);
 }

@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS decision_step (  -- ADDED per-step trace: the timelin
 CREATE TABLE IF NOT EXISTS workpaper (
   id TEXT PRIMARY KEY, decision_id TEXT NOT NULL REFERENCES decision(id), marks_json TEXT NOT NULL,
   kernel_verdict TEXT NOT NULL CHECK (kernel_verdict IN ('accept','reject','block')),
-  checkable_num INTEGER NOT NULL, checkable_den INTEGER NOT NULL, created_at TEXT NOT NULL
+  checkable_num INTEGER NOT NULL, checkable_den INTEGER NOT NULL, created_at TEXT NOT NULL,
+  stale INTEGER NOT NULL DEFAULT 0 CHECK (stale IN (0,1))
 );
 CREATE TABLE IF NOT EXISTS approval (       -- ADDED: the approval is itself a checked artifact (kernel P)
   id TEXT PRIMARY KEY, decision_id TEXT NOT NULL REFERENCES decision(id),

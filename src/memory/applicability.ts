@@ -57,7 +57,7 @@ function firstFailure(db: Db, row: FactRow, q: FactQuery): Omit<RefusedFact, "fa
     return { failed_dimension: "date", detail: `${q.entry_date} is outside ${row.valid_from}..${row.valid_to}` };
   }
   const kinds = (safeJson(row.scope_json) as { kinds?: string[] } | null)?.kinds;
-  if (kinds && !kinds.includes(q.kind)) return { failed_dimension: "kind", detail: `${q.kind} is not in [${kinds.join(", ")}]` };
+  if (!Array.isArray(kinds) || !kinds.includes(q.kind)) return { failed_dimension: "kind", detail: `${q.kind} is not in a valid explicit scope` };
   if (row.uses === "one_time" && countFactUses(db, row.id) > 0) return { failed_dimension: "one_time_used", detail: "one-time fact already used" };
   if (row.max_amount_cents !== null && q.amount_cents > row.max_amount_cents) {
     return { failed_dimension: "amount_ceiling", detail: `${q.amount_cents} exceeds the approver ceiling ${row.max_amount_cents}` };
