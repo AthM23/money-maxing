@@ -66,11 +66,25 @@ function cashApplication(db: Db, c: CaseFile, replaying: boolean): Proposal {
   const memo = `Cash application ${c.bank_txn_id}`;
   const p = base(c, "apply_payment", applications, [
     { account: ACCOUNTS.cash, debit_cents: c.received_cents, credit_cents: 0, memo },
-    { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: applied, memo },
+    ...(applied > 0 ? [{ account: ACCOUNTS.ar, debit_cents: 0, credit_cents: applied, memo }] : []),
     ...(c.received_cents > applied ? [{ account: ACCOUNTS.customer_credits, debit_cents: 0, credit_cents: c.received_cents - applied, memo: `${memo}: unapplied` }] : []),
   ]);
-  if (c.received_cents > applied) p.evidence = c.trace_ids.map((trace_id) => ({ claim: "bank line showing the overpayment", trace_id }));
+  if (c.received_cents > applied) p.evidence = unappliedCashEvidence(db, c);
   return p;
+}
+
+/**
+ * Money held as a customer credit is a judgment, so it needs a quoted source. The source is the bank line itself:
+ * its descriptor is quoted, and the kernel agrees the quote against the stored bank record character by character.
+ */
+function unappliedCashEvidence(db: Db, c: CaseFile): Proposal["evidence"] {
+  const txn = c.bank_txn_id
+    ? (db.prepare("SELECT descriptor FROM bank_txn WHERE id = ?").get(c.bank_txn_id) as { descriptor: string } | undefined)
+    : undefined;
+  return c.trace_ids.map((trace_id) => ({
+    claim: "bank line showing money received with no open document to apply it to", trace_id,
+    ...(txn?.descriptor ? { quote: txn.descriptor } : {}),
+  }));
 }
 
 /** In replay the balance comes from the case snapshot: today's ledger already shows the invoice settled. */
