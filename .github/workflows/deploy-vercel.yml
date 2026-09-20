@@ -1,0 +1,29 @@
+name: Deploy the public copy to Vercel
+# Every push to main redeploys https://money-maxing-mu.vercel.app, whoever wrote the commit. The source is uploaded and
+# built on Vercel exactly as `npx vercel deploy --prod` does from a laptop (context/DEPLOY.md). Without the
+# VERCEL_TOKEN repository secret the job does nothing and passes.
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: vercel-production
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      # Identifiers, not secrets: the same two values as .vercel/project.json after `vercel link`.
+      VERCEL_ORG_ID: team_nco20QhFwbejZ6Ej3HP5mA2v
+      VERCEL_PROJECT_ID: prj_HptEP2nRuLcpz7E3nxoldynuaxTT
+    steps:
+      - if: env.VERCEL_TOKEN == ''
+        run: echo "No VERCEL_TOKEN secret on this repository, so nothing was deployed."
+      - if: env.VERCEL_TOKEN != ''
+        uses: actions/checkout@v4
+      - if: env.VERCEL_TOKEN != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - if: env.VERCEL_TOKEN != ''
+        run: npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
