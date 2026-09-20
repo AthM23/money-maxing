@@ -1,0 +1,825 @@
+vendor,memo,amount_cents,account
+Snowflake,auto-pay,2658906,6400 Cloud Infrastructure
+Mercury Bank,usage charges,3756877,6510 Bank Fees
+Gusto Payroll,usage charges,5419636,6000 Payroll
+LaunchDarkly,,1508238,6300 Software Subscriptions
+Linear,invoice B-9964,5672468,6300 Software Subscriptions
+Twilio,annual renewal,4997454,6420 Communications
+Segment,annual renewal,4652891,6300 Software Subscriptions
+Gusto Payroll,services B-7271,35130,6000 Payroll
+Amplitude,services B-8072,3142082,6300 Software Subscriptions
+Notion Labs,auto-pay,5092605,6300 Software Subscriptions
+Figma,annual renewal,572503,6300 Software Subscriptions
+Linear,monthly subscription,591753,6300 Software Subscriptions
+Linear,,1139389,6300 Software Subscriptions
+Twilio,monthly subscription,3294047,6420 Communications
+AWS,usage charges,2324752,6400 Cloud Infrastructure
+AWS,auto-pay,2697462,6400 Cloud Infrastructure
+DocuSign,,4640386,6300 Software Subscriptions
+WeWork,usage charges,2133325,6200 Rent & Facilities
+Stripe Billing,annual renewal,2816940,6500 Payment Processing Fees
+Figma,invoice B-3397,4508190,6300 Software Subscriptions
+Twilio,usage charges,141998,6420 Communications
+OpenPhone,usage charges,2371634,6420 Communications
+Gusto Payroll,services B-9083,3247584,6000 Payroll
+Notion Labs,,1547626,6300 Software Subscriptions
+Deel Inc,,1850991,6000 Payroll
+Datadog,usage charges,4439173,6410 Monitoring & Tooling
+Zoom Video,annual renewal,1879796,6300 Software Subscriptions
+DocuSign,usage charges,831390,6300 Software Subscriptions
+Datadog,annual renewal,1996667,6410 Monitoring & Tooling
+LaunchDarkly,usage charges,1848887,6300 Software Subscriptions
+Twilio,invoice B-9971,5741694,6420 Communications
+Notion Labs,auto-pay,5157586,6300 Software Subscriptions
+GitHub,services B-1413,1416798,6410 Monitoring & Tooling
+GitHub,monthly subscription,371326,6410 Monitoring & Tooling
+Airtable,services B-8343,61951,6300 Software Subscriptions
+DocuSign,auto-pay,2610088,6300 Software Subscriptions
+Datadog,,2992221,6410 Monitoring & Tooling
+Google Cloud,invoice B-6105,2990889,6400 Cloud Infrastructure
+GitHub,auto-pay,4421144,6410 Monitoring & Tooling
+Notion Labs,invoice B-7701,5567205,6300 Software Subscriptions
+LaunchDarkly,annual renewal,150421,6300 Software Subscriptions
+Stripe Billing,annual renewal,3779483,6500 Payment Processing Fees
+GitHub,services B-7570,4775193,6410 Monitoring & Tooling
+Notion Labs,monthly subscription,3848275,6300 Software Subscriptions
+Snowflake,monthly subscription,4689197,6400 Cloud Infrastructure
+Twilio,services B-1487,2404619,6420 Communications
+DocuSign,services B-9919,1665095,6300 Software Subscriptions
+Snowflake,usage charges,2241416,6400 Cloud Infrastructure
+AWS,services B-8567,312040,6400 Cloud Infrastructure
+Zoom Video,,4693488,6300 Software Subscriptions
+Mercury Bank,monthly subscription,2569931,6510 Bank Fees
+Gusto Payroll,,3393188,6000 Payroll
+Deel Inc,monthly subscription,2665507,6000 Payroll
+Datadog,usage charges,3255760,6410 Monitoring & Tooling
+Figma,usage charges,476441,6300 Software Subscriptions
+Snowflake,,1591161,6400 Cloud Infrastructure
+AWS,,5586160,6400 Cloud Infrastructure
+Datadog,invoice B-2482,5935829,6410 Monitoring & Tooling
+OpenPhone,auto-pay,30811,6420 Communications
+Datadog,annual renewal,610664,6410 Monitoring & Tooling
+Google Cloud,auto-pay,1138083,6400 Cloud Infrastructure
+AWS,auto-pay,2451781,6400 Cloud Infrastructure
+Stripe Billing,usage charges,4381835,6500 Payment Processing Fees
+Amplitude,services B-8355,5244699,6300 Software Subscriptions
+Stripe Billing,services B-8543,1548081,6500 Payment Processing Fees
+OpenPhone,usage charges,5684738,6420 Communications
+Segment,annual renewal,2692263,6300 Software Subscriptions
+Brex,auto-pay,564374,6510 Bank Fees
+GitHub,services B-3546,3702489,6410 Monitoring & Tooling
+Twilio,annual renewal,3411345,6420 Communications
+Figma,invoice B-9922,5995904,6300 Software Subscriptions
+Datadog,annual renewal,2617638,6410 Monitoring & Tooling
+Figma,usage charges,3878474,6300 Software Subscriptions
+Mercury Bank,annual renewal,3974567,6510 Bank Fees
+Brex,services B-7434,1005819,6510 Bank Fees
+Linear,invoice B-7198,4535776,6300 Software Subscriptions
+Snowflake,monthly subscription,1506699,6400 Cloud Infrastructure
+Stripe Billing,usage charges,4740123,6500 Payment Processing Fees
+DocuSign,invoice B-1799,1974413,6300 Software Subscriptions
+Snowflake,annual renewal,5312575,6400 Cloud Infrastructure
+Rippling,monthly subscription,5323737,6000 Payroll
+Airtable,usage charges,4842360,6300 Software Subscriptions
+Google Cloud,annual renewal,419217,6400 Cloud Infrastructure
+Segment,,3614566,6300 Software Subscriptions
+Zoom Video,auto-pay,4815928,6300 Software Subscriptions
+Segment,services B-1749,2981291,6300 Software Subscriptions
+AWS,monthly subscription,210996,6400 Cloud Infrastructure
+Google Cloud,services B-4222,1866845,6400 Cloud Infrastructure
+DocuSign,usage charges,896614,6300 Software Subscriptions
+Airtable,usage charges,1604510,6300 Software Subscriptions
+DocuSign,usage charges,5136639,6300 Software Subscriptions
+Google Cloud,auto-pay,4773082,6400 Cloud Infrastructure
+Segment,annual renewal,3937222,6300 Software Subscriptions
+GitHub,usage charges,3427580,6410 Monitoring & Tooling
+Linear,annual renewal,1532123,6300 Software Subscriptions
+Deel Inc,services B-4906,1670731,6000 Payroll
+DocuSign,services B-2180,5690666,6300 Software Subscriptions
+Segment,invoice B-6182,2936024,6300 Software Subscriptions
+Atlassian,annual renewal,5906085,6300 Software Subscriptions
+Google Cloud,,3698851,6400 Cloud Infrastructure
+WeWork,annual renewal,3646277,6200 Rent & Facilities
+AWS,annual renewal,4323132,6400 Cloud Infrastructure
+Deel Inc,usage charges,1915161,6000 Payroll
+Amplitude,services B-1977,1930348,6300 Software Subscriptions
+Linear,annual renewal,3611539,6300 Software Subscriptions
+Retool,,1410975,6300 Software Subscriptions
+Brex,auto-pay,5290215,6510 Bank Fees
+Retool,services B-9799,3689068,6300 Software Subscriptions
+Snowflake,,3987715,6400 Cloud Infrastructure
+LaunchDarkly,monthly subscription,1932465,6300 Software Subscriptions
+Google Cloud,,908247,6400 Cloud Infrastructure
+Linear,services B-8123,4036023,6300 Software Subscriptions
+Figma,auto-pay,314458,6300 Software Subscriptions
+LaunchDarkly,,906428,6300 Software Subscriptions
+Deel Inc,annual renewal,4985320,6000 Payroll
+DocuSign,,3437569,6300 Software Subscriptions
+Amplitude,auto-pay,1081806,6300 Software Subscriptions
+OpenPhone,usage charges,5337883,6420 Communications
+WeWork,annual renewal,2230891,6200 Rent & Facilities
+Airtable,monthly subscription,2104491,6300 Software Subscriptions
+Google Cloud,annual renewal,3923974,6400 Cloud Infrastructure
+Retool,services B-9638,3183401,6300 Software Subscriptions
+Brex,monthly subscription,2021985,6510 Bank Fees
+Retool,,851445,6300 Software Subscriptions
+Stripe Billing,monthly subscription,3635562,6500 Payment Processing Fees
+Rippling,usage charges,3030431,6000 Payroll
+Notion Labs,services B-5072,1206775,6300 Software Subscriptions
+Figma,services B-4219,3169789,6300 Software Subscriptions
+Figma,usage charges,1782874,6300 Software Subscriptions
+Gusto Payroll,usage charges,3855169,6000 Payroll
+Rippling,services B-2013,3646335,6000 Payroll
+Brex,,2111052,6510 Bank Fees
+AWS,,762329,6400 Cloud Infrastructure
+Deel Inc,monthly subscription,5341422,6000 Payroll
+Snowflake,invoice B-1364,3147067,6400 Cloud Infrastructure
+WeWork,services B-4786,5865696,6200 Rent & Facilities
+Figma,auto-pay,5391366,6300 Software Subscriptions
+Amplitude,invoice B-5705,3769556,6300 Software Subscriptions
+GitHub,,161452,6410 Monitoring & Tooling
+Zoom Video,usage charges,3136471,6300 Software Subscriptions
+Mercury Bank,invoice B-6489,1276195,6510 Bank Fees
+Rippling,annual renewal,2403764,6000 Payroll
+GitHub,annual renewal,2775044,6410 Monitoring & Tooling
+Mercury Bank,services B-3579,5505914,6510 Bank Fees
+GitHub,usage charges,2998740,6410 Monitoring & Tooling
+Figma,annual renewal,56746,6300 Software Subscriptions
+Linear,monthly subscription,2248527,6300 Software Subscriptions
+Notion Labs,annual renewal,4545073,6300 Software Subscriptions
+Google Cloud,auto-pay,5436351,6400 Cloud Infrastructure
+Segment,invoice B-5470,3145773,6300 Software Subscriptions
+Notion Labs,auto-pay,5303788,6300 Software Subscriptions
+Notion Labs,auto-pay,1195492,6300 Software Subscriptions
+Google Cloud,annual renewal,2148628,6400 Cloud Infrastructure
+Segment,,899473,6300 Software Subscriptions
+Retool,services B-6882,3461341,6300 Software Subscriptions
+Datadog,annual renewal,5543455,6410 Monitoring & Tooling
+OpenPhone,monthly subscription,4214492,6420 Communications
+Retool,annual renewal,2801865,6300 Software Subscriptions
+AWS,usage charges,899128,6400 Cloud Infrastructure
+LaunchDarkly,monthly subscription,1111999,6300 Software Subscriptions
+Segment,monthly subscription,3639995,6300 Software Subscriptions
+Rippling,,2644824,6000 Payroll
+OpenPhone,auto-pay,4113665,6420 Communications
+GitHub,usage charges,2460665,6410 Monitoring & Tooling
+Deel Inc,invoice B-9606,3884282,6000 Payroll
+Datadog,auto-pay,4431751,6410 Monitoring & Tooling
+Airtable,usage charges,4807112,6300 Software Subscriptions
+Segment,services B-6560,1941769,6300 Software Subscriptions
+Rippling,annual renewal,3638237,6000 Payroll
+Stripe Billing,usage charges,5372320,6500 Payment Processing Fees
+Notion Labs,annual renewal,4561451,6300 Software Subscriptions
+LaunchDarkly,annual renewal,5034305,6300 Software Subscriptions
+Twilio,usage charges,3303221,6420 Communications
+DocuSign,services B-7456,4473011,6300 Software Subscriptions
+Retool,invoice B-1538,1554745,6300 Software Subscriptions
+WeWork,usage charges,526719,6200 Rent & Facilities
+OpenPhone,monthly subscription,276413,6420 Communications
+GitHub,,5145223,6410 Monitoring & Tooling
+Airtable,invoice B-1768,3850179,6300 Software Subscriptions
+Notion Labs,auto-pay,836989,6300 Software Subscriptions
+Airtable,annual renewal,5000988,6300 Software Subscriptions
+Segment,annual renewal,261436,6300 Software Subscriptions
+OpenPhone,monthly subscription,5144198,6420 Communications
+DocuSign,services B-1397,3970640,6300 Software Subscriptions
+DocuSign,auto-pay,5448060,6300 Software Subscriptions
+Twilio,auto-pay,235992,6420 Communications
+Retool,annual renewal,3146212,6300 Software Subscriptions
+Mercury Bank,monthly subscription,3031806,6510 Bank Fees
+Brex,invoice B-7555,1336747,6510 Bank Fees
+Linear,services B-8732,2387878,6300 Software Subscriptions
+DocuSign,invoice B-1601,3884170,6300 Software Subscriptions
+Retool,invoice B-1731,4787186,6300 Software Subscriptions
+Mercury Bank,monthly subscription,2060823,6510 Bank Fees
+AWS,annual renewal,4181079,6400 Cloud Infrastructure
+Datadog,invoice B-7610,3868705,6410 Monitoring & Tooling
+DocuSign,auto-pay,5126119,6300 Software Subscriptions
+AWS,monthly subscription,3015914,6400 Cloud Infrastructure
+Snowflake,usage charges,5343363,6400 Cloud Infrastructure
+Retool,monthly subscription,5471921,6300 Software Subscriptions
+Snowflake,usage charges,2547761,6400 Cloud Infrastructure
+Segment,,4198892,6300 Software Subscriptions
+Notion Labs,services B-6631,2818017,6300 Software Subscriptions
+Zoom Video,auto-pay,609201,6300 Software Subscriptions
+Twilio,monthly subscription,3605679,6420 Communications
+AWS,usage charges,3950222,6400 Cloud Infrastructure
+Segment,invoice B-1742,1891152,6300 Software Subscriptions
+Figma,,13619,6300 Software Subscriptions
+Twilio,monthly subscription,5940758,6420 Communications
+Deel Inc,usage charges,472783,6000 Payroll
+Notion Labs,services B-8771,4930019,6300 Software Subscriptions
+Deel Inc,invoice B-3051,3029969,6000 Payroll
+Twilio,annual renewal,4664435,6420 Communications
+Brex,auto-pay,2171018,6510 Bank Fees
+Brex,services B-1714,629175,6510 Bank Fees
+GitHub,auto-pay,4701465,6410 Monitoring & Tooling
+Brex,,2452199,6510 Bank Fees
+DocuSign,invoice B-6540,955734,6300 Software Subscriptions
+WeWork,,2103171,6200 Rent & Facilities
+Deel Inc,invoice B-4314,4430431,6000 Payroll
+Gusto Payroll,monthly subscription,19549,6000 Payroll
+Stripe Billing,auto-pay,2657990,6500 Payment Processing Fees
+AWS,services B-3643,3927395,6400 Cloud Infrastructure
+DocuSign,,398921,6300 Software Subscriptions
+Gusto Payroll,,2398448,6000 Payroll
+LaunchDarkly,auto-pay,3088852,6300 Software Subscriptions
+WeWork,services B-6083,5928860,6200 Rent & Facilities
+OpenPhone,annual renewal,1191148,6420 Communications
+LaunchDarkly,,5087943,6300 Software Subscriptions
+Segment,usage charges,3565482,6300 Software Subscriptions
+Mercury Bank,annual renewal,5259099,6510 Bank Fees
+Zoom Video,invoice B-2882,731950,6300 Software Subscriptions
+Notion Labs,auto-pay,4151781,6300 Software Subscriptions
+Snowflake,auto-pay,2725899,6400 Cloud Infrastructure
+Linear,invoice B-3124,4199597,6300 Software Subscriptions
+Figma,,3245252,6300 Software Subscriptions
+Brex,monthly subscription,2618806,6510 Bank Fees
+GitHub,monthly subscription,5227140,6410 Monitoring & Tooling
+Airtable,,2376884,6300 Software Subscriptions
+Airtable,monthly subscription,5446534,6300 Software Subscriptions
+Datadog,invoice B-7126,7751,6410 Monitoring & Tooling
+LaunchDarkly,invoice B-1446,4794240,6300 Software Subscriptions
+Snowflake,invoice B-2870,292879,6400 Cloud Infrastructure
+Zoom Video,usage charges,5805591,6300 Software Subscriptions
+Retool,usage charges,5119640,6300 Software Subscriptions
+Datadog,usage charges,3349410,6410 Monitoring & Tooling
+Figma,monthly subscription,2020725,6300 Software Subscriptions
+Snowflake,usage charges,5026449,6400 Cloud Infrastructure
+Datadog,services B-8233,491450,6410 Monitoring & Tooling
+Gusto Payroll,annual renewal,4760978,6000 Payroll
+Stripe Billing,monthly subscription,315859,6500 Payment Processing Fees
+Figma,,4374806,6300 Software Subscriptions
+Brex,usage charges,2244594,6510 Bank Fees
+Atlassian,auto-pay,5848613,6300 Software Subscriptions
+Linear,monthly subscription,2467574,6300 Software Subscriptions
+Gusto Payroll,,2424056,6000 Payroll
+OpenPhone,monthly subscription,2436568,6420 Communications
+AWS,auto-pay,5463714,6400 Cloud Infrastructure
+Segment,,5524274,6300 Software Subscriptions
+Notion Labs,auto-pay,3171001,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,3985456,6300 Software Subscriptions
+Figma,annual renewal,3978817,6300 Software Subscriptions
+Segment,annual renewal,5715104,6300 Software Subscriptions
+AWS,usage charges,1075760,6400 Cloud Infrastructure
+Linear,invoice B-8980,459508,6300 Software Subscriptions
+Brex,annual renewal,1562877,6510 Bank Fees
+Retool,services B-7015,1811707,6300 Software Subscriptions
+Deel Inc,,3105453,6000 Payroll
+Stripe Billing,auto-pay,4996599,6500 Payment Processing Fees
+DocuSign,monthly subscription,2671332,6300 Software Subscriptions
+Zoom Video,invoice B-3701,3198836,6300 Software Subscriptions
+OpenPhone,invoice B-7971,814606,6420 Communications
+GitHub,usage charges,4320054,6410 Monitoring & Tooling
+Airtable,annual renewal,2593760,6300 Software Subscriptions
+DocuSign,monthly subscription,5339949,6300 Software Subscriptions
+WeWork,,1608744,6200 Rent & Facilities
+Linear,usage charges,3698594,6300 Software Subscriptions
+Amplitude,usage charges,1335670,6300 Software Subscriptions
+Linear,services B-1504,5231332,6300 Software Subscriptions
+Zoom Video,usage charges,4771012,6300 Software Subscriptions
+Mercury Bank,monthly subscription,1162423,6510 Bank Fees
+GitHub,monthly subscription,4825307,6410 Monitoring & Tooling
+Google Cloud,annual renewal,4599837,6400 Cloud Infrastructure
+Atlassian,usage charges,4617424,6300 Software Subscriptions
+WeWork,invoice B-9477,4565051,6200 Rent & Facilities
+LaunchDarkly,annual renewal,3328093,6300 Software Subscriptions
+Amplitude,auto-pay,1408963,6300 Software Subscriptions
+WeWork,monthly subscription,971900,6200 Rent & Facilities
+AWS,services B-3233,4546632,6400 Cloud Infrastructure
+Rippling,,1257710,6000 Payroll
+Snowflake,invoice B-5722,3280146,6400 Cloud Infrastructure
+Google Cloud,auto-pay,593052,6400 Cloud Infrastructure
+Airtable,annual renewal,3863793,6300 Software Subscriptions
+Airtable,services B-3354,963360,6300 Software Subscriptions
+Retool,annual renewal,4345821,6300 Software Subscriptions
+Amplitude,auto-pay,96709,6300 Software Subscriptions
+Brex,invoice B-5268,4988317,6510 Bank Fees
+Retool,annual renewal,4925025,6300 Software Subscriptions
+OpenPhone,usage charges,335332,6420 Communications
+Gusto Payroll,annual renewal,3882628,6000 Payroll
+DocuSign,monthly subscription,3253141,6300 Software Subscriptions
+Retool,invoice B-6531,2048039,6300 Software Subscriptions
+Datadog,auto-pay,2750130,6410 Monitoring & Tooling
+Google Cloud,annual renewal,397931,6400 Cloud Infrastructure
+Rippling,monthly subscription,4132262,6000 Payroll
+Notion Labs,services B-6942,3502726,6300 Software Subscriptions
+Gusto Payroll,services B-1435,5547185,6000 Payroll
+DocuSign,auto-pay,2728589,6300 Software Subscriptions
+DocuSign,annual renewal,5724426,6300 Software Subscriptions
+Airtable,annual renewal,3455026,6300 Software Subscriptions
+Retool,auto-pay,2848173,6300 Software Subscriptions
+Brex,,5799331,6510 Bank Fees
+Twilio,usage charges,5260909,6420 Communications
+OpenPhone,services B-4967,3089218,6420 Communications
+Amplitude,services B-1759,4834400,6300 Software Subscriptions
+AWS,annual renewal,4219114,6400 Cloud Infrastructure
+Figma,auto-pay,3597378,6300 Software Subscriptions
+Zoom Video,,340185,6300 Software Subscriptions
+Linear,annual renewal,4054153,6300 Software Subscriptions
+Snowflake,usage charges,1050128,6400 Cloud Infrastructure
+Gusto Payroll,usage charges,436137,6000 Payroll
+Airtable,,1509517,6300 Software Subscriptions
+Atlassian,monthly subscription,1074909,6300 Software Subscriptions
+Datadog,,2091128,6410 Monitoring & Tooling
+Stripe Billing,annual renewal,897496,6500 Payment Processing Fees
+Airtable,auto-pay,1955494,6300 Software Subscriptions
+Snowflake,monthly subscription,4520775,6400 Cloud Infrastructure
+Atlassian,invoice B-3187,366421,6300 Software Subscriptions
+Twilio,usage charges,4322608,6420 Communications
+Snowflake,usage charges,984118,6400 Cloud Infrastructure
+Figma,invoice B-8724,3356398,6300 Software Subscriptions
+Retool,usage charges,1028868,6300 Software Subscriptions
+Zoom Video,services B-6290,3800732,6300 Software Subscriptions
+Brex,,1661313,6510 Bank Fees
+Deel Inc,annual renewal,5682155,6000 Payroll
+Airtable,monthly subscription,2063925,6300 Software Subscriptions
+GitHub,services B-4117,801018,6410 Monitoring & Tooling
+Google Cloud,usage charges,5172117,6400 Cloud Infrastructure
+Segment,monthly subscription,3388349,6300 Software Subscriptions
+Brex,,124458,6510 Bank Fees
+Segment,auto-pay,769576,6300 Software Subscriptions
+Google Cloud,auto-pay,1543861,6400 Cloud Infrastructure
+Linear,auto-pay,3191631,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,4999651,6300 Software Subscriptions
+DocuSign,,1372496,6300 Software Subscriptions
+LaunchDarkly,annual renewal,2358707,6300 Software Subscriptions
+Mercury Bank,services B-3459,5448288,6510 Bank Fees
+LaunchDarkly,,5898427,6300 Software Subscriptions
+Datadog,,3253787,6410 Monitoring & Tooling
+GitHub,auto-pay,5882312,6410 Monitoring & Tooling
+Deel Inc,services B-3078,2669001,6000 Payroll
+Datadog,monthly subscription,3452371,6410 Monitoring & Tooling
+Atlassian,monthly subscription,3944629,6300 Software Subscriptions
+WeWork,auto-pay,638970,6200 Rent & Facilities
+Linear,monthly subscription,3298899,6300 Software Subscriptions
+DocuSign,auto-pay,5021338,6300 Software Subscriptions
+Stripe Billing,annual renewal,4375120,6500 Payment Processing Fees
+Deel Inc,,5725264,6000 Payroll
+Rippling,monthly subscription,1482658,6000 Payroll
+Twilio,usage charges,1172407,6420 Communications
+Linear,annual renewal,3540945,6300 Software Subscriptions
+Figma,auto-pay,5443518,6300 Software Subscriptions
+AWS,auto-pay,3976936,6400 Cloud Infrastructure
+Gusto Payroll,,2092613,6000 Payroll
+WeWork,invoice B-7131,3984585,6200 Rent & Facilities
+Google Cloud,,2022975,6400 Cloud Infrastructure
+Mercury Bank,monthly subscription,1105481,6510 Bank Fees
+Brex,usage charges,4330379,6510 Bank Fees
+Mercury Bank,,3327880,6510 Bank Fees
+Snowflake,services B-5697,3546333,6400 Cloud Infrastructure
+Linear,auto-pay,4665107,6300 Software Subscriptions
+WeWork,usage charges,3956741,6200 Rent & Facilities
+Linear,,3544871,6300 Software Subscriptions
+Google Cloud,services B-1691,3584801,6400 Cloud Infrastructure
+Twilio,auto-pay,2164287,6420 Communications
+Atlassian,usage charges,2303218,6300 Software Subscriptions
+LaunchDarkly,,2678430,6300 Software Subscriptions
+Atlassian,invoice B-4675,3705413,6300 Software Subscriptions
+Zoom Video,annual renewal,1389013,6300 Software Subscriptions
+Atlassian,annual renewal,521351,6300 Software Subscriptions
+Datadog,monthly subscription,4195405,6410 Monitoring & Tooling
+WeWork,annual renewal,4919050,6200 Rent & Facilities
+Airtable,monthly subscription,2489955,6300 Software Subscriptions
+Datadog,auto-pay,1418737,6410 Monitoring & Tooling
+Snowflake,services B-8429,4503608,6400 Cloud Infrastructure
+DocuSign,services B-4808,3569774,6300 Software Subscriptions
+Twilio,annual renewal,1783491,6420 Communications
+Figma,services B-5980,2380006,6300 Software Subscriptions
+Gusto Payroll,auto-pay,5366327,6000 Payroll
+Rippling,usage charges,1280847,6000 Payroll
+Rippling,usage charges,3555789,6000 Payroll
+Twilio,invoice B-3984,2470207,6420 Communications
+Snowflake,annual renewal,578792,6400 Cloud Infrastructure
+DocuSign,annual renewal,1706989,6300 Software Subscriptions
+Datadog,auto-pay,348883,6410 Monitoring & Tooling
+Mercury Bank,monthly subscription,2523041,6510 Bank Fees
+Deel Inc,annual renewal,4742432,6000 Payroll
+Snowflake,services B-6895,2773744,6400 Cloud Infrastructure
+DocuSign,invoice B-9097,725578,6300 Software Subscriptions
+DocuSign,usage charges,1727504,6300 Software Subscriptions
+LaunchDarkly,,3895203,6300 Software Subscriptions
+Airtable,,4486263,6300 Software Subscriptions
+Twilio,services B-3432,2465062,6420 Communications
+Notion Labs,annual renewal,5970590,6300 Software Subscriptions
+Google Cloud,auto-pay,5141322,6400 Cloud Infrastructure
+Retool,usage charges,1801005,6300 Software Subscriptions
+Google Cloud,usage charges,4152590,6400 Cloud Infrastructure
+Datadog,invoice B-9563,581991,6410 Monitoring & Tooling
+Deel Inc,invoice B-2176,321031,6000 Payroll
+Mercury Bank,monthly subscription,1678974,6510 Bank Fees
+Brex,monthly subscription,546845,6510 Bank Fees
+Snowflake,services B-6914,489887,6400 Cloud Infrastructure
+Mercury Bank,usage charges,1474034,6510 Bank Fees
+DocuSign,invoice B-9574,5231330,6300 Software Subscriptions
+OpenPhone,auto-pay,3618422,6420 Communications
+Datadog,invoice B-1145,3229838,6410 Monitoring & Tooling
+Atlassian,monthly subscription,2937639,6300 Software Subscriptions
+Gusto Payroll,monthly subscription,5761911,6000 Payroll
+Figma,annual renewal,2129755,6300 Software Subscriptions
+Segment,services B-3179,3903068,6300 Software Subscriptions
+Deel Inc,,3223294,6000 Payroll
+Amplitude,usage charges,16136,6300 Software Subscriptions
+Snowflake,invoice B-9359,554032,6400 Cloud Infrastructure
+Mercury Bank,,3682131,6510 Bank Fees
+Zoom Video,auto-pay,1425873,6300 Software Subscriptions
+Segment,usage charges,1945674,6300 Software Subscriptions
+Atlassian,annual renewal,390027,6300 Software Subscriptions
+Deel Inc,annual renewal,96469,6000 Payroll
+Mercury Bank,services B-9713,1958683,6510 Bank Fees
+Figma,usage charges,1958814,6300 Software Subscriptions
+Google Cloud,invoice B-2893,103706,6400 Cloud Infrastructure
+LaunchDarkly,services B-7837,421397,6300 Software Subscriptions
+Rippling,monthly subscription,399677,6000 Payroll
+LaunchDarkly,services B-3855,2467023,6300 Software Subscriptions
+Retool,services B-7533,1030003,6300 Software Subscriptions
+Retool,annual renewal,864171,6300 Software Subscriptions
+Rippling,usage charges,5259513,6000 Payroll
+Mercury Bank,auto-pay,3433997,6510 Bank Fees
+Atlassian,annual renewal,3664267,6300 Software Subscriptions
+Retool,usage charges,1142523,6300 Software Subscriptions
+Datadog,,3304769,6410 Monitoring & Tooling
+Linear,services B-4629,2119379,6300 Software Subscriptions
+Brex,invoice B-3825,400246,6510 Bank Fees
+Snowflake,services B-2608,1721407,6400 Cloud Infrastructure
+Stripe Billing,usage charges,4620385,6500 Payment Processing Fees
+WeWork,monthly subscription,2565147,6200 Rent & Facilities
+Rippling,services B-4206,3835430,6000 Payroll
+Linear,monthly subscription,2094438,6300 Software Subscriptions
+Mercury Bank,,705939,6510 Bank Fees
+Amplitude,usage charges,5892494,6300 Software Subscriptions
+Datadog,invoice B-3576,5569782,6410 Monitoring & Tooling
+Brex,auto-pay,2866811,6510 Bank Fees
+Segment,monthly subscription,1802161,6300 Software Subscriptions
+GitHub,invoice B-6007,119084,6410 Monitoring & Tooling
+Atlassian,invoice B-7140,223138,6300 Software Subscriptions
+AWS,annual renewal,328102,6400 Cloud Infrastructure
+LaunchDarkly,usage charges,5285256,6300 Software Subscriptions
+LaunchDarkly,auto-pay,243098,6300 Software Subscriptions
+AWS,,252696,6400 Cloud Infrastructure
+Mercury Bank,services B-3017,5560583,6510 Bank Fees
+GitHub,auto-pay,4245770,6410 Monitoring & Tooling
+Brex,invoice B-6791,2046329,6510 Bank Fees
+Twilio,invoice B-2569,3366933,6420 Communications
+Linear,usage charges,2800205,6300 Software Subscriptions
+Datadog,monthly subscription,4956852,6410 Monitoring & Tooling
+Mercury Bank,,2315010,6510 Bank Fees
+Rippling,,4200723,6000 Payroll
+AWS,usage charges,372620,6400 Cloud Infrastructure
+Datadog,annual renewal,3810528,6410 Monitoring & Tooling
+Google Cloud,monthly subscription,3136199,6400 Cloud Infrastructure
+AWS,monthly subscription,5419266,6400 Cloud Infrastructure
+Deel Inc,services B-1801,3395717,6000 Payroll
+LaunchDarkly,usage charges,5115074,6300 Software Subscriptions
+Atlassian,annual renewal,5167458,6300 Software Subscriptions
+Figma,monthly subscription,5483275,6300 Software Subscriptions
+Twilio,monthly subscription,4466165,6420 Communications
+Datadog,usage charges,4145481,6410 Monitoring & Tooling
+Datadog,auto-pay,5057304,6410 Monitoring & Tooling
+Retool,annual renewal,2617136,6300 Software Subscriptions
+Zoom Video,,1496251,6300 Software Subscriptions
+Mercury Bank,usage charges,3095150,6510 Bank Fees
+Twilio,annual renewal,4334946,6420 Communications
+OpenPhone,invoice B-5764,5351740,6420 Communications
+Twilio,,1589212,6420 Communications
+Brex,,3374876,6510 Bank Fees
+Amplitude,invoice B-7399,56561,6300 Software Subscriptions
+Google Cloud,monthly subscription,1073902,6400 Cloud Infrastructure
+Figma,auto-pay,3855228,6300 Software Subscriptions
+Figma,usage charges,4369243,6300 Software Subscriptions
+Gusto Payroll,usage charges,818879,6000 Payroll
+Amplitude,monthly subscription,2528308,6300 Software Subscriptions
+Twilio,services B-4165,11502,6420 Communications
+Snowflake,monthly subscription,5028695,6400 Cloud Infrastructure
+OpenPhone,invoice B-2942,4988833,6420 Communications
+WeWork,annual renewal,4688003,6200 Rent & Facilities
+Amplitude,annual renewal,555574,6300 Software Subscriptions
+Atlassian,services B-5683,4954997,6300 Software Subscriptions
+DocuSign,usage charges,793631,6300 Software Subscriptions
+Notion Labs,annual renewal,5884312,6300 Software Subscriptions
+LaunchDarkly,annual renewal,4991553,6300 Software Subscriptions
+Rippling,usage charges,1422195,6000 Payroll
+Stripe Billing,monthly subscription,4407785,6500 Payment Processing Fees
+Brex,auto-pay,3080802,6510 Bank Fees
+AWS,,222376,6400 Cloud Infrastructure
+Zoom Video,invoice B-3704,4182904,6300 Software Subscriptions
+AWS,annual renewal,3177902,6400 Cloud Infrastructure
+LaunchDarkly,annual renewal,4035868,6300 Software Subscriptions
+Atlassian,monthly subscription,1417789,6300 Software Subscriptions
+DocuSign,services B-1401,337029,6300 Software Subscriptions
+Datadog,annual renewal,11735,6410 Monitoring & Tooling
+WeWork,,4100111,6200 Rent & Facilities
+LaunchDarkly,auto-pay,910478,6300 Software Subscriptions
+Brex,,4977961,6510 Bank Fees
+AWS,invoice B-6431,1359681,6400 Cloud Infrastructure
+Twilio,usage charges,4079457,6420 Communications
+OpenPhone,auto-pay,3251600,6420 Communications
+LaunchDarkly,services B-5250,5481936,6300 Software Subscriptions
+Figma,annual renewal,3172664,6300 Software Subscriptions
+Figma,annual renewal,3930198,6300 Software Subscriptions
+AWS,annual renewal,5866469,6400 Cloud Infrastructure
+Segment,usage charges,2603190,6300 Software Subscriptions
+WeWork,monthly subscription,5501048,6200 Rent & Facilities
+Segment,monthly subscription,3066099,6300 Software Subscriptions
+Snowflake,usage charges,177506,6400 Cloud Infrastructure
+Mercury Bank,invoice B-3857,4980576,6510 Bank Fees
+AWS,annual renewal,1007047,6400 Cloud Infrastructure
+Gusto Payroll,,4723248,6000 Payroll
+Amplitude,annual renewal,4668690,6300 Software Subscriptions
+Datadog,annual renewal,3657063,6410 Monitoring & Tooling
+Datadog,services B-7966,4337847,6410 Monitoring & Tooling
+Mercury Bank,auto-pay,1620923,6510 Bank Fees
+Brex,,1731381,6510 Bank Fees
+DocuSign,invoice B-8305,2239312,6300 Software Subscriptions
+GitHub,,209497,6410 Monitoring & Tooling
+AWS,annual renewal,5189371,6400 Cloud Infrastructure
+Atlassian,monthly subscription,5901109,6300 Software Subscriptions
+Linear,annual renewal,5518098,6300 Software Subscriptions
+Mercury Bank,annual renewal,1632442,6510 Bank Fees
+WeWork,auto-pay,5355121,6200 Rent & Facilities
+Zoom Video,,1179853,6300 Software Subscriptions
+Amplitude,usage charges,1491513,6300 Software Subscriptions
+Mercury Bank,usage charges,907140,6510 Bank Fees
+Rippling,usage charges,1393591,6000 Payroll
+Notion Labs,auto-pay,1729357,6300 Software Subscriptions
+Google Cloud,annual renewal,2743968,6400 Cloud Infrastructure
+Rippling,auto-pay,958796,6000 Payroll
+Linear,auto-pay,1335014,6300 Software Subscriptions
+Notion Labs,auto-pay,1341502,6300 Software Subscriptions
+Datadog,monthly subscription,2797999,6410 Monitoring & Tooling
+Twilio,monthly subscription,2926843,6420 Communications
+GitHub,,300347,6410 Monitoring & Tooling
+Atlassian,services B-8388,4843742,6300 Software Subscriptions
+Twilio,services B-9082,4207581,6420 Communications
+Mercury Bank,,5894803,6510 Bank Fees
+Zoom Video,usage charges,2996207,6300 Software Subscriptions
+WeWork,services B-5454,2525981,6200 Rent & Facilities
+Stripe Billing,auto-pay,3799551,6500 Payment Processing Fees
+Deel Inc,monthly subscription,1314814,6000 Payroll
+Zoom Video,usage charges,502175,6300 Software Subscriptions
+Amplitude,usage charges,1095427,6300 Software Subscriptions
+Stripe Billing,invoice B-7181,1881890,6500 Payment Processing Fees
+Zoom Video,monthly subscription,2912298,6300 Software Subscriptions
+Stripe Billing,invoice B-9077,4920331,6500 Payment Processing Fees
+Segment,,5116757,6300 Software Subscriptions
+Gusto Payroll,annual renewal,1456151,6000 Payroll
+Segment,invoice B-6301,2264556,6300 Software Subscriptions
+Twilio,auto-pay,1643764,6420 Communications
+DocuSign,services B-2322,2373937,6300 Software Subscriptions
+Notion Labs,auto-pay,1204026,6300 Software Subscriptions
+Atlassian,,1416956,6300 Software Subscriptions
+Linear,monthly subscription,5781690,6300 Software Subscriptions
+Zoom Video,monthly subscription,2400451,6300 Software Subscriptions
+Linear,,5206480,6300 Software Subscriptions
+WeWork,usage charges,50961,6200 Rent & Facilities
+GitHub,services B-8271,5973358,6410 Monitoring & Tooling
+Figma,services B-5503,49642,6300 Software Subscriptions
+Zoom Video,,385838,6300 Software Subscriptions
+Notion Labs,invoice B-2862,299206,6300 Software Subscriptions
+Twilio,auto-pay,1754494,6420 Communications
+Google Cloud,auto-pay,2682205,6400 Cloud Infrastructure
+Figma,usage charges,569807,6300 Software Subscriptions
+Rippling,invoice B-6402,3517759,6000 Payroll
+Google Cloud,invoice B-8571,2070160,6400 Cloud Infrastructure
+Gusto Payroll,annual renewal,2164142,6000 Payroll
+AWS,annual renewal,202679,6400 Cloud Infrastructure
+Deel Inc,invoice B-1025,3887633,6000 Payroll
+Deel Inc,services B-7030,3222363,6000 Payroll
+WeWork,monthly subscription,3588257,6200 Rent & Facilities
+LaunchDarkly,annual renewal,129432,6300 Software Subscriptions
+Gusto Payroll,usage charges,96724,6000 Payroll
+Notion Labs,monthly subscription,1290817,6300 Software Subscriptions
+Gusto Payroll,auto-pay,4310879,6000 Payroll
+Twilio,monthly subscription,3873023,6420 Communications
+Brex,usage charges,5780320,6510 Bank Fees
+Google Cloud,auto-pay,2761893,6400 Cloud Infrastructure
+Zoom Video,annual renewal,2723183,6300 Software Subscriptions
+Google Cloud,,3359420,6400 Cloud Infrastructure
+Airtable,,1890995,6300 Software Subscriptions
+Linear,invoice B-5603,4773006,6300 Software Subscriptions
+OpenPhone,auto-pay,5514808,6420 Communications
+LaunchDarkly,usage charges,3377192,6300 Software Subscriptions
+Segment,,2797471,6300 Software Subscriptions
+Figma,,5505525,6300 Software Subscriptions
+Airtable,usage charges,5455126,6300 Software Subscriptions
+Segment,monthly subscription,2438875,6300 Software Subscriptions
+WeWork,services B-4202,4224485,6200 Rent & Facilities
+Google Cloud,services B-3806,2502645,6400 Cloud Infrastructure
+LaunchDarkly,annual renewal,4207230,6300 Software Subscriptions
+Amplitude,usage charges,1851414,6300 Software Subscriptions
+Segment,invoice B-3301,4458900,6300 Software Subscriptions
+Deel Inc,,5717928,6000 Payroll
+DocuSign,auto-pay,2400451,6300 Software Subscriptions
+Atlassian,invoice B-3286,2081802,6300 Software Subscriptions
+AWS,invoice B-6605,657201,6400 Cloud Infrastructure
+Linear,invoice B-1562,5486088,6300 Software Subscriptions
+Retool,services B-7508,2437929,6300 Software Subscriptions
+Airtable,,3300412,6300 Software Subscriptions
+Snowflake,,3868505,6400 Cloud Infrastructure
+Gusto Payroll,monthly subscription,4166944,6000 Payroll
+Google Cloud,monthly subscription,1222336,6400 Cloud Infrastructure
+Twilio,auto-pay,5315312,6420 Communications
+Retool,,4378239,6300 Software Subscriptions
+Linear,services B-3943,3480647,6300 Software Subscriptions
+Stripe Billing,annual renewal,3109576,6500 Payment Processing Fees
+Twilio,,2472192,6420 Communications
+Brex,monthly subscription,4307257,6510 Bank Fees
+Mercury Bank,usage charges,4509895,6510 Bank Fees
+Rippling,invoice B-4142,657714,6000 Payroll
+Google Cloud,annual renewal,4456312,6400 Cloud Infrastructure
+GitHub,services B-4529,132309,6410 Monitoring & Tooling
+Atlassian,invoice B-3755,4643577,6300 Software Subscriptions
+Snowflake,annual renewal,4548094,6400 Cloud Infrastructure
+Stripe Billing,monthly subscription,5673878,6500 Payment Processing Fees
+Deel Inc,annual renewal,3442315,6000 Payroll
+Google Cloud,invoice B-1461,1756983,6400 Cloud Infrastructure
+Gusto Payroll,services B-2107,2724241,6000 Payroll
+Segment,usage charges,2181146,6300 Software Subscriptions
+Zoom Video,,5346289,6300 Software Subscriptions
+Stripe Billing,monthly subscription,5462783,6500 Payment Processing Fees
+Notion Labs,invoice B-3463,2309900,6300 Software Subscriptions
+Twilio,annual renewal,4333934,6420 Communications
+Airtable,annual renewal,3037457,6300 Software Subscriptions
+Gusto Payroll,auto-pay,2136246,6000 Payroll
+Mercury Bank,,2491299,6510 Bank Fees
+Airtable,services B-8559,4229346,6300 Software Subscriptions
+GitHub,monthly subscription,2692018,6410 Monitoring & Tooling
+Deel Inc,annual renewal,3625295,6000 Payroll
+Stripe Billing,usage charges,2571432,6500 Payment Processing Fees
+Gusto Payroll,annual renewal,1148944,6000 Payroll
+Datadog,services B-9476,3216857,6410 Monitoring & Tooling
+DocuSign,annual renewal,3924756,6300 Software Subscriptions
+OpenPhone,,1450689,6420 Communications
+Deel Inc,invoice B-6667,4005153,6000 Payroll
+Gusto Payroll,services B-9683,3080378,6000 Payroll
+Mercury Bank,,4525534,6510 Bank Fees
+Segment,usage charges,1985639,6300 Software Subscriptions
+OpenPhone,auto-pay,3962948,6420 Communications
+Gusto Payroll,,3713655,6000 Payroll
+DocuSign,auto-pay,5095744,6300 Software Subscriptions
+Snowflake,invoice B-9258,5581481,6400 Cloud Infrastructure
+Amplitude,services B-1141,2764915,6300 Software Subscriptions
+Datadog,monthly subscription,373611,6410 Monitoring & Tooling
+Snowflake,,3648691,6400 Cloud Infrastructure
+Retool,annual renewal,4492090,6300 Software Subscriptions
+Notion Labs,,1088369,6300 Software Subscriptions
+Google Cloud,usage charges,2651134,6400 Cloud Infrastructure
+OpenPhone,annual renewal,4478466,6420 Communications
+Notion Labs,monthly subscription,2512976,6300 Software Subscriptions
+Stripe Billing,monthly subscription,456289,6500 Payment Processing Fees
+OpenPhone,usage charges,5598592,6420 Communications
+Rippling,invoice B-7080,2161598,6000 Payroll
+OpenPhone,monthly subscription,5814150,6420 Communications
+Gusto Payroll,usage charges,5846787,6000 Payroll
+OpenPhone,,5126405,6420 Communications
+Stripe Billing,auto-pay,4344413,6500 Payment Processing Fees
+Retool,invoice B-6356,4450858,6300 Software Subscriptions
+GitHub,auto-pay,1734082,6410 Monitoring & Tooling
+WeWork,services B-4605,2388863,6200 Rent & Facilities
+Gusto Payroll,monthly subscription,893709,6000 Payroll
+Retool,usage charges,204547,6300 Software Subscriptions
+Datadog,invoice B-3760,4560722,6410 Monitoring & Tooling
+OpenPhone,services B-8038,1321509,6420 Communications
+Linear,monthly subscription,1244197,6300 Software Subscriptions
+Retool,,247506,6300 Software Subscriptions
+DocuSign,annual renewal,2189503,6300 Software Subscriptions
+Snowflake,usage charges,308466,6400 Cloud Infrastructure
+Amplitude,monthly subscription,5458828,6300 Software Subscriptions
+Mercury Bank,auto-pay,1762996,6510 Bank Fees
+LaunchDarkly,usage charges,2950781,6300 Software Subscriptions
+Brex,annual renewal,3343638,6510 Bank Fees
+Datadog,invoice B-6635,2941409,6410 Monitoring & Tooling
+Gusto Payroll,,2770345,6000 Payroll
+Linear,usage charges,4686704,6300 Software Subscriptions
+Snowflake,,5582306,6400 Cloud Infrastructure
+Airtable,auto-pay,2419592,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,820057,6300 Software Subscriptions
+LaunchDarkly,services B-7036,5716190,6300 Software Subscriptions
+Atlassian,annual renewal,3281063,6300 Software Subscriptions
+AWS,annual renewal,531364,6400 Cloud Infrastructure
+Gusto Payroll,services B-8601,3515143,6000 Payroll
+DocuSign,usage charges,3889057,6300 Software Subscriptions
+AWS,services B-6910,4571067,6400 Cloud Infrastructure
+Deel Inc,services B-3304,3749798,6000 Payroll
+Mercury Bank,,4353918,6510 Bank Fees
+Airtable,,5992054,6300 Software Subscriptions
+DocuSign,invoice B-3028,5834695,6300 Software Subscriptions
+Segment,monthly subscription,5357595,6300 Software Subscriptions
+Twilio,invoice B-2577,3147571,6420 Communications
+Figma,invoice B-1804,3957274,6300 Software Subscriptions
+Retool,invoice B-1473,2946056,6300 Software Subscriptions
+AWS,auto-pay,4608084,6400 Cloud Infrastructure
+OpenPhone,invoice B-6672,2612943,6420 Communications
+Datadog,monthly subscription,2910382,6410 Monitoring & Tooling
+WeWork,monthly subscription,1319505,6200 Rent & Facilities
+Rippling,services B-3110,272328,6000 Payroll
+Notion Labs,services B-9234,4562009,6300 Software Subscriptions
+Gusto Payroll,services B-7847,5342998,6000 Payroll
+Zoom Video,usage charges,952287,6300 Software Subscriptions
+AWS,monthly subscription,5113384,6400 Cloud Infrastructure
+Zoom Video,annual renewal,4677191,6300 Software Subscriptions
+Amplitude,,593492,6300 Software Subscriptions
+Zoom Video,monthly subscription,5976145,6300 Software Subscriptions
+Airtable,,927528,6300 Software Subscriptions
+Rippling,,4664411,6000 Payroll
+Stripe Billing,annual renewal,1123099,6500 Payment Processing Fees
+Snowflake,auto-pay,4643255,6400 Cloud Infrastructure
+Amplitude,auto-pay,2014563,6300 Software Subscriptions
+WeWork,annual renewal,826803,6200 Rent & Facilities
+Notion Labs,invoice B-4466,948399,6300 Software Subscriptions
+Notion Labs,,5488455,6300 Software Subscriptions
+Gusto Payroll,auto-pay,338690,6000 Payroll
+Rippling,auto-pay,5624932,6000 Payroll
+Retool,annual renewal,3246167,6300 Software Subscriptions
+Airtable,,1801015,6300 Software Subscriptions
+Zoom Video,usage charges,688823,6300 Software Subscriptions
+Mercury Bank,,5177885,6510 Bank Fees
+Twilio,services B-1656,2973572,6420 Communications
+Google Cloud,annual renewal,2516149,6400 Cloud Infrastructure
+Twilio,auto-pay,4478336,6420 Communications
+Airtable,invoice B-1674,4723054,6300 Software Subscriptions
+Zoom Video,usage charges,2643640,6300 Software Subscriptions
+Airtable,invoice B-3344,694835,6300 Software Subscriptions
+OpenPhone,annual renewal,1019745,6420 Communications
+Airtable,monthly subscription,3724862,6300 Software Subscriptions
+Google Cloud,monthly subscription,147302,6400 Cloud Infrastructure
+Zoom Video,monthly subscription,2731520,6300 Software Subscriptions
+Atlassian,auto-pay,5531361,6300 Software Subscriptions
+Twilio,invoice B-7654,2124444,6420 Communications
+GitHub,usage charges,1312958,6410 Monitoring & Tooling
+Linear,invoice B-3317,885155,6300 Software Subscriptions
+Deel Inc,monthly subscription,2295174,6000 Payroll
+Gusto Payroll,services B-6641,632623,6000 Payroll
+Retool,usage charges,3664295,6300 Software Subscriptions
+GitHub,annual renewal,2140053,6410 Monitoring & Tooling
+Notion Labs,monthly subscription,5998115,6300 Software Subscriptions
+GitHub,usage charges,1801307,6410 Monitoring & Tooling
+Linear,services B-9633,3640700,6300 Software Subscriptions
+LaunchDarkly,,826589,6300 Software Subscriptions
+Gusto Payroll,monthly subscription,4394542,6000 Payroll
+Stripe Billing,annual renewal,2696527,6500 Payment Processing Fees
+Figma,auto-pay,4575115,6300 Software Subscriptions
+Gusto Payroll,services B-7974,3918968,6000 Payroll
+Google Cloud,,5522807,6400 Cloud Infrastructure
+Segment,,2977746,6300 Software Subscriptions
+WeWork,services B-8271,834725,6200 Rent & Facilities
+Deel Inc,services B-5509,4301331,6000 Payroll
+Segment,,4618977,6300 Software Subscriptions
+Retool,auto-pay,249303,6300 Software Subscriptions
+Zoom Video,invoice B-6235,1742350,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,2384825,6300 Software Subscriptions
+Stripe Billing,invoice B-7508,2882422,6500 Payment Processing Fees
+Zoom Video,,5878138,6300 Software Subscriptions
+Snowflake,monthly subscription,4344012,6400 Cloud Infrastructure
+Google Cloud,annual renewal,2469582,6400 Cloud Infrastructure
+Snowflake,auto-pay,1907957,6400 Cloud Infrastructure
+Airtable,invoice B-6991,3745988,6300 Software Subscriptions
+OpenPhone,monthly subscription,4476780,6420 Communications
+Atlassian,auto-pay,1690231,6300 Software Subscriptions
+Airtable,services B-6942,3562552,6300 Software Subscriptions
+Datadog,services B-6310,4458211,6410 Monitoring & Tooling
+Airtable,auto-pay,1056120,6300 Software Subscriptions
+Gusto Payroll,monthly subscription,286269,6000 Payroll
+Stripe Billing,invoice B-5497,3899232,6500 Payment Processing Fees
+Rippling,invoice B-1160,761749,6000 Payroll
+Snowflake,annual renewal,1117011,6400 Cloud Infrastructure
+Amplitude,auto-pay,3936066,6300 Software Subscriptions
+Figma,auto-pay,4929197,6300 Software Subscriptions
+Notion Labs,annual renewal,2921695,6300 Software Subscriptions
+Stripe Billing,annual renewal,2143239,6500 Payment Processing Fees
+Deel Inc,services B-3910,3297757,6000 Payroll
+OpenPhone,monthly subscription,5070394,6420 Communications
+OpenPhone,services B-9865,3028845,6420 Communications
+Stripe Billing,services B-4601,5967216,6500 Payment Processing Fees
+Google Cloud,services B-6504,3898833,6400 Cloud Infrastructure
+Airtable,auto-pay,94778,6300 Software Subscriptions
+Notion Labs,monthly subscription,2198050,6300 Software Subscriptions
+Mercury Bank,,1735102,6510 Bank Fees
+Google Cloud,monthly subscription,1219930,6400 Cloud Infrastructure
+Google Cloud,services B-2437,522287,6400 Cloud Infrastructure
+Snowflake,usage charges,4803294,6400 Cloud Infrastructure
+Brex,usage charges,5066676,6510 Bank Fees
+Zoom Video,monthly subscription,3685078,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,4056432,6300 Software Subscriptions
+Atlassian,services B-1071,4719712,6300 Software Subscriptions
+Google Cloud,services B-9448,77037,6400 Cloud Infrastructure
+WeWork,annual renewal,2207245,6200 Rent & Facilities
+Segment,services B-9954,2797319,6300 Software Subscriptions
+Stripe Billing,annual renewal,4226610,6500 Payment Processing Fees
+Mercury Bank,invoice B-7103,5802376,6510 Bank Fees
+Amplitude,services B-5647,2485763,6300 Software Subscriptions
+Mercury Bank,,2252602,6510 Bank Fees
+Stripe Billing,monthly subscription,5684211,6500 Payment Processing Fees
+Atlassian,auto-pay,277303,6300 Software Subscriptions
+OpenPhone,invoice B-4518,6985,6420 Communications
+Amplitude,,3106408,6300 Software Subscriptions
+Stripe Billing,,2845092,6500 Payment Processing Fees
+Rippling,,3640793,6000 Payroll
+Airtable,,2298328,6300 Software Subscriptions
+Atlassian,auto-pay,4533135,6300 Software Subscriptions
+DocuSign,,1658326,6300 Software Subscriptions
+Airtable,annual renewal,5046833,6300 Software Subscriptions
+Amplitude,annual renewal,2500648,6300 Software Subscriptions
+Gusto Payroll,services B-1979,3970211,6000 Payroll
+Snowflake,monthly subscription,1340290,6400 Cloud Infrastructure
+Rippling,services B-2736,5422583,6000 Payroll

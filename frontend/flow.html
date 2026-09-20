@@ -8,23 +8,50 @@
 <style>
   :root{--lime:#d9f24f;--ink:#101012;--paper:#f4f4f1;--mut:#5b5b57;--coral:#f0645c;--green:#3fae52;--indigo:#4a55b8}
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
-  header{display:flex;align-items:center;justify-content:space-between;padding:22px 44px}
-  .logo{font-weight:800;font-size:19px;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
-  .logo svg{border-radius:8px}
-  h1{font-size:clamp(26px,3.2vw,40px);letter-spacing:-.02em;line-height:1.05}
-  .sub{color:var(--mut);font-size:15px;margin-top:6px;max-width:760px;line-height:1.55}
-  .btn{border:0;cursor:pointer;font-size:15px;font-weight:700;border-radius:999px;padding:13px 26px;background:var(--ink);color:#fff;transition:transform .15s}
-  .btn:hover{transform:translateY(-2px)}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--ink);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  header{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;z-index:100}
+  .logo{font-weight:800;font-size:20px;letter-spacing:-.03em;display:flex;align-items:center;gap:10px;background:#fff;border-radius:999px;padding:7px 20px 7px 8px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
+  .logo svg{display:block;border-radius:9px}
+  .kick{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.55;margin-bottom:18px}
+  h1{font-size:clamp(36px,4.6vw,64px);letter-spacing:-.02em;line-height:1.02;font-weight:700}
+  .sub{color:var(--mut);font-size:18px;margin-top:16px;max-width:720px;line-height:1.65}
+  .btn{border:0;cursor:pointer;font-size:15px;font-weight:600;border-radius:999px;padding:14px 26px;background:var(--ink);color:#fff;transition:transform .18s,box-shadow .18s;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.2)}
   .btn.lime{background:var(--lime);color:var(--ink)}
-  main{padding:6px 44px 40px;max-width:1500px;margin:0 auto}
+  .sheet{background:var(--paper);border-radius:44px 44px 0 0;box-shadow:0 -28px 70px rgba(0,0,0,.28);margin-top:96px;min-height:calc(100vh - 96px)}
+  main{padding:56px 72px 60px;max-width:1560px;margin:0 auto}
+  @media(max-width:900px){main{padding:44px 22px 40px}header{padding:20px 22px}}
+
+  /* stage stepper + isometric stack, the "how it works" strip */
+  .hiw{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:center;background:#fff;border-radius:32px;
+       padding:24px 30px;margin-top:18px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
+  @media(max-width:1100px){.hiw{grid-template-columns:1fr}}
+  .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .step{font-size:12px;font-weight:700;border-radius:999px;padding:8px 14px;background:var(--paper);color:#8a8a85;
+        transition:all .35s;white-space:nowrap}
+  .step.on{background:var(--ink);color:var(--lime)}
+  .hiw h2{font-size:clamp(20px,2.2vw,28px);letter-spacing:-.02em;min-height:1.2em}
+  .hiw p{color:var(--mut);font-size:14.5px;line-height:1.55;margin-top:8px;min-height:3.2em}
+  .iso{position:relative;height:250px;display:flex;align-items:center;justify-content:center}
+  .layer{position:absolute;width:190px;height:190px;border-radius:22px;background:#fff;border:1.5px solid #e4e4df;
+         transform:rotate(45deg) scaleY(.577) translateY(240px);opacity:0;transition:transform .7s cubic-bezier(.3,.7,.3,1),opacity .7s;
+         box-shadow:0 18px 34px rgba(20,22,6,.10)}
+  .layer.show{opacity:1;transform:rotate(45deg) scaleY(.577) translateY(0)}
+  .layer .tag{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+              transform:scaleY(1.733) rotate(-45deg);font-size:12px;font-weight:700;color:#6b6b66;text-align:center;line-height:1.3;
+              opacity:0;transition:opacity .4s}
+  .layer.top .tag{opacity:1}
+  .layer.top{border-color:var(--lime);box-shadow:0 0 0 2.5px var(--lime),0 18px 34px rgba(20,22,6,.12)}
+  .layer .orb{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--green);opacity:0;transition:opacity .4s}
+  .layer.show .orb{opacity:1;animation:blink 1.6s ease-in-out infinite}
+  @keyframes blink{50%{opacity:.35}}
 
   /* the board: four columns joined by connector rails */
   .board{display:grid;grid-template-columns:230px 1fr 330px;gap:26px;margin-top:18px}
   @media(max-width:1100px){.board{grid-template-columns:1fr}}
   .col h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:#8a8a85;margin-bottom:12px}
 
-  .card{background:#fff;border-radius:18px;padding:14px 16px;margin-bottom:12px;box-shadow:0 6px 24px rgba(0,0,0,.06);
+  .card{background:#fff;border-radius:20px;padding:14px 16px;margin-bottom:12px;box-shadow:0 6px 24px rgba(0,0,0,.06);
         opacity:.38;transform:translateY(6px);transition:opacity .5s,transform .5s,box-shadow .5s;position:relative}
   .card.on{opacity:1;transform:none}
   .card.hot{box-shadow:0 0 0 2.5px var(--lime),0 10px 30px rgba(0,0,0,.10)}
@@ -38,7 +65,7 @@
   .chip.ink{background:var(--ink);color:#fff}
 
   /* the agent lane */
-  .lane{background:#fff;border-radius:22px;padding:22px 26px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
+  .lane{background:#fff;border-radius:32px;padding:22px 26px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
   .agents{display:flex;justify-content:space-between;align-items:flex-start;position:relative;padding:6px 6px 2px}
   .agents::before{content:"";position:absolute;left:52px;right:52px;top:27px;height:2.5px;background:#e6e6e1;border-radius:2px}
   .agents .wire{position:absolute;left:52px;top:27px;height:2.5px;width:0;background:var(--ink);border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
@@ -61,7 +88,7 @@
   .entry{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid #efefeb;opacity:0;transition:opacity .45s}
   .entry.on{opacity:1}
   .entry .num{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
-  .foot{margin-top:26px;background:var(--ink);color:#fff;border-radius:20px;padding:20px 26px;display:flex;gap:34px;flex-wrap:wrap;align-items:center}
+  .foot{margin-top:26px;background:var(--ink);color:#fff;border-radius:28px;padding:20px 26px;display:flex;gap:34px;flex-wrap:wrap;align-items:center}
   .foot .stat b{font-size:22px;display:block;color:var(--lime)}
   .foot .stat small{font-size:12px;color:#b7b7bd}
   .foot .note{font-size:12.5px;color:#b7b7bd;max-width:420px;line-height:1.5}
@@ -69,14 +96,38 @@
 </head>
 <body>
 <header>
-  <div class="logo"><svg width="30" height="30" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>Money Maxer</div>
+  <a class="logo" href="index.html" style="text-decoration:none;color:var(--ink)"><svg width="30" height="30" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>Money Maxer</a>
   <button class="btn lime" id="replay" onclick="play()">Run July again</button>
 </header>
+<div class="sheet">
 <main>
+  <div class="kick">the whole run · live replay</div>
   <h1>One click. The agents do the month.</h1>
   <p class="sub">This is the real July from our demo company, replayed: every number below was measured on our own run,
   nothing is invented. Sources feed the Reader, the Reader feeds code, code posts what it can prove, one question goes
   to a person, the answer becomes a rule, and the auditor re-performs everything.</p>
+
+  <div class="hiw">
+    <div>
+      <div class="steps">
+        <span class="step" id="st0">01 · All the data</span>
+        <span class="step" id="st1">02 · Our own model</span>
+        <span class="step" id="st2">03 · Agents run it</span>
+        <span class="step" id="st3">04 · One human moment</span>
+        <span class="step" id="st4">05 · The loop</span>
+      </div>
+      <h2 id="hiwTitle">All data, one feed.</h2>
+      <p id="hiwText">Bank files, remittance emails, the Slack thread, the contract. Everything the month rests on, ingested into one place.</p>
+    </div>
+    <div class="iso">
+      <div class="layer" id="ly0" style="margin-top:120px"><div class="tag">bank + mail + chat<br>+ contracts</div></div>
+      <div class="layer" id="ly1" style="margin-top:40px"><div class="tag">Reader<br>our fine-tuned model</div></div>
+      <div class="layer" id="ly2" style="margin-top:-40px"><div class="tag">agents + kernel</div>
+        <span class="orb" style="left:14px;top:50%"></span><span class="orb" style="right:14px;top:50%"></span>
+        <span class="orb" style="left:50%;top:10px"></span><span class="orb" style="left:50%;bottom:10px"></span></div>
+      <div class="layer" id="ly3" style="margin-top:-120px"><div class="tag">books, audit-ready</div></div>
+    </div>
+  </div>
 
   <div class="board">
     <div class="col" id="srcCol">
@@ -132,6 +183,7 @@
     Our 0.6B and 4B lead every Claude tier on it, and the grader and answers are in the repo for anyone to re-run.</div>
   </div>
 </main>
+</div>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -145,6 +197,18 @@ function msg(who,txt,cls){
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
 function chip(id,text,cls){const c=$(id).querySelector('.chip')||$(id);c.textContent=text;c.className='chip '+cls;}
+const STAGES=[
+ ["All data, one feed.","Bank files, remittance emails, the Slack thread, the contract. Everything the month rests on, ingested into one place."],
+ ["Read by our own model.","Every document becomes a schema entry through the Qwen model we fine-tuned in 15 minutes on the GX10. Measured: 97.2% field accuracy at 1.2 seconds per document, ahead of every Claude tier on our benchmark."],
+ ["Agents run the work.","The code tier posts what it can prove for $0. The kernel re-performs every tick mark and refuses any draft whose evidence does not match its source."],
+ ["Your team steps in when it matters.","One question reaches the CFO, with everything already checked attached. The answer is recorded with a scope and an end date."],
+ ["Every close, smarter.","The answer becomes a standing rule. Corrections become training data, and the model retrains in 15 minutes. Next month asks less."]];
+function stage(n){
+  for(let i=0;i<5;i++) $('st'+i).classList.toggle('on',i===n);
+  $('hiwTitle').textContent=STAGES[n][0]; $('hiwText').textContent=STAGES[n][1];
+  const upto=[0,1,2,2,3][n];
+  for(let i=0;i<4;i++){const L=$('ly'+i);L.classList.toggle('show',i<=upto);L.classList.toggle('top',i===upto);}
+}
 function hot(id,on){$(id).classList.toggle('hot',on);$(id).classList.add('on');}
 function agent(id,state){const a=$(id);a.classList.add('on');a.classList.toggle('hot',state==='hot');}
 
@@ -154,6 +218,7 @@ async function play(){
   document.querySelectorAll('.card,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
   document.querySelectorAll('.chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
   $('msgs').innerHTML='';$('wire').style.width='0';
+  stage(0);
   await sleep(400);if(guard())return;
 
   // 1. sources light up
@@ -162,11 +227,13 @@ async function play(){
   await sleep(900);if(guard())return;
 
   // 2. reader
+  stage(1);
   agent('a-reader','hot');$('wire').style.width='12%';
   msg('Reader','Reading every document into the ledger schema. Our own model, trained on this company\'s paper: measured 97.2% field accuracy, 1.2 s per document, on the $3,000 box under the desk.');
   await sleep(2400);if(guard())return;agent('a-reader','on');
 
   // 3. preparer, code tier
+  stage(2);
   agent('a-prep','hot');$('wire').style.width='36%';
   msg('Preparer','Code matches receipts to invoices and drafts entries. No model needed for the routine ones.');
   await sleep(1600);if(guard())return;
@@ -192,6 +259,7 @@ async function play(){
   await sleep(2200);if(guard())return;
 
   // 5. human
+  stage(3);
   agent('a-check','on');agent('a-human','hot');$('wire').style.width='78%';
   msg('Checker','The contract says a credit needs an officer in writing. Nobody gave it. One question goes to the CFO, with everything that was checked attached.');
   await sleep(2000);if(guard())return;
@@ -205,6 +273,7 @@ async function play(){
   await sleep(2600);if(guard())return;hot('l-learn',false);agent('a-human','on');
 
   // 6. auditor
+  stage(4);
   agent('a-audit','hot');$('wire').style.width='100%';
   hot('l-audit',true);$('e9').classList.add('on');
   msg('Auditor','Re-performing every sampled entry with fresh eyes: 15 of 15 clean.');
