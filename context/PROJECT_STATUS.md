@@ -866,3 +866,49 @@ run on `main` with lanes A, B and C merged, on the locally seeded world (`pnpm s
   the merged world: Initech $0.069, Wayne in progress.
 - `pnpm test` → 45 files, **443 passing**; typecheck clean. The independent review of tonight's lane A commits is
   still running; its findings will be logged with their fixes.
+
+### 2026-09-19 22:14 ET — Second independent review of lane A: four false-auto-post paths confirmed, all closed (Person A)
+
+The reviewer attacked tonight's lane A commits (`3356c85..2afe6ac`) and reproduced every finding below before
+reporting it. Fixes are on `main` at `cdb59cc`, each with a regression test. The audit and AP findings (4, 6, 7, 8
+and four medium ones) are being fixed now by a separate builder and will be logged when they land.
+
+- **Correction to the 21:35 entry.** It said run 2 had "12 of 12 decisions settled by code". Six of those twelve were
+  rule-driven write-offs that **parked** for review; only the six cash applications posted with no person. The
+  scoreboard called routed work "settled". It now reports three different things: reached by code, posted with no
+  person, and parked. Correct reading of that run: 12 reached by code, 0 model calls, 6 posted with no person, 6 parked.
+- **Critical 1: a valid rule that says something else gave free inference cover.** J1 checked that a cited policy
+  resolved, was approved and that its condition held, never that it was a rule *for this entry*. Reproduced: a tier 2
+  concession to deferred revenue citing the wire-fee rule (whose action is a write-off to 6150) passed J1, counted as
+  compiled judgment, and **auto-posted with no approval row in the database**. J1 now requires the same function,
+  the same kind, and the judgment amount on the rule's account; a rule with no readable action covers nothing.
+- **Critical 2: the controller agent approved exactly what the free-inference rule had held back.** An entry demoted
+  from auto to review *because* it was free inference sat at `review`, where the controller agent could sign it.
+  Reproduced: posted, zero human approvals. P2 now lets the controller agent sign only compiled judgment (planned by
+  code, or citing an approved policy or an active fact), below materiality, on a kind with a track record. An unknown
+  preparer tier counts as a model tier.
+- **Critical 3: replaying the same history twice doubled the evidence** (three cases read as six and reached auto).
+  Fixed earlier tonight: each historical decision counts once, latest replay stands.
+- **High: a credit for half the shortfall closed the case** when no end condition had been written (every intent not
+  opened by the drift monitor). The condition is now read off the case file: bank line applied, documents settled; a
+  bill counts as settled once a decision has been taken on it.
+- **High: replay could never record a regression.** It scored the newest replay decision on the intent, not the one
+  this pass made, so after a rule was retired the old agreements still stood. It now scores only this pass, records a
+  pass that proposes nothing as a result, and the ladder is recomputed in full: retire the rule and its kind is back
+  in shadow.
+- **Medium:** compile's backtest is in-sample, and said so nowhere. It now also reports a leave-one-out check (the rule
+  drafted without each case in turn: 4 of 5 on the Q2 wire fees, never the case that set the ceiling), and the CLI
+  labels both. Harvest learns only from plain approvals (`corrected` was scored both ways). Carried memory uses fixed
+  column lists, not the source file's schema.
+- **Seen in the Wayne run, fixed:** the agent put a full sentence in the question's `predicate` and an invented
+  `decision_kind`. Those two fields are the key that makes a question "the same question", so a rephrased question
+  would have been asked twice. `predicate` is now a closed list of seven unknowns and `decision_kind` is a proposal
+  kind; the sentence goes in `what_is_unknown`.
+- **Wayne on real models, merged world:** Haiku searched for 32 turns ($0.069) and handed up; Sonnet found the contract
+  clause and the policy memo section that require written officer agreement for any discount, found no such
+  agreement, and **escalated to the account owner** ($0.139). Route ESCALATE, nothing posted, $0.21 in all. The
+  question has not been sent to Slack yet.
+- Clean, per the reviewer: harvest ignores controller approvals, agent-posted entries and rejected drafts; carried
+  memory holds nothing that lets run 2 cheat; `tier` comes from the runtime, never the model; empty stored features
+  cannot make J1 pass; no style violations.
+- `pnpm test` on a clean checkout of `cdb59cc` → 46 files, **450 passing**; typecheck clean.
