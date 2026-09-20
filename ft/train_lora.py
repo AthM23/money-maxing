@@ -34,7 +34,8 @@ trainer = SFTTrainer(
     args=SFTConfig(output_dir=a.out, num_train_epochs=a.epochs, per_device_train_batch_size=2,
                    gradient_accumulation_steps=8, learning_rate=a.lr, lr_scheduler_type="cosine",
                    bf16=True, logging_steps=10, max_length=4096, report_to=[],
-                   eval_strategy="epoch" if cal else "no", save_strategy="no"),
+                   eval_strategy="epoch" if cal else "no",
+                   save_strategy="epoch", save_total_limit=4),  # per-epoch checkpoints feed benchmark.py's progression curve
 )
 trainer.train()
 trainer.save_model(f"{a.out}/adapter")
