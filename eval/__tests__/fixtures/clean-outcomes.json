@@ -1,0 +1,4 @@
+[
+  { "case_id": "A-01", "route": "AUTO", "auto_posted_entry_matches_key": true, "cost_micros": 1200 },
+  { "case_id": "B-15", "route": "REFUSE", "refuse_places_looked": ["contract line items"] }
+]

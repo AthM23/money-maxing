@@ -14,6 +14,9 @@ export interface InvestigationReport {
   outcome: "proposed" | "escalated" | "refused" | "handed_off" | "budget_exhausted";
   summary: string;
   places_looked: string[];
+  /** Filled by model-backed investigators; a scripted one leaves them out. */
+  model_calls?: number;
+  cost_micros?: number;
 }
 
 export type ToolCaller = (tool: string, input: unknown) => ToolCallResult;

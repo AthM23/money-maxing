@@ -324,3 +324,26 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
   "not in the past, not more than five years out".
 - Next for Person A: the agent loop on the Claude Agent SDK and the AR agent pack (needs an Anthropic key to run), the
   eval harness for `tests/cases.csv`, then replay and compile.
+
+### 2026-09-19 ~20:12 ET — Agent layer, Agent SDK investigator and eval harness landed (Person A)
+
+- `src/agents/`: read tools over `trace` with the replay as-of guard applied in SQL, write tools (`propose_entry`,
+  `escalate`, `record_fact_candidate`, `finish`), one metered dispatcher used by every harness, a `decision_step`
+  timeline, the AR system prompt (no exception-specific instructions), and `runCase`: tier 0 in code, then
+  investigators by tier, with the route settled from what happened at the write tools rather than from the agent's
+  own summary. Decisions are now opened at intake so steps and cost are metered from the start.
+- `src/agents/sdk.ts`: the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk` 0.3.277, zod 4 peer) as an investigator:
+  `tools: []` (no file, shell or web tools), only our MCP tools allowed, `settingSources: []`, empty temp working
+  directory, `maxTurns` and `maxBudgetUsd` per tier. It typechecks against the SDK. **It has not been run: no
+  Anthropic key is set on this machine yet.** `tsx src/agents/cli.ts <db> <case.json>` runs one case once a key exists.
+- Scripted investigators (test doubles that can only act through the tools) cover Initech end to end (cash AUTO,
+  agent finds the CEO email, credit memo PROPOSE, human approves, books tie, fact candidate recorded) and Wayne
+  (nothing found, owner asked once, ESCALATE, nothing written off, the repeat case does not ask again).
+- `eval/`: loads and validates `tests/cases.csv` (115 rows; routes and min-fixture counts asserted), grades the route
+  with each route's obligation (BLOCK names its rule, REFUSE lists where it looked, ESCALATE names the unknown),
+  the five rubric numbers as k / n, confusion matrix, out-of-scope rows reported separately, `--baseline`, `--stage
+  min`, recorded-outcomes replay, and **exit code 2 on any false auto-post**. `pnpm eval --stage min` currently reports
+  0 of 22 cases run, because no case is wired to the system yet.
+- Measured: `pnpm test` → 17 files, **235 tests passing**; `pnpm typecheck` clean. Nothing has called a model.
+- For Atharv: the investigator reads `trace` rows by `source` (`gmail`, `slack`, `contract`, `crm`, `file`, `workbook`)
+  and needs `party.owner_user` for escalation. Ingest with a real `recorded_time`, or replay sees everything at once.

@@ -70,6 +70,10 @@ async function runTier(
   };
   const report = await investigator.investigate(
     { case_file: c, tier, system_prompt: AR_SYSTEM_PROMPT, notes, max_turns: opts.max_turns ?? 15 }, call);
+  if (report.model_calls || report.cost_micros) {
+    db.prepare("UPDATE decision SET model_calls = model_calls + ?, cost_micros = cost_micros + ? WHERE id = ?")
+      .run(report.model_calls ?? 0, report.cost_micros ?? 0, decisionId);
+  }
   const route = settleRoute(db, decisionId, report, seen);
   recordStep(env, { kind: "route", output: { route, outcome: report.outcome, places_looked: report.places_looked } });
   return { status: "done", routes: route ? [...priorRoutes, route] : priorRoutes, final_route: route, tier_used: tier, decision_id: decisionId, report, notes };
