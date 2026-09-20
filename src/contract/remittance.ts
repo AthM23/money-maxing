@@ -24,3 +24,73 @@ export function parseRemittance(text: string): Remittance | null {
   const result = Remittance.safeParse({ reference, date, amount_cents: cents(amount), applications });
   return result.success ? result.data : null;
 }
+
+/** Money as it appears in customer mail: $1,234.56 · 1234.56 · USD 1,234.56 · 5,494.98. Always two decimals. */
+const MONEY = /(?<![\d.])(\d{1,3}(?:,\d{3})+|\d+)\.(\d{2})(?!\d)/g;
+/** How far from an invoice number its amount may sit, in characters. "INV-6685 ($996.35)" and "INV-1891:5,494.98" are well inside. */
+const PAIRING_WINDOW = 60;
+
+interface Token { at: number; cents: number }
+
+function moneyTokens(text: string): Token[] {
+  return [...text.matchAll(MONEY)].map((m) => ({ at: m.index ?? 0, cents: Number(`${m[1]!.replaceAll(",", "")}${m[2]!}`) }));
+}
+
+/**
+ * Check a free-form remittance that a model (or a person) read, against the customer's own words. Nothing the reader
+ * said is trusted: every invoice number must appear in the text, its amount must sit next to it with no other
+ * invoice in between (so a correct total cannot hide amounts swapped between invoices), the total must appear, and
+ * the allocations must foot to it. Pure text and arithmetic; the kernel runs it again at every gate.
+ */
+export function remittanceProvenanceProblems(
+  text: string, applications: ReadonlyArray<{ doc_id: string; amount_cents: number }>, totalCents: number,
+): string[] {
+  const problems: string[] = [];
+  const money = moneyTokens(text);
+  if (applications.length === 0) return ["the remittance allocates nothing"];
+  if (new Set(applications.map((a) => a.doc_id)).size !== applications.length) problems.push("an invoice is allocated twice");
+  const footed = applications.reduce((n, a) => n + a.amount_cents, 0);
+  if (footed !== totalCents) problems.push(`allocations foot to ${footed}, the receipt is ${totalCents}`);
+  if (!money.some((t) => t.cents === totalCents)) problems.push(`the receipt total ${totalCents} is not stated in the remittance`);
+  return [...problems, ...pairingProblems(text, money, applications)];
+}
+
+type Application = { doc_id: string; amount_cents: number };
+
+/**
+ * Which amount belongs to which invoice. Customers write one way or the other throughout a remittance: the amount
+ * after the invoice ("INV-1 ($5.00)", "INV-1:5.00") or before it ("$5.00 against INV-1"). Every line has to pair
+ * in the same direction, with no other invoice number in between. One invoice has nothing to be confused with.
+ */
+function pairingProblems(text: string, money: Token[], applications: ReadonlyArray<Application>): string[] {
+  const named = applications.map((a) => ({ app: a, at: positionsOf(text, a.doc_id) }));
+  const missing = named.filter((n) => n.at.length === 0).map((n) => `${n.app.doc_id} is not named in the remittance`);
+  if (missing.length > 0) return missing;
+  if (applications.length === 1) {
+    const only = applications[0]!;
+    return money.some((t) => t.cents === only.amount_cents) ? [] : [`${only.amount_cents} is not stated in the remittance for ${only.doc_id}`];
+  }
+  const allIds = named.flatMap((n) => n.at).sort((a, b) => a - b);
+  const after = named.filter((n) => !n.at.some((idAt) => neighbour(money, allIds, idAt, "after") === n.app.amount_cents));
+  if (after.length === 0) return [];
+  const before = named.filter((n) => !n.at.some((idAt) => neighbour(money, allIds, idAt, "before") === n.app.amount_cents));
+  if (before.length === 0) return [];
+  return after.map((n) => `${n.app.amount_cents} is not stated next to ${n.app.doc_id} in the remittance`);
+}
+
+/** The first amount after an invoice number (or the last one before it), short of the next invoice number and the window. */
+function neighbour(money: Token[], allIds: number[], idAt: number, side: "after" | "before"): number | undefined {
+  if (side === "after") {
+    const limit = Math.min(allIds.find((o) => o > idAt) ?? Infinity, idAt + PAIRING_WINDOW);
+    return money.find((t) => t.at > idAt && t.at < limit)?.cents;
+  }
+  const limit = Math.max([...allIds].reverse().find((o) => o < idAt) ?? -Infinity, idAt - PAIRING_WINDOW);
+  return [...money].reverse().find((t) => t.at < idAt && t.at > limit)?.cents;
+}
+
+function positionsOf(text: string, id: string): number[] {
+  const out: number[] = [];
+  const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (const m of text.matchAll(new RegExp(`(?<![A-Za-z0-9-])${escaped}(?![A-Za-z0-9-])`, "g"))) out.push(m.index ?? 0);
+  return out;
+}

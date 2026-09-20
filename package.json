@@ -22,7 +22,8 @@
     "learn": "tsx src/learn/cli.ts",
     "rerun": "tsx src/learn/rerunCli.ts",
     "demo:seed": "tsx src/demo/seedCli.ts",
-    "desk": "tsx src/desk/cli.ts"
+    "desk": "tsx src/desk/cli.ts",
+    "bench:reader": "tsx src/reader/benchCli.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.277",
