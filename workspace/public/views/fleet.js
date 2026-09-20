@@ -29,7 +29,8 @@ export async function renderFleet(app) {
   const first = f.runs.find((r) => r.intent_id === selected) ?? [...f.runs].sort((a, b) => b.model_calls - a.model_calls || b.tool_calls - a.tool_calls || b.turns - a.turns)[0];
   if (first) pick(first.intent_id, false);
   return h("section", {},
-    h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Agents"), h("p", { class: "muted" }, "Who works here, what each of them did, and every run's trace. Each turn is a row in the ledger's own database, so this is a record, not a log someone chose to keep."))),
+    h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Agents"), h("p", { class: "muted" }, "Who works here, what each of them did, and every run's trace. Each turn is a row in the ledger's own database, so this is a record, not a log someone chose to keep.")),
+      h("a", { class: "btn white", href: "/flow", target: "_blank", rel: "noopener" }, icon("spark", 16), "The month as one picture")),
     h("div", { class: "stats" }, stat(f.runs.length, "runs this month"), stat(f.totals.tool_calls, "lookups"), stat(f.totals.model_calls, "model calls"),
       stat(`${cost(f.totals.cost_micros)}${f.totals.uncosted_turns ? "+" : ""}`, f.totals.uncosted_turns ? `model cost · ${f.totals.uncosted_turns} aborted turn(s) not costed` : "model cost"), stat(f.totals.kernel_refusals, "drafts the kernel refused", f.totals.kernel_refusals ? "bad" : "")),
     h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "The agents"), h("p", { class: "muted" }, "They read documents, reason over them and propose. Cheapest first, and one that was not needed says so."))), roster(f.roster.filter((e) => e.group === "agents"))),

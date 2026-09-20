@@ -13,7 +13,10 @@ import { caseView, fleetView, overview, workpaperView } from "./views.js";
 
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "public");
 export const BRAND = process.env.FOOTNOTE_BRAND ?? "Money Maxer";
-const SITE = join(dirname(fileURLToPath(import.meta.url)), "..", "frontend", "index.html");
+const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..", "frontend");
+const SITE = join(FRONTEND, "index.html");
+/** Lane C's other self-contained pages, each at a short address. `gate.ts` leaves the same addresses open. */
+export const PAGES: Readonly<Record<string, string>> = { "/flow": "flow.html", "/flow.html": "flow.html" };
 // The marketing page is one self-contained file with its own inline style and script, and nothing from the network.
 const SITE_CSP = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'";
 
@@ -54,6 +57,8 @@ function get(db: Db, url: URL, res: ServerResponse): void {
   if (url.pathname === "/api/workpaper") return found(res, workpaperView(db, url.searchParams.get("decision") ?? ""));
   // One address for both: the marketing page at the root, the workspace at /dashboard. Its scripts and styles keep their root paths.
   if (url.pathname === "/" || url.pathname === "/site") return site(res);
+  const page = PAGES[url.pathname];
+  if (page) return existsSync(join(FRONTEND, page)) ? sendPage(res, join(FRONTEND, page)) : found(res, null);
   if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") return sendStatic(res, PUBLIC, "/index.html");
   if (url.pathname.startsWith("/api/")) throw new HttpError(404, "not found");
   sendStatic(res, PUBLIC, url.pathname);
@@ -68,8 +73,13 @@ function site(res: ServerResponse): void {
     res.end();
     return;
   }
+  sendPage(res, SITE);
+}
+
+/** One self-contained page from `frontend/`: its own inline style and script, nothing from the network. */
+function sendPage(res: ServerResponse, file: string): void {
   res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": SITE_CSP, "x-content-type-options": "nosniff" });
-  res.end(readFileSync(SITE));
+  res.end(readFileSync(file));
 }
 
 /** Only an http(s) address is followed. Anything else is reported once at start-up and ignored. */

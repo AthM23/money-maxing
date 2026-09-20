@@ -20,7 +20,7 @@ const OUT = join(ROOT, ".vercel", "output");
 const FUNC = join(OUT, "functions", "index.func");
 const SNAPSHOT = join(ROOT, "runs", "snapshot", "month.db");
 /** Read at run time, relative to the source file that reads them. They keep their repo paths inside the function. */
-const READ_AT_RUN_TIME = ["src/contract/schema.sql", "src/ledger/schema-b.sql", "workspace/public", "frontend/index.html", "ft/data", "runs/reader-bench"];
+const READ_AT_RUN_TIME = ["src/contract/schema.sql", "src/ledger/schema-b.sql", "workspace/public", "frontend", "ft/data", "runs/reader-bench"];
 /** Large and never read by the workspace: training rows. */
 const NOT_NEEDED = /\.(jsonl|csv)$/;
 

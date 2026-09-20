@@ -1951,3 +1951,21 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   typecheck clean (05:19).
 - **To do by a person:** tear the box down after judging (commands in `DEPLOY.md`); that also destroys the only copy
   of the key that is off Karan's laptop.
+
+
+### 2026-09-20 ~05:42 ET — Preet's `frontend/flow.html` has an address on every copy: `/flow` (Karan + Claude Code session)
+
+- `f73658d` added the page but nothing served it, so it could only be opened as a file. Now `/flow` (and `/flow.html`)
+  serve it on the laptop, on AWS and in the Vercel build, **open like the marketing page** and under the same content
+  policy (its inline style and script run; checked in a browser). `PAGES` in `workspace/app.ts` names such pages and
+  `workspace/gate.ts` leaves the same addresses open; `workspace/__tests__/pages.test.ts` checks a visitor who has not
+  signed in gets the page and that the neighbouring addresses still ask for the password.
+- **AthM23, in your files:** `gate.ts` has two more open addresses, and `scripts/vercel-build.mjs` now copies the whole
+  `frontend/` folder instead of `frontend/index.html`, so a page added there needs no build change. Built here
+  (`node scripts/vercel-build.mjs`, keys blanked) and served the built function locally: `/`, `/flow` 200;
+  `/dashboard`, `/api/overview`, `/app.js` 401.
+- **Preet:** link it as `/flow` (a relative `flow.html` also works). The Agents page now has a button to it, "The month
+  as one picture". One thing to have an answer for, not changed: the page says July's documents go through the
+  Reader, and the demo month is built without it on purpose (`scripts/demo-build.sh` blanks the reader's address);
+  what is measured is the reader bench, 168 of 200 settled with 0 wrong postings. `DEMO_PATH.md` has the wording.
+- Full suite: 92 files, **772 passing**; typecheck clean.
