@@ -53,7 +53,7 @@
   .pipe-head span{font-size:12.5px;color:var(--mut)}
   .agents{display:flex;justify-content:space-between;align-items:flex-start;position:relative;padding:0 8px}
   .agents::before{content:"";position:absolute;left:60px;right:60px;top:24px;height:2px;background:var(--line);border-radius:2px}
-  .agents .wire{position:absolute;left:60px;top:24px;height:2px;width:0;background:var(--ink);border-radius:2px;
+  .agents .wire{position:absolute;left:60px;top:24px;height:2px;width:0;max-width:calc(100% - 120px);background:var(--ink);border-radius:2px;
                 transition:width .8s cubic-bezier(.4,0,.2,1)}
   .agent{position:relative;z-index:1;text-align:center;width:130px}
   .agent .dot{width:48px;height:48px;border-radius:14px;background:var(--paper);border:1.5px solid var(--line);display:flex;
@@ -101,23 +101,6 @@
     <svg width="28" height="28" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>
     Money Maxer
   </a>
-  <div class="side-sec">Connected sources</div>
-  <div class="src" id="s-bank">
-    <svg class="ic" viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
-    <span>Bank feeds<small>3 banks, 4 accounts, 6 countries</small></span><span class="st"></span>
-  </div>
-  <div class="src" id="s-mail">
-    <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7.5 8 6 8-6"/></svg>
-    <span>Gmail<small>remittances, the outage note</small></span><span class="st"></span>
-  </div>
-  <div class="src" id="s-slack">
-    <svg class="ic" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 1 0-3.6 6.7L20 19.5l-.9-3.4a8 8 0 0 0 .9-4.6z"/></svg>
-    <span>Slack<small>the outage thread, approvals</small></span><span class="st"></span>
-  </div>
-  <div class="src" id="s-docs">
-    <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
-    <span>Contracts<small>credit terms, signatures</small></span><span class="st"></span>
-  </div>
   <div class="side-sec">Model</div>
   <a class="src on" style="opacity:1" href="/dashboard#model">
     <svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
@@ -333,13 +316,11 @@ async function play(){
   const guard=()=>my!==runId;
   document.querySelectorAll('.bcard,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
   document.querySelectorAll('.bcard .chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
-  document.querySelectorAll('.src').forEach(s=>{if(s.id) s.classList.remove('on');});
   $('msgs').innerHTML='';$('wire').style.width='0';
   stage(0);
   await sleep(400);if(guard())return;
 
-  for(const s of ['s-bank','s-mail','s-slack','s-docs']){$(s).classList.add('on');await sleep(240);if(guard())return;}
-  msg('Sources','September arrives: 12 bank receipts, the remittance emails, the Slack thread, the contract.');
+  msg('Sources','September arrives over the connectors: 12 bank receipts, the remittance emails, the Slack thread, the contract.');
   await sleep(900);if(guard())return;
 
   stage(1);
@@ -417,6 +398,8 @@ async function runDoc(){
   $('msgs').innerHTML='';$('wire').style.width='0';
   const name=f.vendor||f.payer||'unknown party';
   const kind=f.doc_kind||'document';
+  const pulled=['the Reader, our fine-tuned model','the Preparer, drafting from code'];
+  const roster=()=>msg('System','Spun up for this document: '+pulled.join('; ')+'. Nothing else woke up: the pipeline pulls only the agents this document needs.');
 
   // a live card for this document in the books column
   const card=document.createElement('div');card.className='bcard on hot';
@@ -447,22 +430,27 @@ async function runDoc(){
 
   stage(2);agent('a-check','hot');$('wire').style.width='64%';
   if(trap){
+    pulled.push('the trap scanner, a code rule that reads refusal markers');
     msg('Checker','REFUSED: the document says it should not be paid. The rule that catches VOID and duplicate markers is code, not a model, and it fires before anything posts.','reject');
     card.querySelector('.chip').textContent='refused';card.querySelector('.chip').className='chip wait';
     $('wire').style.width='100%';agent('a-check','on');
     msg('System','Nothing posted. The document and the refusal are both kept as evidence.');
+    roster();
     if(f.ref)SEEN_REFS.add(f.ref);
     return;
   }
   if(dupe){
+    pulled.push('the duplicate scanner, matching refs across everything read');
     msg('Checker',`REFUSED: ref ${f.ref} was already read this session. The same invoice does not post twice.`,'reject');
     card.querySelector('.chip').textContent='duplicate';card.querySelector('.chip').className='chip wait';
     $('wire').style.width='100%';agent('a-check','on');
+    roster();
     return;
   }
   if(f.ref)SEEN_REFS.add(f.ref);
   const rules=(LIVE&&LIVE.rules)||[], facts=(LIVE&&LIVE.memory)||[];
   const livePol=rules.filter(r=>r.status==='approved'||r.status==='live');
+  pulled.push('the policy matcher, reading the live policy table');
   msg('Checker',`Consulting what the system has learned: ${livePol.length} live polic${livePol.length===1?'y':'ies'} and ${facts.length} remembered fact${facts.length===1?'':'s'}, read from the books just now. <span class="chip live">policies API, live</span>`);
   await sleep(1800);if(guard())return;
   if(!mathOk){
@@ -472,9 +460,11 @@ async function runDoc(){
     const match=livePol.find(r=>r.action&&r.action.kind==='write_off'&&evalCond(r.condition,short));
     const inScope=match&&(match.customer_scope||[]).some(slug=>(f.payer||'').toLowerCase().includes(slug));
     if(match&&inScope){
+      pulled.push('the write-off engine, acting under an earned policy');
       msg('Checker',`${fmt(short)} is unexplained, and ${match.code} v${match.version} covers it: a policy learned from last quarter and approved by the controller. Written off to GL ${match.action.account}, no question asked.`);
       card.querySelector('.chip').textContent='policy applied';card.querySelector('.chip').className='chip done';
       stage(4);agent('a-check','on');$('wire').style.width='100%';
+      roster();
       return;
     }
     stage(3);agent('a-check','on');agent('a-human','hot');$('wire').style.width='82%';
@@ -484,9 +474,11 @@ async function runDoc(){
       msg('Checker',`The numbers do not tie: ${mathNote}. No live policy covers this, so the flag fires: it stops, shows its working, and asks once.`,'reject');
     }
     card.querySelector('.chip').textContent='asking you';card.querySelector('.chip').className='chip wait';
+    pulled.push('the escalation desk, routing one question to the right person');
     msg('Human','You answer once. The answer is stored with the state before and after, scoped, with an end date. Approve entries like it a few times and the route earns autonomy; correct a field and the fix joins the next retrain.','human');
     await sleep(2200);if(guard())return;
     stage(4);agent('a-human','on');
+    roster();
     return;
   }
   msg('Checker',`Every claim ties: ${mathNote||'amount, date and reference are consistent'}. The entry is prepared and waits for one click, because ${name} has not yet earned the right to post alone.`);
@@ -497,6 +489,8 @@ async function runDoc(){
         body:JSON.stringify({vendor:f.vendor,ref:String(f.ref),bill_date:f.date,period:(f.period||'').slice(0,7)||undefined,amount_cents:f.amount_cents,terms_days:f.terms_days,raw:raw.slice(0,6000)})});
       const fj=await fr.json();
       if(fj.status==='filed'){
+        pulled.push('the vendor resolver, matching this name to the parties on file');
+        pulled.push('the history analyst, sizing this bill against prior ones');
         const hgh=fj.history||{};
         msg('System',`Filed into the company's books as ${fj.bill_id}, with the document kept as evidence. It is now waiting in Input needed on the dashboard, where you accept or reject it. <span class="chip live">written to the books</span>`);
         if(hgh.prior_bills) msg('Checker',`Triage: ${hgh.prior_bills} prior bill(s) from this vendor averaging ${fmt(hgh.avg_cents)}. This one is ${hgh.within_pct}% from that average, so it is ${hgh.within_pct<=10?'routed as routine':'flagged as unusual for the approver'}. <span class="chip live">history, live</span>`);
@@ -511,6 +505,8 @@ async function runDoc(){
   stage(4);agent('a-check','on');agent('a-audit','hot');$('wire').style.width='100%';
   msg('Auditor','The reading, the checks and the draft are all on the record, re-performable without the preparer.');
   await sleep(1600);if(guard())return;agent('a-audit','on');
+  pulled.push('the Auditor, keeping the whole trail re-performable');
+  roster();
   msg('System',`Recorded. Approve entries from ${name} a few times and the route earns autonomy. Correct any field and the fix joins the next 15-minute retrain.`);
 }
 </script>
