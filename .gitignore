@@ -1,17 +1,11 @@
 node_modules/
-dist/
-.next/
-coverage/
-*.tsbuildinfo
-
-# local state: databases, run artifacts, secrets
-data/
-*.db
-*.db-wal
-*.db-shm
 .env
 .env.*
 !.env.example
-
-# the planted-drift answer key is generated, never committed next to anything an agent can read
-world/answer-key*.json
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+runs/
+dist/
+.DS_Store

@@ -1,0 +1,4 @@
+[
+  { "case_id": "A-01", "route": "AUTO", "auto_posted_entry_matches_key": true },
+  { "case_id": "A-13", "route": "AUTO" }
+]

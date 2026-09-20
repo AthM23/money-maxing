@@ -9,9 +9,9 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~20:15 ET |
-| **Phase** | Build started — Phase 0 contract written on `atharv-branch`, **awaiting Person A's review** (roadmap says `src/contract/` is frozen by both) |
-| **Repo state** | Scaffold + `src/contract/` (schema, types, tool names, topics). No function code yet. |
+| **Last updated** | 2026-09-19 ~19:30 ET |
+| **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
+| **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
 | **Test bar** | [`../tests/README.md`](../tests/README.md) — 115 edge cases, each with an expected route |
@@ -251,36 +251,173 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
   three was not stated; if three, the Surface items in B's lane split back out.
 - Blocked on humans: who is Person A and who is Person B; the four Phase 0 decisions listed in the roadmap.
 
-### 2026-09-19 ~20:15 ET — Phase 0: scaffold and contract written; four decisions made (AthM23 as Person B + Claude Code session)
+### 2026-09-19 ~19:55 ET — Lanes assigned; scaffold and DRAFT contract landed (Karan + Claude Code session)
 
-- **Person B = AthM23.** Person A is still unnamed. The roadmap says the contract is frozen by both people;
-  this was written by B alone on `atharv-branch`, so it is **proposed until A has read it**.
-- Landed: repo scaffold (TypeScript, Node 22, pnpm, better-sqlite3, zod 4, vitest; `pnpm check`) and
-  `src/contract/`: `schema.sql`, `types.ts` (`Proposal`, `Mark`, routes, functions), `tools.ts` (36 spec §8
-  names), `topics.ts` (the 50 topics), `accounts.ts`, `rules.ts`, `db.ts`. Verified: typecheck clean, 20 vitest
-  tests pass, `pnpm db:init` creates 36 tables and reopens cleanly. The tests also assert the topic and tool
-  lists still equal `EVENT_TOPICS.md` and spec §8.
-- **Decisions, made by AthM23 (not yet confirmed by Person A):**
-  1. *AUTO above $500:* only through a ceiling. Above the threshold the route is PROPOSE unless an active,
-     in-scope fact or approved policy carries a human approver's authority ceiling covering the amount.
-  2. *GPT controller:* reviewer only. PROPOSE needs a human click. The `approval` table enforces it
-     (`role = 'approver'` requires `actor_kind = 'human'`). This narrows spec §3, which let the controller
-     approve within its authority.
-  3. *Bank feed:* a seeded file behind `bank.*`. No Increase sandbox.
-  4. *Processor payout (A-07 / H-2):* in as a file, Phase 3 stretch, third on the cut list.
-- **Schema additions taken** (all marked `+P0` in `schema.sql`): `party` + `alias` · `approval` ·
-  `blocked_attempt` (lift needs a second, different verifier) · `gl_entry.posted_at`, `period.locked_at`,
-  `decision.posted_at` · third clock `trace.ingested_at` · `reversal_mode` on `gl_entry` and `Proposal` ·
-  evidence versioning on `trace` (`content_hash`, `version`, `supersedes_trace_id`) · `fact.authority_ceiling_cents`
-  and `explained_amount_cents` · `decision.route` and `status` · `account` (chart) · `application` · `schedule` /
-  `schedule_line` (one engine for revenue, prepaid, stock comp) · dedupe keys on `intent` and `escalation` ·
-  `event_cursor` · `seed_manifest` · `Proposal.bank_txn_id` and `entry_date`.
-  **Not taken:** employee and grant tables, per-step trace table, artifact kinds in `Proposal.kind` for forecast
-  and reporting. Add when their owner needs them.
-- Choices a reader could trip on: function names are spelled as in `tests/cases.csv` (`bank-rec`, `revenue`,
-  `reporting`), not as topic prefixes · tool names keep their dots; `toMcpName` maps `.` to `__` for the model API ·
-  no migrations: a schema change bumps `SCHEMA_VERSION` and the database is re-seeded · vitest files live in
-  `src/**`, because `tests/` is the corpus.
-- **Not done, needs a human (B's account list):** Intuit developer app and sandbox token · Gmail re-consent with
-  `gmail.readonly` + `gmail.insert` · HubSpot test account · **Plume project, hard deadline 23:59 tonight**.
-  Key names are in `.env.example`.
+- **Person A = Karan, Person B = Atharv**, stated by Karan. `ROADMAP.md` updated. This clears the "who is A and B" blocker.
+- Repo scaffold committed: TypeScript ESM (NodeNext), Node 22, pnpm, vitest, zod, better-sqlite3, tsx. `pnpm install` needs
+  the native build allowed; `pnpm-workspace.yaml` already does that. `pnpm test`, `pnpm typecheck`.
+- `src/contract/` committed as a **DRAFT written by Person A alone**, so it is not frozen: `types.ts` (`Proposal`, `Mark`,
+  routes, six block rules, two-stage `KernelResult`), `tools.ts` (tool registry from spec §8, auditor deny-list),
+  `topics.ts` (the 50 topics from `EVENT_TOPICS.md`), `schema.sql` (spec §7 plus the roadmap's "take now" additions, each
+  marked `-- ADDED`; 30 tables; loads in SQLite). Atharv: edit it in conversation with Karan, points marked `DECIDE:`.
+  Differences from spec §7 worth a look: one `party` table with `alias` instead of `customer` and `vendor`; `gl_line.party_id`;
+  `decision.route`, `decision.tier`, `decision_step`; `approval`, `blocked_attempt`, `approver`; `fact.uses`,
+  `fact.max_amount_cents`, `fact.explained_amount_cents`; `escalation.dedupe_key`; `bill.service_period`.
+- `src/kernel/types.ts`: the kernel's input interface (plain data and lookups, no database or model import).
+- **Proposed by Person A for the four Phase 0 decisions (not agreed):** (1) nothing at or above $500 is AUTO except an
+  exact-match cash application with no residual; the threshold applies to the adjustment amount, not the matched payment.
+  (2) The GPT controller reviews and signs judgment marks but its approval does not satisfy PROPOSE at or above $500; a
+  person clicks. (3) Bank feed from a file now. (4) Processor payout in as a file, cut early if behind. Auditor model:
+  open-weight on the fine-tune host, so it differs from Claude and GPT.
+- In progress, Person A: kernel checks with pass and fail fixtures, eval harness for `tests/cases.csv`, then the
+  `propose_entry` runtime. No API keys are needed for these.
+
+### 2026-09-19 ~20:00 ET — Third builder joins; ASUS GX10 checked out; local fine-tune lane proposed (Preet + Claude Code session)
+
+- **Preet is the third builder.** ROADMAP's two-person re-cut is superseded on one point: a lane C is
+  proposed in [`research/gx10-finetune-plan.md`](./research/gx10-finetune-plan.md) — Preet takes the
+  fine-tune/eval-data items out of A's overnight (trace export, rejection-sampling filter, GBT baseline,
+  LoRA SFT, shadow eval, serving, cost/latency numbers). A and B lanes otherwise unchanged. **Proposed,
+  needs A+B sign-off.**
+- **Hardware: ASUS Ascent GX10 checked out from the ASUS booth** (GB10 Grace Blackwell, 128 GB unified,
+  aarch64, DGX OS). This supersedes "Team machine has NO NVIDIA GPU" in
+  `research/architecture-briefs/fine-tuning.md` and removes the hosted-LoRA route (Together/Modal) entirely:
+  the open-weight SFT trains and serves locally. Everything else in that brief stands (GBT primary, task (e)
+  extraction target, shadow-only, routes stay rules).
+- Access: Tailscale mesh is up — Preet's MacBook `100.119.234.32`, GX10 `100.73.102.120`
+  (`gx10-d56e`, MagicDNS `gx10-d56e.tail800199.ts.net`). The GX10 has **no keyboard**; all work goes over
+  SSH from the Mac. Username `asus`; key-based auth being set up. Tailscale SSH not enabled.
+- Cloned https://github.com/karpathy/autoresearch beside the repo as reference for sheet 20 loop D
+  (still cut 1st; unchanged).
+- Added [`research/winner-patterns-2026.md`](./research/winner-patterns-2026.md): web-researched synthesis
+  of 2023-2026 winners at HackMIT/TreeHacks/CalHacks/PennApps/HackHarvard, distilled to demo lessons —
+  judge-interactive live moment, delete flaky features, name the built-vs-bought split, trust-layer framing,
+  track stacking. Feeds B's demo lane; changes no build scope.
+- Possible extra prize surface: ASUS "Build What's Next" (project built on ASUS hardware). Verify at the
+  booth that it stacks with Maximor before adding it to Plume.
+- Blocked on humans: one-time SSH password entry on the Mac to install Preet's key on the GX10; A+B
+  sign-off on lane C.
+
+### 2026-09-19 ~20:00 ET — Kernel, `propose_entry` runtime, fact memory and router tier 0 landed (Person A)
+
+_Heading time corrected from "~20:20": commit `805e468` is stamped 19:59._
+
+- `src/kernel/`: pure functions, no database or model import. Marks F1-F3, F7, E1-E3, E5, P1-P6, P9, J1-J3 and the six hard
+  BLOCK rules; two stages (proposal, post gate). Every check has a passing and a failing fixture. `src/runtime/`:
+  `proposeEntry` is the only write path (zod → decision → kernel → AUTO post, PROPOSE park, or BLOCK persisted with its
+  rule and an `entry.blocked` event), `approveDecision` re-runs the kernel as the post gate with the approver's identity,
+  posting is one SQLite transaction (ledger, open balances, artifact, events). `src/memory/`: fact candidates with guards,
+  approval that inherits the approver's ceiling, applicability decided in code with the failed dimension named, one-time
+  facts, supersede and expiry, asked-once escalations. `src/router/`: tier 0 builds proposals in code from an exact match,
+  an active fact or an approved policy.
+- Measured: `pnpm test` → 10 files, **176 tests passing**; `pnpm typecheck` clean. Covered end to end on an in-memory
+  database: Initech cash application posts AUTO; the $1,200 credit memo parks as PROPOSE and posts after a human approves;
+  changing one character of the quoted email makes the kernel reject (E2); the controller agent cannot approve at or above
+  $500; preparer-as-approver, over-limit approver and a locked period each BLOCK and persist; a $20 wire shortfall clears
+  on a compiled policy with zero model calls and AR stays tied; replay never posts. No model has been called yet.
+- **Contract changes made by Person A alone since the last entry, for Atharv to review:** `src/contract/accounts.ts`
+  (chart of accounts as codes), `CaseFile` in `types.ts` and `intent.case_json` in `schema.sql` (the structured difference
+  the drift monitor hands to the router: party, docs, expected, received, shortfall, method, trace ids).
+- **Seeder obligation the kernel enforces (F3):** before any proposal runs, GL 1200 must equal the sum of open invoice
+  balances, and GL 2000 the sum of approved or scheduled bills. If the seed posts invoices without their ledger entries,
+  every AR proposal is rejected with "not tied before the proposal".
+- One brief error of mine, fixed: P9 first rejected any terms end date outside the fiscal window, which rejected the
+  Initech concession (ends 2027-06-30). It now checks the entry date against the window, and the terms end date against
+  "not in the past, not more than five years out".
+- Next for Person A: the agent loop on the Claude Agent SDK and the AR agent pack (needs an Anthropic key to run), the
+  eval harness for `tests/cases.csv`, then replay and compile.
+
+### 2026-09-19 ~20:12 ET — Agent layer, Agent SDK investigator and eval harness landed (Person A)
+
+- `src/agents/`: read tools over `trace` with the replay as-of guard applied in SQL, write tools (`propose_entry`,
+  `escalate`, `record_fact_candidate`, `finish`), one metered dispatcher used by every harness, a `decision_step`
+  timeline, the AR system prompt (no exception-specific instructions), and `runCase`: tier 0 in code, then
+  investigators by tier, with the route settled from what happened at the write tools rather than from the agent's
+  own summary. Decisions are now opened at intake so steps and cost are metered from the start.
+- `src/agents/sdk.ts`: the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk` 0.3.277, zod 4 peer) as an investigator:
+  `tools: []` (no file, shell or web tools), only our MCP tools allowed, `settingSources: []`, empty temp working
+  directory, `maxTurns` and `maxBudgetUsd` per tier. It typechecks against the SDK. **It has not been run: no
+  Anthropic key is set on this machine yet.** `tsx src/agents/cli.ts <db> <case.json>` runs one case once a key exists.
+- Scripted investigators (test doubles that can only act through the tools) cover Initech end to end (cash AUTO,
+  agent finds the CEO email, credit memo PROPOSE, human approves, books tie, fact candidate recorded) and Wayne
+  (nothing found, owner asked once, ESCALATE, nothing written off, the repeat case does not ask again).
+- `eval/`: loads and validates `tests/cases.csv` (115 rows; routes and min-fixture counts asserted), grades the route
+  with each route's obligation (BLOCK names its rule, REFUSE lists where it looked, ESCALATE names the unknown),
+  the five rubric numbers as k / n, confusion matrix, out-of-scope rows reported separately, `--baseline`, `--stage
+  min`, recorded-outcomes replay, and **exit code 2 on any false auto-post**. `pnpm eval --stage min` currently reports
+  0 of 22 cases run, because no case is wired to the system yet.
+- Measured: `pnpm test` → 17 files, **235 tests passing**; `pnpm typecheck` clean. Nothing has called a model.
+- For Atharv: the investigator reads `trace` rows by `source` (`gmail`, `slack`, `contract`, `crm`, `file`, `workbook`)
+  and needs `party.owner_user` for escalation. Ingest with a real `recorded_time`, or replay sees everything at once.
+
+### 2026-09-19 ~20:16 ET — Replay, compile and the autonomy ladder landed (Person A)
+
+- `src/learn/replay.ts`: for each `decision_point` in time order, hide the humans' entry, run the case as of
+  `decided_at` (trace reads are as-of in SQL; document balances come from the case snapshot, because today's ledger
+  already shows Q2 invoices settled), never post, and score in code against `human_outcome_json`. A miss where the
+  agent sided with the humans' own majority is triaged `human_inconsistent` and not held against the agent.
+- `src/learn/compile.ts`: deterministic policy induction. Groups the humans' judgments by treatment, account and
+  method; needs three agreeing cases; the ceiling is the largest amount the humans actually did (never wider);
+  backtests on every closed decision point; **one prior mis-clear refuses the draft**; same-treatment different-account
+  cases are listed for the approver as outliers. Drafts are `proposed` and do nothing until `approvePolicy`, where the
+  policy inherits its approver's ceiling. `src/learn/autonomy.ts`: auto at 95% with n of 5 or more and coverage by a
+  cited policy or fact; review at 80%; otherwise shadow. Counts stored, not just rates.
+- Measured on a seeded mini-Q2 (six wire shortfalls, one booked by a human to the wrong account): the compiler drafts
+  "write off to 6150 up to 4,500 cents for wires" with backtest 5 of 6 and the outlier named; with the policy approved,
+  replay through tier 0 reproduces 5 of 6 and triages the sixth as `human_inconsistent`; the ladder moves that kind to
+  auto (6 of 6, covered); the next July wire shortfall clears with zero model calls. With no policy, replay proposes
+  nothing on all six rather than guessing. `pnpm test` → 18 files, **242 passing**. Still no model call anywhere.
+- Eval grader tightened: a false auto-post is always graded incorrect, even when the route label matches.
+- **Contract additions by Person A alone, for Atharv (seeder) to review:** `decision_point.case_json` (a `CaseFile` with
+  `docs_snapshot`: balances as the humans saw them), `HumanOutcome` type for `human_outcome_json` (kind, account,
+  amount, docs, who was asked), and an `autonomy` table. The Q2 seed needs both JSON columns per decision point.
+- Lane C (Preet, fine-tune on the GX10): fine by Person A's code, which already writes `decision_step` rows for export.
+  Sign-off is Karan's to give.
+
+### 2026-09-19 ~20:22 ET — Human-answer path, controller agent and Slack transport written (Person A)
+
+- `src/agents/humanLoop.ts`: a person's reply is kept verbatim as a `trace` (source slack, kind human_answer), the
+  escalation is answered, a fact is stored that is never wider than what was said (this party, this treatment, one-time
+  unless stated standing, always ends, inherits the answerer's ceiling), and the case resumes with an entry that quotes
+  the answer. A one-time or lapsed answer does not cover later cases: the new question carries the old answer.
+  Tested end to end for Wayne with a scripted investigator.
+- `src/agents/controller.ts`: independent review packet (proposal, kernel marks, full text of cited sources). The
+  controller can approve only below materiality and only if the approval matrix lists it with a ceiling; at or above
+  materiality its note goes to the human approver; a disagreement posts nothing. `controllerOpenAI.ts` is the GPT
+  implementation (`FOOTNOTE_CONTROLLER_MODEL`, default `gpt-5`, **UNVERIFIED that this model id exists**; one JSON call;
+  an unreadable reply counts as not agreeing). **Seeder note for Atharv:** add an `approver` row for `controller:gpt`
+  with `limit_cents` 49999, or the controller approves nothing.
+- `src/agents/slack/`: Block Kit builders as plain data (escalation with what was checked and hit counts, answer modal
+  with one-time vs standing, approval card with the entry, tick-mark tally, quoted evidence and the controller's note)
+  and a Socket Mode transport (no tunnel). Answers and approvals go through `recordHumanAnswer` and `approveDecision`,
+  so identity checks and the kernel's post gate apply unchanged.
+- Measured: `pnpm test` → 21 files, **252 passing**. **Not run:** the Agent SDK investigator, the GPT controller and
+  the Slack transport, because no Anthropic, OpenAI or Slack tokens are set on Person A's machine. All three are
+  typechecked against their installed SDKs only.
+- Blocked on a human (Karan): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and a Slack app in Socket Mode
+  (`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` with `connections:write`; bot scopes `chat:write`, `im:write`).
+
+### 2026-09-19 ~20:29 ET — Independent review of Person A's code: nine confirmed holes, all fixed with regression tests
+
+An independent reviewer agent (read-only, reproduced each finding with a probe) went through `src/kernel`, `runtime`,
+`memory`, `router` and `agents`. **Two findings were false auto-post or double-post paths, which is the one thing this
+system claims cannot happen.** They were real. All are fixed; each has a regression test in
+`src/runtime/__tests__/reviewFindings.test.ts` that posted wrongly before the fix.
+
+| # | Severity | What was wrong | Fix |
+|---|---|---|---|
+| 1 | critical | A write-off booked Dr cash / Cr AR read as a zero adjustment (control accounts were excluded), needed no evidence, and **posted AUTO** | Adjustment for non-cash reducing kinds is at least the amount applied; new check **F8** (entry shape fits the kind: a concession or write-off never touches cash; its outside-control debit equals what it applies) |
+| 1b | critical | `apply_payment` with no bank line was accepted; one bank line could be applied twice | A cash application requires a bank line; the kernel subtracts what posted decisions already applied from it |
+| 2 | critical | The same proposal parked twice, approved twice, **posted twice** | An identical proposal on the same intent that is pending or posted is handed back, not recorded again; approval refuses a decision whose twin already posted |
+| 3 | high | Any active alias fact switched off the whole party tie, so one customer's cash could pay another's invoice | Documents must always belong to the proposal's party; an alias fact covers only the bank line of the one payer it names |
+| 4 | high | Re-proposing a human-approved entry reported route AUTO | The stored route is returned |
+| 5 | high | Kinds that write no ledger entry (dispute hold) were never deduped, and one-time facts cited on them never counted as used | `decision.posted_at` (schema addition) is stamped inside the post transaction for every kind; idempotency and fact-use counting key on it |
+| 6 | medium | Ledger and bank tools had no as-of guard in replay | In replay, open invoices come from the case snapshot and a bank line posted after the as-of date does not exist |
+| 7 | medium | Two applications to one document each passed F2, then the post threw and aborted the run | F2 adds applications per document; a failed post now returns a rejection (mark X1) instead of throwing |
+| 8 | medium | The approval row was written outside the post transaction | Approval and post are one transaction |
+| 9 | low | A fact with unreadable scope JSON was treated as unrestricted | It now covers no kind (fails closed) |
+
+- Measured after the fixes: `pnpm test` → 22 files, **263 passing**; `pnpm typecheck` clean.
+- What this changes in how we talk about it: "zero wrong auto-posts" is a property we test for, and a reviewer found two
+  ways to break it within an hour. Say that in the limitations section, with the count of adversarial probes run.
+- Contract change: `decision.posted_at`. `FactLite.value` added to the kernel's input types.
