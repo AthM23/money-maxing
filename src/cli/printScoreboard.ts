@@ -11,6 +11,7 @@ export function printScoreboard(title: string, s: Scoreboard): void {
   out(`  routes ${Object.entries(s.by_route).map(([r, n]) => `${r} ${n}`).join(" · ")}`);
   out(`  model calls ${s.model_calls} · cost ${dollars(s.cost_micros)} · questions ${s.questions} (repeat ${s.repeat_questions})`);
   out(`  approvals: people ${s.human_approvals} · controller agent ${s.controller_approvals} · independent reviews ${s.controller_reviews} (${s.controller_tokens} tokens, not in the cost above)`);
+  if (s.documents_read > 0) out(`  documents read by a small model ${s.documents_read} · readings code could verify and used ${s.readings_used}`);
   out(`  tick marks re-performed in code ${s.checkable_num} / ${s.checkable_den} (${pct(s.checkable_num, s.checkable_den)})`);
 }
 

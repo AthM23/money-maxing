@@ -2,10 +2,12 @@ import type { Route } from "../contract/types.js";
 import type { Investigator } from "../agents/investigator.js";
 import { runCase } from "../agents/runCase.js";
 import type { AutonomySetting } from "../runtime/autonomy.js";
-import type { Clock, RuntimeConfig } from "../runtime/config.js";
+import type { DocumentReader } from "../reader/types.js";
+import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { intentStanding, type IntentStatus } from "../runtime/intentStatus.js";
 import { pickOpenIntents, type PickedIntent, type SkippedIntent } from "./pickup.js";
+import { readRemittances, type RemittanceReading } from "./readRemittances.js";
 
 /** After this many attempts with nothing to show, a case goes to a person instead of being retried. */
 const MAX_ATTEMPTS = 3;
@@ -25,6 +27,8 @@ export interface WorkerOptions {
   clock?: Clock;
   config?: RuntimeConfig;
   onWorked?: (worked: WorkedIntent) => void;
+  /** A document reader (a small local model, say) for remittance advices the fixed-format parser cannot read. */
+  reader?: DocumentReader;
 }
 
 export interface WorkedIntent {
@@ -43,6 +47,7 @@ export interface WorkedIntent {
 export interface WorkerReport {
   worked: WorkedIntent[];
   skipped: SkippedIntent[];
+  readings: RemittanceReading[];
 }
 
 /**
@@ -51,13 +56,14 @@ export interface WorkerReport {
  */
 export async function runOpenIntents(db: Db, opts: WorkerOptions): Promise<WorkerReport> {
   const { ready, skipped } = pickOpenIntents(db, { function: opts.function, limit: opts.limit, has_model_tiers: opts.investigators.length > 0, retry: opts.retry, intent_id: opts.intent_id });
+  const readings = opts.reader ? await readRemittances(db, opts.reader, ready, opts.clock ?? systemClock) : [];
   const worked: WorkedIntent[] = [];
   for (const intent of ready) {
     const result = await workOne(db, intent, opts);
     worked.push(result);
     opts.onWorked?.(result);
   }
-  return { worked, skipped };
+  return { worked, skipped, readings };
 }
 
 async function workOne(db: Db, intent: PickedIntent, opts: WorkerOptions): Promise<WorkedIntent> {

@@ -26,6 +26,9 @@ export interface Scoreboard {
   controller_reviews: number;
   controller_tokens: number;
   blocked: number;
+  /** Documents a small model read, and how many of those readings code could verify and used. */
+  documents_read: number;
+  readings_used: number;
   /** Tick marks the kernel could re-perform in code, over all tick marks, on first proposal. */
   checkable_num: number;
   checkable_den: number;
@@ -60,6 +63,8 @@ export function scoreboard(db: Db, fn?: string): Scoreboard {
     controller_approvals: approvals(db, "controller_agent", f),
     controller_reviews: one(`SELECT COUNT(*) AS n FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE ${LIVE} AND s.tool LIKE 'controller:%'`),
     controller_tokens: one(`SELECT SUM(COALESCE(s.tokens_in, 0) + COALESCE(s.tokens_out, 0)) AS n FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE ${LIVE} AND s.tool LIKE 'controller:%'`),
+    documents_read: one(`SELECT COUNT(*) AS n FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE ${LIVE} AND s.tool LIKE 'reader:%'`),
+    readings_used: one(`SELECT COUNT(*) AS n FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE ${LIVE} AND s.tool LIKE 'reader:%' AND json_extract(s.output_json, '$.outcome') = 'applied'`),
     blocked: one(`SELECT COUNT(*) AS n FROM blocked_attempt b JOIN decision d ON d.id = b.decision_id WHERE ${LIVE}`),
     ...checkable(db, f),
   };
@@ -92,6 +97,6 @@ export interface RunDelta {
 /** The same month twice. Only the numbers that memory can move are compared. */
 export function compareRuns(run1: Scoreboard, run2: Scoreboard): RunDelta[] {
   const keys = ["decisions", "decided_by_code", "decided_by_model", "auto_posted", "parked", "model_calls", "cost_micros", "questions",
-    "repeat_questions", "human_approvals", "controller_approvals", "resolved", "waiting_on_human", "blocked"] as const;
+    "repeat_questions", "human_approvals", "controller_approvals", "resolved", "waiting_on_human", "blocked", "documents_read", "readings_used"] as const;
   return keys.map((k) => ({ metric: k, run1: run1[k], run2: run2[k] }));
 }

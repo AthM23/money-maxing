@@ -1156,3 +1156,48 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - `atharv-branch` itself is **not** merged with `main` yet; fast-forward it to `b-phase2-on-main` once the working tree
   is clean. Finding 1 for Karan in the 23:15 entry (a rejected decision can still be approved) is still open on `main`.
 
+### 2026-09-19 23:39 ET — Codex's audit patch verified and pushed; the harness now takes a small model as a document reader, with a harness-level benchmark (Person A)
+
+- **Codex's audit patch** (`context/AUDIT_2026-09-19.md`; delivered uncommitted into Karan's checkout at about 23:26)
+  was verified here before anything else was touched: typecheck clean, 488 tests, `pnpm demo:remittance` applies
+  $13,505 across fourteen invoices and leaves exactly $495 open with no model call, and the seeded July under its
+  stricter rules still settles 8 of 11 in code with the books tied. Committed on its own as `3f33a96` and pushed.
+  **It touches lanes B and C** (drift, ingest, seed, console, `ft/` scoring): Atharv and Preet, please read the audit.
+- **Slack, live:** Karan approved Initech's $1,200 concession from Slack at 23:09. The click came back over Socket Mode,
+  the kernel re-checked the entry at the post gate with the approver's identity (mapped to the CFO), and it posted.
+  Wayne's question was not answered: its button opens a short form (what was agreed, one-time or standing) and the
+  answer is saved on submit. All personas still map to one real Slack user.
+- **Where a small model fits, and where it does not.** Lane C's fine-tuned Qwen is a document reader (remittances,
+  vendor bills, contract clauses → JSON) and its server has no tool calling, so it cannot drive the investigation
+  loop, and a 4B model should not. It fits one step earlier: when the drift monitor cannot tell which invoices a
+  payment is for (`matching_issue`), the customer's remittance advice usually says, in ordinary mail that the audit
+  patch's fixed-format parser cannot read.
+  - `src/reader/`: a `DocumentReader` on any OpenAI-compatible endpoint (`ft/serve.py`, vLLM, Ollama), using the
+    instruction the models were tuned on; never throws; hard time limit.
+  - `src/worker/readRemittances.ts`: the reader reads the mail; **code decides whether to believe it**: the total must
+    be the bank line to the cent, every invoice this customer's and open, no deduction spread over several invoices,
+    and every invoice and amount must be in the customer's own words with each amount next to its invoice. One reading
+    must fit, not two. A refused reading is recorded with its reason and the case goes on as before.
+  - Kernel `E_REMIT` gains a second mode for free-form mail (`remittanceProvenanceProblems`, pure text and
+    arithmetic, in `src/contract/remittance.ts` next to the audit's parser), so the same check runs again at every
+    gate. A correct total cannot hide amounts swapped between invoices: pairing must hold in one direction throughout.
+  - Every reading is metered as a model turn on the case; the scoreboard shows documents read and readings used.
+- **Harness-level benchmark** (`pnpm bench:reader`): rebuilds a ledger from lane C's **held-out** remittances
+  (`ft/data/sft.test.jsonl`: one customer, their invoices plus two older decoys so oldest-first would be wrong, a bank
+  line that names no invoice, the mail), runs the real worker with a given reader, and checks every posting against
+  what the customer wrote. Exit code 2 on any wrong posting. Measured, n = 200:
+
+  | Reader | Settled from code | Cash applied, deduction left open | Left for judgment | Wrong postings |
+  |---|---|---|---|---|
+  | none (floor) | 0 | 0 | 200 | 0 |
+  | oracle: the gold labels, not a model (ceiling) | 168 | 32 | 0 | 0 |
+  | saboteur: deliberately wrong (swapped amounts, another open invoice of the same customer), not a model | 0 | 0 | 200 | 0 |
+
+  The ceiling says our verification accepts every one of lane C's document styles when the reading is right (OCR
+  81 of 81, plain 36 of 36, terse 25 of 25, email 26 of 26; the 32 short-pay remittances have their cash applied and the
+  claimed deduction left open, never conceded). **No real model has been run through it yet.** Preet, with the GX10:
+  `pnpm bench:reader --n 200 --reader-url http://<gx10>:8000/v1 --reader-model qwen --reader-name "Qwen3-4B base"`,
+  then the same against the server started with `--adapter`, named "Qwen3-4B + our LoRA". About 6 s a document.
+  The same flags on `pnpm worker <db>` (or `FOOTNOTE_READER_URL` / `FOOTNOTE_READER_MODEL` in `.env`) put the
+  reader into a live run.
+- `pnpm test` → 53 files, **499 passing**; typecheck clean.

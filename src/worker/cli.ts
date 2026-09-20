@@ -4,12 +4,14 @@ import { selectController } from "../agents/selectController.js";
 import { flagInt, flagString, out, parseArgs, runCli, warn } from "../cli/flags.js";
 import { printScoreboard } from "../cli/printScoreboard.js";
 import { loadEnv } from "../env.js";
+import { openAICompatReader, readerFromEnv } from "../reader/openaiCompat.js";
+import type { DocumentReader } from "../reader/types.js";
 import { scoreboard } from "../learn/scoreboard.js";
 import { openDb } from "../runtime/db.js";
 import { reviewParked } from "./reviewParked.js";
 import { runOpenIntents } from "./runOpenIntents.js";
 
-const USAGE = "usage: pnpm worker <db> [--code-only] [--review] [--retry] [--intent <id>] [--function ar] [--limit N]";
+const USAGE = "usage: pnpm worker <db> [--code-only] [--review] [--retry] [--intent <id>] [--function ar] [--limit N] [--reader-url U --reader-model M [--reader-name N]]";
 
 /**
  * One pass over the open intents in a seeded database. `--code-only` runs tier 0 alone and costs nothing;
@@ -36,10 +38,13 @@ async function main(): Promise<number> {
     out(`cold copy kept at ${cold}`);
   }
   const investigators = codeOnly ? [] : defaultTiers();
+  const reader = readerFromFlags(args) ?? readerFromEnv();
+  if (reader) out(`remittance reader: ${reader.name}`);
   const report = await runOpenIntents(db, {
-    investigators, function: flagString(args, "function"), limit: flagInt(args, "limit"), retry: args.flags.retry === true, intent_id: flagString(args, "intent"),
+    investigators, reader, function: flagString(args, "function"), limit: flagInt(args, "limit"), retry: args.flags.retry === true, intent_id: flagString(args, "intent"),
     onWorked: (w) => out(`${w.intent_id}: ${w.routes.join(" → ") || "(no route)"} · tier ${w.tier_used} · ${w.status} · ${w.elapsed_ms} ms${w.error ? ` · ERROR ${w.error}` : ""}`),
   });
+  for (const r of report.readings) out(`read ${r.trace_id} for ${r.intent_id} with ${r.reader}: ${r.outcome}${r.reason ? ` (${r.reason})` : ""} · ${r.latency_ms} ms`);
   for (const s of report.skipped) warn(`skipped ${s.intent_id}: ${s.reason}`);
   if (args.flags.review === true) {
     const controller = selectController();
@@ -48,6 +53,12 @@ async function main(): Promise<number> {
   printScoreboard("scoreboard", scoreboard(db, flagString(args, "function")));
   out(`\nnext: pnpm inbox ${dbPath} list`);
   return report.worked.some((w) => w.error) ? 1 : 0;
+}
+
+/** --reader-url and --reader-model name an OpenAI-compatible endpoint, e.g. lane C's ft/serve.py on the GX10. */
+function readerFromFlags(args: ReturnType<typeof parseArgs>): DocumentReader | undefined {
+  const [url, model] = [flagString(args, "reader-url"), flagString(args, "reader-model")];
+  return url && model ? openAICompatReader({ base_url: url, model, name: flagString(args, "reader-name") ?? model }) : undefined;
 }
 
 runCli(main);

@@ -1,0 +1,12 @@
+{
+  "n_test_txns": 93,
+  "top1": 0.914,
+  "recall_at_3": 0.925,
+  "auto_clear_threshold": 0.6666666666666666,
+  "threshold_source": "calibration",
+  "n_cal_txns": 72,
+  "test_auto_clear_coverage": 0.946,
+  "test_auto_clear_precision": 0.966,
+  "test_false_auto_clears": 3,
+  "n_train_pairs": 3118
+}

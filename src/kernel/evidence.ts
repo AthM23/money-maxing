@@ -1,5 +1,5 @@
 import type { Mark, Proposal } from "../contract/types.js";
-import { parseRemittance } from "../contract/remittance.js";
+import { remittanceProvenanceProblems, parseRemittance } from "../contract/remittance.js";
 import type { KernelContext } from "./types.js";
 import { failMark, isAfterAsOf, isControlAccount, naMark, normalizeWs, truncate, verdictMark } from "./util.js";
 
@@ -126,9 +126,21 @@ function checkRemittance(proposal: Proposal, ctx: KernelContext): Mark {
   const problems: string[] = [];
   if (!trace || trace.superseded_by || isAfterAsOf(ctx, trace.recorded_time) || trace.party_id !== proposal.party_id) problems.push("remittance source is missing, stale, outside the replay window or belongs to another party");
   if (!proposal.evidence.some(e => e.trace_id === id)) problems.push("remittance must be cited in the workpaper");
+  if (trace && !remit) return freeFormRemittance(proposal, trace.payload_text, bank?.amount_cents, problems, id);
   if (proposal.kind !== "apply_payment" || !remit || !bank || remit.amount_cents !== bank.amount_cents || remit.date !== bank.posted_date
     || !bank.descriptor?.split(/[^A-Za-z0-9-]+/).includes(remit.reference)) problems.push("remittance reference, date and total must agree to the bank receipt");
   const sorted = (apps: Proposal["applications"]) => JSON.stringify([...apps].sort((a, b) => a.doc_id.localeCompare(b.doc_id)));
   if (!remit || sorted(remit.applications) !== sorted(proposal.applications)) problems.push("per-invoice allocations differ from the remittance");
   return verdictMark("E", "E_REMIT", problems, "remittance source, bank reference, total and every invoice allocation agree", [id]);
+}
+
+/**
+ * A remittance written as ordinary mail cannot be re-parsed by rule, so whoever read it (a small model, usually) is
+ * not believed either. The allocation is checked against the customer's own words instead: every invoice named,
+ * each amount next to its invoice, the receipt total stated, and the allocations footing to the bank line.
+ */
+function freeFormRemittance(proposal: Proposal, text: string, bankCents: number | undefined, problems: string[], id: string): Mark {
+  if (proposal.kind !== "apply_payment" || bankCents === undefined) problems.push("a remittance can only direct a cash application against a bank receipt");
+  else problems.push(...remittanceProvenanceProblems(text, proposal.applications, bankCents));
+  return verdictMark("E", "E_REMIT", problems, "free-form remittance: every invoice and amount agrees to the customer's own words and foots to the receipt", [id]);
 }
