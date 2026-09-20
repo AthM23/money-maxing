@@ -30,7 +30,11 @@ async function main(): Promise<number> {
   out(`harvested ${harvestLiveOutcomes(db).length} decision point(s) from entries people approved this month`);
   const approver = flagString(args, "approve-as");
   for (const d of compilePolicies(db, systemClock, fn)) {
-    out(`\ndraft: ${d.name}`);
+    if (d.unchanged) {
+      out(`\non file, unchanged: ${d.name}`);
+      continue;
+    }
+    out(`\ndraft: ${d.name}${d.supersedes ? ` (retires ${d.supersedes} when approved)` : ""}`);
     out(`  backtest: matched ${d.backtest.n}, humans did exactly this ${d.backtest.agree}, other account ${d.backtest.account_outliers.length}, would have mis-cleared ${d.backtest.regressions.length}`);
     if (!d.policy_id) out(`  REFUSED: ${d.refused_reason ?? "no reason recorded"}`);
     else if (approver) out(`  ${d.policy_id}: ${JSON.stringify(approvePolicy(db, systemClock, d.policy_id, approver))}`);

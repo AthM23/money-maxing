@@ -155,7 +155,10 @@ CREATE TABLE IF NOT EXISTS policy (
   tier TEXT NOT NULL CHECK (tier IN ('universal','vertical','company')),
   max_amount_cents INTEGER,                 -- ADDED: same ceiling rule as facts
   backtest_json TEXT, status TEXT NOT NULL CHECK (status IN ('proposed','approved','retired')),
-  approved_by TEXT, approved_at TEXT
+  approved_by TEXT, approved_at TEXT,
+  code TEXT,                                -- ADDED: the rule's short name across versions, e.g. SHORT-PAY-01
+  version INTEGER NOT NULL DEFAULT 1,       -- ADDED: a widened or narrowed rule is a new version, never an edit
+  supersedes TEXT REFERENCES policy(id)     -- ADDED: the version this one retires when it is approved
 );
 CREATE TABLE IF NOT EXISTS replay_result (
   decision_point_id TEXT NOT NULL REFERENCES decision_point(id), decision_id TEXT NOT NULL REFERENCES decision(id),

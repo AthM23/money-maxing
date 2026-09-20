@@ -79,6 +79,45 @@ function personApprovesAll(db: Db): number {
   return parked.length;
 }
 
+describe("improves: what a person approves beyond the rule becomes the rule's next version", () => {
+  it("v1 is learned from the month, a bigger fee is approved by a person, v2 widens to it and retires v1", async () => {
+    const db = julyOfWireFees();
+    await runOpenIntents(db, { investigators: [writesOffTheFee], clock: fixedClock });
+    personApprovesAll(db);
+    harvestLiveOutcomes(db);
+    const [v1] = compilePolicies(db, fixedClock, "ar");
+    expect(v1!.name).toBe("SHORT-PAY-01 v1 · wire short ≤ $45.00 → write_off to 6150");
+    approvePolicy(db, fixedClock, v1!.policy_id!, "U_CTRL");
+    // Compiling again with nothing new drafts nothing new.
+    expect(compilePolicies(db, fixedClock, "ar")).toMatchObject([{ policy_id: v1!.policy_id, unchanged: true }]);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM policy").get()).toEqual({ n: 1 });
+
+    // A seventh customer's wire arrives $60 short: above the rule's ceiling, so it takes a model and a person again.
+    seedCustomer(db, 7, 6000);
+    db.exec("UPDATE gl_line SET debit_cents = debit_cents + 2000000 WHERE entry_id = 'je_open' AND line_no = 1; UPDATE gl_line SET credit_cents = credit_cents + 2000000 WHERE entry_id = 'je_open' AND line_no = 2;");
+    const seventh = await runOpenIntents(db, { investigators: [writesOffTheFee], clock: fixedClock });
+    expect(seventh.worked).toMatchObject([{ intent_id: "int_7", tier_used: 1, final_route: "PROPOSE" }]);
+    personApprovesAll(db);
+    harvestLiveOutcomes(db);
+
+    const [v2] = compilePolicies(db, fixedClock, "ar");
+    expect(v2).toMatchObject({ name: "SHORT-PAY-01 v2 · wire short ≤ $60.00 → write_off to 6150", supersedes: v1!.policy_id, backtest: { n: 7, agree: 7, regressions: [] } });
+    // Until a person approves v2, v1 is still the rule.
+    expect(db.prepare("SELECT status FROM policy WHERE id = ?").get(v1!.policy_id)).toEqual({ status: "approved" });
+    approvePolicy(db, fixedClock, v2!.policy_id!, "U_CTRL");
+    expect(db.prepare("SELECT code, version, status FROM policy ORDER BY version").all()).toEqual([
+      { code: "SHORT-PAY-01", version: 1, status: "retired" }, { code: "SHORT-PAY-01", version: 2, status: "approved" }]);
+
+    // The next $55 fee closes on v2 with no model call.
+    seedCustomer(db, 8, 5500);
+    db.exec("UPDATE gl_line SET debit_cents = debit_cents + 2000000 WHERE entry_id = 'je_open' AND line_no = 1; UPDATE gl_line SET credit_cents = credit_cents + 2000000 WHERE entry_id = 'je_open' AND line_no = 2;");
+    const eighth = await runOpenIntents(db, { investigators: [writesOffTheFee], clock: fixedClock });
+    expect(eighth.worked).toMatchObject([{ intent_id: "int_8", tier_used: 0 }]);
+    const cited = db.prepare("SELECT json_extract(proposal_json, '$.policy_refs[0]') AS ref FROM decision WHERE intent_id = 'int_8' AND kind = 'write_off'").get() as { ref: string };
+    expect(cited.ref).toBe(v2!.policy_id);
+  });
+});
+
 describe("the same month twice: run cold, learn from what people approved, run again with only memory changed", () => {
   it("run 1 needs a model and a person for every shortfall; run 2 needs no model at all", async () => {
     const run1 = julyOfWireFees();
