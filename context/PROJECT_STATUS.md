@@ -1803,3 +1803,32 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   review itself concluded.
 - Not touched: `pnpm desk` and everything under `src/desk` / `src/agents/slack` (lane A's, and it needs nothing here).
 - Merged with `main` at `b3097ea` (04:58 ET; only this file conflicted, entries kept in time order): `pnpm test` → **90 files, 764 passing**; typecheck clean.
+
+### 2026-09-20 05:05 ET — Accruals built (the close's own agent); the public copy is live on AWS; Agents page regrouped (Person A)
+
+- **Accruals** (Karan: "why isn't it built"): it was not built because the demo world is receivables only, with no
+  vendors, bills or operating expenses. Added, additively, so a prepared month keeps its state:
+  `pnpm demo:payables <db>` (two vendors, three months of bills booked and paid, payables still tied, no July bill),
+  `src/agents/close` (a recurring vendor expense with nothing booked for the month becomes a case; code accrues a
+  steady one at its median with each bill quoted; one that moves is never averaged and goes to the model tiers on the
+  close pack's prompt), kernel **F11** (three consecutive months, nothing booked for the month, and the amount is the
+  ledger's median or a figure quoted from that vendor's own document, which is marked judgment), the close
+  checklist's accruals item as a real test on the ledger (lane B's stub and its pinned test replaced; on the Northwind
+  world it lists 10 vendors with nothing booked for July), `pnpm accruals <db> <YYYY-MM>`, and "Find unbilled
+  expenses" on the workspace's Close page. Prepaid amortisation is still not built.
+  **Run on real models:** Harborline's hosting (18,210.40, 18,954.75, 19,377.10, so not averaged) went to Haiku:
+  **9 calls, $0.03**, found the vendor's July usage statement, proposed 21,480.00 quoting the line; the kernel agreed
+  the quote and marked F11 judgment. Castlegate's rent was accrued by code at 14,000.00, F11 "re-performed from the
+  ledger". Both approved on a copy: the checklist goes 4 of 11 to 5 of 11, accrued liabilities 35,480.00, and the
+  auditor re-performs **16 of 16 clean** (its context now reads an accrual's month as of the posting).
+  `runs/demo/start.db` now carries this (4 items waiting for a person); the month before it is kept as
+  `start.before-accruals.db`.
+- **AWS:** the public, read-only copy is live: `http://32.198.75.6/` (marketing) and `/dashboard` (workspace).
+  One t3.small in us-east-1, systemd, no `.env` and no key on the box, the real Slack member id scrubbed from the
+  month. Verified from outside: reads answer in about 100 ms; approve, run, accruals, decide and the paid Ask answer
+  403. `scripts/deploy-public.sh 32.198.75.6` updates it; `context/DEPLOY.md` has the teardown. **Atharv: on Vercel
+  the "Open the dashboard" button has to point at `http://32.198.75.6/dashboard`.**
+- **Agents page** regrouped into the agents and the harness around them (Karan: the "Code" chips read as hard-coded);
+  the kernel and the Ask agent have cards; "Code tier" is "Learned rules" there. Model page shows Preet's Sonnet 5,
+  Opus 5, Fable 5 and 0.6B LoRA rows.
+- `pnpm test` → 90 files, **764 passing**; typecheck clean. Pushed through `3b2b713`, rebased onto Preet's pushes.
