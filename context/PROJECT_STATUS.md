@@ -298,7 +298,9 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
 - Blocked on humans: one-time SSH password entry on the Mac to install Preet's key on the GX10; A+B
   sign-off on lane C.
 
-### 2026-09-19 ~20:20 ET — Kernel, `propose_entry` runtime, fact memory and router tier 0 landed (Person A)
+### 2026-09-19 ~20:00 ET — Kernel, `propose_entry` runtime, fact memory and router tier 0 landed (Person A)
+
+_Heading time corrected from "~20:20": commit `805e468` is stamped 19:59._
 
 - `src/kernel/`: pure functions, no database or model import. Marks F1-F3, F7, E1-E3, E5, P1-P6, P9, J1-J3 and the six hard
   BLOCK rules; two stages (proposal, post gate). Every check has a passing and a failing fixture. `src/runtime/`:
