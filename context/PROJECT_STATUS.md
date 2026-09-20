@@ -1668,7 +1668,7 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   path; nothing is deployed; lane B's `console/` still says Footnote (three strings, left to lane B).
 - `pnpm test` → 83 files, **731 passing**; typecheck clean. Pushed as `3ebf835`, `148f366` and this commit.
 
-### 2026-09-20 03:52 ET — A false auto-post found and closed; Agents page holds the traces; a read-only public mode (Person A)
+### 2026-09-20 03:50 ET — A false auto-post found and closed; Agents page holds the traces; a read-only public mode (Person A)
 
 - **Reproduced, then closed: a fee and an FX gain netted into a "short-pay".** Vossberg pays INV-3202 in full at a
   better rate, $25.00 fee, $10.00 gain, so the wire is $15.00 short; the split refuses a gain and the code tier fell
