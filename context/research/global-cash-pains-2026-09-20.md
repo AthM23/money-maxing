@@ -43,16 +43,15 @@ the seller's settlement rate and the whole residual is FX, **not** a short-pay. 
 and Local Statutory, plus a dedicated **Rounding Gain/Loss** account alongside Realized and Unrealized
 ([Oracle](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N1409370.html)). Two defensible rates
 (bank's actual vs the ERP daily table) differ by cents on a six-figure invoice. **Arithmetic** once policy names the
-source; **judgment** is choosing source and tolerance. Evidence: the dated rate-table row, or the advice. Inference:
-for the demo cite the bank's own rate — it is on a document the judge can see.
+source; **judgment** is choosing source and tolerance. Evidence: the dated rate-table row, or the advice.
 
 **6. Month-end remeasurement of open foreign receivables (unrealized FX).** Monetary items are remeasured at each
 balance-sheet date and again at settlement, so unrealized and realized land in the right periods
 ([DART 4.3](https://dart.deloitte.com/USDART/home/codification/broad-transactions/asc830-10/roadmap-foreign-currency-transactions-translations/chapter-4-foreign-currency-transactions/4-3-subsequent-measurement-foreign-currency),
-[IAS 21](https://iasplus.com/en/standards/ias/ias21)). Entry: Dr/Cr 1200 AR / Cr/Dr 7150 Unrealized FX; NetSuite uses a
+[IAS 21](https://iasplus.com/en/standards/ias/ias21)). Entry: Dr/Cr 1200 / Cr/Dr 7150 Unrealized FX; NetSuite uses a
 separate Unrealized Gain/Loss account
 ([Oracle](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_N1428662.html)). **Arithmetic.** Trap:
-remeasure, then also compute realized FX from the *original* booked rate, and you double-count.
+remeasure, then compute realized FX from the *original* booked rate, and you double-count.
 
 **7. Partial payment in foreign currency.** FX is realized only on the slice settled; the remainder stays at its booked
 rate until cash-settled or remeasured at period end (IAS 21, above). Entry: Dr 1000 + Dr/Cr 7100 on the settled slice
@@ -73,22 +72,22 @@ debts and debit an intercompany balance ([Practical Law](https://uk.practicallaw
 [NetSuite](https://www.netsuite.com/portal/resource/articles/accounting/intercompany-accounting.shtml)). Two cases:
 (a) a third-party payer — kernel refuses the party tie, needs an approved-payer fact; (b) cash into the *wrong seller
 entity's* account — Dr 1000 (B) / Cr **2900 Due to A**, mirrored Dr 1500 Due from B / Cr 1200 in A, eliminated on
-consolidation. Kiteworks is the reference shape: 10 entities, 7 currencies, 66 accounts, agents "translate currencies
-and eliminate intercompany transactions" ([Maximor](https://www.maximor.ai/case-study/kiteworks)). **Arithmetic** once
+consolidation. Kiteworks is the shape: 10 entities, 7 currencies, 66 accounts, agents "translate currencies and
+eliminate intercompany transactions" ([Maximor](https://www.maximor.ai/case-study/kiteworks)). **Arithmetic** once
 authority exists; **judgment** on whether this payer may pay for that customer.
 
 **10. VAT/GST short-pay.** Under the EU reverse charge the seller invoices **without VAT** and the buyer self-accounts
 ([Avalara](https://www.avalara.com/us/en/vatlive/eu-vat-rules/eu-vat-returns/reverse-charge-on-eu-vat.html),
 [Fonoa](https://www.fonoa.com/resources/blog/eu-reverse-charge-what-is-it-and-who-is-it-for)). The failure mode is the
-mirror image: the seller *did* charge VAT (VAT ID invalid or unvalidated) and the buyer pays net of it. That is a
-**billing error, not a deduction** — credit note and reissue, not a write-off. **Judgment**; evidence is the validated
-VAT ID and the invoice's Art. 226(11a) mention.
+mirror image: the seller *did* charge VAT (VAT ID invalid or unvalidated) and the buyer pays net of it — a **billing
+error, not a deduction**; credit note and reissue, never a write-off. **Judgment**; evidence is the validated VAT ID
+and the invoice's Art. 226(11a) mention.
 
 **11. Pooled and netted payments.** One wire pays many invoices across several selling entities, net of credit notes;
 netting centres compute one figure per counterparty
 ([Tipalti](https://tipalti.com/resources/learn/multilateral-netting/),
-[bill.com](https://www.bill.com/learning/netting)). Nothing ties unless a remittance file is parsed. Cash splits
-across several AR subledgers, possibly across entities (see #9). **Arithmetic** given the remittance; otherwise
+[bill.com](https://www.bill.com/learning/netting)). Nothing ties unless a remittance file is parsed; cash splits
+across several AR subledgers, possibly across entities (#9). **Arithmetic** given the remittance; otherwise
 unapplied.
 
 **12. Value date vs booking date at period end.** Statements carry both (`BookgDt`, `ValDt`). Cash recorded by the
@@ -97,7 +96,7 @@ company in one period and by the bank in the next is a deposit in transit
 **Arithmetic.** Lockboxes widen the gap. Inference: ranked low — a rec item, not a match failure.
 
 **13. Returned, recalled or held wires.** A beneficiary name mismatch or AML/sanctions hit returns or freezes the
-payment; a true SDN match is blocked in an interest-bearing account and cannot simply be released
+payment; a true SDN match is blocked in an interest-bearing account
 ([Xe](https://xe.com/blog/business/returned-international-payment-playbook-7-steps-to-recover-funds-and-resend),
 [transnationalmatters](https://www.transnationalmatters.com/ofac-hold-on-wire-transfer/)). Reverse the application,
 re-open the invoice. **Judgment** — never auto-resolve a compliance hold.
@@ -110,12 +109,12 @@ disposition.
 
 Per **invoice**: currency; foreign total; booked rate + its source and date (ERP rate-table row or contract-fixed);
 selling entity; tax treatment (VAT charged / reverse charge / withholding expected) and the customer's VAT ID;
-contract clauses on bank charges, FX risk and SLA credits (order form, read once).
+contract clauses on bank charges, FX risk and SLA credits.
 
 Per **receipt**: bank account and owning entity; **value date and booking date** (camt.053/BAI2/MT940); foreign amount
 credited; the bank's conversion rate; fees deducted (71F/71G or `Chrgs`); charge option 71A; originating party name
-and country (often *not* the customer); remittance reference (field 70 / `RmtInf`, often truncated — #3); tax withheld
-and certificate reference (arrives later); trace id of every document quoted.
+and country (often *not* the customer); remittance reference (field 70 / `RmtInf`, often truncated); tax withheld and
+certificate reference (arrives later); trace id of every document quoted.
 
 Reality check: rate and fee exist **only** in the bank's credit advice, not the statement feed; the deduction reason
 **only** in a remittance advice or email; the payer's authority **only** in a contract or inbox. Hence "read the
@@ -125,7 +124,7 @@ document, re-perform the arithmetic".
 
 **Arithmetic — no person:** realized FX from two cited rates; the fee as the residual after FX when the advice states
 it; unrealized remeasurement and its reversal; splitting a pooled wire across invoices a remittance names; spotting a
-duplicate; cutoff classification; converting a stated withholding rate into an amount.
+duplicate; cutoff classification; applying a stated withholding rate.
 
 **Judgment — ask once, remember with scope:** who bears bank charges; whether a deduction is tax, dispute, agreed
 credit or billing error; whether a payer may pay for a customer; which rate source is authoritative and the rounding
@@ -159,8 +158,8 @@ treaty-rate determination.
 ## 5. Mistakes a finance judge would catch
 
 FX to misc expense instead of a named FX gain/loss line. Realizing FX on the unpaid remainder. The invoice-date rate
-on the cash leg, or a month-average for a spot settlement. Netting the bank fee into FX so neither is re-performable.
-Withheld tax as a discount or write-off — it is a receivable with a certificate behind it. Ignoring month-end
-remeasurement, or double-counting it against realized FX. A reverse-charge VAT short-pay called a deduction rather
-than a billing error. A third-party payer's cash applied without an approved-payer record. An overpayment auto-cleared
-to revenue. A "daily cash view by currency and entity" built on receipts that were all USD.
+on the cash leg, or a month-average for a spot settlement. Netting the fee into FX so neither is re-performable.
+Withheld tax as a discount — it is a receivable with a certificate behind it. Ignoring month-end remeasurement, or
+double-counting it against realized FX. A reverse-charge VAT short-pay called a deduction. A third-party payer's cash
+applied without an approved-payer record. An overpayment cleared to revenue. A "daily cash view by currency and
+entity" built on receipts that were all USD.
