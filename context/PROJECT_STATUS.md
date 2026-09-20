@@ -1876,3 +1876,17 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   the kernel and the Ask agent have cards; "Code tier" is "Learned rules" there. Model page shows Preet's Sonnet 5,
   Opus 5, Fable 5 and 0.6B LoRA rows.
 - `pnpm test` → 90 files, **764 passing**; typecheck clean. Pushed through `3b2b713`, rebased onto Preet's pushes.
+
+### 2026-09-20 ~05:15 ET — The Vercel copy redeployed from `main` at `b7ce94e` (AthM23 + Claude Code session)
+
+- https://money-maxing-mu.vercel.app had been built from `vercel-setup` at `c8c10f5`, 13 commits behind `main`. `main`
+  (through `b7ce94e`) was merged into `vercel-setup` in two steps (it moved during the first build); the only conflicts
+  were `DEPLOY.md` and this file, both kept as unions in time order. `pnpm test` → 91 files, **768 passing**; typecheck
+  clean; `npx vercel deploy --prod` from the `mm-vercel` worktree, Ready.
+- Measured on the public address: `/` 200 and byte-identical to `frontend/index.html` at the deployed commit;
+  `/dashboard`, `/api/overview`, `/.env` 401 before signing in. **Not checked signed in**: `DASHBOARD_PASSWORD` is a
+  sensitive variable, so `vercel env pull` returns a placeholder, not the value.
+- `DEPLOY.md`'s note that the Vercel page's dashboard button must point at the AWS box is answered there: the Vercel
+  copy serves its own `/dashboard`.
+- **Still a hand deploy.** `vercel-setup` is not on `main` and the project is not connected to GitHub, so the copy falls
+  behind with every push until someone redeploys.
