@@ -31,7 +31,8 @@ async def batcher():
         while len(batch) < a.max_batch and (time.time() - t0) * 1000 < a.gather_ms:
             try: batch.append(queue.get_nowait())
             except asyncio.QueueEmpty: await asyncio.sleep(0.01)
-        prompts = [tok.apply_chat_template(b["messages"], tokenize=False, add_generation_prompt=True) for b in batch]
+        prompts = [tok.apply_chat_template(b["messages"], tokenize=False, add_generation_prompt=True,
+                                           enable_thinking=False) for b in batch]
         max_new = max(b.get("max_tokens", 512) for b in batch)
         enc = tok(prompts, return_tensors="pt", padding=True, truncation=True, max_length=6144).to(model.device)
         t1 = time.time()

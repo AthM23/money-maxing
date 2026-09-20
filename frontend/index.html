@@ -334,7 +334,7 @@
     </div>
     <div class="rv d1">
       <table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">never-seen docs</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">new vendors and formats</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="foot-note" id="benchNote">Loading results…</p>
@@ -485,15 +485,16 @@ if(location.hash) addEventListener('load',()=>goTo(location.hash,false));
 /* benchmark table: measured numbers only; one row per system */
 const NAMES = {
   "ours": "Our model (Qwen3-4B, fine-tuned by us)",
-  "muse-hinted": "Muse Spark 1.3, told the answer format",
-  "muse": "Muse Spark 1.3, no help",
+  "muse-hinted": "Muse Spark 1.3, given a cheat sheet",
+  "muse": "Muse Spark 1.3, no cheat sheet",
   "base4b": "Qwen3-4B before our training",
-  "tiny": "Qwen3-0.6B, tiny model",
-  "haiku-hinted": "Claude Haiku 4.5, told the answer format",
-  "haiku-bare": "Claude Haiku 4.5, no help",
+  "tiny": "Qwen3-0.6B before our training",
+  "haiku-hinted": "Claude Haiku 4.5, given a cheat sheet",
+  "haiku-bare": "Claude Haiku 4.5, no cheat sheet",
   "tuned06": "Our small model (Qwen3-0.6B, fine-tuned by us)",
-  "sonnet-hinted": "Claude Sonnet 5, told the answer format",
-  "opus-hinted": "Claude Opus 5, told the answer format",
+  "sonnet-hinted": "Claude Sonnet 5, given a cheat sheet",
+  "opus-hinted": "Claude Opus 5, given a cheat sheet",
+  "fable-hinted": "Claude Fable 5, given a cheat sheet",
 };
 const fallback = {
   "ours":{exact:0.700,f1:0.972,ho:0.977,lat:6.2,scorer:"v2"},
@@ -523,6 +524,7 @@ const EXTRA = {
   "haiku-bare":{cost:5},
   "sonnet-hinted":{lat:2.7,cost:15},
   "opus-hinted":{lat:1.7,cost:25},
+  "fable-hinted":{lat:1.9,cost:50},
 };
 function applyExtra(rows){
   for(const [k,e] of Object.entries(EXTRA)){
@@ -539,7 +541,7 @@ function renderBench(rows, note){
     .filter(([k])=>!/ep\d|epoch/.test(k))
     .sort((a,b)=>b[1].f1-a[1].f1)
     .forEach(([k,r])=>{
-      const tr=document.createElement('tr'); if(k==='ours') tr.className='hero-row';
+      const tr=document.createElement('tr'); if(k==='ours'||k==='tuned06') tr.className='hero-row';
       tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
         <td class="num">${(r.f1*100).toFixed(1)}%</td><td class="num">${r.ho!=null?(r.ho*100).toFixed(1)+'%':'n/a'}</td>
         <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>
@@ -550,11 +552,12 @@ function renderBench(rows, note){
   document.getElementById('progNote').textContent = PROG;
   renderChart(rows);
 }
-renderBench(applyExtra({...fallback}), "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
+renderBench(applyExtra({...fallback}), "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. New vendors and formats: accuracy on only the companies and document styles we deliberately kept out of training, proof the model learned the job instead of memorizing answers. Cheat sheet means we handed that model the exact answer template in its prompt; our models get no cheat sheet, the format is trained in. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
                '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json',
                '../ft/data/benchmark_v2_sonnet.json','../ft/data/benchmark_v2_opus.json',
+               '../ft/data/benchmark_v2_fable.json',
                '../ft/data/benchmark_results_v2.json'];
   const rows={...fallback}; let anyV2=false;
   for(const url of files){
@@ -570,7 +573,7 @@ renderBench(applyExtra({...fallback}), "120 test documents per model, same exam 
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(applyExtra(rows), "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
+  renderBench(applyExtra(rows), "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. New vendors and formats: accuracy on only the companies and document styles we deliberately kept out of training, proof the model learned the job instead of memorizing answers. Cheat sheet means we handed that model the exact answer template in its prompt; our models get no cheat sheet, the format is trained in. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
 })();
 </script>
 </body>

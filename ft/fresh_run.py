@@ -14,6 +14,7 @@ ap.add_argument("--data", default="ft/data_fresh")
 ap.add_argument("--endpoint", default="http://100.73.102.120:8000")
 ap.add_argument("--concurrency", type=int, default=8)
 ap.add_argument("--limit", type=int, default=0)
+ap.add_argument("--out", default="ft/data/fresh_exam_result.json")
 a = ap.parse_args()
 
 rows = [json.loads(l) for l in open(f"{a.data}/sft.test.jsonl") if l.strip()]
@@ -57,7 +58,7 @@ async def main():
            "avg_batch_size": round(sum(x["batch"] for x in out) / max(n, 1), 1),
            "errors": sum(1 for x in out if "err" in x)}
     print("FRESH_EXAM", json.dumps(res))
-    Path("ft/data/fresh_exam_result.json").write_text(json.dumps(
+    Path(a.out).write_text(json.dumps(
         {"protocol": {"scorer": getattr(scoring, "SCORER_VERSION", "v2"), "data": "seed-99 fresh, zero overlap"},
          "result": res}, indent=1))
 
