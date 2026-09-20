@@ -1,6 +1,5 @@
 import { Proposal } from "../src/contract/types.js";
 import { isControlAccountCode } from "./accounts.js";
-import { buildFleet } from "../src/readmodel/fleet.js";
 import { buildReceipts } from "../src/readmodel/receipts.js";
 import { buildConsoleState } from "../src/readmodel/state.js";
 import { buildCaseTrace } from "../src/readmodel/trace.js";
@@ -9,6 +8,7 @@ import type { Db } from "../src/runtime/db.js";
 import { readControlTotals } from "../src/runtime/kernelContext.js";
 import { getTrace, safeJson } from "../src/runtime/lookups.js";
 import { rippleView } from "./ripple.js";
+import { fleetWithRoster } from "./roster.js";
 import { TOOLS, type BookTool } from "./tools.js";
 
 /** Everything the first screen needs, in one read. */
@@ -95,5 +95,5 @@ export function workpaperView(db: Db, decisionId: string): unknown {
 }
 
 export function fleetView(db: Db): unknown {
-  return buildFleet(db);
+  return fleetWithRoster(db);
 }

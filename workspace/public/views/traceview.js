@@ -10,12 +10,28 @@ const LANE_NAMES = { code: "Code", reader: "Document reader", model: "Model", co
 export function traceView(trace) {
   if (!trace || trace.spans.length === 0) return h("p", { class: "muted" }, "Nothing has worked this case yet.");
   const t = trace.totals;
+  trace = { ...trace, spans: collapseRepeats(trace.spans) };
   return h("div", { class: "trace" },
     h("div", { class: "tracetotals" },
       fact(t.turns, "turns"), fact(t.tool_calls, "lookups"), fact(t.model_calls, "model calls"), fact(`${cost(t.cost_micros)}${t.uncosted_turns ? "+" : ""}`, t.uncosted_turns ? `model cost · ${t.uncosted_turns} aborted turn not costed` : "model cost"),
       fact(t.kernel_refusals, "drafts the kernel refused", t.kernel_refusals > 0 ? "bad" : ""), fact(t.questions, "questions to a person"), fact(t.posted, "entries posted")),
     waterfall(trace),
     h("div", { class: "spans" }, trace.spans.map((s, i) => spanCard(s, i))));
+}
+
+/**
+ * Every pass over an open case records that code could settle nothing more. Read in a row they say one thing, so they
+ * are shown once, with how many passes said it. Nothing is dropped from the record, only from this view.
+ */
+function collapseRepeats(spans) {
+  const out = [];
+  for (const s of spans) {
+    const last = out.at(-1);
+    const idle = (x) => x.lane === "code" && x.kind === "no_action" && x.steps.every((st) => st.kind !== "proposal");
+    if (last && idle(last) && idle(s) && last.label === s.label) out[out.length - 1] = { ...last, repeats: (last.repeats ?? 1) + 1 };
+    else out.push(s);
+  }
+  return out;
 }
 
 function fact(value, label, tone = "") {
@@ -43,7 +59,7 @@ function waterfall(trace) {
 function spanCard(s, index) {
   const open = s.lane !== "code" || s.steps.some((st) => st.status === "refused");
   const head = h("summary", {},
-    h("span", { class: `dot ${s.lane}` }), h("b", {}, s.label), h("span", { class: "muted" }, ` · ${s.kind && s.kind !== "no_action" ? s.kind.replaceAll("_", " ") : LANE_NAMES[s.lane]}`),
+    h("span", { class: `dot ${s.lane}` }), h("b", {}, s.label), h("span", { class: "muted" }, ` · ${s.kind && s.kind !== "no_action" ? s.kind.replaceAll("_", " ") : LANE_NAMES[s.lane]}${s.repeats ? `, on ${s.repeats} passes` : ""}`),
     h("span", { class: `outcome ${toneOf(s.outcome)}` }, s.outcome),
     h("span", { class: "spanmeta mono" }, clock(s.started_at), " · ", duration(s.duration_ms), s.model_calls ? ` · ${s.model_calls} model calls` : "", !s.cost_recorded ? " · cost not recorded" : s.cost_micros ? ` · ${cost(s.cost_micros)}` : ""));
   return h("details", { class: "span", id: `span-${index}`, open }, head, h("ol", { class: "steps" }, s.steps.map(stepRow)));

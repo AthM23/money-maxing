@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Money Maxer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22%23101012%22%2F%3E%3Cpath%20d%3D%22M8%2023.5V11.5l7%207.5%208.6-10.4%22%20fill%3D%22none%22%20stroke%3D%22%23d9f24f%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%228.2%22%20r%3D%222.7%22%20fill%3D%22%23d9f24f%22%2F%3E%3C%2Fsvg%3E">
 <style>
   :root{
     --lime:#d9f24f; --ink:#101012; --paper:#f4f4f1; --mut:#5b5b57;
@@ -17,8 +18,8 @@
   nav{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;
       padding:20px 48px;z-index:100;pointer-events:none}
   nav>*{pointer-events:auto}
-  .logo{font-weight:700;font-size:20px;position:relative;background:#fff;border-radius:999px;padding:10px 22px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
-  .logo::after{content:"";position:absolute;right:10px;top:8px;width:14px;height:14px;background:var(--lime);border-radius:50%;z-index:-0}
+  .logo{font-weight:800;font-size:20px;letter-spacing:-.03em;display:flex;align-items:center;gap:10px;background:#fff;border-radius:999px;padding:7px 20px 7px 8px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
+  .logo svg{display:block;border-radius:9px}
   .nav-links{display:flex;gap:6px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
   .nav-links a{color:var(--ink);text-decoration:none;font-size:14.5px;padding:9px 16px;border-radius:999px;transition:background .2s}
   .nav-links a:hover{background:#f0f0ec}
@@ -179,7 +180,7 @@
 <body>
 
 <nav>
-  <div class="logo">Money Maxer</div>
+  <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>Money Maxer</div>
   <div class="nav-links">
     <a href="#story">The close</a><a href="#loop">The loop</a><a href="#model">The model</a><a href="#bench">Benchmark</a><a href="/dashboard">Dashboard ↗</a>
   </div>

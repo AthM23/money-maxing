@@ -27,7 +27,7 @@ function hero(x) {
   const base = x?.rows.find((r) => r.key === "base4b"), ours = x?.rows.find((r) => r.ours);
   if (!base || !ours) return null;
   const fact = (label, from, to) => h("div", { class: "fact" }, h("b", {}, `${from} → ${to}`), h("span", {}, label));
-  return h("div", { class: "console modelhero" },
+  return h("div", { class: "darkhero modelhero" },
     h("div", {}, h("p", { class: "kick" }, "Same model, before and after our training"), h("div", { class: "herofig" }, h("span", { class: "from" }, base.field_f1.toFixed(3)), h("span", { class: "arrow" }, "→"), h("b", {}, ours.field_f1.toFixed(3))), h("p", { class: "muted" }, `field-F1 on ${x.n} July documents, graded by code (${x.scorer})`)),
     h("div", { class: "tracetotals" }, fact("valid against the schema", pct(base.schema_valid ?? 0), pct(ours.schema_valid ?? 0)), fact("whole document exactly right", pct(base.exact), pct(ours.exact)),
       ours.held_out_f1 === undefined ? null : h("div", { class: "fact" }, h("b", {}, ours.held_out_f1.toFixed(3)), h("span", {}, `F1 on the ${ours.held_out_n} documents from customers it never saw`))));

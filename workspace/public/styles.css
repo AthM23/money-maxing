@@ -119,16 +119,18 @@ button.bubble { cursor: pointer; } button.bubble:hover { border-color: var(--ink
 .noderow > .node:last-child { position: absolute; left: calc(100% + 70px); top: 50%; transform: translateY(-50%); width: 300px; }
 
 /* the timeline (dark console) */
-.console { background: var(--ink); color: #e9e9e4; border-radius: 20px; padding: 24px; } .console .muted { color: #8e8e88; }
-.tracetotals { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 18px; } .fact { display: grid; } .fact b { font-size: 22px; color: #fff; font-weight: 600; } .fact span { font-size: 12px; color: #8e8e88; } .fact.bad b { color: var(--coral); }
-.waterfall { background: #1b1b1e; border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; } .wfrow { display: grid; grid-template-columns: 250px 1fr 160px; gap: 14px; align-items: center; padding: 4px 0; font-size: 13px; }
-.wftrack { background: #2a2a2e; border-radius: 999px; height: 10px; } .wfbar { display: block; height: 10px; border-radius: 999px; background: #777; } .wfmeta { text-align: right; color: #8e8e88; }
-.wfbar.code { background: var(--lime); } .wfbar.model { background: #9d8cff; } .wfbar.person { background: var(--coral); } .wfbar.reader { background: #4cc3e0; } .wfbar.controller { background: #c9a227; }
-details.span { background: #1b1b1e; border: 1px solid #2a2a2e; border-radius: 16px; margin-bottom: 8px; } details.span > summary { list-style: none; color: #fff; margin: 0; padding: 13px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } details.span > summary::-webkit-details-marker { display: none; }
-.spanmeta { margin-left: auto; color: #8e8e88; } .console .outcome { background: #2a2a2e; color: #cfcfd4; } .console .outcome.ok { background: rgba(217, 242, 79, .16); color: var(--lime); } .console .outcome.wait { background: rgba(240, 100, 92, .18); color: #ff9d97; } .console .outcome.bad { background: var(--coral); color: #fff; }
-ol.steps { list-style: none; padding: 0 16px 12px; border-top: 1px solid #2a2a2e; } .step { display: grid; grid-template-columns: 76px 1fr auto; gap: 12px; padding: 7px 0; border-bottom: 1px solid #232326; font-size: 13px; } .step:last-child { border-bottom: 0; }
-.step .when, .step .lat { color: #6f6f6a; } .step b { color: #fff; font-weight: 600; } .step.tool b { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--lime); font-weight: 500; } .step .detail { color: #9a9a94; word-break: break-word; }
-.step.refused b { color: #ff9d97; } .step.waiting b { color: #ffc46b; } .step.posted b, .step.answer b, .step.approval.ok b { color: var(--lime); } .step.outcome { opacity: .7; } ul.refused { margin-top: 6px; padding-left: 18px; color: #ff9d97; font-size: 12.5px; }
+/* the trace timeline: the same light page as everything else. Lime stays the code tier's colour, as a bar with an ink edge. */
+.console { background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 20px; padding: 24px; } .console .muted { color: var(--mut); }
+.darkhero { background: var(--ink); color: #e9e9e4; border-radius: 20px; } .darkhero .muted { color: #8e8e88; } .darkhero .fact b { color: #fff; } .darkhero .fact span { color: #8e8e88; }
+.tracetotals { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 18px; } .fact { display: grid; } .fact b { font-size: 22px; color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; } .fact span { font-size: 12px; color: var(--mut); } .fact.bad b { color: var(--coral-ink); }
+.waterfall { background: var(--soft); border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; } .wfrow { display: grid; grid-template-columns: 250px 1fr 160px; gap: 14px; align-items: center; padding: 4px 0; font-size: 13px; }
+.wftrack { background: #e6e6e0; border-radius: 999px; height: 10px; } .wfbar { display: block; height: 10px; border-radius: 999px; background: #9a9a94; } .wfmeta { text-align: right; color: var(--mut); }
+.wfbar.code { background: var(--lime); box-shadow: inset 0 0 0 1.5px var(--ink); } .wfbar.model { background: var(--violet); } .wfbar.person { background: var(--coral); } .wfbar.reader { background: var(--blue); } .wfbar.controller { background: var(--amber); }
+details.span { background: #fff; border: 1px solid var(--line); border-radius: 16px; margin-bottom: 8px; } details.span[open] { box-shadow: 0 6px 18px rgba(16, 16, 18, .05); } details.span > summary { list-style: none; color: var(--ink); margin: 0; padding: 13px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; cursor: pointer; } details.span > summary::-webkit-details-marker { display: none; }
+.spanmeta { margin-left: auto; color: var(--mut); }
+ol.steps { list-style: none; padding: 0 16px 12px; border-top: 1px solid var(--line); } .step { display: grid; grid-template-columns: 76px 1fr auto; gap: 12px; padding: 7px 0; border-bottom: 1px solid #f1f1ed; font-size: 13px; } .step:last-child { border-bottom: 0; }
+.step .when, .step .lat { color: #9a9a94; } .step b { color: var(--ink); font-weight: 600; } .step.tool b { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px; color: var(--violet); font-weight: 600; } .step .detail { color: var(--mut); word-break: break-word; }
+.step.refused b { color: var(--coral-ink); } .step.waiting b { color: var(--amber); } .step.posted b, .step.answer b, .step.approval.ok b { color: var(--green-ink); } .step.outcome { opacity: .75; } ul.refused { margin-top: 6px; padding-left: 18px; color: var(--coral-ink); font-size: 12.5px; }
 
 /* policies, feed, audit */
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px; } .rule { background: var(--soft); border-radius: 20px; padding: 20px; } .rule.retired { opacity: .55; } .rulehead { display: flex; justify-content: space-between; align-items: center; }
@@ -206,3 +208,13 @@ form.answer .actions.wide { grid-column: 1 / -1; display: flex; justify-content:
 /* the case page: what the posted entry touched in the other books */
 .ripple { display: grid; gap: 2px; } .ripplerow { display: grid; grid-template-columns: 170px minmax(0, 1fr) 130px; gap: 14px; align-items: center; padding: 11px 4px; border-top: 1px solid var(--line); font-size: 14.5px; } .ripplerow .num { text-align: right; }
 @media (max-width: 1100px) { .ripplerow { grid-template-columns: 1fr; gap: 4px; } .ripplerow .num { text-align: left; } }
+
+/* Agents: the team as cards, then the runs you can pick a trace from */
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.agentcard { border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; background: #fff; } .agentcard.idle { background: #fbfbf9; } .agentcard.idle .did { color: var(--mut); font-weight: 500; }
+.agenthead { display: flex; align-items: center; gap: 9px; } .agenthead b { font-size: 15px; letter-spacing: -.01em; } .agenthead .chip { margin-left: auto; font-size: 11px; padding: 2px 9px; }
+.agenticon { width: 28px; height: 28px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: var(--green); } .agenticon.model { background: var(--violet); } .agenticon.person { background: var(--coral); } .agentcard.idle .agenticon { background: #c9c9c2; }
+.agentcard .did { font-size: 13.5px; font-weight: 600; line-height: 1.4; margin-top: 2px; }
+.tbl.runs tr.on td { background: #f7fbdf; } .tbl.runs tr.on td:first-child { box-shadow: inset 3px 0 0 var(--ink); }
+.workers { display: flex; gap: 4px; flex-wrap: wrap; } .wk { font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--green-bg); color: var(--green-ink); } .wk.model { background: var(--violet-bg); color: var(--violet); } .wk.person { background: var(--coral-bg); color: var(--coral-ink); } .wk.reader { background: var(--blue-bg); color: var(--blue); } .wk.controller { background: var(--amber-bg); color: var(--amber); }
+#runtrace { scroll-margin-top: 16px; }
