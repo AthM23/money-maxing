@@ -1667,3 +1667,22 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - **Not done:** the Slack question form has still not been answered live; the fine-tuned reader is not on the demo
   path; nothing is deployed; lane B's `console/` still says Footnote (three strings, left to lane B).
 - `pnpm test` → 83 files, **731 passing**; typecheck clean. Pushed as `3ebf835`, `148f366` and this commit.
+
+### 2026-09-20 03:52 ET — A false auto-post found and closed; Agents page holds the traces; a read-only public mode (Person A)
+
+- **Reproduced, then closed: a fee and an FX gain netted into a "short-pay".** Vossberg pays INV-3202 in full at a
+  better rate, $25.00 fee, $10.00 gain, so the wire is $15.00 short; the split refuses a gain and the code tier fell
+  through to SHORT-PAY-01 on the net figure (Dr 6150 15.00, AUTO, resolved, no person). A model citing the rule posted
+  too. Now: the code tier leaves a converted receipt it cannot split to the judgment tiers, and **kernel check F10**
+  refuses a rule-backed write-off on a converted receipt that is not exactly the bank's fee. Each layer has an
+  assertion that fails without it. The demo month still re-performs clean under F10 (14 of 14). Pushed as `c5480e3`.
+- **Agents page** (Karan: the trace belongs there, not under Cash): the team as cards with what the database proves
+  each did (an idle one says so), a run list, and the picked run's trace in place, flow or timeline. The timeline is
+  light like the rest of the app. `workspace/roster.ts`, `src/readmodel/runs.ts`. Pushed as `e3a987d`.
+- **`WORKSPACE_PUBLIC=1`** (`workspace/publicMode.ts`): refuses every action that writes or spends, by name, answers
+  Ask from code only, and is the only mode that listens beyond 127.0.0.1. `context/DEPLOY.md` is the ten-minute
+  version. **Nothing has been deployed.** Pushed as `21e97bc`.
+- `/` is the marketing page and `/dashboard` the app; the logo mark is in both and is the favicon of both
+  (`frontend/index.html`: the nav logo, a "Dashboard" link and an inline favicon, nothing else).
+- `context/JUDGE_QA.md`: the hard questions, answered as the code stands now.
+- `pnpm test` → 85 files, **735 passing**; typecheck clean.
