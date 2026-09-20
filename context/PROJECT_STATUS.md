@@ -995,3 +995,34 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - `pnpm test` → 48 files, **473 passing**; typecheck clean. **Still to do on lane A:** run the Slack desk live with a
   person clicking; the improve beat and run 2 on the seeded world; README results and limitations. **Team:** the
   Plume project must exist by 23:59 tonight.
+
+### 2026-09-19 23:02 ET — Preparer, reviewer, revision loop run on real models; first messages delivered to Slack; README (Person A)
+
+- **The whole review loop ran on real models on the seeded world, for the first time.** Initech, draft 1 (Haiku,
+  $0.052): the Opus controller **declined it on the record**: the concession was properly authorised, but two of the
+  four evidence claims did not say what they were cited for ("paid $10,800 on 12 July" rested on an instruction in
+  an email, not on a bank line), and it raised a real accounting point: 12 of July's 31 days were already delivered,
+  so that sliver belongs against revenue, not deferred revenue. Draft 2 (Haiku, $0.070, given the controller's
+  concerns): three sources (the CEO's email, the contract, the concessions memo). Second review: **agrees**, with the
+  ratable sliver noted as immaterial at $1,200. Over $500, so it is parked for a person with the controller's note.
+  A reviewer's concerns now reach the next preparer **from the record** (`runCase` reads declined drafts on the case),
+  so they survive even when the revision runs in a later pass.
+- **Wayne again, with the closed vocabularies:** Haiku handed up ($0.056), Sonnet escalated ($0.219, 3 minutes):
+  predicate `shortfall_reason`, kind `credit_memo`, four valid answers with short labels. The first run's question
+  could not have been sent: its four answer ids were invented (every button would have done nothing) and its labels
+  were sentences (Slack refuses a message with a button label over 75 characters). Answer ids are now the five
+  treatments the runtime can act on, labels are at most 60 characters, and every Slack text field is clipped to
+  Slack's limits.
+- **Slack, live:** `pnpm desk data/footnote.db --once` delivered both messages to the Northwind Systems workspace:
+  Wayne's question to the account owner's mapped user and Initech's approval request, with the controller's note, to
+  the controller's mapped user (all personas map to one real user today). A desk is now running on lane A's machine
+  so clicks come back through `recordHumanAnswer` and `approveDecision`. **The click itself has not been tested:**
+  it needs a person in that workspace.
+- **Root `README.md` drafted** (there was none): the loop in the order of Maximor's widget, what stops a wrong entry,
+  a measured table with n, limits stated plainly (six false-auto-post paths found by review and closed; one entity,
+  one currency, one bank; only AR end to end; same-family controller; Slack click untested; in-sample backtest; the
+  ripple is not built), and the commands. Lane B and C owners should correct their parts.
+- **Known gap found here:** the controller's own model cost is not metered into `decision.cost_micros`, so the
+  scoreboard's cost line understates a run that includes reviews.
+- Paid spend this stretch: about $0.45 of investigator cost on the scoreboard, plus four Opus reviews not metered.
+- `pnpm test` → 48 files, **474 passing**; typecheck clean.
