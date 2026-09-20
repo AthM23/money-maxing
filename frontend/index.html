@@ -335,7 +335,7 @@
     </div>
     <div class="rv d1">
       <div class="tbl-scroll"><table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">perfect answers of 120</th><th class="num">accuracy</th><th class="num">new vendors and formats</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">docs 100% right, of 120</th><th class="num">field accuracy</th><th class="num">new vendors and formats</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
         <tbody></tbody>
       </table></div>
       <button id="allModelsBtn" onclick="toggleModels()" style="margin-top:14px;border:0;cursor:pointer;background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600">Show every system we measured</button>
@@ -505,11 +505,10 @@ const fallback = {
   "muse":{exact:0.0,f1:0.091,ho:0.103,lat:5.6,scorer:"v2"},
   "base4b":{exact:0.0,f1:0.061,ho:0.066,lat:6.4,scorer:"v2"},
   "tiny":{exact:0.0,f1:0.010,ho:0.014,lat:1.3,scorer:"v1"},
-  "haiku-hinted":{exact:0.742,f1:0.962,ho:0.969,lat:null,scorer:"v2"},
-  "haiku-bare":{exact:0.0,f1:0.106,ho:0.120,lat:null,scorer:"v2"},
+  "haiku-hinted":{exact:0.608,f1:0.943,ho:0.954,lat:null,scorer:"v2"},
+  "haiku-bare":{exact:0.0,f1:0.087,ho:0.104,lat:null,scorer:"v2"},
   "tuned06":{exact:0.717,f1:0.972,ho:0.977,lat:2.1,scorer:"v2"},
-  "sonnet-hinted":{exact:0.775,f1:0.976,ho:0.979,lat:null,scorer:"v2"},
-  "opus-hinted":{exact:0.775,f1:0.974,ho:0.979,lat:null,scorer:"v2"},
+  "sonnet-hinted":{exact:0.65,f1:0.949,ho:0.958,lat:null,scorer:"v2"},
 };
 /* speed and cost, kept out of the accuracy JSONs. lat is effective seconds per document in each
    system's normal serving mode: ours through our batching server on the GX10 (measured over 614
@@ -523,12 +522,11 @@ const EXTRA = {
   "tiny":{lat:1.3,cost:0.40},
   "muse-hinted":{cost:null},
   "muse":{cost:null},
-  "haiku-hinted":{lat:1.2,cost:5},
+  "haiku-hinted":{lat:2.2,cost:5},
   "haiku-bare":{cost:5},
-  "sonnet-hinted":{lat:2.7,cost:15},
-  "opus-hinted":{lat:1.7,cost:25},
-  "fable-hinted":{lat:1.9,cost:50},
-  "opus48-hinted":{lat:2.3,cost:25},
+  "sonnet-hinted":{lat:2.3,cost:15},
+  "fable-hinted":{lat:2.0,cost:50},
+  "opus48-hinted":{lat:3.1,cost:25},
 };
 function applyExtra(rows){
   for(const [k,e] of Object.entries(EXTRA)){
@@ -565,11 +563,11 @@ function renderBench(rows, note){
   renderChart(rows);
 }
 function toggleModels(){ showAll=!showAll; if(LASTROWS) renderBench(LASTROWS, LASTNOTE); }
-renderBench(applyExtra({...fallback}), "Same 120-document exam, same grading script, every row. Perfect answers: the whole document right to the cent. Accuracy: partial credit per field. New vendors and formats: documents from companies and styles kept out of training. Cheat sheet: that model was handed the exact answer template in its prompt; ours has the format trained in.");
+renderBench(applyExtra({...fallback}), "Same 120-document exam, same grading script, every row. Docs 100% right: every field of the document right to the cent, all or nothing. Field accuracy: partial credit per field, so a model can get more documents fully right yet score lower here if its misses are bigger. New vendors and formats: documents from companies and styles kept out of training. Cheat sheet: that model was handed the exact answer template in its prompt; ours has the format trained in.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
                '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json',
-               '../ft/data/benchmark_v2_sonnet.json','../ft/data/benchmark_v2_opus.json',
+               '../ft/data/benchmark_v2_sonnet.json',
                '../ft/data/benchmark_v2_fable.json','../ft/data/benchmark_v2_opus48.json',
                '../ft/data/benchmark_results_v2.json'];
   const rows={...fallback}; let anyV2=false;
@@ -586,7 +584,7 @@ renderBench(applyExtra({...fallback}), "Same 120-document exam, same grading scr
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(applyExtra(rows), "Same 120-document exam, same grading script, every row. Perfect answers: the whole document right to the cent. Accuracy: partial credit per field. New vendors and formats: documents from companies and styles kept out of training. Cheat sheet: that model was handed the exact answer template in its prompt; ours has the format trained in.");
+  renderBench(applyExtra(rows), "Same 120-document exam, same grading script, every row. Docs 100% right: every field of the document right to the cent, all or nothing. Field accuracy: partial credit per field, so a model can get more documents fully right yet score lower here if its misses are bigger. New vendors and formats: documents from companies and styles kept out of training. Cheat sheet: that model was handed the exact answer template in its prompt; ours has the format trained in.");
 })();
 </script>
 </body>
