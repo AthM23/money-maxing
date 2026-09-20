@@ -1,0 +1,74 @@
+HARBORLINE CLOUD, INC.                                                            I N V O I C E
+1100 Dexter Avenue N, Suite 500
+Seattle, WA 98109, United States
+EIN 88-1420937
+invoices@harborline-cloud.test  |  +1 206 555 0142
+
+--------------------------------------------------------------------------------------------------
+Invoice number        HLC-129884                 Customer account      NW-PROD
+Invoice date          2026-08-06                 Purchase order        None - usage billed
+Invoice type          380 (commercial invoice)   Service period        2026-07-01 to 2026-07-31
+Currency              USD                        Payment terms         Net 15
+Due date              2026-08-21                 Prior invoice         HLC-125391 (paid 2026-07-15)
+--------------------------------------------------------------------------------------------------
+
+BILL TO                                          SERVICE LOCATION
+Northwind Systems, Inc.                          us-west-2 / us-east-1 (Harborline regions)
+Suite 400, 210 Harbor Street                     Account NW-PROD
+Boston, MA 02210, United States
+EIN 47-2019338
+Attn: Accounts Payable, ap@northwind.test
+
+--------------------------------------------------------------------------------------------------
+ #  Description                                        Quantity  Unit    Unit price        Amount
+--------------------------------------------------------------------------------------------------
+ 1  Compute - general purpose (c3.large)             178,560.00   HUR      0.064000     11,427.84
+    240 vCPU x 744 hours, 1-31 July 2026
+ 2  Compute - memory optimised (r3.xlarge)            22,320.00   HUR      0.091000      2,031.12
+    30 vCPU x 744 hours, 1-31 July 2026
+ 3  Block storage, SSD (gp2)                          42,000.00   E34      0.080000      3,360.00
+    GB-month, average provisioned
+ 4  Object storage, standard class                    96,000.00   E34      0.021000      2,016.00
+    GB-month, average stored
+ 5  Managed PostgreSQL 16 (db.m5.large)                1,488.00   HUR      0.520000        773.76
+    2 instances x 744 hours
+ 6  Data transfer out to internet                     14,016.00   E34      0.080000      1,121.28
+    GB egress, after 100 GB monthly allowance
+ 7  Support plan - Business                                1.00   MON    750.000000        750.00
+    1-31 July 2026
+--------------------------------------------------------------------------------------------------
+                                                            Subtotal (usage)        USD  20,730.00
+                                                            Subtotal (support)      USD     750.00
+                                                            Taxable amount          USD  21,480.00
+                                                            Sales tax @ 0.00%       USD       0.00
+                                                            Exempt: category E, resale certificate
+                                                            MA-RS-44718 on file
+                                                            ------------------------------------
+                                                            TOTAL DUE               USD  21,480.00
+--------------------------------------------------------------------------------------------------
+
+Amount in words: Twenty-one thousand four hundred eighty and 00/100 US dollars.
+
+NOTES
+Compute is above the June run rate: reprocessing after the 17-18 June incident ran into the first
+week of July. Detail by resource is in the usage report for account NW-PROD, issued 2026-08-01.
+
+REMITTANCE
+Pay by ACH or wire in USD, quoting invoice number HLC-129884.
+  Beneficiary      Harborline Cloud, Inc.
+  Bank             Cascade Pacific Bank, Seattle, WA
+  ABA / routing    125181286  (ACH and domestic wire)
+  Account          0034118826
+  SWIFT/BIC        CPBKUS6SXXX
+  Remittance to    ar@harborline-cloud.test
+Our remittance details have not changed. We will never ask you to change them by email; call
++1 206 555 0142 and ask for accounts receivable to confirm any request that claims otherwise.
+
+TERMS
+Payable within 15 days of the invoice date. Overdue amounts carry interest at 1.5% per month or
+the maximum permitted by law, whichever is lower. Disputes must be raised within 10 days of the
+invoice date; undisputed amounts remain payable. Fees are exclusive of taxes; where an exemption
+certificate is on file no tax is charged, and the customer remains responsible for any tax later
+assessed. Governed by the Harborline Cloud Terms of Service accepted for account NW-PROD.
+
+Page 1 of 1                                                    Invoice HLC-129884 | 2026-08-06

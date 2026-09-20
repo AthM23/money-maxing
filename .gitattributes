@@ -1,3 +1,11 @@
 # Run by bash on Linux (Vercel, the box in context/DEPLOY.md) even when checked out or deployed from Windows.
 *.sh text eol=lf
 scripts/vercel/bin/* text eol=lf
+
+# The invoice fixture. The PDF is mostly ASCII, so git's binary sniffing misses it and CRLF
+# conversion would shift every byte offset its xref table points at. The other three are fed to
+# parsers that expect the bytes they were written with, so pin them to LF on every platform.
+fixtures/invoices/*.pdf -text
+fixtures/invoices/*.txt text eol=lf
+fixtures/invoices/*.xml text eol=lf
+fixtures/invoices/*.json text eol=lf

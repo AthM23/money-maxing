@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Test fixture. Fictional parties, .test domains, invented identifiers.
+  Syntax : OASIS UBL 2.1 Invoice
+  Model  : EN 16931-1:2017 semantic data model (BT-/BG- references in comments)
+  Profile: Peppol BIS Billing 3.0 is declared below. This is a US domestic invoice, so three things
+           sit outside the EU profile and a strict schematron run will say so: EAS "EM" for the
+           endpoint, TaxScheme "LOC" (local sales tax) instead of "VAT", and an EIN where a VAT
+           identifier is expected. Swap those three for a schematron-clean EU variant.
+-->
+<Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+         xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
+         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+
+  <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:fdc:peppol.eu:2017:poacc:billing:3.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
+  <cbc:ID>HLC-129884</cbc:ID>                                    <!-- BT-1  Invoice number -->
+  <cbc:IssueDate>2026-08-06</cbc:IssueDate>                      <!-- BT-2  Issue date -->
+  <cbc:DueDate>2026-08-21</cbc:DueDate>                          <!-- BT-9  Due date -->
+  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>                 <!-- BT-3  UNCL1001 380 = commercial invoice -->
+  <cbc:Note>Compute is above the June run rate: reprocessing after the 17-18 June incident ran into the first week of July.</cbc:Note>
+  <cbc:DocumentCurrencyCode>USD</cbc:DocumentCurrencyCode>       <!-- BT-5  ISO 4217 -->
+  <cbc:BuyerReference>NW-PROD</cbc:BuyerReference>               <!-- BT-10 Buyer reference -->
+
+  <cac:InvoicePeriod>                                            <!-- BG-14 Invoicing period -->
+    <cbc:StartDate>2026-07-01</cbc:StartDate>                    <!-- BT-73 -->
+    <cbc:EndDate>2026-07-31</cbc:EndDate>                        <!-- BT-74 -->
+  </cac:InvoicePeriod>
+
+  <cac:ContractDocumentReference>                                <!-- BT-12 Contract reference -->
+    <cbc:ID>NW-PROD</cbc:ID>
+  </cac:ContractDocumentReference>
+
+  <cac:AccountingSupplierParty>                                  <!-- BG-4  Seller -->
+    <cac:Party>
+      <cbc:EndpointID schemeID="EM">invoices@harborline-cloud.test</cbc:EndpointID>  <!-- BT-34 -->
+      <cac:PartyName><cbc:Name>Harborline Cloud</cbc:Name></cac:PartyName>           <!-- BT-28 trading name -->
+      <cac:PostalAddress>                                        <!-- BG-5 -->
+        <cbc:StreetName>1100 Dexter Avenue N</cbc:StreetName>
+        <cbc:AdditionalStreetName>Suite 500</cbc:AdditionalStreetName>
+        <cbc:CityName>Seattle</cbc:CityName>
+        <cbc:PostalZone>98109</cbc:PostalZone>
+        <cbc:CountrySubentity>WA</cbc:CountrySubentity>
+        <cac:Country><cbc:IdentificationCode>US</cbc:IdentificationCode></cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyTaxScheme>                                       <!-- BT-31/32 tax registration -->
+        <cbc:CompanyID>88-1420937</cbc:CompanyID>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:PartyTaxScheme>
+      <cac:PartyLegalEntity>                                     <!-- BT-27 legal name, BT-30 registration -->
+        <cbc:RegistrationName>Harborline Cloud, Inc.</cbc:RegistrationName>
+        <cbc:CompanyID>88-1420937</cbc:CompanyID>
+      </cac:PartyLegalEntity>
+      <cac:Contact>                                              <!-- BG-6 -->
+        <cbc:Name>Accounts Receivable</cbc:Name>
+        <cbc:Telephone>+1 206 555 0142</cbc:Telephone>
+        <cbc:ElectronicMail>ar@harborline-cloud.test</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+
+  <cac:AccountingCustomerParty>                                  <!-- BG-7  Buyer -->
+    <cac:Party>
+      <cbc:EndpointID schemeID="EM">ap@northwind.test</cbc:EndpointID>                <!-- BT-49 -->
+      <cac:PartyName><cbc:Name>Northwind Systems</cbc:Name></cac:PartyName>            <!-- BT-45 -->
+      <cac:PostalAddress>                                        <!-- BG-8 -->
+        <cbc:StreetName>210 Harbor Street</cbc:StreetName>
+        <cbc:AdditionalStreetName>Suite 400</cbc:AdditionalStreetName>
+        <cbc:CityName>Boston</cbc:CityName>
+        <cbc:PostalZone>02210</cbc:PostalZone>
+        <cbc:CountrySubentity>MA</cbc:CountrySubentity>
+        <cac:Country><cbc:IdentificationCode>US</cbc:IdentificationCode></cac:Country>
+      </cac:PostalAddress>
+      <cac:PartyLegalEntity>
+        <cbc:RegistrationName>Northwind Systems, Inc.</cbc:RegistrationName>           <!-- BT-44 -->
+        <cbc:CompanyID>47-2019338</cbc:CompanyID>                                      <!-- BT-47 -->
+      </cac:PartyLegalEntity>
+      <cac:Contact>
+        <cbc:Name>Accounts Payable</cbc:Name>
+        <cbc:ElectronicMail>ap@northwind.test</cbc:ElectronicMail>
+      </cac:Contact>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+
+  <cac:PaymentMeans>                                             <!-- BG-16 -->
+    <cbc:PaymentMeansCode name="Credit transfer (ACH)">30</cbc:PaymentMeansCode>       <!-- BT-81 UNCL4461 -->
+    <cbc:PaymentID>HLC-129884</cbc:PaymentID>                                          <!-- BT-83 remittance information -->
+    <cac:PayeeFinancialAccount>                                  <!-- BG-17 -->
+      <cbc:ID>0034118826</cbc:ID>                                                      <!-- BT-84 -->
+      <cbc:Name>Harborline Cloud, Inc. operating</cbc:Name>                            <!-- BT-85 -->
+      <cac:FinancialInstitutionBranch>
+        <cbc:ID>125181286</cbc:ID>                                                     <!-- BT-86 ABA routing -->
+      </cac:FinancialInstitutionBranch>
+    </cac:PayeeFinancialAccount>
+  </cac:PaymentMeans>
+
+  <cac:PaymentTerms>
+    <cbc:Note>Net 15 days from the invoice date. Overdue amounts carry interest at 1.5% per month or the maximum permitted by law, whichever is lower.</cbc:Note>
+  </cac:PaymentTerms>
+
+  <cac:TaxTotal>                                                 <!-- BG-23 -->
+    <cbc:TaxAmount currencyID="USD">0.00</cbc:TaxAmount>                               <!-- BT-110 -->
+    <cac:TaxSubtotal>
+      <cbc:TaxableAmount currencyID="USD">21480.00</cbc:TaxableAmount>                 <!-- BT-116 -->
+      <cbc:TaxAmount currencyID="USD">0.00</cbc:TaxAmount>                             <!-- BT-117 -->
+      <cac:TaxCategory>
+        <cbc:ID>E</cbc:ID>                                                             <!-- BT-118 UNCL5305 E = exempt -->
+        <cbc:Percent>0.00</cbc:Percent>                                                <!-- BT-119 -->
+        <cbc:TaxExemptionReason>Exempt: resale certificate MA-RS-44718 on file</cbc:TaxExemptionReason>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:TaxCategory>
+    </cac:TaxSubtotal>
+  </cac:TaxTotal>
+
+  <cac:LegalMonetaryTotal>                                       <!-- BG-22 -->
+    <cbc:LineExtensionAmount currencyID="USD">21480.00</cbc:LineExtensionAmount>       <!-- BT-106 -->
+    <cbc:TaxExclusiveAmount currencyID="USD">21480.00</cbc:TaxExclusiveAmount>         <!-- BT-109 -->
+    <cbc:TaxInclusiveAmount currencyID="USD">21480.00</cbc:TaxInclusiveAmount>         <!-- BT-112 -->
+    <cbc:PrepaidAmount currencyID="USD">0.00</cbc:PrepaidAmount>                       <!-- BT-113 -->
+    <cbc:PayableAmount currencyID="USD">21480.00</cbc:PayableAmount>                   <!-- BT-115 -->
+  </cac:LegalMonetaryTotal>
+
+  <cac:InvoiceLine>                                              <!-- BG-25 -->
+    <cbc:ID>1</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="HUR">178560</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">11427.84</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod><cbc:StartDate>2026-07-01</cbc:StartDate><cbc:EndDate>2026-07-31</cbc:EndDate></cac:InvoicePeriod>
+    <cac:Item>
+      <cbc:Description>240 vCPU x 744 hours, 1-31 July 2026</cbc:Description>
+      <cbc:Name>Compute - general purpose (c3.large)</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>CMP-GP-C3L</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">0.064000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>2</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="HUR">22320</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">2031.12</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Description>30 vCPU x 744 hours, 1-31 July 2026</cbc:Description>
+      <cbc:Name>Compute - memory optimised (r3.xlarge)</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>CMP-MO-R3XL</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">0.091000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>3</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="E34">42000</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">3360.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Description>GB-month, average provisioned</cbc:Description>
+      <cbc:Name>Block storage, SSD (gp2)</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>STO-BLK-GP2</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">0.080000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>4</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="E34">96000</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">2016.00</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Description>GB-month, average stored</cbc:Description>
+      <cbc:Name>Object storage, standard class</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>STO-OBJ-STD</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">0.021000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>5</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="HUR">1488</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">773.76</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Description>2 instances x 744 hours</cbc:Description>
+      <cbc:Name>Managed PostgreSQL 16 (db.m5.large)</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>DB-PG16-M5L</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">0.520000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>6</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="E34">14016</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">1121.28</cbc:LineExtensionAmount>
+    <cac:Item>
+      <cbc:Description>GB egress, after 100 GB monthly allowance</cbc:Description>
+      <cbc:Name>Data transfer out to internet</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>NET-EGR-INET</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">0.080000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+  <cac:InvoiceLine>
+    <cbc:ID>7</cbc:ID>
+    <cbc:InvoicedQuantity unitCode="MON">1</cbc:InvoicedQuantity>
+    <cbc:LineExtensionAmount currencyID="USD">750.00</cbc:LineExtensionAmount>
+    <cac:InvoicePeriod><cbc:StartDate>2026-07-01</cbc:StartDate><cbc:EndDate>2026-07-31</cbc:EndDate></cac:InvoicePeriod>
+    <cac:Item>
+      <cbc:Description>1-31 July 2026</cbc:Description>
+      <cbc:Name>Support plan - Business</cbc:Name>
+      <cac:SellersItemIdentification><cbc:ID>SUP-BUS</cbc:ID></cac:SellersItemIdentification>
+      <cac:ClassifiedTaxCategory>
+        <cbc:ID>E</cbc:ID><cbc:Percent>0.00</cbc:Percent>
+        <cac:TaxScheme><cbc:ID>LOC</cbc:ID></cac:TaxScheme>
+      </cac:ClassifiedTaxCategory>
+    </cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="USD">750.000000</cbc:PriceAmount></cac:Price>
+  </cac:InvoiceLine>
+
+</Invoice>

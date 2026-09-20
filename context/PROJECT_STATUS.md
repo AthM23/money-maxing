@@ -2088,3 +2088,31 @@ simply that you can connect your own sources; the qualifying counts made it read
 - The README now opens with "**Connect your own sources.**" and the registered list is one sentence.
 - Nothing about the code changed — registry, ingestion, tool derivation and the Linear example are as landed in
   `3f0b088`. `pnpm test` → 94 files, **789 passing**; `pnpm typecheck` clean.
+
+### 2026-09-20 ~07:50 ET — Local connector work rebased onto `main`; a real invoice fixture checked in (AthM23 + Claude Code session)
+
+Housekeeping, not a direction change. The local checkout had diverged: three connector commits here, nine commits on
+`origin/main` (Preet's pipeline page, the GX10 PDF-extraction endpoint, the reader upload panel, the 8B benchmark row).
+
+- **Rebased, not merged.** The two sides touched no file in common, so the rebase was clean and history stayed linear.
+  The connector commits are now `8e4eb5f`, `1ed3eff`, `5fe541f` — the ~06:50 and ~07:12 entries above cite their
+  pre-rebase hashes (`3f0b088`, `82e269a`, `27de3bf`); same content.
+- **Verified on the combined tree, not on either side alone:** `pnpm typecheck` clean, `pnpm test` → 94 files,
+  **789 passing**. Measured after the rebase, before the push.
+- **`fixtures/invoices/` checked in.** The Harborline Cloud July bill — `HLC-129884` — in four representations that
+  agree to the cent: the plain text an AP clerk reads, OASIS UBL 2.1 / EN 16931 / Peppol BIS 3.0 XML, a `mail.json`
+  item that carries it through the whole ingest path, and a rendered PDF for the upload panel that landed in `ec2ec3c`.
+  `render_pdf.py` regenerates the PDF (needs `reportlab`); edit its `INVOICE` dict for the over-bill, tax and
+  duplicate variants the README describes. It is the invoice `pnpm demo:payables` deliberately leaves missing, and it
+  totals the USD 21,480.00 the seeded usage statement states, so the accrual and the actual tie. Fictional parties,
+  `.test` domains, invented identifiers.
+- **`.gitattributes` gained four lines with it.** `core.autocrlf` is on here and git's binary sniffing reads this
+  PDF as text, so a plain `git add` would have committed it with CRLF line endings and shifted every byte offset its
+  xref table points at — a file that opens locally and is broken for everyone who clones. `*.pdf -text`, and the txt,
+  xml and json pinned to `eol=lf` so the parsers see the bytes they were written with. Checked: the staged blob is
+  byte-for-byte the working file.
+- Nothing tracked imports the fixture yet — it is there for the reader, the structured-parse tests and the upload
+  panel to point at.
+- **Still a human call, still untracked:** the Maximor revenue-recognition PDF in `context/research/`. Flagged in the
+  09-19 ~23:40 entry; committing a sponsor's PDF is not a decision to make by default. Its notes are already in
+  `research/storytelling/05-maximor-usage-revenue-playbook.md`, which is committed.
