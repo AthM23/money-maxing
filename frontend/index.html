@@ -334,7 +334,7 @@
     </div>
     <div class="rv d1">
       <table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">hard cases</th><th class="num">speed</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">never-seen docs</th><th class="num">speed</th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="foot-note" id="benchNote">Loading results…</p>
@@ -433,14 +433,14 @@ function renderChart(rows){
     out+=`<g class="cbar" data-name="${it.name}" data-f1="${it.f1.toFixed(3)}">
       <text x="${LX-12}" y="${y+15}" text-anchor="end" font-size="14" fill="#444">${it.name}</text>
       <rect x="${LX}" y="${y}" width="${w}" height="22" rx="4" fill="${GCOL[it.g]}"/>
-      <text x="${LX+w+10}" y="${y+16}" font-size="13.5" font-weight="600" fill="#101012">${it.f1.toFixed(3)}</text>
+      <text x="${LX+w+10}" y="${y+16}" font-size="13.5" font-weight="600" fill="#101012">${(it.f1*100).toFixed(1)}%</text>
     </g>`;
   });
   svg.innerHTML=out;
   const tip=document.getElementById('ctip');
   svg.querySelectorAll('.cbar').forEach(g=>{
     g.addEventListener('mousemove',e=>{tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-10)+'px';
-      tip.textContent=`${g.dataset.name}: ${g.dataset.f1} accuracy (F1), n=120, same grader`;});
+      tip.textContent=`${g.dataset.name}: ${(parseFloat(g.dataset.f1)*100).toFixed(1)}% accuracy, n=120, same grader`;});
     g.addEventListener('mouseleave',()=>tip.style.opacity=0);
   });
 }
@@ -495,7 +495,7 @@ function renderBench(rows, note){
     .forEach(([k,r])=>{
       const tr=document.createElement('tr'); if(k==='ours') tr.className='hero-row';
       tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
-        <td class="num">${r.f1.toFixed(3)}</td><td class="num">${r.ho!=null?r.ho.toFixed(3):'n/a'}</td>
+        <td class="num">${(r.f1*100).toFixed(1)}%</td><td class="num">${r.ho!=null?(r.ho*100).toFixed(1)+'%':'n/a'}</td>
         <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>`;
       tb.appendChild(tr);
     });
@@ -503,7 +503,7 @@ function renderBench(rows, note){
   document.getElementById('progNote').textContent = PROG;
   renderChart(rows);
 }
-renderBench(fallback, "120 test documents per model, same exam for everyone. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
+renderBench(fallback, "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
                '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json','../ft/data/benchmark_results_v2.json'];
@@ -521,7 +521,7 @@ renderBench(fallback, "120 test documents per model, same exam for everyone. A p
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(rows, "120 test documents per model, same exam, same grading script. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
+  renderBench(rows, "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product.");
 })();
 </script>
 </body>
