@@ -1,0 +1,46 @@
+{
+  "generator": "ft/gen_data.py",
+  "seed": 7,
+  "sft_counts": {
+    "train": 956,
+    "cal": 498,
+    "test": 1546
+  },
+  "pairs_txns": 600,
+  "coding_rows": {
+    "train": 831,
+    "test": 369
+  },
+  "held_out_customers": [
+    "Acme Dynamics",
+    "Acme Holdings",
+    "Acme Logistics",
+    "Acme Partners",
+    "Dunder Logistics",
+    "Globex Corp",
+    "Globex Logistics",
+    "Hooli Group",
+    "Hooli Holdings",
+    "Initech Corp",
+    "Initech Dynamics",
+    "Initech Industries",
+    "Prestige Labs",
+    "Umbrella Software",
+    "Umbrella Systems",
+    "Vandelay Holdings",
+    "Wayne Partners",
+    "Wonka Software"
+  ],
+  "held_out_vendors": [
+    "Datadog",
+    "GitHub",
+    "Google Cloud",
+    "NetSuite",
+    "Notion Labs"
+  ],
+  "test_only_families": [
+    "bill_foreign",
+    "remit_ocr"
+  ],
+  "honesty_note": "synthetic; test = held-out entities + never-seen template families + July"
+}

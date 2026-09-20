@@ -1,0 +1,8 @@
+{
+  "n_test": 369,
+  "acc_all": 0.65,
+  "acc_seen_vendor": 1.0,
+  "n_seen": 158,
+  "acc_unseen_vendor": 0.389,
+  "n_unseen": 211
+}

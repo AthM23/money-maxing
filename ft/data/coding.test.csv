@@ -1,0 +1,370 @@
+vendor,memo,amount_cents,account
+Vercel,invoice B-1598,315250,6400 Cloud Infrastructure
+Snowflake,monthly subscription,2444750,6400 Cloud Infrastructure
+Rippling,invoice B-9417,110092,6000 Payroll
+Gusto Payroll,,2469080,6000 Payroll
+Notion Labs,annual renewal,1093564,6300 Software Subscriptions
+NetSuite,usage charges,2566671,6300 Software Subscriptions
+GitHub,invoice B-4726,3060665,6410 Monitoring & Tooling
+Google Cloud,usage charges,5939431,6400 Cloud Infrastructure
+Notion Labs,,3450999,6300 Software Subscriptions
+Mercury Bank,annual renewal,5348261,6510 Bank Fees
+Google Cloud,,4797162,6400 Cloud Infrastructure
+AWS,invoice B-1329,5061301,6400 Cloud Infrastructure
+Rippling,annual renewal,3915870,6000 Payroll
+LaunchDarkly,usage charges,4791279,6300 Software Subscriptions
+Airtable,annual renewal,4582493,6300 Software Subscriptions
+Twilio,auto-pay,2231955,6420 Communications
+GitHub,usage charges,4308727,6410 Monitoring & Tooling
+GitHub,services B-7990,5506135,6410 Monitoring & Tooling
+OpenPhone,annual renewal,5158594,6420 Communications
+Salesforce,usage charges,4530143,6300 Software Subscriptions
+Brex,usage charges,245023,6510 Bank Fees
+Amplitude,annual renewal,2281666,6300 Software Subscriptions
+Figma,services B-3526,849506,6300 Software Subscriptions
+Stripe Billing,auto-pay,4154384,6500 Payment Processing Fees
+Atlassian,auto-pay,485013,6300 Software Subscriptions
+Amplitude,services B-2968,3767831,6300 Software Subscriptions
+Notion Labs,monthly subscription,1229141,6300 Software Subscriptions
+GitHub,services B-1648,4020518,6410 Monitoring & Tooling
+Google Cloud,annual renewal,1286905,6400 Cloud Infrastructure
+Linear,services B-8765,3624453,6300 Software Subscriptions
+Datadog,auto-pay,5417645,6410 Monitoring & Tooling
+DocuSign,annual renewal,5030042,6300 Software Subscriptions
+Datadog,invoice B-8700,1567652,6410 Monitoring & Tooling
+NetSuite,invoice B-5531,4415826,6300 Software Subscriptions
+GitHub,invoice B-3852,2891730,6410 Monitoring & Tooling
+NetSuite,usage charges,2611324,6300 Software Subscriptions
+Notion Labs,auto-pay,5029977,6300 Software Subscriptions
+NetSuite,services B-9572,4880278,6300 Software Subscriptions
+NetSuite,invoice B-7506,1826003,6300 Software Subscriptions
+Datadog,invoice B-3838,2228809,6410 Monitoring & Tooling
+Google Cloud,annual renewal,809431,6400 Cloud Infrastructure
+Salesforce,auto-pay,2270244,6300 Software Subscriptions
+AWS,monthly subscription,5767177,6400 Cloud Infrastructure
+Google Cloud,auto-pay,763386,6400 Cloud Infrastructure
+Deel Inc,annual renewal,2224689,6000 Payroll
+Notion Labs,services B-3023,4347271,6300 Software Subscriptions
+Datadog,auto-pay,4915838,6410 Monitoring & Tooling
+Notion Labs,auto-pay,1706160,6300 Software Subscriptions
+Notion Labs,auto-pay,457932,6300 Software Subscriptions
+GitHub,annual renewal,5919142,6410 Monitoring & Tooling
+GitHub,usage charges,544885,6410 Monitoring & Tooling
+DocuSign,auto-pay,603086,6300 Software Subscriptions
+Notion Labs,,3282941,6300 Software Subscriptions
+Deel Inc,services B-4851,3281467,6000 Payroll
+Notion Labs,invoice B-3638,2721924,6300 Software Subscriptions
+Stripe Billing,usage charges,5550173,6500 Payment Processing Fees
+GitHub,services B-5796,3523273,6410 Monitoring & Tooling
+Notion Labs,monthly subscription,185713,6300 Software Subscriptions
+Rippling,auto-pay,2063763,6000 Payroll
+Rippling,auto-pay,5293700,6000 Payroll
+Gusto Payroll,,3419175,6000 Payroll
+Mercury Bank,auto-pay,2536348,6510 Bank Fees
+Google Cloud,services B-8250,1391868,6400 Cloud Infrastructure
+Twilio,annual renewal,562654,6420 Communications
+Salesforce,,1313859,6300 Software Subscriptions
+Google Cloud,monthly subscription,1041657,6400 Cloud Infrastructure
+Salesforce,,4926322,6300 Software Subscriptions
+Google Cloud,usage charges,1267823,6400 Cloud Infrastructure
+Linear,invoice B-6712,5137715,6300 Software Subscriptions
+GitHub,annual renewal,1321296,6410 Monitoring & Tooling
+Amplitude,services B-4154,5715930,6300 Software Subscriptions
+Brex,annual renewal,4691274,6510 Bank Fees
+GitHub,,4302147,6410 Monitoring & Tooling
+Zoom Video,annual renewal,5372670,6300 Software Subscriptions
+NetSuite,services B-5882,917987,6300 Software Subscriptions
+Notion Labs,monthly subscription,1340977,6300 Software Subscriptions
+GitHub,auto-pay,342022,6410 Monitoring & Tooling
+WeWork,auto-pay,5487193,6200 Rent & Facilities
+Notion Labs,monthly subscription,2257580,6300 Software Subscriptions
+Notion Labs,usage charges,105255,6300 Software Subscriptions
+Zoom Video,auto-pay,1114827,6300 Software Subscriptions
+Google Cloud,annual renewal,5570093,6400 Cloud Infrastructure
+Datadog,,5404592,6410 Monitoring & Tooling
+Deel Inc,,5722281,6000 Payroll
+Google Cloud,annual renewal,1719844,6400 Cloud Infrastructure
+GitHub,usage charges,2315955,6410 Monitoring & Tooling
+Gusto Payroll,usage charges,5327016,6000 Payroll
+GitHub,,5806990,6410 Monitoring & Tooling
+NetSuite,,3115912,6300 Software Subscriptions
+NetSuite,,5066831,6300 Software Subscriptions
+Google Cloud,annual renewal,1848422,6400 Cloud Infrastructure
+Rippling,services B-7276,1539152,6000 Payroll
+Notion Labs,usage charges,5925088,6300 Software Subscriptions
+Vercel,auto-pay,3034424,6400 Cloud Infrastructure
+Brex,annual renewal,1161448,6510 Bank Fees
+NetSuite,auto-pay,2058680,6300 Software Subscriptions
+WeWork,usage charges,878814,6200 Rent & Facilities
+GitHub,monthly subscription,1728486,6410 Monitoring & Tooling
+GitHub,services B-9638,3723630,6410 Monitoring & Tooling
+GitHub,usage charges,533535,6410 Monitoring & Tooling
+Notion Labs,services B-9333,2097344,6300 Software Subscriptions
+Datadog,annual renewal,4471044,6410 Monitoring & Tooling
+Google Cloud,invoice B-5528,1088919,6400 Cloud Infrastructure
+LaunchDarkly,auto-pay,1784245,6300 Software Subscriptions
+GitHub,monthly subscription,5089225,6410 Monitoring & Tooling
+GitHub,usage charges,3484453,6410 Monitoring & Tooling
+GitHub,annual renewal,6491,6410 Monitoring & Tooling
+Google Cloud,auto-pay,3387199,6400 Cloud Infrastructure
+Notion Labs,usage charges,4782774,6300 Software Subscriptions
+NetSuite,,4265821,6300 Software Subscriptions
+Amplitude,auto-pay,3666055,6300 Software Subscriptions
+Carta,annual renewal,708728,6600 Professional Services
+Carta,invoice B-7606,4865565,6600 Professional Services
+Salesforce,services B-5986,592448,6300 Software Subscriptions
+Datadog,invoice B-8840,1161843,6410 Monitoring & Tooling
+WeWork,,2311828,6200 Rent & Facilities
+GitHub,auto-pay,5272991,6410 Monitoring & Tooling
+Gusto Payroll,usage charges,289877,6000 Payroll
+Notion Labs,monthly subscription,2220373,6300 Software Subscriptions
+GitHub,invoice B-3570,2532710,6410 Monitoring & Tooling
+Atlassian,monthly subscription,1849707,6300 Software Subscriptions
+Notion Labs,annual renewal,3893767,6300 Software Subscriptions
+Notion Labs,,3798166,6300 Software Subscriptions
+Notion Labs,auto-pay,925765,6300 Software Subscriptions
+DocuSign,auto-pay,2931153,6300 Software Subscriptions
+Segment,auto-pay,4923398,6300 Software Subscriptions
+NetSuite,auto-pay,1989604,6300 Software Subscriptions
+Datadog,invoice B-4407,3675520,6410 Monitoring & Tooling
+WeWork,invoice B-9250,254432,6200 Rent & Facilities
+Google Cloud,annual renewal,4859972,6400 Cloud Infrastructure
+GitHub,annual renewal,3323491,6410 Monitoring & Tooling
+Notion Labs,usage charges,1422105,6300 Software Subscriptions
+Datadog,auto-pay,4765127,6410 Monitoring & Tooling
+GitHub,auto-pay,4830859,6410 Monitoring & Tooling
+Amplitude,usage charges,2509274,6300 Software Subscriptions
+Snowflake,annual renewal,658899,6400 Cloud Infrastructure
+GitHub,invoice B-6313,943174,6410 Monitoring & Tooling
+GitHub,invoice B-9019,631974,6410 Monitoring & Tooling
+Notion Labs,invoice B-7553,5500108,6300 Software Subscriptions
+Figma,services B-8427,4772174,6300 Software Subscriptions
+Segment,annual renewal,2941776,6300 Software Subscriptions
+Slack Technologies,invoice B-1747,685014,6300 Software Subscriptions
+GitHub,invoice B-5732,1264695,6410 Monitoring & Tooling
+Atlassian,auto-pay,5871115,6300 Software Subscriptions
+Google Cloud,usage charges,3000572,6400 Cloud Infrastructure
+Gusto Payroll,services B-1179,4750008,6000 Payroll
+GitHub,monthly subscription,4752777,6410 Monitoring & Tooling
+Linear,,4340486,6300 Software Subscriptions
+Airtable,services B-3278,1957580,6300 Software Subscriptions
+Datadog,monthly subscription,1889673,6410 Monitoring & Tooling
+Twilio,auto-pay,2586865,6420 Communications
+OpenPhone,usage charges,5889981,6420 Communications
+Datadog,services B-1184,5066738,6410 Monitoring & Tooling
+Notion Labs,,5127471,6300 Software Subscriptions
+Notion Labs,,1332300,6300 Software Subscriptions
+Figma,invoice B-5101,3820034,6300 Software Subscriptions
+NetSuite,services B-7312,1465840,6300 Software Subscriptions
+GitHub,monthly subscription,2035293,6410 Monitoring & Tooling
+Slack Technologies,auto-pay,4286721,6300 Software Subscriptions
+Stripe Billing,,5231606,6500 Payment Processing Fees
+Notion Labs,auto-pay,297502,6300 Software Subscriptions
+GitHub,invoice B-7315,5857178,6410 Monitoring & Tooling
+Google Cloud,annual renewal,5884913,6400 Cloud Infrastructure
+Linear,annual renewal,2393733,6300 Software Subscriptions
+Slack Technologies,usage charges,869789,6300 Software Subscriptions
+GitHub,usage charges,3442592,6410 Monitoring & Tooling
+Carta,services B-9886,3619835,6600 Professional Services
+Datadog,auto-pay,2390392,6410 Monitoring & Tooling
+Rippling,auto-pay,4268255,6000 Payroll
+Salesforce,annual renewal,5690887,6300 Software Subscriptions
+Deel Inc,annual renewal,2389522,6000 Payroll
+Zoom Video,usage charges,5297113,6300 Software Subscriptions
+Google Cloud,usage charges,645438,6400 Cloud Infrastructure
+Notion Labs,invoice B-3600,730134,6300 Software Subscriptions
+Salesforce,monthly subscription,5353642,6300 Software Subscriptions
+NetSuite,services B-7221,2404662,6300 Software Subscriptions
+GitHub,usage charges,5057723,6410 Monitoring & Tooling
+Vercel,usage charges,5885797,6400 Cloud Infrastructure
+Google Cloud,,4496002,6400 Cloud Infrastructure
+Notion Labs,,5534122,6300 Software Subscriptions
+Linear,services B-1618,1656425,6300 Software Subscriptions
+Google Cloud,invoice B-8713,46488,6400 Cloud Infrastructure
+Brex,usage charges,13452,6510 Bank Fees
+NetSuite,,2842884,6300 Software Subscriptions
+Mercury Bank,,3036681,6510 Bank Fees
+Datadog,,899964,6410 Monitoring & Tooling
+Slack Technologies,,358569,6300 Software Subscriptions
+Rippling,annual renewal,2085078,6000 Payroll
+Rippling,,1635155,6000 Payroll
+Deel Inc,annual renewal,432922,6000 Payroll
+Google Cloud,usage charges,778433,6400 Cloud Infrastructure
+Gusto Payroll,monthly subscription,4034964,6000 Payroll
+Datadog,invoice B-7305,847686,6410 Monitoring & Tooling
+GitHub,services B-9427,5643433,6410 Monitoring & Tooling
+GitHub,auto-pay,2517770,6410 Monitoring & Tooling
+WeWork,annual renewal,1823756,6200 Rent & Facilities
+Notion Labs,auto-pay,229397,6300 Software Subscriptions
+Rippling,auto-pay,928552,6000 Payroll
+Rippling,monthly subscription,4866166,6000 Payroll
+Notion Labs,services B-1333,221004,6300 Software Subscriptions
+Notion Labs,,1341241,6300 Software Subscriptions
+NetSuite,monthly subscription,1452457,6300 Software Subscriptions
+Retool,monthly subscription,3508133,6300 Software Subscriptions
+Google Cloud,annual renewal,1756115,6400 Cloud Infrastructure
+Figma,monthly subscription,4214806,6300 Software Subscriptions
+Slack Technologies,annual renewal,3850214,6300 Software Subscriptions
+NetSuite,,1575591,6300 Software Subscriptions
+Mercury Bank,auto-pay,3772824,6510 Bank Fees
+Google Cloud,,4705350,6400 Cloud Infrastructure
+Google Cloud,services B-6731,5698414,6400 Cloud Infrastructure
+Notion Labs,invoice B-1219,2591414,6300 Software Subscriptions
+Google Cloud,usage charges,3525213,6400 Cloud Infrastructure
+Datadog,invoice B-3392,1365142,6410 Monitoring & Tooling
+Mercury Bank,invoice B-5414,4221907,6510 Bank Fees
+Notion Labs,annual renewal,2363171,6300 Software Subscriptions
+Google Cloud,services B-1312,3546861,6400 Cloud Infrastructure
+Vercel,invoice B-5113,3946236,6400 Cloud Infrastructure
+NetSuite,invoice B-8642,2268757,6300 Software Subscriptions
+GitHub,auto-pay,2431344,6410 Monitoring & Tooling
+NetSuite,auto-pay,974637,6300 Software Subscriptions
+NetSuite,invoice B-5327,2912652,6300 Software Subscriptions
+GitHub,auto-pay,1236865,6410 Monitoring & Tooling
+Segment,auto-pay,5040175,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,2355240,6300 Software Subscriptions
+WeWork,monthly subscription,2895342,6200 Rent & Facilities
+Google Cloud,,2396855,6400 Cloud Infrastructure
+Datadog,,1864864,6410 Monitoring & Tooling
+NetSuite,invoice B-6807,4610788,6300 Software Subscriptions
+NetSuite,auto-pay,4039453,6300 Software Subscriptions
+Datadog,auto-pay,4920249,6410 Monitoring & Tooling
+Rippling,invoice B-3450,4891741,6000 Payroll
+OpenPhone,usage charges,40497,6420 Communications
+OpenPhone,usage charges,4575467,6420 Communications
+Notion Labs,usage charges,3015655,6300 Software Subscriptions
+Deel Inc,invoice B-3215,35754,6000 Payroll
+Google Cloud,annual renewal,2183830,6400 Cloud Infrastructure
+Segment,auto-pay,4397790,6300 Software Subscriptions
+Google Cloud,usage charges,116965,6400 Cloud Infrastructure
+Google Cloud,invoice B-4370,2725236,6400 Cloud Infrastructure
+Rippling,annual renewal,5921173,6000 Payroll
+Datadog,monthly subscription,5735730,6410 Monitoring & Tooling
+Google Cloud,annual renewal,3219858,6400 Cloud Infrastructure
+AWS,annual renewal,4448633,6400 Cloud Infrastructure
+DocuSign,monthly subscription,5578780,6300 Software Subscriptions
+Notion Labs,invoice B-6797,4049187,6300 Software Subscriptions
+Vercel,usage charges,1700272,6400 Cloud Infrastructure
+GitHub,,5910802,6410 Monitoring & Tooling
+GitHub,invoice B-9670,852858,6410 Monitoring & Tooling
+GitHub,auto-pay,2627664,6410 Monitoring & Tooling
+Notion Labs,,2122610,6300 Software Subscriptions
+Datadog,auto-pay,5244121,6410 Monitoring & Tooling
+NetSuite,usage charges,5985866,6300 Software Subscriptions
+Datadog,services B-2250,2173381,6410 Monitoring & Tooling
+Vercel,,2259895,6400 Cloud Infrastructure
+Google Cloud,annual renewal,1298979,6400 Cloud Infrastructure
+GitHub,annual renewal,3852666,6410 Monitoring & Tooling
+Datadog,auto-pay,5206762,6410 Monitoring & Tooling
+NetSuite,monthly subscription,2497074,6300 Software Subscriptions
+Google Cloud,monthly subscription,1562509,6400 Cloud Infrastructure
+Segment,,3911081,6300 Software Subscriptions
+Segment,services B-9267,1973566,6300 Software Subscriptions
+Mercury Bank,,5669720,6510 Bank Fees
+Datadog,,4077821,6410 Monitoring & Tooling
+Datadog,monthly subscription,5407251,6410 Monitoring & Tooling
+GitHub,usage charges,1055149,6410 Monitoring & Tooling
+Vercel,auto-pay,4280907,6400 Cloud Infrastructure
+Notion Labs,services B-8272,4146772,6300 Software Subscriptions
+Carta,services B-7191,5003628,6600 Professional Services
+NetSuite,monthly subscription,2569762,6300 Software Subscriptions
+Brex,usage charges,4269934,6510 Bank Fees
+Salesforce,auto-pay,899174,6300 Software Subscriptions
+NetSuite,monthly subscription,758004,6300 Software Subscriptions
+GitHub,annual renewal,5588852,6410 Monitoring & Tooling
+Datadog,services B-6037,1381449,6410 Monitoring & Tooling
+Zoom Video,annual renewal,3444099,6300 Software Subscriptions
+Google Cloud,,5111779,6400 Cloud Infrastructure
+Google Cloud,monthly subscription,3662785,6400 Cloud Infrastructure
+NetSuite,auto-pay,1596272,6300 Software Subscriptions
+GitHub,monthly subscription,2678549,6410 Monitoring & Tooling
+Datadog,annual renewal,341719,6410 Monitoring & Tooling
+Notion Labs,annual renewal,664690,6300 Software Subscriptions
+OpenPhone,services B-5107,2461506,6420 Communications
+Zoom Video,,3694722,6300 Software Subscriptions
+Notion Labs,monthly subscription,2120595,6300 Software Subscriptions
+GitHub,invoice B-6142,3907927,6410 Monitoring & Tooling
+Datadog,usage charges,3852091,6410 Monitoring & Tooling
+WeWork,invoice B-3910,3193091,6200 Rent & Facilities
+Notion Labs,,3907623,6300 Software Subscriptions
+Segment,usage charges,3474452,6300 Software Subscriptions
+DocuSign,annual renewal,861064,6300 Software Subscriptions
+Notion Labs,,3790279,6300 Software Subscriptions
+GitHub,services B-9221,4199308,6410 Monitoring & Tooling
+Notion Labs,monthly subscription,5643901,6300 Software Subscriptions
+Notion Labs,invoice B-1414,2973420,6300 Software Subscriptions
+Figma,,2961458,6300 Software Subscriptions
+Rippling,usage charges,1823460,6000 Payroll
+NetSuite,monthly subscription,1973639,6300 Software Subscriptions
+GitHub,services B-8128,5326195,6410 Monitoring & Tooling
+NetSuite,services B-7921,4966151,6300 Software Subscriptions
+Rippling,annual renewal,2346621,6000 Payroll
+Deel Inc,annual renewal,3198316,6000 Payroll
+Brex,annual renewal,1533525,6510 Bank Fees
+Vercel,,510572,6400 Cloud Infrastructure
+Datadog,monthly subscription,3661638,6410 Monitoring & Tooling
+Vercel,,4258269,6400 Cloud Infrastructure
+Figma,annual renewal,1815923,6300 Software Subscriptions
+Datadog,,368780,6410 Monitoring & Tooling
+Linear,usage charges,5172541,6300 Software Subscriptions
+Google Cloud,,5097266,6400 Cloud Infrastructure
+Notion Labs,annual renewal,5865649,6300 Software Subscriptions
+Notion Labs,usage charges,1439773,6300 Software Subscriptions
+Airtable,services B-2957,627890,6300 Software Subscriptions
+Slack Technologies,monthly subscription,3222087,6300 Software Subscriptions
+Vercel,,2176855,6400 Cloud Infrastructure
+Carta,annual renewal,1937914,6600 Professional Services
+Google Cloud,usage charges,4900307,6400 Cloud Infrastructure
+NetSuite,monthly subscription,3787962,6300 Software Subscriptions
+Notion Labs,invoice B-4223,4440950,6300 Software Subscriptions
+Retool,usage charges,4359909,6300 Software Subscriptions
+Amplitude,auto-pay,3544408,6300 Software Subscriptions
+Airtable,auto-pay,4945690,6300 Software Subscriptions
+GitHub,auto-pay,1239197,6410 Monitoring & Tooling
+Datadog,invoice B-3297,1086128,6410 Monitoring & Tooling
+Amplitude,annual renewal,3557905,6300 Software Subscriptions
+Rippling,usage charges,3245029,6000 Payroll
+Notion Labs,,3482519,6300 Software Subscriptions
+Datadog,monthly subscription,3727671,6410 Monitoring & Tooling
+Gusto Payroll,invoice B-6756,4564861,6000 Payroll
+Datadog,annual renewal,5473073,6410 Monitoring & Tooling
+Google Cloud,services B-2882,1506250,6400 Cloud Infrastructure
+Google Cloud,annual renewal,5489558,6400 Cloud Infrastructure
+GitHub,services B-8898,1052242,6410 Monitoring & Tooling
+Datadog,monthly subscription,3150123,6410 Monitoring & Tooling
+Zoom Video,,2641520,6300 Software Subscriptions
+Salesforce,,1647381,6300 Software Subscriptions
+Google Cloud,annual renewal,4398837,6400 Cloud Infrastructure
+NetSuite,,5520110,6300 Software Subscriptions
+NetSuite,,3484568,6300 Software Subscriptions
+GitHub,monthly subscription,3565502,6410 Monitoring & Tooling
+Mercury Bank,monthly subscription,2333224,6510 Bank Fees
+Notion Labs,auto-pay,2091409,6300 Software Subscriptions
+Google Cloud,services B-5786,4117632,6400 Cloud Infrastructure
+GitHub,invoice B-1013,4871123,6410 Monitoring & Tooling
+Datadog,services B-9453,3902027,6410 Monitoring & Tooling
+Google Cloud,annual renewal,3009344,6400 Cloud Infrastructure
+Datadog,invoice B-9611,1625362,6410 Monitoring & Tooling
+Figma,auto-pay,4858132,6300 Software Subscriptions
+Gusto Payroll,,2063689,6000 Payroll
+Mercury Bank,services B-2177,4232393,6510 Bank Fees
+Google Cloud,services B-3107,3558517,6400 Cloud Infrastructure
+Google Cloud,monthly subscription,4252038,6400 Cloud Infrastructure
+Datadog,usage charges,2751558,6410 Monitoring & Tooling
+Datadog,,2920219,6410 Monitoring & Tooling
+Mercury Bank,invoice B-6148,5364394,6510 Bank Fees
+Notion Labs,monthly subscription,1824919,6300 Software Subscriptions
+Notion Labs,services B-2933,509999,6300 Software Subscriptions
+Rippling,invoice B-8188,3677410,6000 Payroll
+Retool,auto-pay,3372047,6300 Software Subscriptions
+Datadog,annual renewal,4188228,6410 Monitoring & Tooling
+Airtable,,281100,6300 Software Subscriptions
+Vercel,monthly subscription,1863377,6400 Cloud Infrastructure
+AWS,invoice B-7336,2014633,6400 Cloud Infrastructure
+Salesforce,usage charges,252062,6300 Software Subscriptions
+AWS,invoice B-6860,2874425,6400 Cloud Infrastructure
+Atlassian,services B-9576,3109830,6300 Software Subscriptions
+NetSuite,usage charges,353290,6300 Software Subscriptions
+Linear,usage charges,5270231,6300 Software Subscriptions
+Deel Inc,annual renewal,4008640,6000 Payroll
+NetSuite,monthly subscription,3743012,6300 Software Subscriptions

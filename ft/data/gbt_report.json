@@ -1,0 +1,8 @@
+{
+  "n_test_txns": 93,
+  "top1": 0.914,
+  "recall_at_3": 0.925,
+  "auto_clear_threshold": 0.8462,
+  "auto_clear_coverage_at_99pct_precision": 0.914,
+  "n_train_pairs": 3118
+}
