@@ -1,4 +1,4 @@
-import { act, cost, flow, h, s, statusPill, toast } from "/dom.js";
+import { act, cost, flow, h, money, s, statusPill, toast } from "/dom.js";
 import { icon } from "/icons.js";
 import { askFromElsewhere } from "/views/ask.js";
 
@@ -22,6 +22,7 @@ export function renderOverview(app, o) {
       h("div", { class: "tiles" },
         tile("code", "Entries posted with no person involved", sb.auto_posted, "kernel-checked", "up"),
         tile("spark", "Model cost this month", cost(sb.cost_micros), `${sb.model_calls} model calls`, sb.cost_micros ? "flat" : "up"),
+        sb.payables_committed_cents ? tile("cash", "Payables committed", `−${money(sb.payables_committed_cents)}`, "accepted bills, cash leaves at the payment run", "flat") : null,
         tile("shield", "Tick marks code could re-perform", `${sb.checkable_num}/${sb.checkable_den}`, sb.checkable_den ? `${Math.floor((sb.checkable_num / sb.checkable_den) * 1000) / 10}% · remaining marks need a person` : "none yet", sb.checkable_num === sb.checkable_den ? "up" : "flat"))),
     h("div", { class: "grid2" },
       h("div", { class: "panel" }, h("h2", {}, "Ask the books"), h("p", { class: "muted" }, "Reports are built by code from the ledger. No model writes a number here."), askBox(app)),

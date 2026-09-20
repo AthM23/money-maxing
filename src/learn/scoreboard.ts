@@ -2,6 +2,7 @@ import { ROUTES, type Route } from "../contract/types.js";
 import type { Db } from "../runtime/db.js";
 
 export interface Scoreboard {
+  payables_committed_cents: number;
   intents: number;
   resolved: number;
   waiting_on_human: number;
@@ -44,7 +45,9 @@ export function scoreboard(db: Db, fn?: string): Scoreboard {
     .all(...f) as { route: Route; n: number }[];
   const by_route = Object.fromEntries(ROUTES.map((r) => [r, routes.find((x) => x.route === r)?.n ?? 0])) as Record<Route, number>;
   const intent = "FROM intent WHERE owner NOT IN ('seed','replay') AND (? IS NULL OR function = ?)";
+  const payables_committed = one("SELECT COALESCE(SUM(b.total_cents),0) AS n FROM bill b JOIN bill_review r ON r.bill_id = b.id AND r.outcome = 'accepted' WHERE b.status = 'open'", []);
   return {
+    payables_committed_cents: payables_committed,
     intents: one(`SELECT COUNT(*) AS n ${intent}`),
     resolved: one(`SELECT COUNT(*) AS n ${intent} AND status = 'resolved'`),
     waiting_on_human: one(`SELECT COUNT(*) AS n ${intent} AND status = 'waiting_on_human'`),
