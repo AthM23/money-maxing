@@ -54,5 +54,47 @@
     "ts": "19:21",
     "kind": "local+lora",
     "model": "Qwen/Qwen3-4B-Instruct-2507+/home/asus/ft/out/run1/adapter"
+  },
+  "tiny": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.0,
+    "field_f1": 0.01,
+    "held_out_n": 88,
+    "held_out_exact": 0.0,
+    "held_out_f1": 0.014,
+    "avg_latency_s": 1.29,
+    "est_cost_usd": 0.0,
+    "ts": "19:53",
+    "kind": "local",
+    "model": "Qwen/Qwen3-0.6B"
+  },
+  "ours-ep1": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.658,
+    "field_f1": 0.953,
+    "held_out_n": 88,
+    "held_out_exact": 0.693,
+    "held_out_f1": 0.955,
+    "avg_latency_s": 6.32,
+    "est_cost_usd": 0.0,
+    "ts": "20:07",
+    "kind": "local+lora",
+    "model": "Qwen/Qwen3-4B-Instruct-2507+/home/asus/ft/out/run1/checkpoint-60"
+  },
+  "ours-ep2": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.7,
+    "field_f1": 0.958,
+    "held_out_n": 88,
+    "held_out_exact": 0.705,
+    "held_out_f1": 0.957,
+    "avg_latency_s": 6.32,
+    "est_cost_usd": 0.0,
+    "ts": "20:20",
+    "kind": "local+lora",
+    "model": "Qwen/Qwen3-4B-Instruct-2507+/home/asus/ft/out/run1/checkpoint-120"
   }
 }
