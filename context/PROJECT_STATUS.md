@@ -373,3 +373,26 @@ _Heading time corrected from "~20:20": commit `805e468` is stamped 19:59._
   amount, docs, who was asked), and an `autonomy` table. The Q2 seed needs both JSON columns per decision point.
 - Lane C (Preet, fine-tune on the GX10): fine by Person A's code, which already writes `decision_step` rows for export.
   Sign-off is Karan's to give.
+
+### 2026-09-19 ~20:22 ET — Human-answer path, controller agent and Slack transport written (Person A)
+
+- `src/agents/humanLoop.ts`: a person's reply is kept verbatim as a `trace` (source slack, kind human_answer), the
+  escalation is answered, a fact is stored that is never wider than what was said (this party, this treatment, one-time
+  unless stated standing, always ends, inherits the answerer's ceiling), and the case resumes with an entry that quotes
+  the answer. A one-time or lapsed answer does not cover later cases: the new question carries the old answer.
+  Tested end to end for Wayne with a scripted investigator.
+- `src/agents/controller.ts`: independent review packet (proposal, kernel marks, full text of cited sources). The
+  controller can approve only below materiality and only if the approval matrix lists it with a ceiling; at or above
+  materiality its note goes to the human approver; a disagreement posts nothing. `controllerOpenAI.ts` is the GPT
+  implementation (`FOOTNOTE_CONTROLLER_MODEL`, default `gpt-5`, **UNVERIFIED that this model id exists**; one JSON call;
+  an unreadable reply counts as not agreeing). **Seeder note for Atharv:** add an `approver` row for `controller:gpt`
+  with `limit_cents` 49999, or the controller approves nothing.
+- `src/agents/slack/`: Block Kit builders as plain data (escalation with what was checked and hit counts, answer modal
+  with one-time vs standing, approval card with the entry, tick-mark tally, quoted evidence and the controller's note)
+  and a Socket Mode transport (no tunnel). Answers and approvals go through `recordHumanAnswer` and `approveDecision`,
+  so identity checks and the kernel's post gate apply unchanged.
+- Measured: `pnpm test` → 21 files, **252 passing**. **Not run:** the Agent SDK investigator, the GPT controller and
+  the Slack transport, because no Anthropic, OpenAI or Slack tokens are set on Person A's machine. All three are
+  typechecked against their installed SDKs only.
+- Blocked on a human (Karan): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and a Slack app in Socket Mode
+  (`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` with `connections:write`; bot scopes `chat:write`, `im:write`).
