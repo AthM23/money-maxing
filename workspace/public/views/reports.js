@@ -8,5 +8,8 @@ export function renderReports(app) {
     h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Reports"), h("p", { class: "muted" }, "Built by code from the ledger, to the cent.")),
       h("div", { class: "actions" }, h("button", { class: "btn white", on: { click: () => app.go("ask") } }, icon("spark", 15), "Ask for a report in words"))),
     r ? h("div", { class: "panel" }, h("h2", {}, `AR ageing by customer · end of ${app.period}`), dataTable(r.ageing, { totalFirst: true })) : null,
+    r && r.bills && r.bills.rows.length ? h("div", { class: "panel" }, h("h2", {}, "Bills on file, not yet paid"),
+      h("p", { class: "muted small" }, "Uploads land here the moment they are filed, with who accepted them. The payable posts through the kernel; cash moves in the payment run."),
+      dataTable(r.bills, {})) : null,
     r ? h("div", { class: "panel" }, h("h2", {}, `Trial balance through ${app.period}`), dataTable(r.trial_balance, { totalLast: true })) : null);
 }

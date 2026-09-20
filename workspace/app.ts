@@ -92,12 +92,22 @@ export function marketingUrl(): string | null {
   return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
 }
 
+/** Every bill that is not yet paid, each with who accepted or rejected it. Uploads land here the moment they are filed. */
+function billsOnFile(db: Db): { columns: string[]; rows: (string | number | null)[][]; money_columns: number[] } {
+  const rows = db.prepare(`SELECT p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents, b.status,
+        (SELECT r.outcome || ' by ' || r.approver_id FROM bill_review r WHERE r.bill_id = b.id) AS review
+      FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status NOT IN ('paid') ORDER BY b.bill_date DESC LIMIT 50`)
+    .all() as { vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number; status: string; review: string | null }[];
+  return { columns: ["Vendor", "Ref", "Bill date", "Period", "Amount", "Status", "Reviewed"], money_columns: [4],
+    rows: rows.map((r) => [r.vendor, r.ref, r.bill_date, r.service_period, r.total_cents, r.status, r.review ?? "waiting"]) };
+}
+
 /** Forecast, close, revenue and the standing reports for one month. A month that is not YYYY-MM is refused. */
 function modules(db: Db, period: string): unknown {
   if (!/^\d{4}-\d{2}$/.test(period)) throw new HttpError(400, "period must be YYYY-MM");
   const lastDay = new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0)).toISOString().slice(0, 10);
   return { period, forecast: forecastView(db), close: closeView(db), revenue: revenueView(db),
-    reports: { ageing: arAgeing(db, lastDay), trial_balance: trialBalance(db, period), cash_by_week: cashByWeek(db, period) } };
+    reports: { ageing: arAgeing(db, lastDay), trial_balance: trialBalance(db, period), cash_by_week: cashByWeek(db, period), bills: billsOnFile(db) } };
 }
 
 function found(res: ServerResponse, body: unknown): void {
