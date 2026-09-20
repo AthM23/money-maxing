@@ -1434,3 +1434,41 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - **Blocked on humans:** delete the nine stale emails · whether the demo runs on `global-july` (then set
   `FOOTNOTE_WORLD`, `FOOTNOTE_DB`, `FOOTNOTE_STORES` in each `.env`) · the first paid run of the main scene's judgment
   leg on this database (Karan's key).
+
+### 2026-09-20 00:36 ET — Two red-team reviews of tonight's code: five wrong-money paths closed; the main scene run on real models (Person A)
+
+- **Reviewed by two independent reviewers** (reports kept outside the repo; every CONFIRMED item was a passing
+  assertion against the real functions). Fixed and pushed as `6a857ac`, each with a regression test; two of the tests
+  were probed by removing the fix and watching them fail:
+  - *Remittance read by a model.* One invoice was not pair-checked, so cash could post to an invoice the customer
+    said it did **not** pay ("we paid 8,494.98 against INV-3182. INV-3181 is still under query"). Now one invoice is
+    checked like several, any document number in the mail is a barrier, an invoice named twice with two amounts is a
+    person's to read, and with several invoices the total must be a figure of its own. The kernel now checks the
+    mail's date against the receipt itself (ten days before to three after). Benchmark control row unchanged
+    (n=100 oracle: 80 settled, 20 with the deduction left open, 0 left over, **0 wrong postings**).
+  - *Realized FX (F9).* The booked rate came from whatever invoice the entry cited, so a same-customer invoice booked
+    at another rate gave a self-consistent wrong answer. Now the invoice must be the one this receipt's cash was
+    applied to (so FX cannot post before the cash), the receipt cannot exceed the invoice's foreign total, and the
+    advice must state the amount and rate as whole figures. The bank's fee is only ever booked under a write-off rule.
+  - *A person's answer.* "2% credit" on a 10% shortfall booked the whole shortfall while the fact remembered 2%: one
+    answer, two amounts. Now a percentage answer books that percentage; the rest stays open.
+  - *Memory.* A payer fact had no ceiling: a $500-limit approver's fact let $500,000 of cash through with nobody
+    watching. Now capped on the cash in the router and in kernel J2, and the desk sizes a proposed fact by the
+    exposure it unlocks. A case whose entry a person declined is no longer reopened by an unrelated fact. Only a
+    person in the approval matrix approves or rejects a fact; a rejection is recorded (`fact.rejected`).
+  - *Rules and audit.* Approving a version retires every other live version of that rule. The auditor reads a rule
+    approved only after an entry posted as not yet approved.
+  - Accepted as designed, not changed: a one-time fact carried into run 2 applies to the same case it was given for
+    (run 2 is the same month from cold); a certificate follow-up has no queue yet (nothing sweeps intents).
+- **The main scene on real models** (`pnpm worker <db> --intent int_main`, file database seeded by the new
+  `src/demo/scenario/cli.ts`): code posted the cash, the $40 fee and the $1,960 rate difference in 15 ms; the model
+  tiers found the customer's remittance, the Slack note ("I have not promised anything"), order form section 7
+  (credits only when confirmed in writing by an officer) and the $500 approval rule, booked nothing, and asked the
+  account owner one question with the $2,200 exactly explained. **Right outcome, wrong cost: 52 model calls, $1.07,
+  9 min 50 s** (my estimate to Karan was $0.07 to $0.30). Why: Haiku reached the same conclusion in about 50 s but
+  may not ask a person while a stronger tier exists; Sonnet then hit its 240 s wall clock with nothing decided; Opus
+  redid the search, had three entries rejected by the kernel (a hold written as a one-sided entry) and then asked.
+  **For the demo: do not run the model tiers live on this case.** Run the code tier live (instant), and open the
+  question from the prepared database. Open design question for after the demo: let the cheapest tier ask when code
+  can verify from the step log that the search plan was completed.
+- `pnpm test` on the committed state alone (clean checkout of `6a857ac`) → 70 files, **663 passing**; typecheck clean.
