@@ -58,7 +58,7 @@ export function pickOpenIntents(db: Db, filter: PickupFilter = {}): { ready: Pic
 
 /**
  * Code already tried this case and could not settle it. Trying again in code is only worth it if memory has
- * changed since: a rule was approved, a fact became active, or a question was answered.
+ * changed since: a rule was approved, a fact was learned or approved, or a question was answered.
  */
 function worthAnotherCodePass(db: Db, intentId: string): boolean {
   const newest = db
@@ -69,9 +69,10 @@ function worthAnotherCodePass(db: Db, intentId: string): boolean {
     .prepare(
       `SELECT (SELECT COUNT(*) FROM policy WHERE status = 'approved' AND approved_at > ?)
             + (SELECT COUNT(*) FROM fact WHERE status = 'active' AND learned_at > ?)
+            + (SELECT COUNT(*) FROM event WHERE topic = 'fact.activated' AND ts > ?)
             + (SELECT COUNT(*) FROM escalation WHERE answered_at > ?) AS n`,
     )
-    .get(newest.created_at, newest.created_at, newest.created_at) as { n: number };
+    .get(newest.created_at, newest.created_at, newest.created_at, newest.created_at) as { n: number };
   return changed.n > 0;
 }
 

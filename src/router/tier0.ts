@@ -75,11 +75,33 @@ function cashApplication(db: Db, c: CaseFile, replaying: boolean): Proposal {
     ...(c.received_cents > applied ? [{ account: ACCOUNTS.customer_credits, debit_cents: 0, credit_cents: c.received_cents - applied, memo: `${memo}: unapplied` }] : []),
   ]);
   if (c.received_cents > applied) p.evidence = unappliedCashEvidence(db, c);
+  if (!replaying) citePayerFact(db, c, p);
   if (c.remittance) {
     p.remittance_trace_id = c.remittance.trace_id;
     p.evidence.push({ claim: "Customer's per-invoice remittance instructions", trace_id: c.remittance.trace_id });
   }
   return p;
+}
+
+/**
+ * Global customers often pay from another legal entity: a parent, a treasury centre, a payment agent. The kernel
+ * ties a bank line to the customer on the entry unless an active fact, approved by a person, names that payer. When
+ * such a fact exists the entry cites it; when none does, the entry goes as it is and the kernel's refusal is the
+ * record of why someone has to confirm who pays for whom.
+ */
+function citePayerFact(db: Db, c: CaseFile, p: Proposal): void {
+  const payer = c.bank_txn_id
+    ? (db.prepare("SELECT party_id FROM bank_txn WHERE id = ?").get(c.bank_txn_id) as { party_id: string | null } | undefined)?.party_id
+    : null;
+  if (!payer || payer === c.party_id) return;
+  for (const predicate of ["payer_alias", "parent_pays"]) {
+    const { applicable } = applicableFacts(db, { party_id: c.party_id, kind: "apply_payment", entry_date: c.entry_date, amount_cents: 0, predicate });
+    const fact = applicable.find((f) => f.value.payer_party_id === payer);
+    if (!fact) continue;
+    p.fact_refs = [...p.fact_refs, fact.fact_id];
+    p.evidence = [...p.evidence, ...factEvidence(db, fact.fact_id)];
+    return;
+  }
 }
 
 /**

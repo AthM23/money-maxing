@@ -82,9 +82,49 @@ export function approveFact(db: Db, clock: Clock, factId: string, approverId: st
       .run(approverId, approver.limit_cents, factId);
     emit(db, clock, { topic: "fact.activated", from_function: "memory", intent_id: null,
       payload: { fact_id: factId, party_id: fact.party_id, predicate: fact.predicate, approved_by: approverId } });
+    reopenCasesWaitingOnMemory(db, fact.party_id);
   });
   run();
   return { status: "active", fact_id: factId, max_amount_cents: approver.limit_cents };
+}
+
+/**
+ * A case the agents could not settle waits on a person. When that person's answer is a fact (who pays for whom, a
+ * standing rate), the case is worth another pass, so it goes back to open. A case with an entry parked or a question
+ * still unanswered stays where it is: those have their own way back.
+ */
+function reopenCasesWaitingOnMemory(db: Db, partyId: string): void {
+  db.prepare(
+    `UPDATE intent SET status = 'open', closed_at = NULL
+     WHERE status = 'waiting_on_human' AND json_extract(case_json, '$.party_id') = ?
+       AND NOT EXISTS (SELECT 1 FROM decision d WHERE d.intent_id = intent.id AND d.mode = 'live' AND d.route = 'PROPOSE' AND d.posted_at IS NULL
+                         AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected'))
+       AND NOT EXISTS (SELECT 1 FROM escalation e JOIN decision d ON d.id = e.decision_id WHERE d.intent_id = intent.id AND e.answered_at IS NULL)`,
+  ).run(partyId);
+}
+
+/** A person said no. The candidate is kept on record and never applies; the schema's word for that is expired. */
+export function rejectFact(db: Db, factId: string): { status: "rejected" | "not_candidate" } {
+  const info = db.prepare("UPDATE fact SET status = 'expired' WHERE id = ? AND status = 'candidate'").run(factId);
+  return { status: info.changes === 1 ? "rejected" : "not_candidate" };
+}
+
+export interface FactCandidateView {
+  id: string; party_id: string; predicate: string; value: Record<string, unknown>; kinds: string[];
+  uses: string; valid_from: string; valid_to: string; stated_by: string; source_trace_ids: string[]; explained_amount_cents: number | null;
+}
+
+/** What an agent proposes to remember, waiting for a person. It applies to nothing until approved. */
+export function factCandidates(db: Db): FactCandidateView[] {
+  const rows = db.prepare("SELECT * FROM fact WHERE status = 'candidate' ORDER BY learned_at, id").all() as Array<Record<string, unknown>>;
+  return rows.map((r) => ({
+    id: String(r.id), party_id: String(r.party_id), predicate: String(r.predicate),
+    value: (safeJson(String(r.value_json)) as Record<string, unknown> | null) ?? {},
+    kinds: ((safeJson(String(r.scope_json)) as { kinds?: string[] } | null)?.kinds) ?? [],
+    uses: String(r.uses), valid_from: String(r.valid_from), valid_to: String(r.valid_to), stated_by: String(r.stated_by),
+    source_trace_ids: (safeJson(String(r.source_trace_ids_json)) as string[] | null) ?? [],
+    explained_amount_cents: typeof r.explained_amount_cents === "number" ? r.explained_amount_cents : null,
+  }));
 }
 
 /** Facts whose end date has passed stop applying. Run at the start of every period run. */

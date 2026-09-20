@@ -26,8 +26,10 @@ async function main(): Promise<number> {
   const intervalMs = (flagInt(args, "interval") ?? 5) * 1000;
   let stopping = false;
   process.on("SIGINT", () => { stopping = true; });
+  const askedAboutFacts = new Set<string>();
   do {
-    const report = await deskPass(db, slack, systemClock);
+    const report = await deskPass(db, slack, systemClock, askedAboutFacts);
+    for (const f of report.facts_posted) out(`asked to remember: ${f.fact_id} → ${f.approver_id}`);
     for (const id of report.escalations_posted) out(`asked: ${id}`);
     for (const a of report.approvals_posted) out(`approval requested: ${a.decision_id} → ${a.approver_id}`);
     for (const u of report.unroutable) warn(`not routed: ${u.decision_id}: ${u.reason}`);

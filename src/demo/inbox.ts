@@ -1,5 +1,6 @@
 import { recordHumanAnswer } from "../agents/humanLoop.js";
 import { approvePolicy } from "../learn/compile.js";
+import { approveFact, factCandidates, rejectFact } from "../memory/facts.js";
 import { APP_CONFIG } from "../packs/index.js";
 import { approveDecision } from "../runtime/approve.js";
 import { systemClock } from "../runtime/config.js";
@@ -15,11 +16,12 @@ const out = (line: string): void => { process.stdout.write(`${line}\n`); };
  *   pnpm inbox <db> approve|reject <decision_id> --as U_CTRL
  *   pnpm inbox <db> approve-policy <policy_id> --as U_CTRL
  *   pnpm inbox <db> reopen <intent_id> --as U_CTRL
+ *   pnpm inbox <db> approve-fact|reject-fact <fact_id> --as U_CTRL
  */
 function main(): number {
   const [dbPath, command, id, ...rest] = process.argv.slice(2);
   if (!dbPath || !command) {
-    process.stderr.write("usage: pnpm inbox <db> list | answer <escalation_id> --as U --treatment T --text \"...\" | approve <decision_id> --as U | reject <decision_id> --as U | approve-policy <policy_id> --as U | reopen <intent_id> --as U\n");
+    process.stderr.write("usage: pnpm inbox <db> list | answer <escalation_id> --as U --treatment T --text \"...\" | approve <decision_id> --as U | reject <decision_id> --as U | approve-policy <policy_id> --as U | reopen <intent_id> --as U | approve-fact <fact_id> --as U | reject-fact <fact_id> --as U\n");
     return 1;
   }
   const db = openDb(dbPath);
@@ -38,6 +40,11 @@ function main(): number {
     const r = approveDecision(db, id, { approver_id: flags.as, approver_kind: "human", outcome: command === "approve" ? "approved" : "rejected" }, { config: APP_CONFIG });
     out(JSON.stringify(r, null, 2));
     return r.status === "posted" || r.status === "declined" ? 0 : 1;
+  }
+  if (command === "approve-fact" || command === "reject-fact") {
+    const r = command === "approve-fact" ? approveFact(db, systemClock, id, flags.as) : rejectFact(db, id);
+    out(JSON.stringify(r, null, 2));
+    return r.status === "active" || r.status === "rejected" ? 0 : 1;
   }
   if (command === "reopen") {
     // Hand a waiting case back to the worker, e.g. once the model tiers are switched on. The next pass re-settles it.
@@ -71,6 +78,9 @@ function list(db: Db): number {
     out(`  ${p.id} · ${p.kind} · ${proposal.party_id} · ${lines}${proposal.evidence[0]?.quote ? `\n    evidence: “${proposal.evidence[0].quote}”` : ""}`);
   }
   listPolicyDrafts(db);
+  const facts = factCandidates(db);
+  out(`facts an agent proposes to remember: ${facts.length}`);
+  for (const f of facts) out(`  ${f.id} · ${f.party_id} · ${f.predicate} ${JSON.stringify(f.value)} · ${f.uses} · for ${f.kinds.join(", ")} · ${f.valid_from} to ${f.valid_to} · sources ${f.source_trace_ids.join(", ")}`);
   return 0;
 }
 

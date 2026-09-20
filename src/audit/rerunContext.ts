@@ -61,6 +61,7 @@ export function buildRerunContext(db: Db, subject: RerunSubject, config: Runtime
     open_escalations: asOfEscalations(db, subject, base.open_escalations, neutralised),
     bankTxnAppliedCents: (id) => appliedByOthers(db, subject, id, neutralised),
     getFact: (id) => asOfFact(db, subject, base, id, neutralised),
+    getPolicy: (id) => asOfPolicy(db, subject, base, id, neutralised),
     findPaidDuplicate: (party, amount, exclude) =>
       base.findPaidDuplicate?.(party, amount, [...exclude, ...paidLater(db, subject)]),
     remitChangedUnverified: (party) => remitChangedAsOf(db, subject, party),
@@ -161,6 +162,23 @@ function appliedByOthers(db: Db, subject: RerunSubject, bankTxnId: string, neutr
 }
 
 /** A one-time fact this entry spent is not "already used" from the entry's own point of view. */
+/**
+ * A rule is never edited: a newer version retires the older one. An entry posted under v1 was right to cite v1, so
+ * re-performance reads v1 as approved if it was approved before the posting and only retired afterwards, by a
+ * successor whose approval time is on file. A rule retired with no successor carries no retirement time, so it is
+ * left as retired: that stays a finding for a person to look at.
+ */
+function asOfPolicy(db: Db, subject: RerunSubject, base: KernelContext, id: string, neutralised: string[]): ReturnType<KernelContext["getPolicy"]> {
+  const policy = base.getPolicy(id);
+  if (!policy || policy.status !== "retired") return policy;
+  const own = db.prepare("SELECT approved_at FROM policy WHERE id = ?").get(id) as { approved_at: string | null } | undefined;
+  const successor = db.prepare("SELECT id, approved_at FROM policy WHERE supersedes = ? AND approved_at IS NOT NULL ORDER BY approved_at LIMIT 1")
+    .get(id) as { id: string; approved_at: string } | undefined;
+  if (!own?.approved_at || !successor || own.approved_at > subject.posted_at || successor.approved_at <= subject.posted_at) return policy;
+  neutralised.push(`policy ${id} read as approved: it was retired at ${successor.approved_at} by ${successor.id}, after this entry posted at ${subject.posted_at}`);
+  return { ...policy, status: "approved" };
+}
+
 function asOfFact(db: Db, subject: RerunSubject, base: KernelContext, id: string, neutralised: string[]): ReturnType<KernelContext["getFact"]> {
   const fact = base.getFact(id);
   if (!fact) return undefined;

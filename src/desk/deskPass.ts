@@ -1,5 +1,6 @@
 import { Proposal } from "../contract/types.js";
 import { summarise } from "../learn/compare.js";
+import { factCandidates } from "../memory/facts.js";
 import type { Clock } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { safeJson } from "../runtime/lookups.js";
@@ -8,9 +9,12 @@ import { safeJson } from "../runtime/lookups.js";
 export interface Poster {
   postEscalation(escalationId: string): Promise<string | undefined>;
   postApproval(decisionId: string, approverSlackUser: string, controllerNote?: string): Promise<string | undefined>;
+  /** Something an agent proposes to remember. Optional, so a poster that cannot show it simply leaves it in the inbox. */
+  postFact?(factId: string, approverSlackUser: string): Promise<string | undefined>;
 }
 
 export interface DeskReport {
+  facts_posted: { fact_id: string; approver_id: string }[];
   escalations_posted: string[];
   approvals_posted: { decision_id: string; approver_id: string }[];
   /** Parked entries nobody on the approval matrix can be reached for. They stay in the terminal inbox. */
@@ -24,8 +28,9 @@ const REQUEST_STEP = "desk:approval_request";
  * goes to one approver with the authority to sign it, once. Nothing is decided here; answers and approvals come
  * back through recordHumanAnswer and approveDecision, where identity, authority and the kernel's post gate apply.
  */
-export async function deskPass(db: Db, poster: Poster, clock: Clock): Promise<DeskReport> {
-  const report: DeskReport = { escalations_posted: [], approvals_posted: [], unroutable: [] };
+export async function deskPass(db: Db, poster: Poster, clock: Clock, alreadyAsked: Set<string> = new Set()): Promise<DeskReport> {
+  const report: DeskReport = { facts_posted: [], escalations_posted: [], approvals_posted: [], unroutable: [] };
+  await postFactCandidates(db, poster, alreadyAsked, report);
   const questions = db.prepare("SELECT id FROM escalation WHERE answered_at IS NULL AND slack_ts IS NULL ORDER BY asked_at").all() as { id: string }[];
   for (const q of questions) {
     if (await poster.postEscalation(q.id)) report.escalations_posted.push(q.id);
@@ -42,6 +47,22 @@ export async function deskPass(db: Db, poster: Poster, clock: Clock): Promise<De
     report.approvals_posted.push({ decision_id: parked.id, approver_id: approver.id });
   }
   return report;
+}
+
+/**
+ * What an agent wants to remember goes to a person once. A fact has no row to mark as asked, so the desk keeps the
+ * ids it has posted for as long as it runs; after a restart a still-open candidate is asked about again.
+ */
+async function postFactCandidates(db: Db, poster: Poster, alreadyAsked: Set<string>, report: DeskReport): Promise<void> {
+  if (!poster.postFact) return;
+  for (const f of factCandidates(db)) {
+    if (alreadyAsked.has(f.id)) continue;
+    const approver = chooseApprover(db, { id: f.id, actor: f.stated_by, amount_cents: f.explained_amount_cents ?? 0, answered_by: null });
+    if (!approver) { report.unroutable.push({ decision_id: f.id, reason: "no reachable approver for a proposed fact" }); continue; }
+    if (!(await poster.postFact(f.id, approver.slack_user))) continue;
+    alreadyAsked.add(f.id);
+    report.facts_posted.push({ fact_id: f.id, approver_id: approver.id });
+  }
 }
 
 interface Parked { id: string; actor: string; amount_cents: number; answered_by: string | null }

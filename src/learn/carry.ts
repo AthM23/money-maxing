@@ -48,6 +48,7 @@ function insertRows(to: Db, table: keyof typeof CARRIED, rows: Row[], replace = 
   const sql = `INSERT OR ${replace ? "REPLACE" : "IGNORE"} INTO ${table} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
   const insert = to.prepare(sql);
   let written = 0;
-  for (const row of rows) written += insert.run(...cols.map((c) => row[c] ?? null)).changes;
+  // What a carried row superseded stays behind (a retired rule, an older fact), so that link is not carried either.
+  for (const row of rows) written += insert.run(...cols.map((c) => (c === "supersedes" ? null : row[c] ?? null))).changes;
   return written;
 }

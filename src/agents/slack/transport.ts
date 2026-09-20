@@ -3,7 +3,10 @@ import { approveDecision } from "../../runtime/approve.js";
 import type { Db } from "../../runtime/db.js";
 import { safeJson } from "../../runtime/lookups.js";
 import { recordHumanAnswer } from "../humanLoop.js";
-import { answerModal, approvalBlocks, escalationBlocks, type EscalationQuestion } from "./blocks.js";
+import { approveFact, factCandidates, rejectFact } from "../../memory/facts.js";
+import { systemClock } from "../../runtime/config.js";
+import { getTrace } from "../../runtime/lookups.js";
+import { answerModal, approvalBlocks, escalationBlocks, factBlocks, type EscalationQuestion } from "./blocks.js";
 import { APP_CONFIG } from "../../packs/index.js";
 
 interface Action { action_id: string; value: string }
@@ -17,7 +20,7 @@ interface InteractiveBody {
  * Needs SLACK_BOT_TOKEN (xoxb) and SLACK_APP_TOKEN (xapp, connections:write). Every answer and approval still goes
  * through recordHumanAnswer and approveDecision, so the identity checks and the kernel's post gate apply unchanged.
  */
-export async function startSlack(db: Db): Promise<{ postEscalation: typeof postEscalation; postApproval: typeof postApproval; stop(): Promise<void> }> {
+export async function startSlack(db: Db): Promise<{ postEscalation: typeof postEscalation; postApproval: typeof postApproval; postFact: typeof postFact; stop(): Promise<void> }> {
   const botToken = process.env.SLACK_BOT_TOKEN;
   const appToken = process.env.SLACK_APP_TOKEN;
   if (!botToken || !appToken) throw new Error("SLACK_BOT_TOKEN and SLACK_APP_TOKEN must be set to start the Slack transport");
@@ -55,7 +58,15 @@ export async function startSlack(db: Db): Promise<{ postEscalation: typeof postE
     return res.ts;
   }
 
-  return { postEscalation, postApproval, stop: () => socket.disconnect() };
+  async function postFact(factId: string, approverSlackUser: string): Promise<string | undefined> {
+    const fact = factCandidates(db).find((f) => f.id === factId);
+    if (!fact) return undefined;
+    const quotes = fact.source_trace_ids.flatMap((id) => { const t = getTrace(db, id); return t ? [t.payload_text.slice(0, 400)] : []; });
+    const res = await web.chat.postMessage({ channel: approverSlackUser, text: `Remember this about ${fact.party_id}?`, blocks: factBlocks({ ...fact, quotes }) as never });
+    return res.ts;
+  }
+
+  return { postEscalation, postApproval, postFact, stop: () => socket.disconnect() };
 }
 
 async function handleInteractive(db: Db, web: { views: { open(args: never): Promise<unknown> }; chat: { postMessage(args: never): Promise<unknown> } }, body: InteractiveBody): Promise<void> {
@@ -68,6 +79,13 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     const approver = approverFor(db, body.user.id);
     const result = approveDecision(db, action.value, { approver_id: approver, approver_kind: "human", outcome: action.action_id === "approve" ? "approved" : "rejected" }, { config: APP_CONFIG });
     await web.chat.postMessage({ channel: body.user.id, text: describe(result) } as never);
+    return;
+  }
+  if (body.type === "block_actions" && action && (action.action_id === "fact_approve" || action.action_id === "fact_reject")) {
+    const result = action.action_id === "fact_approve" ? approveFact(db, systemClock, action.value, approverFor(db, body.user.id)) : rejectFact(db, action.value);
+    const said = result.status === "active" ? "Remembered. It applies from now, within your limit and its end date."
+      : result.status === "rejected" ? "Not remembered." : `Nothing changed (${result.status}${"reason" in result ? `: ${result.reason}` : ""}).`;
+    await web.chat.postMessage({ channel: body.user.id, text: said } as never);
     return;
   }
   if (body.type === "view_submission" && body.view) {

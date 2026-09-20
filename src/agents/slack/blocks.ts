@@ -74,6 +74,29 @@ export function approvalBlocks(decisionId: string, proposal: Proposal, marks: Ma
   ];
 }
 
+export interface FactForApproval {
+  id: string; party_id: string; predicate: string; value: Record<string, unknown>; kinds: string[];
+  uses: string; valid_from: string; valid_to: string; stated_by: string; quotes: string[];
+}
+
+/** Something an agent wants to remember. It applies to nothing until a person in the approval matrix says yes. */
+export function factBlocks(f: FactForApproval): Block[] {
+  const what = Object.entries(f.value).map(([k, v]) => `${k}: ${String(v)}`).join(" · ");
+  const sources = f.quotes.map((q) => `> ${q}`).join("\n");
+  return [
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Remember this?* ${f.predicate.replaceAll("_", " ")} for ${f.party_id}\n${what}\nApplies to ${f.kinds.join(", ").replaceAll("_", " ")} · ${f.uses.replaceAll("_", " ")} · ${f.valid_from} to ${f.valid_to} · stated by ${f.stated_by}`, SECTION_MAX) } },
+    ...(sources ? [{ type: "section", text: { type: "mrkdwn", text: clip(sources, SECTION_MAX) } }] : []),
+    {
+      type: "actions", block_id: `fact:${f.id}`,
+      elements: [
+        { type: "button", style: "primary", text: { type: "plain_text", text: "Remember it" }, action_id: "fact_approve", value: f.id },
+        { type: "button", style: "danger", text: { type: "plain_text", text: "No" }, action_id: "fact_reject", value: f.id },
+      ],
+    },
+    { type: "context", elements: [{ type: "mrkdwn", text: "Approved, it inherits your approval limit and its end date. Until then it applies to nothing." }] },
+  ];
+}
+
 function option(value: string, text: string): Block {
   return { text: { type: "plain_text", text }, value };
 }
