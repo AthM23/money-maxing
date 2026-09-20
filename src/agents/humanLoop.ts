@@ -4,7 +4,8 @@ import { ACCOUNTS } from "../contract/accounts.js";
 import { CaseFile, IsoDate, type Proposal } from "../contract/types.js";
 import { answerEscalation } from "../memory/escalations.js";
 import { approveFact, recordFactCandidate } from "../memory/facts.js";
-import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
+import { APP_CONFIG } from "../packs/index.js";
+import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { newId } from "../runtime/ids.js";
 import { settleIntent } from "../runtime/intentStatus.js";
@@ -49,7 +50,7 @@ export function recordHumanAnswer(
   if (recorded.status !== "answered") return { status: recorded.status, detail: "reason" in recorded ? recorded.reason : escalationId };
 
   const fact = rememberAnswer(db, clock, ctx.case_file, answer, answerer, traceId);
-  const proposal = resume(db, ctx.case_file, answer, traceId, fact.fact_id, { clock, config: deps.config ?? DEFAULT_CONFIG });
+  const proposal = resume(db, ctx.case_file, answer, traceId, fact.fact_id, { clock, config: deps.config ?? APP_CONFIG });
   // "Chase the customer" books nothing: the case stays with a person instead of going back to the agents.
   settleIntent(db, clock, ctx.case_file.intent_id);
   return { status: "answered", trace_id: traceId, fact_id: fact.fact_id, fact_status: fact.status, proposal };

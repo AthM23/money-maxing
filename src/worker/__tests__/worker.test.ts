@@ -63,6 +63,14 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     expect(step.output_json).toContain("no tier reached a route");
   });
 
+  it("approving the parked cash application does not resolve a case whose shortfall nobody explained", async () => {
+    const db = world();
+    await runOpenIntents(db, { investigators: [], clock: fixedClock });
+    const cash = db.prepare("SELECT id FROM decision WHERE intent_id = 'int_initech' AND kind = 'apply_payment'").get() as { id: string };
+    expect(approveDecision(db, cash.id, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
+    expect(intentStatus(db, "int_initech")).toBe("waiting_on_human");
+  });
+
   it("keeps the document balances as they stood before anything posted", async () => {
     const db = world();
     earn(db, "apply_payment", "auto");

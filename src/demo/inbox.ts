@@ -1,5 +1,8 @@
 import { recordHumanAnswer } from "../agents/humanLoop.js";
+import { approvePolicy } from "../learn/compile.js";
+import { APP_CONFIG } from "../packs/index.js";
 import { approveDecision } from "../runtime/approve.js";
+import { systemClock } from "../runtime/config.js";
 import { openDb, type Db } from "../runtime/db.js";
 
 const out = (line: string): void => { process.stdout.write(`${line}\n`); };
@@ -10,11 +13,13 @@ const out = (line: string): void => { process.stdout.write(`${line}\n`); };
  *   pnpm inbox <db> list
  *   pnpm inbox <db> answer <escalation_id> --as U_SAM --treatment credit_memo --text "One-time credit for ..." [--uses standing --valid-to 2027-06-30]
  *   pnpm inbox <db> approve|reject <decision_id> --as U_CTRL
+ *   pnpm inbox <db> approve-policy <policy_id> --as U_CTRL
+ *   pnpm inbox <db> reopen <intent_id> --as U_CTRL
  */
 function main(): number {
   const [dbPath, command, id, ...rest] = process.argv.slice(2);
   if (!dbPath || !command) {
-    process.stderr.write("usage: pnpm inbox <db> list | answer <escalation_id> --as U --treatment T --text \"...\" | approve <decision_id> --as U | reject <decision_id> --as U\n");
+    process.stderr.write("usage: pnpm inbox <db> list | answer <escalation_id> --as U --treatment T --text \"...\" | approve <decision_id> --as U | reject <decision_id> --as U | approve-policy <policy_id> --as U | reopen <intent_id> --as U\n");
     return 1;
   }
   const db = openDb(dbPath);
@@ -30,9 +35,20 @@ function main(): number {
     return r.status === "answered" ? 0 : 1;
   }
   if (command === "approve" || command === "reject") {
-    const r = approveDecision(db, id, { approver_id: flags.as, approver_kind: "human", outcome: command === "approve" ? "approved" : "rejected" });
+    const r = approveDecision(db, id, { approver_id: flags.as, approver_kind: "human", outcome: command === "approve" ? "approved" : "rejected" }, { config: APP_CONFIG });
     out(JSON.stringify(r, null, 2));
     return r.status === "posted" || r.status === "declined" ? 0 : 1;
+  }
+  if (command === "reopen") {
+    // Hand a waiting case back to the worker, e.g. once the model tiers are switched on. The next pass re-settles it.
+    const info = db.prepare("UPDATE intent SET status = 'open', closed_at = NULL WHERE id = ? AND status = 'waiting_on_human'").run(id);
+    out(info.changes === 1 ? `${id} reopened by ${flags.as}` : `${id} is not waiting on a person`);
+    return info.changes === 1 ? 0 : 1;
+  }
+  if (command === "approve-policy") {
+    const r = approvePolicy(db, systemClock, id, flags.as);
+    out(JSON.stringify(r, null, 2));
+    return r.status === "approved" ? 0 : 1;
   }
   process.stderr.write(`unknown command ${command}\n`);
   return 1;
@@ -54,7 +70,19 @@ function list(db: Db): number {
     const lines = proposal.entries.map((l) => `${l.account} Dr ${l.debit_cents} Cr ${l.credit_cents}`).join("; ");
     out(`  ${p.id} · ${p.kind} · ${proposal.party_id} · ${lines}${proposal.evidence[0]?.quote ? `\n    evidence: “${proposal.evidence[0].quote}”` : ""}`);
   }
+  listPolicyDrafts(db);
   return 0;
+}
+
+/** A compiled rule is approved like a pull request: the reviewer sees what it would have done to every closed case. */
+function listPolicyDrafts(db: Db): void {
+  const drafts = db.prepare("SELECT id, name, backtest_json FROM policy WHERE status = 'proposed' ORDER BY rowid").all() as
+    { id: string; name: string; backtest_json: string | null }[];
+  out(`policy drafts: ${drafts.length}`);
+  for (const d of drafts) {
+    const bt = JSON.parse(d.backtest_json ?? "{}") as { n?: number; agree?: number; account_outliers?: string[] };
+    out(`  ${d.id} · ${d.name}\n    backtest: matched ${bt.n ?? 0}, humans did exactly this ${bt.agree ?? 0}, other account ${(bt.account_outliers ?? []).length}`);
+  }
 }
 
 function parseFlags(args: string[]): Record<string, string> {

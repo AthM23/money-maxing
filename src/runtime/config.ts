@@ -1,5 +1,7 @@
 import { ACCOUNTS } from "../contract/accounts.js";
 import { MATERIALITY_CENTS, type ProposalKind } from "../contract/types.js";
+import type { ExtraCheck } from "../kernel/types.js";
+import type { Db } from "./db.js";
 
 export interface RuntimeConfig {
   materiality_cents: number;
@@ -8,6 +10,11 @@ export interface RuntimeConfig {
   standard_accounts: Partial<Record<ProposalKind, readonly string[]>>;
   /** Accounts a kind may post its judgment amount to (kernel J4). From the written policy memo; a kind not listed is unrestricted. */
   allowed_accounts: Partial<Record<ProposalKind, readonly string[]>>;
+  /**
+   * Checks a function's pack adds to the kernel (AP: three-way match, duplicate obligation). They are built from
+   * the database at every gate, so an approval re-tests today's world, not the world when the entry was proposed.
+   */
+  pack_checks?: Partial<Record<string, (db: Db) => ExtraCheck[]>>;
 }
 
 export const DEFAULT_CONFIG: RuntimeConfig = {

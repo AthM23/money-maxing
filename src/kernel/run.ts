@@ -18,16 +18,13 @@ export function runKernel(proposal: Proposal, ctx: KernelContext, stage: KernelS
   const validated = parsed.data;
 
   const adjustment = adjustmentCents(validated, ctx);
-  const j3 = checkJ3(validated);
-  const required = requiresApproval(ctx, adjustment, j3);
-
-  const marks: Mark[] = [
-    ...formalMarks(validated, ctx),
-    ...evidenceMarks(validated, ctx),
-    ...processMarks(validated, ctx, stage, required, adjustment),
-    ...judgmentMarks(validated, ctx, adjustment, j3),
-    ...extraMarks(validated, ctx),
-  ];
+  const formal = formalMarks(validated, ctx);
+  const evidence = evidenceMarks(validated, ctx);
+  const judgment = judgmentMarks(validated, ctx, adjustment, checkJ3(validated));
+  const extra = extraMarks(validated, ctx);
+  // Process checks come last because they need to know whether a person must approve, and that depends on the rest.
+  const required = requiresApproval(ctx, adjustment, [...formal, ...evidence, ...judgment, ...extra]);
+  const marks: Mark[] = [...formal, ...evidence, ...processMarks(validated, ctx, stage, required, adjustment), ...judgment, ...extra];
   const triggered = evaluateBlockRules(validated, ctx, stage, adjustment);
   marks.push(...triggered.map((item) => item.mark));
 
@@ -35,13 +32,13 @@ export function runKernel(proposal: Proposal, ctx: KernelContext, stage: KernelS
 }
 
 /**
- * A person must approve when the agent is not on auto, when the adjustment reaches
- * materiality, or when the agent left judgment on the table.
+ * A person must approve when the agent is not on auto, when the adjustment reaches materiality, or when any check,
+ * the kernel's own or a pack's, came back as judgment: something the code could not re-perform is a person's call.
  */
-function requiresApproval(ctx: KernelContext, adjustment: number, j3: readonly Mark[]): boolean {
+function requiresApproval(ctx: KernelContext, adjustment: number, marks: readonly Mark[]): boolean {
   if (ctx.autonomy_level !== "auto") return true;
   if (adjustment >= ctx.materiality_cents) return true;
-  return j3.some((m) => m.status === "judgment");
+  return marks.some((m) => m.status === "judgment");
 }
 
 /**

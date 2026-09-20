@@ -30,7 +30,8 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     approval: meta.approval ?? null,
     materiality_cents: config.materiality_cents,
     open_escalations: countOpenEscalations(db, meta.intent_id),
-    control: meta.mode === "replay" && meta.replay_docs ? replayControl(meta.replay_docs) : readControlTotals(db),
+    // An empty snapshot carries no balances, so the control totals are read from the books, not taken as zero.
+    control: meta.mode === "replay" && meta.replay_docs?.length ? replayControl(meta.replay_docs) : readControlTotals(db),
     standardAccounts: (kind) => config.standard_accounts[kind] ?? [],
     allowedAccounts: (kind) => config.allowed_accounts[kind] ?? [],
     features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
@@ -43,8 +44,23 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     getApprover: (id) => getApprover(db, id),
     findPaidDuplicate: (party, amount, exclude) => findPaidDuplicate(db, party, amount, exclude),
     remitChangedUnverified: (party) => remitChangedUnverified(db, party),
-    extra_checks: meta.extra_checks,
+    extra_checks: [...(meta.extra_checks ?? []), ...packChecks(db, proposal, config)],
   };
+}
+
+/** Functions whose entries may not pass the kernel on its generic checks alone. */
+const NEEDS_PACK_CHECKS: readonly string[] = ["ap"];
+
+/**
+ * A pack's checks come from the configuration, so every gate runs them, including a person's approval. For a
+ * function that needs them, their absence fails the entry: a forgotten configuration must never read as a pass.
+ */
+function packChecks(db: Db, proposal: Proposal, config: RuntimeConfig): ExtraCheck[] {
+  const factory = config.pack_checks?.[proposal.function];
+  if (factory) return factory(db);
+  if (!NEEDS_PACK_CHECKS.includes(proposal.function)) return [];
+  return [() => [{ cls: "P", check: "X2", status: "fail", refs: [proposal.intent_id],
+    detail: `no pack checks are configured for function ${proposal.function}; the entry cannot be re-performed` }]];
 }
 
 /** In replay, a bank line posted after the as-of date does not exist yet. */

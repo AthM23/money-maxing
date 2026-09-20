@@ -190,9 +190,9 @@ describe("walking skeleton: bank line → drift → intent → router → propos
   it("the parent's payment is not applied to the subsidiary on a guess: the kernel rejects it", () => {
     const r = row(key("parent_pays_for_subsidiary", "globex-labs").bank_txn_id);
     expect(r).toMatchObject({ routes: [], final_route: null, intent_status: "waiting_on_human" });
-    // The rejected proposal is the record of why; nothing posted, so no separate "unsettled" note is needed.
+    // The rejected proposal is the record of why, nothing posted, and the case is marked unsettled as its newest decision.
     expect(db.prepare("SELECT w.kernel_verdict, d.posted_at FROM workpaper w JOIN decision d ON d.id = w.decision_id WHERE d.intent_id = ?").all(r.intent_id)).toEqual([{ kernel_verdict: "reject", posted_at: null }]);
-    expect(unsettled(r.intent_id)).toBe(0);
+    expect(unsettled(r.intent_id)).toBe(1);
     expect(openInvoices(db, "globex-labs")).toMatchObject([{ id: "INV-1038", open_cents: 1_500_000 }]);
     expect(bankUnmatched(db).map((t) => t.id)).toEqual([r.bank_txn_id]);
   });

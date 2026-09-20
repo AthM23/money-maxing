@@ -13,3 +13,8 @@ export function openDb(path = ":memory:"): Db {
   db.exec(readFileSync(SCHEMA_PATH, "utf8"));
   return db;
 }
+
+/** An independent in-memory copy of a database as it stands now. Used to run the same month twice from one cold start. */
+export function cloneDb(db: Db): Db {
+  return new Database(db.serialize());
+}
