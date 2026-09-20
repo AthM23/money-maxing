@@ -198,7 +198,7 @@ details.marks ul { list-style: none; padding: 8px 0 0; display: grid; gap: 5px; 
 .mlegend { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12.5px; color: var(--mut); } .mlegend span { display: inline-flex; align-items: center; gap: 7px; } .msw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
 .stackrow { display: grid; grid-template-columns: 240px 1fr 130px; gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); } .stackname, .stackend { display: grid; } .stackend { text-align: right; }
 .stack { display: flex; height: 26px; border-radius: 8px; overflow: hidden; background: var(--soft); } .stackseg { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.tiles.four { grid-template-columns: repeat(4, 1fr); } ul.plain { padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: #4a4a46; }
+.tiles.four { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } ul.plain { padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: #4a4a46; }
 @media (max-width: 1100px) { .tiles.four { grid-template-columns: 1fr 1fr; } .barrow { grid-template-columns: 130px 1fr 56px; } .stackrow { grid-template-columns: 1fr; } .stackend { text-align: left; } }
 
 /* Input needed: the preparer's reasoning on an approval card */

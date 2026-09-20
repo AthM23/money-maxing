@@ -126,7 +126,9 @@ const fact = (value, label) => h("div", { class: "fact" }, h("b", {}, value), h(
 function generalises(m) {
   const f = m.fresh?.result, ours = m.extraction?.rows.find((r) => r.ours);
   const tile = (label, value, note) => h("div", { class: "tile" }, h("span", { class: "tilelabel" }, label), h("div", { class: "tilevalue" }, h("b", {}, value)), h("span", { class: "muted small" }, note));
+  const seen = m.seen?.result;
   return h("div", { class: "tiles four" },
+    !seen ? null : tile("Customers it trained on", seen.field_f1.toFixed(3), `field-F1 on ${count(seen.n)} documents from customers in its training data. Set beside the two tiles to the right, the line is flat: it learned the task, not the names`),
     ours?.held_out_f1 === undefined ? null : tile("Customers it never saw", ours.held_out_f1.toFixed(3), `field-F1 on ${ours.held_out_n} held-out documents, against ${ours.field_f1.toFixed(3)} overall: no sign it memorised names`),
     !f ? null : [tile("Fresh exam, new seed", f.field_f1.toFixed(3), `${count(f.n)} documents generated after training, ${m.fresh.protocol.data}; ${pct(f.exact)} exact, ${f.errors} errors`),
       tile("Throughput on one box", `${f.docs_per_min} docs/min`, `${f.effective_s_per_doc} s a document at batch ${f.avg_batch_size} · ${Math.round(f.tokens_per_s_aggregate)} tokens/s`)],

@@ -151,6 +151,6 @@ function ablation(root: string, problems: string[]): unknown {
 /** `root` is the checkout the result files are read from; only a test passes another one. */
 export function modelView(root: string = ROOT): unknown {
   const problems: string[] = [];
-  return { recipe: RECIPE, data: read(root, "ft/data/manifest.json", Manifest, problems), extraction: extraction(root, problems), fresh: read(root, "ft/data/fresh_exam_result.json", Fresh, problems), harness: harness(root, problems),
+  return { recipe: RECIPE, data: read(root, "ft/data/manifest.json", Manifest, problems), extraction: extraction(root, problems), fresh: read(root, "ft/data/fresh_exam_result.json", Fresh, problems), seen: read(root, "ft/data/seen_exam_result.json", Fresh, problems), harness: harness(root, problems),
     matcher: read(root, "ft/data/gbt_report_v2.json", Matcher, problems), coder: read(root, "ft/data/coding_report.json", Coder, problems), external: external(root, problems), ablation: ablation(root, problems), problems };
 }

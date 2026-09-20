@@ -19,13 +19,12 @@ same test slice and scorer (`ft/benchmark.py`, strict-v2, n=120, no schema hint)
 
 The names matter: the page reads `size-<billions>b` and `data-<percent>` out of the file's keys.
 
-## Two small edits to `ft/train_lora.py` (it hardcodes the model and always uses every row)
+## One small edit to `ft/train_lora.py` (it always uses every row)
+
+`--base` is already there (Preet, 04:13). The data curve needs one more flag:
 
 ```python
-ap.add_argument("--model", default="Qwen/Qwen3-4B-Instruct-2507")
 ap.add_argument("--train-rows", type=int, default=0)   # 0 = all
-# after parse_args():
-MODEL = a.model
 # after train, cal, test = load(...):
 if a.train_rows: train = train[:a.train_rows]          # the file's order is the generator's, fixed by seed 7
 ```
@@ -37,8 +36,8 @@ evaluate them with thinking off, as the `tiny` row was run before, or the output
 
 ```bash
 # train (each writes <out>/adapter)
-python ft/train_lora.py --model Qwen/Qwen3-0.6B --out /ws/out/size-0.6b
-python ft/train_lora.py --model Qwen/Qwen3-1.7B --out /ws/out/size-1.7b
+python ft/train_lora.py --base Qwen/Qwen3-0.6B --out /ws/out/size-0.6b
+python ft/train_lora.py --base Qwen/Qwen3-1.7B --out /ws/out/size-1.7b
 python ft/train_lora.py --train-rows 239 --out /ws/out/data-25
 python ft/train_lora.py --train-rows 478 --out /ws/out/data-50
 
