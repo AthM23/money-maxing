@@ -19,3 +19,67 @@ CREATE TABLE IF NOT EXISTS drift_case (
   dedupe_key TEXT PRIMARY KEY, comparator TEXT NOT NULL, intent_id TEXT NOT NULL REFERENCES intent(id),
   delta_cents INTEGER NOT NULL, first_seen TEXT NOT NULL, last_seen TEXT NOT NULL
 );
+
+-- ───────────── Phase 2: engines, conductor, mirror, ripple (see src/engines/README.md)
+
+-- revenue schedule engine (sheet 13). One active version per contract; a revision supersedes, it never edits.
+CREATE TABLE IF NOT EXISTS rev_schedule (
+  id TEXT PRIMARY KEY, contract_id TEXT NOT NULL REFERENCES contract(id), party_id TEXT NOT NULL REFERENCES party(id),
+  version INTEGER NOT NULL, status TEXT NOT NULL CHECK (status IN ('active','superseded')),
+  method TEXT NOT NULL DEFAULT 'ratable_monthly',
+  total_cents INTEGER NOT NULL,             -- equals SUM(rev_schedule_line.amount_cents) exactly
+  modification_id TEXT,                     -- null for version 1
+  created_at TEXT NOT NULL,
+  UNIQUE (contract_id, version)
+);
+CREATE TABLE IF NOT EXISTS rev_schedule_line (
+  schedule_id TEXT NOT NULL REFERENCES rev_schedule(id), period TEXT NOT NULL,   -- 'YYYY-MM'
+  amount_cents INTEGER NOT NULL,
+  PRIMARY KEY (schedule_id, period)
+);
+-- what was recognised, per contract and period, whichever schedule version was active when it was proposed.
+-- The line counts as recognised when decision.posted_at is set (recognition above materiality waits for approval).
+CREATE TABLE IF NOT EXISTS rev_recognition (
+  contract_id TEXT NOT NULL REFERENCES contract(id), period TEXT NOT NULL, amount_cents INTEGER NOT NULL,
+  schedule_id TEXT NOT NULL REFERENCES rev_schedule(id), decision_id TEXT NOT NULL,
+  PRIMARY KEY (contract_id, period)
+);
+-- one row per thing that changed a contract's consideration. cause_decision_id UNIQUE is half of the double-hit
+-- guard: one decision can move revenue once.
+CREATE TABLE IF NOT EXISTS contract_modification (
+  id TEXT PRIMARY KEY, contract_id TEXT NOT NULL REFERENCES contract(id),
+  cause_decision_id TEXT NOT NULL UNIQUE, cause_intent_id TEXT, cause_entry_id TEXT,
+  treatment TEXT NOT NULL CHECK (treatment IN ('prospective','memo_only','contra_revenue_no_schedule_change')),
+  pct_off_bps INTEGER, effective_period TEXT NOT NULL, until TEXT,
+  memo_cents INTEGER NOT NULL, memo_account TEXT NOT NULL,
+  delta_total_cents INTEGER NOT NULL,       -- change in schedule total; 0 when the memo already hit a revenue account
+  from_version INTEGER, to_version INTEGER, fact_id TEXT, created_at TEXT NOT NULL
+);
+
+-- 13-week forecast (sheet 15). forecast_line.as_of holds forecast_version.as_of.
+CREATE TABLE IF NOT EXISTS forecast_version (
+  as_of TEXT PRIMARY KEY,                   -- '<as_of_date>/v<version>'
+  as_of_date TEXT NOT NULL, version INTEGER NOT NULL, built_at TEXT NOT NULL, reason TEXT NOT NULL,
+  cause_event_id INTEGER, cause_intent_id TEXT,
+  opening_cash_cents INTEGER NOT NULL, inflow_cents INTEGER NOT NULL, outflow_cents INTEGER NOT NULL,
+  min_cash_cents INTEGER NOT NULL, min_cash_week TEXT NOT NULL,
+  UNIQUE (as_of_date, version)
+);
+
+-- QuickBooks mirror: one row per decision and mirrored object, so a re-run creates nothing.
+CREATE TABLE IF NOT EXISTS mirror_log (
+  decision_id TEXT NOT NULL, system TEXT NOT NULL, kind TEXT NOT NULL, external_id TEXT,
+  status TEXT NOT NULL CHECK (status IN ('mirrored','dry_run','skipped','failed')),
+  detail TEXT, mirrored_at TEXT NOT NULL,
+  PRIMARY KEY (decision_id, system, kind)
+);
+
+-- the ripple view (sheet 30): what one intent changed in each function, with the amounts, so the console can show
+-- "the same transaction means the same thing everywhere" without re-deriving it.
+CREATE TABLE IF NOT EXISTS ripple (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, intent_id TEXT NOT NULL, function TEXT NOT NULL, kind TEXT NOT NULL,
+  ref TEXT NOT NULL, summary TEXT NOT NULL,
+  before_cents INTEGER, after_cents INTEGER, delta_cents INTEGER,
+  event_id INTEGER, created_at TEXT NOT NULL,
+  UNIQUE (intent_id, function, kind, ref)
+);

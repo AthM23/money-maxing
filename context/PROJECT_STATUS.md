@@ -9,9 +9,9 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~21:50 ET |
+| **Last updated** | 2026-09-19 ~23:15 ET |
 | **Phase** | Phase 1 of lanes A and B is merged on `main` and runs end to end (log, 09-19 ~21:35 merge entry); Phase 2 in progress. Demo focus **proposed**, not agreed |
-| **Repo state** | `main` = lanes A, B and C. `pnpm test` → 43 files, 432 passing; `pnpm typecheck` clean (measured 09-19 ~21:50, after A's Phase 2 merge) |
+| **Repo state** | `main` = lanes A, B and C. `atharv-branch` adds lane B's Phase 2: `pnpm test` → 58 files, 584 passing; `pnpm typecheck` clean (measured 09-19 ~23:15, before merging the newer `main`) |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
 | **Judge feedback v2** | [`judge-feedback-v2-2026-09-19.md`](./judge-feedback-v2-2026-09-19.md): do not be generic; 2-3 processes as one customer story; own benchmark + fine-tune comparison |
@@ -762,3 +762,88 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   kernel-pack` 0 false auto-posts. **Not re-run on Phase 2:** the console API check and the ingest → worker hand-off from
   the ~21:35 entry, and none of Phase 2's own commands (`worker`, `learn`, `rerun`, `auditpack`, `demo:seed`) beyond
   their unit tests. The two findings in the ~21:35 entry were not re-checked against Phase 2 and may be answered by it.
+
+### 2026-09-19 ~23:15 ET — Phase 2, Person B: the spine runs across AR → revenue → forecast → close on one ledger; two independent reviews, 22 findings fixed (AthM23 + Claude Code session)
+
+- **Landed (all of B's Phase 2 column).** Conventions and event payloads: [`src/engines/README.md`](../src/engines/README.md).
+  `src/contract/` and every Person A directory were **not edited**. New lane-B tables are in `src/ledger/schema-b.sql`
+  (`rev_schedule`, `rev_schedule_line`, `rev_recognition`, `contract_modification`, `forecast_version`, `mirror_log`, `ripple`).
+  - *Revenue schedule engine* (`src/engines/revenue/`): ratable in integer cents by cumulative floor differencing, so
+    lines sum exactly to contract value (a reviewer's 20,000-case fuzz held). On `ar.credit_memo.posted`: prospective
+    revision, `rev.schedule.revised`, month-end `rev_recognition` through `proposeEntry`, deferred-revenue tie-out.
+    **Double-hit guard:** a memo that debited 4000/4900 already cut that month's revenue, so that month's line never
+    moves too; one decision can revise a schedule once (`cause_decision_id` UNIQUE).
+  - *13-week forecast* (`src/engines/forecast/`): direct method, one new version per change (`<date>/v<n>`), opening
+    cash asserted equal to GL 1000, scheduled billing priced from the active revenue schedule, recurring AP projected
+    from history, `forecast.updated` with a per-week diff and `beyond_horizon {monthly_delta_cents, through}`.
+    **Payroll is not modelled** (the world has none) and the summary says so.
+  - *Close conductor* (`src/close/`): an 11-item `checklist_item` DAG for the open period. An item is done when its
+    condition holds in the ledger; events only trigger re-evaluation, and a done item can go back. It never locks.
+  - *Drift comparator C1* (`src/drift/crmVsSchedule.ts`): CRM deal value vs the active schedule. Opens a revenue intent
+    (no `case_json`, so A's worker ignores it) and resolves it, with one `drift.explained`, once an **active** fact in
+    force on the world's date explains the difference.
+  - *QuickBooks mirror* (`src/mirror/`, `pnpm mirror [--live]`): Payment, CreditMemo, the zero-amount Payment that
+    applies it, workpaper and source email as attachments; everything else is logged `skipped` (JournalEntry is Phase 3).
+    Dry run by default. Identity in QuickBooks is the natural key (PaymentRefNum, `CM-<invoice>[-n]` + customer), so a
+    local `--reset` adopts what is there instead of duplicating it.
+  - *Console v0* (still the zero-dependency server): drift board incl. C1, close checklist, forecast board, and the
+    intent ripple view (lanes AR → Revenue → Forecast → Close → Drift → QuickBooks, v1/v2 schedule table, weekly forecast
+    delta, F/E/P/J workpaper with the quote highlighted). Opens directly at `#intent=<id>`. Never 500s on an empty db.
+  - *Spine runner* (`pnpm spine [--approve-as U] [--recognise [--recognise-as U]] [--qbo-live]`, `src/spine/`): the
+    walking skeleton, then every subscriber drains the bus until a full round does nothing. Idempotent: re-running
+    continues from wherever a person's approval left it. `src/engines/ripple.ts` records what each intent changed per
+    function with the amounts.
+- **Measured** (local stores, no model key, no external write): `pnpm typecheck` clean; `pnpm test` → 58 files, **584
+  passing** (was 43 / 432). From a clean database, `pnpm seed --target=local --reset && pnpm spine --approve-as U_CTRL
+  --recognise --recognise-as U_CFO`: 11 cases; Initech's $1,200 credit memo is Dr 2400 / Cr 1200, approved by U_CTRL;
+  schedule v2 = 12 × $10,800 = $129,600 exactly; July Initech revenue $10,800 (not $12,000, not $9,600) and its deferred
+  revenue 0; forecast v2 −$2,400 in the horizon and −$1,200 a month through 2027-06-30; "AR concessions reviewed",
+  "Revenue schedules revised" and "Revenue recognised per schedule" tick; CRM $144,000 vs schedule $129,600 is open
+  until the fact is approved, then explained with nobody asked; AR tied, deferred revenue tied, trial balance foots; a
+  second run works 0 cases and changes nothing. The period is correctly **not** ready to lock: BTX-0072 ($15,000, parent
+  pays for subsidiary) is unapplied, 4 cases wait on a person, accruals are Phase 3. The console was checked in headless
+  Chrome (main page and the INV-1042 ripple), **superseding the two earlier "not checked in a browser" notes**.
+- **The Initech investigation in those runs is a scripted stand-in** (`src/spine/scripted.ts`), used only when
+  `ANTHROPIC_API_KEY` is unset (it is empty on this machine). It acts only through A's tools, so search, the kernel's
+  quote check, materiality and the approval gate apply, but it knows the answer. **Not run: the spine with a real model
+  tier.**
+- **Two independent adversarial reviews (read-only, each finding reproduced with a probe) found 22 defects in the first
+  version, 6 of them wrong-money or duplicate-write paths. All 22 are fixed; 20 have a regression test (the two without are wording in the AR ripple summary and a tighter guard in the scripted stand-in).** The worst:
+  a repeated concession compounded ($10,800 → $9,720; the percentage is now applied to the version-1 line) · a
+  recognition parked at $12,000 before the schedule moved could still be approved (now withdrawn by the revision, and
+  the spine refuses to approve an amount the active schedule no longer says) · a memo arriving after its month had
+  posted left deferred revenue at −$1,200 with the tie-out green (now red, plus a true-up intent for a person) ·
+  future months could be recognised against this month's billing · the close item read done on the wrong amount · after
+  a local reset the mirror would have created a second Payment and CreditMemo in QuickBooks · a POST was retried after
+  a 5xx (creates now carry a deterministic `requestid`; a POST without one is never retried) · `--approve-as` activated
+  every candidate fact in the database (now only the fact the approved memo rests on). Say this in the limitations
+  section, as with A's review: the happy path was green before any of these were found.
+- **Findings for Karan (Person A's lane; not changed here):**
+  1. **`approveDecision` does not treat an earlier `rejected` approval as final.** A decision that was declined can be
+     approved later by id and posts. Reproduced in `src/engines/revenue/__tests__/regressions.test.ts` ("a recognition
+     parked at the old amount…"): the withdrawn $12,000 recognition still posts, July revenue becomes $22,800 and
+     deferred revenue −$12,000. Lane B makes it loud (tie-out red, close item not done) but cannot prevent it. Two lines
+     in `src/runtime/approve.ts` would. Not fixed on `main` as of `c205715`.
+  2. A `rev_recognition` at or above $500 always parks (materiality applies to the whole amount), so month-end
+     recognition is one click per contract, and **Initech's $10,800 is above the controller's $10,000 limit, so it
+     needs the CFO**; a wrong approver is a terminal BLOCK. Decide whether recognition off an approved schedule should
+     count as adjustment 0 like an exact cash match. A revenue pack check at the post gate ("amount equals the active
+     schedule line and does not exceed deferred") would also close finding 1 for this kind.
+  3. To give agents the new reads, spread `REVENUE_TOOL_SPECS`, `FORECAST_TOOL_SPECS` and `CLOSE_TOOL_SPECS` into
+     `READ_TOOL_SPECS` (`rev.schedule`, `forecast.get`, `close.checklist`). B did not edit `src/agents/`.
+  4. Lane B writes `artifact` rows for schedule versions, forecast versions, checklist ticks and QuickBooks objects
+     (through `recordRipple`), and the revenue engine records its own withdrawal as an `approval` row with
+     `approver_kind = 'controller_agent'`, `approver_id = 'engine:revenue'`, because the contract has no third kind.
+- **UNVERIFIED, QuickBooks mirror live.** No create, upload or delete was sent to the sandbox in this session, on
+  purpose: creating the Initech CreditMemo now would make the demo's live run *adopt* it rather than show it appear,
+  and `--reset` against QuickBooks is still unexercised. Verified read-only: INV-1042 is Invoice 150, Initech is
+  Customer 64, the item is 19; QuickBooks' own credit applications are TotalAmt-0 Payments with two linked lines, which
+  is the shape the mirror sends; PaymentRefNum and DocNumber filters work. **Not verified:** the `/upload` part names
+  and response, `requestid` replay, the sandbox's `AutoApplyCredit: true` applying the memo by itself (the mirror looks
+  for that and adopts it), and omitting `DepositToAccountRef`. First live run: `pnpm seed --target=quickbooks`, then
+  `pnpm mirror --live --verbose` on a database where the spine has run; expect up to 10 Payments, 1 CreditMemo, 1
+  application and 2 attachments. **Blocked on a human (Atharv): when to spend that first live run.**
+- Not built (not in B's Phase 2 column, noted so nobody assumes it): billing lowering future invoices, flux note,
+  accruals, bank rec pack, JournalEntry mirror, a long-running process (everything here is one pass per command).
+- This working tree also holds another session's uncommitted research (`context/research/storytelling/`, a sponsor PDF,
+  and the two entries above this one). They were left uncommitted and untouched by this commit.
