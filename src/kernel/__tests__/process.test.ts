@@ -31,7 +31,7 @@ function materialMemo(over: Partial<Proposal> = {}): Proposal {
     kind: "credit_memo",
     applications: [{ doc_id: "INV-9001", amount_cents: 120_000 }],
     entries: [line(DEFERRED, 120_000, 0), line(AR, 0, 120_000)],
-    evidence: [{ claim: "shortfall agreed", trace_id: "t-1" }],
+    evidence: [{ claim: "shortfall agreed", trace_id: "t-1", quote: "shortfall agreed by the CEO" }],
     ...over,
   });
 }
@@ -120,7 +120,7 @@ describe("P6 accruals say how they reverse", () => {
     makeProposal({ function: "close", kind: "accrual", entries: [line(EXPENSE, 9_000, 0), line(AR, 0, 9_000)], ...over });
 
   it("passes when reversal_mode is set", () => {
-    const proposal = accrual({ reversal_mode: "auto_next_period", evidence: [{ claim: "accrue", trace_id: "t-1" }] });
+    const proposal = accrual({ reversal_mode: "auto_next_period", evidence: [{ claim: "accrue", trace_id: "t-1", quote: "shortfall agreed" }] });
     expect(statusOf(runKernel(proposal, makeCtx(world), "proposal"), "P6")).toBe("pass");
   });
 
@@ -200,7 +200,7 @@ describe("P2 approval present when required", () => {
       kind: "credit_memo",
       entries: [line(DEFERRED, 40_000, 0), line(AR, 0, 40_000)],
       applications: [{ doc_id: "INV-9001", amount_cents: 40_000 }],
-      evidence: [{ claim: "small goodwill credit", trace_id: "t-1" }],
+      evidence: [{ claim: "small goodwill credit", trace_id: "t-1", quote: "agreed by the CEO" }],
       judgment: [{ note: "goodwill sizing", confidence: "high" }],
     });
     const ctx = makeCtx({ ...world, approvers: [...world.approvers, approver("agent:controller", 5_000_000)] }, {

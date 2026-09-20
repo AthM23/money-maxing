@@ -88,10 +88,16 @@ async function runTier(
   return { status: "done", routes: route ? [...priorRoutes, route] : priorRoutes, final_route: route, tier_used: tier, decision_id: decisionId, report, notes };
 }
 
+const SEVERITY: readonly Route[] = ["BLOCK", "ESCALATE", "REFUSE", "PROPOSE", "AUTO"];
+
 /** The route comes from what actually happened at the write tools, never from what the agent says it did. */
 function settleRoute(db: Db, decisionId: string, report: InvestigationReport, seen: ToolCallResult[]): Route | null {
-  const stored = db.prepare("SELECT route FROM decision WHERE id = ?").get(decisionId) as { route: Route | null } | undefined;
-  if (stored?.route) return stored.route;
+  const actor = db.prepare("SELECT actor, intent_id FROM decision WHERE id = ?").get(decisionId) as { actor: string; intent_id: string };
+  const routed = db.prepare("SELECT route FROM decision WHERE intent_id = ? AND actor = ? AND route IS NOT NULL AND rowid >= (SELECT rowid FROM decision WHERE id = ?)")
+    .all(actor.intent_id, actor.actor, decisionId) as { route: Route }[];
+  // An agent may propose more than one entry. The case is scored on the most restrictive thing that happened.
+  const worst = SEVERITY.find((r) => routed.some((d) => d.route === r));
+  if (worst) return worst;
   const outputs = seen.map((s) => s.output as { status?: string });
   if (outputs.some((o) => o.status === "opened" || o.status === "already_open")) {
     setRoute(db, decisionId, "ESCALATE");

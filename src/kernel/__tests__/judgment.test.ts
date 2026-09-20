@@ -30,7 +30,7 @@ function memo(over: Partial<Proposal> = {}): Proposal {
     kind: "credit_memo",
     applications: [{ doc_id: "INV-9001", amount_cents: 120_000 }],
     entries: [line(DEFERRED, 120_000, 0), line(AR, 0, 120_000)],
-    evidence: [{ claim: "shortfall agreed", trace_id: "t-1" }],
+    evidence: [{ claim: "shortfall agreed", trace_id: "t-1", quote: "shortfall agreed by the CEO" }],
     ...over,
   });
 }

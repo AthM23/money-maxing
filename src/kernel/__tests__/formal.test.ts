@@ -152,7 +152,7 @@ describe("F3 control accounts stay tied", () => {
       party_id: ACME,
       applications: [{ doc_id: "BILL-7", amount_cents: 50_000 }],
       entries: [line(EXPENSE, 50_000, 0), line(AP, 0, 50_000)],
-      evidence: [{ claim: "bill received", trace_id: "t-1" }],
+      evidence: [{ claim: "bill received", trace_id: "t-1", quote: "Acme bill 7" }],
     });
     const ctx = makeCtx({ ...world, traces: [trace("t-1", "Acme bill 7 for 50,000 cents")] });
     expect(markOf(runKernel(proposal, ctx, "proposal"), "F3").detail).toContain("AP 3050000 = 3050000");

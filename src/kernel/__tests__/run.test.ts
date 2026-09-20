@@ -146,7 +146,7 @@ describe("requires_approval", () => {
   const immaterial = makeProposal({
     kind: "credit_memo",
     entries: [line(DEFERRED, 1_000, 0), line(AR, 0, 1_000)],
-    evidence: [{ claim: "tiny", trace_id: "trace:ceo-email" }],
+    evidence: [{ claim: "tiny", trace_id: "trace:ceo-email", quote: CEO_EMAIL_QUOTE }],
   });
   const world = { traces: [trace("trace:ceo-email", CEO_EMAIL_TEXT)] };
 
@@ -164,7 +164,7 @@ describe("requires_approval", () => {
     const atThreshold = makeProposal({
       kind: "credit_memo",
       entries: [line(DEFERRED, 50_000, 0), line(AR, 0, 50_000)],
-      evidence: [{ claim: "at the line", trace_id: "trace:ceo-email" }],
+      evidence: [{ claim: "at the line", trace_id: "trace:ceo-email", quote: CEO_EMAIL_QUOTE }],
     });
     expect(runKernel(atThreshold, makeCtx(world), "proposal").requires_approval).toBe(true);
   });
@@ -216,7 +216,7 @@ describe("the checkable fraction", () => {
   const clean = makeProposal({
     kind: "credit_memo",
     entries: [line(DEFERRED, 1_000, 0), line(AR, 0, 1_000)],
-    evidence: [{ claim: "tiny", trace_id: "trace:ceo-email" }],
+    evidence: [{ claim: "tiny", trace_id: "trace:ceo-email", quote: CEO_EMAIL_QUOTE }],
   });
 
   it("counts every mark in the denominator and re-performed marks in the numerator", () => {

@@ -93,8 +93,21 @@ export function checkE5(proposal: Proposal, ctx: KernelContext): Mark {
     const detail = `${nonStandard.length} non-standard line(s) on ${accounts.join(", ")} with 0 evidence items`;
     return failMark("E", "E5", detail, accounts);
   }
-  const ok = `${nonStandard.length} non-standard line(s) on ${accounts.join(", ")} carry ${proposal.evidence.length} evidence item(s)`;
+  const covered = proposal.policy_refs.length > 0 || proposal.fact_refs.length > 0;
+  const onPoint = proposal.evidence.filter((e) => Boolean(e.quote) && aboutThisParty(ctx.getTrace(e.trace_id)?.party_id, proposal.party_id));
+  if (!covered && onPoint.length === 0) {
+    const detail = `${accounts.join(", ")}: no quoted evidence from a source about ${proposal.party_id}, and no policy or fact cited`;
+    return failMark("E", "E5", detail, accounts);
+  }
+  const ok = covered
+    ? `judgment on ${accounts.join(", ")} rests on cited policy or fact (checked at J1/J2) with ${proposal.evidence.length} evidence item(s)`
+    : `judgment on ${accounts.join(", ")} rests on ${onPoint.length} quoted source(s) about ${proposal.party_id}`;
   return verdictMark("E", "E5", [], ok, accounts);
+}
+
+/** A source counts for a party if it is filed under that party, or under nobody (a company-wide memo). */
+function aboutThisParty(tracePartyId: string | null | undefined, partyId: string): boolean {
+  return tracePartyId === partyId || tracePartyId === null || tracePartyId === undefined;
 }
 
 export function evidenceMarks(proposal: Proposal, ctx: KernelContext): Mark[] {

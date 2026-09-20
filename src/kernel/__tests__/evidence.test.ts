@@ -215,7 +215,7 @@ describe("E5 adjustment evidence", () => {
   const world = { docs: [invoice("INV-9001", INITECH, 120_000)], traces: [trace("t-1", "uncollectible, per Dana")] };
 
   it("passes when the non-standard account carries evidence", () => {
-    const proposal = writeOff({ evidence: [{ claim: "uncollectible", trace_id: "t-1" }] });
+    const proposal = writeOff({ evidence: [{ claim: "uncollectible", trace_id: "t-1", quote: "uncollectible" }] });
     const mark = markOf(runKernel(proposal, makeCtx(world), "proposal"), "E5");
     expect(mark.status).toBe("pass");
     expect(mark.refs).toEqual([BAD_DEBT]);

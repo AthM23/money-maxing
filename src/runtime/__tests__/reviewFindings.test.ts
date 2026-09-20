@@ -137,3 +137,36 @@ describe("found by the controller agent on the first real model run", () => {
     expect(proposeEntry(db, creditMemo(), agent, deps).status).toBe("pending_approval");
   });
 });
+
+describe("review follow-ups (plausible findings, second pass)", () => {
+  it("evidence has to be on point: an unquoted trace, or a quote from another customer's mail, does not carry a judgment amount", () => {
+    const db = seedInitech();
+    const unquoted = { ...creditMemo(), evidence: [{ claim: "see email", trace_id: "tr_email_1" }] };
+    const r1 = proposeEntry(db, unquoted, agent, deps);
+    expect(r1.status).toBe("rejected");
+    if (r1.status === "rejected") expect(r1.failed.map((m) => m.check)).toContain("E5");
+
+    db.prepare("INSERT INTO trace (id, source, kind, external_id, event_time, recorded_time, ingested_at, party_id, content_hash, payload_json) VALUES ('tr_other','gmail','email','m2','2026-06-01T00:00:00Z','2026-06-01T00:00:00Z','2026-09-19T00:00:00Z','wayne','h','{\"body\":\"Wayne gets 10% off\"}')").run();
+    const offPoint = { ...creditMemo(), evidence: [{ claim: "discount", trace_id: "tr_other", quote: "Wayne gets 10% off" }] };
+    const r2 = proposeEntry(db, offPoint, agent, deps);
+    expect(r2.status).toBe("rejected");
+    if (r2.status === "rejected") expect(r2.failed.map((m) => m.check)).toContain("E5");
+  });
+
+  it("a bank line has to point the right way: money out cannot back a cash application, and a credit memo cites no bank line", () => {
+    const db = seedInitech();
+    db.exec("INSERT INTO bank_txn (id, posted_date, amount_cents, descriptor, method, party_id) VALUES ('BTX-OUT','2026-07-12',-1080000,'ACH OUT','ach','initech')");
+    const r = proposeEntry(db, { ...applyPayment(), bank_txn_id: "BTX-OUT", entries: [
+      { account: ACCOUNTS.cash, debit_cents: 1080000, credit_cents: 0, memo: "x" }, { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 1080000, memo: "x" }] }, agent, deps);
+    expect(r.status).toBe("rejected");
+    expect(proposeEntry(db, { ...creditMemo(), bank_txn_id: "BTX-1" }, agent, deps).status).toBe("rejected");
+  });
+
+  it("a dispute hold reduces nothing, so it needs no approver with authority over the disputed amount", () => {
+    const db = seedInitech();
+    const hold = { ...creditMemo(), kind: "dispute_hold" as const, entries: [], terms_change: undefined, applications: [{ doc_id: "INV-1042", amount_cents: 1200000 }] };
+    const r = proposeEntry(db, hold, agent, deps);
+    expect(r.status).toBe("posted");
+    expect(db.prepare("SELECT status, open_cents FROM invoice WHERE id = 'INV-1042'").get()).toEqual({ status: "disputed", open_cents: 1200000 });
+  });
+});

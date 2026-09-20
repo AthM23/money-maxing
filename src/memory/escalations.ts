@@ -18,6 +18,8 @@ export interface OpenEscalationInput {
   deadline?: string;
   /** Date of the case being asked about. Lets a dated or one-time answer stop covering later cases. */
   entry_date?: string;
+  /** Size of the case in cents. An answer to a small question never covers a large one. */
+  amount_cents?: number;
 }
 
 export type OpenEscalationResult =
@@ -31,7 +33,7 @@ export function openEscalation(db: Db, clock: Clock, input: OpenEscalationInput)
     .prepare("SELECT id, answer_json FROM escalation WHERE dedupe_key = ? ORDER BY asked_at DESC LIMIT 1")
     .get(input.dedupe_key) as { id: string; answer_json: string | null } | undefined;
   const priorAnswer = prior?.answer_json ? ((safeJson(prior.answer_json) as Record<string, unknown> | null) ?? {}) : null;
-  if (prior && priorAnswer && covers(priorAnswer, input.entry_date)) {
+  if (prior && priorAnswer && covers(priorAnswer, input.entry_date, input.amount_cents)) {
     return { status: "already_answered", escalation_id: prior.id, answer: priorAnswer };
   }
   if (prior && !priorAnswer) return { status: "already_open", escalation_id: prior.id };
@@ -52,10 +54,12 @@ export function openEscalation(db: Db, clock: Clock, input: OpenEscalationInput)
 }
 
 /** A stored answer covers a later case only if it was given as standing and has not lapsed by that case's date. */
-function covers(answer: Record<string, unknown>, entryDate?: string): boolean {
+function covers(answer: Record<string, unknown>, entryDate?: string, amountCents?: number): boolean {
   if (answer.uses !== "standing") return false;
   const validTo = typeof answer.valid_to === "string" ? answer.valid_to : null;
-  return !(validTo && entryDate && entryDate > validTo);
+  if (validTo && entryDate && entryDate > validTo) return false;
+  const ceiling = typeof answer.max_amount_cents === "number" ? answer.max_amount_cents : null;
+  return !(ceiling !== null && amountCents !== undefined && amountCents > ceiling);
 }
 
 export type AnswerResult =
@@ -77,8 +81,10 @@ export function answerEscalation(
     return { status: "unauthorised", escalation_id: escalationId, reason: `${answerer} was not asked and is not in the approval matrix` };
   }
   const run = db.transaction(() => {
+    // The answer carries the answerer's authority: it never covers a later case larger than they could approve.
+    const limit = db.prepare("SELECT limit_cents FROM approver WHERE id = ?").get(answerer) as { limit_cents: number } | undefined;
     db.prepare("UPDATE escalation SET answer_json = ?, answered_at = ?, slack_ts = COALESCE(?, slack_ts) WHERE id = ?")
-      .run(JSON.stringify({ ...answer, answered_by: answerer }), clock.now(), slackTs ?? null, escalationId);
+      .run(JSON.stringify({ ...answer, answered_by: answerer, max_amount_cents: limit?.limit_cents ?? 0 }), clock.now(), slackTs ?? null, escalationId);
     db.prepare("UPDATE intent SET status = 'open' WHERE id = ? AND status = 'waiting_on_human'").run(row.intent_id);
     emit(db, clock, { topic: "human.escalation.answered", from_function: "memory", intent_id: row.intent_id,
       payload: { escalation_id: escalationId, answered_by: answerer } });

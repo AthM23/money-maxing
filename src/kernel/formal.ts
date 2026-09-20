@@ -70,6 +70,9 @@ function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
   const txn = ctx.getBankTxn(proposal.bank_txn_id);
   if (!txn) return [`bank transaction ${proposal.bank_txn_id} not found`];
   const problems: string[] = [];
+  if (NO_CASH_KINDS.has(proposal.kind)) problems.push(`kind ${proposal.kind} moves no cash and must not cite bank line ${txn.id}`);
+  if (INBOUND_KINDS.has(proposal.kind) && txn.amount_cents <= 0) problems.push(`kind ${proposal.kind} needs money in, but bank line ${txn.id} is ${txn.amount_cents}`);
+  if (proposal.kind === "schedule_payment" && txn.amount_cents >= 0) problems.push(`a payment out needs a debit, but bank line ${txn.id} is ${txn.amount_cents}`);
   const total = applicationsTotal(proposal);
   const spent = ctx.bankTxnAppliedCents?.(txn.id) ?? 0;
   const available = Math.abs(txn.amount_cents) - spent;
@@ -82,6 +85,7 @@ function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
   return problems;
 }
 
+const INBOUND_KINDS: ReadonlySet<string> = new Set(["apply_payment", "customer_credit"]);
 const NO_CASH_KINDS: ReadonlySet<string> = new Set(["credit_memo", "write_off", "dispute_hold", "accrual", "payroll_accrual", "amortization", "rev_recognition"]);
 
 /** F8 — the entry has the shape its kind claims. A concession or write-off moves no cash; only a cash application does. */

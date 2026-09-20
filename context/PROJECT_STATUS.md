@@ -452,3 +452,25 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   stronger tier once; a person sees only what survives, with the controller's notes.
 - `pnpm test` → 25 files, **270 passing**. Model ids per Anthropic's current list: `claude-haiku-4-5`, `claude-sonnet-5`,
   `claude-opus-5`.
+
+### 2026-09-19 ~20:55 ET — Reviewer re-probe: four worst holes confirmed closed; second batch of findings fixed (Person A)
+
+- The reviewer re-probed findings 1, 2, 4 and 5 against commit `15868e6` and reported each **closed** (the cash-booked
+  write-off now rejects on F8, and the same trick on a credit memo too; a twin proposal returns `not_pending`; the
+  stored route is returned; a second approval of a dispute hold does nothing and a used one-time fact is refused).
+  No style-rule violations found (no function over 50 lines, no nesting past 4, no `console.log`).
+- Second batch, reported as plausible rather than reproduced, fixed anyway with regression tests:
+  - **E5 counted evidence, not relevance.** One resolvable trace used to satisfy it. Now a judgment amount needs either
+    a cited policy or fact (checked at J1 and J2) or at least one **quoted** source filed under this party or under
+    nobody. A quote from another customer's mail no longer carries it. Whether the quote *means* what is claimed
+    remains judgment, which is the controller's job.
+  - **F2 ignored payment direction.** A cash application needs money in; a payment out needs a debit; a kind that moves
+    no cash may not cite a bank line.
+  - **A standing answer could cover a much larger case.** An answer now carries the answerer's approval limit and never
+    covers a later case above it.
+  - **Only the first proposal in a run was scored.** The judgment route is now the most restrictive outcome of
+    everything the agent proposed for the intent (BLOCK > ESCALATE > REFUSE > PROPOSE > AUTO).
+  - The LIKE-wildcard finding no longer applies: ranked search matches terms in code, not in SQL patterns.
+- One behaviour change the reviewer flagged, reversed on purpose: a dispute hold reduces nothing, so it carries no
+  adjustment and needs no approver with authority over the disputed amount. It is the safe default when nobody answers.
+- `pnpm test` → 25 files, **273 passing**.

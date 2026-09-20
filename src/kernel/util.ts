@@ -61,7 +61,7 @@ export function linesOn(proposal: Proposal, account: string): EntryLine[] {
 }
 
 /** Kinds that reduce a receivable or a payable WITHOUT money moving. Whatever they apply is judgment, however it is booked. */
-const NON_CASH_REDUCING: ReadonlySet<string> = new Set(["credit_memo", "write_off", "customer_credit", "dispute_hold", "bank_adjustment"]);
+const NON_CASH_REDUCING: ReadonlySet<string> = new Set(["credit_memo", "write_off", "customer_credit", "bank_adjustment"]);
 
 /**
  * The judgment amount: what this entry moves outside the control accounts (credit memo, write-off, accrual).
