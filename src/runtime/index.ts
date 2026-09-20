@@ -4,3 +4,4 @@ export { approveDecision, type ApprovalInput, type ApproveResult } from "./appro
 export { emit } from "./events.js";
 export { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "./config.js";
 export { readControlTotals } from "./kernelContext.js";
+export { openDecision, type IntakeInput } from "./persist.js";

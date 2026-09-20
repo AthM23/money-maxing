@@ -4,10 +4,12 @@ import type { ExtraCheck } from "../kernel/types.js";
 import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "./config.js";
 import type { Db } from "./db.js";
 import { buildKernelContext, type ContextMeta } from "./kernelContext.js";
-import { canonicalJson, insertDecision, insertWorkpaper, persistBlock, setRoute, type DecisionMeta } from "./persist.js";
+import { attachProposal, canonicalJson, insertDecision, insertWorkpaper, persistBlock, setRoute, type DecisionMeta } from "./persist.js";
 import { postEntry } from "./post.js";
 
 export interface ProposeMeta extends DecisionMeta {
+  /** A decision opened at intake. When absent, or already routed, a new decision is recorded. */
+  decision_id?: string;
   as_of?: string;
   features?: Record<string, string | number | boolean>;
   extra_checks?: ExtraCheck[];
@@ -41,7 +43,8 @@ export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: Ru
   const already = findPosted(db, proposal);
   if (already) return { status: "posted", decision_id: already.decision_id, route: "AUTO", entry_id: already.entry_id };
 
-  const decisionId = insertDecision(db, clock, proposal, meta);
+  const reuse = meta.decision_id && attachProposal(db, meta.decision_id, proposal, meta) ? meta.decision_id : undefined;
+  const decisionId = reuse ?? insertDecision(db, clock, proposal, meta);
   const ctxMeta: ContextMeta = {
     mode: meta.mode, as_of: meta.as_of, preparer: meta.actor, autonomy_level: meta.autonomy_level,
     approval: null, intent_id: proposal.intent_id, features: meta.features, extra_checks: meta.extra_checks,

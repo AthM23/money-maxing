@@ -90,7 +90,11 @@ export function apGlDelta(proposal: Proposal, ctx: KernelContext): number {
   return linesOn(proposal, ctx.control.ap_account).reduce((sum, l) => sum + l.credit_cents - l.debit_cents, 0);
 }
 
-const AR_REDUCING_KINDS: readonly ProposalKind[] = ["apply_payment", "credit_memo", "write_off", "dispute_hold"];
+/**
+ * Kinds that actually retire receivable. dispute_hold is deliberately not one of them: it only
+ * marks an invoice as disputed, posts no entry, and leaves the balance where it was.
+ */
+const AR_REDUCING_KINDS: readonly ProposalKind[] = ["apply_payment", "credit_memo", "write_off"];
 
 /** What the same proposal does to the subledgers, derived from its applications, not from its entry. */
 export function subledgerDeltas(proposal: Proposal, ctx: KernelContext): { ar: number; ap: number } {

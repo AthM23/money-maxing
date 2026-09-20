@@ -56,7 +56,14 @@ describe("P9 fiscal window", () => {
     expect(statusOf(runKernel(makeProposal(), makeCtx(world), "proposal"), "P9")).toBe("pass");
   });
 
-  it("fails an entry date in an invented year", () => {
+  it("fails an entry date before the window", () => {
+    const proposal = makeProposal({ entry_date: "2023-07-14" });
+    const mark = markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9");
+    expect(mark.status).toBe("fail");
+    expect(mark.detail).toContain("entry_date 2023-07-14 is outside the fiscal window 2026-01-01..2026-12-31");
+  });
+
+  it("fails an entry date in an invented future year", () => {
     const proposal = makeProposal({ entry_date: "2027-09-15" });
     const mark = markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9");
     expect(mark.status).toBe("fail");
@@ -64,18 +71,34 @@ describe("P9 fiscal window", () => {
   });
 
   it("passes a concession that runs through a renewal next year", () => {
-    const proposal = makeProposal({ terms_change: { pct_off: 10, until: "2027-06-30" } });
+    const proposal = makeProposal({ entry_date: "2026-07-14", terms_change: { pct_off: 10, until: "2027-06-30" } });
+    const mark = markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9");
+    expect(mark.status).toBe("pass");
+    expect(mark.detail).toContain("terms end 2027-06-30 on or before 2031-12-31");
+  });
+
+  it("fails a terms end date that is already in the past", () => {
+    const proposal = makeProposal({ entry_date: "2026-07-14", terms_change: { pct_off: 10, until: "2025-01-01" } });
+    expect(markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9").detail).toContain(
+      "terms_change.until 2025-01-01 is before the entry date 2026-07-14",
+    );
+  });
+
+  it("passes a terms end date on the entry date itself", () => {
+    const proposal = makeProposal({ entry_date: "2026-07-14", terms_change: { until: "2026-07-14" } });
     expect(statusOf(runKernel(proposal, makeCtx(world), "proposal"), "P9")).toBe("pass");
   });
 
-  it("fails a terms end date in the past", () => {
-    const proposal = makeProposal({ terms_change: { pct_off: 10, until: "2025-01-01" } });
-    expect(markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9").detail).toContain("is before the entry date");
+  it("passes a terms end date exactly on the five year horizon", () => {
+    const proposal = makeProposal({ entry_date: "2026-07-14", terms_change: { until: "2031-12-31" } });
+    expect(statusOf(runKernel(proposal, makeCtx(world), "proposal"), "P9")).toBe("pass");
   });
 
   it("fails an invented far-future terms end date", () => {
-    const proposal = makeProposal({ terms_change: { pct_off: 10, until: "2040-01-01" } });
-    expect(markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9").detail).toContain("is later than");
+    const proposal = makeProposal({ entry_date: "2026-07-14", terms_change: { pct_off: 10, until: "2040-01-01" } });
+    expect(markOf(runKernel(proposal, makeCtx(world), "proposal"), "P9").detail).toContain(
+      "terms_change.until 2040-01-01 is later than 2031-12-31",
+    );
   });
 });
 

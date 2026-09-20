@@ -169,6 +169,31 @@ describe("F3 control accounts stay tied", () => {
     );
   });
 
+  it("leaves both subledgers alone for a dispute hold, which retires nothing", () => {
+    const proposal = makeProposal({
+      kind: "dispute_hold",
+      applications: [{ doc_id: "INV-9001", amount_cents: 120_000 }],
+      entries: [],
+    });
+    const result = runKernel(proposal, makeCtx(world), "proposal");
+    expect(markOf(result, "F1").detail).toMatch(/^n\/a:/);
+    expect(statusOf(result, "F3")).toBe("pass");
+    expect(markOf(result, "F3").detail).toContain("AR 5000000 = 5000000");
+    expect(statusOf(result, "F2")).toBe("pass");
+    expect(result.verdict).toBe("accept");
+  });
+
+  it("still checks that a disputed amount fits the open balance", () => {
+    const proposal = makeProposal({
+      kind: "dispute_hold",
+      applications: [{ doc_id: "INV-9001", amount_cents: 2_000_000 }],
+      entries: [],
+    });
+    const result = runKernel(proposal, makeCtx(world), "proposal");
+    expect(markOf(result, "F2").detail).toContain("application 2000000 exceeds INV-9001 open balance 1200000");
+    expect(statusOf(result, "F3")).toBe("pass");
+  });
+
   it("fails and says so when the accounts were not tied before the proposal", () => {
     const ctx = makeCtx(world, { control: { ar_subledger_cents: 4_999_000 } });
     const mark = markOf(runKernel(makeProposal(), ctx, "proposal"), "F3");

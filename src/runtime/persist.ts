@@ -22,6 +22,30 @@ export function insertDecision(db: Db, clock: Clock, proposal: Proposal, meta: D
   return id;
 }
 
+export interface IntakeInput extends DecisionMeta {
+  intent_id: string;
+  function: string;
+}
+
+/** Open the decision at intake, before any investigation, so every step and cent is metered against it. */
+export function openDecision(db: Db, clock: Clock, input: IntakeInput): string {
+  const id = newId("dec");
+  db.prepare(
+    `INSERT INTO decision (id, intent_id, function, mode, decision_point_id, kind, actor, autonomy_level, tier, created_at)
+     VALUES (?, ?, ?, ?, ?, 'no_action', ?, ?, ?, ?)`,
+  ).run(id, input.intent_id, input.function, input.mode, input.decision_point_id ?? null, input.actor, input.autonomy_level,
+    input.tier ?? null, clock.now());
+  return id;
+}
+
+/** Attach a proposal to a decision opened at intake. Refused once that decision has a route. */
+export function attachProposal(db: Db, decisionId: string, proposal: Proposal, meta: DecisionMeta): boolean {
+  const info = db
+    .prepare("UPDATE decision SET kind = ?, proposal_json = ?, actor = ?, tier = ? WHERE id = ? AND intent_id = ? AND route IS NULL")
+    .run(proposal.kind, canonicalJson(proposal), meta.actor, meta.tier ?? null, decisionId, proposal.intent_id);
+  return info.changes === 1;
+}
+
 export function setRoute(db: Db, decisionId: string, route: Route): void {
   db.prepare("UPDATE decision SET route = ? WHERE id = ?").run(route, decisionId);
 }
