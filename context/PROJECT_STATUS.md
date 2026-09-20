@@ -811,3 +811,58 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   kernel-pack` 0 false auto-posts. **Not re-run on Phase 2:** the console API check and the ingest → worker hand-off from
   the ~21:35 entry, and none of Phase 2's own commands (`worker`, `learn`, `rerun`, `auditpack`, `demo:seed`) beyond
   their unit tests. The two findings in the ~21:35 entry were not re-checked against Phase 2 and may be answered by it.
+
+### 2026-09-19 22:02 ET — The judges' three stories on the merged world: what runs today, measured (Person A)
+
+Read against `context/judge-feedback-v2-2026-09-19.md` and Preet's capture of Maximor's homepage widget
+(`context/research/maximor-website-2026-09-19.md`: **Learns → Runs → Escalates → Improves**). Everything below was
+run on `main` with lanes A, B and C merged, on the locally seeded world (`pnpm seed --target=local --reset`).
+
+- **Learns / Runs, in code, $0.** `pnpm skeleton` with the model key blanked: 6 of 11 July receipts clear by exact
+  match. `pnpm learn data/footnote.db --replay --approve-as U_CTRL`: replay of the six Q2 decisions agrees 0 of 6;
+  compile drafts **`SHORT-PAY-01 v1 · wire short ≤ $45.00 → write_off to 6150`** (backtest 5 of 6, the one
+  other-account outlier shown to the approver); approved; replay again agrees 5 of 6 with the sixth triaged as human
+  inconsistency, so `ar/write_off` earns auto on six covered decisions. `pnpm worker data/footnote.db --code-only`:
+  the $35 and $25 wire shortfalls close on the rule. **8 of 11 resolved, 0 model calls, 280 of 280 tick marks
+  re-performed in code, AR control = subledger.**
+- **Improves (new).** Rules now carry a code and a version and are never edited. When a person approves something
+  beyond the rule (a $60 wire fee against a $45 ceiling), the next `pnpm learn` drafts **`SHORT-PAY-01 v2 · wire short
+  ≤ $60.00`**, backtested again on every closed decision and every entry a person approved this month; approving v2
+  retires v1 in the same transaction, and the next $55 fee closes on v2 with no model call. Compiling with nothing new
+  drafts nothing. Contract change, additive: `policy` gains nullable `code`, `version` (default 1) and `supersedes`;
+  `openDb` adds them to databases that predate it. **Atharv: shout if the console reads `policy`.**
+- **The reason lives in somebody's inbox, on real models.** Initech through `pnpm worker` at earned autonomy: Haiku,
+  21 turns, **$0.069**, found the CEO's email in the seeded mail store, quoted it verbatim, proposed Dr 2400 / Cr 1200
+  for $1,200 with two quoted sources; the kernel accepted; it parked for a person because the amount is over $500 and
+  `credit_memo` has no track record. Wayne is running on the model tiers as this is written (Haiku gave up after 32
+  turns and $0.069 and handed up; only tier 2 and above may ask a person).
+- **An entry you can defend.** `pnpm auditpack data/footnote.db 2026-07 demo 5`: population 12, all 12 sampled (10
+  must-test), **12 of 12 re-performed clean, 0 findings**. Then one character of a cited bank line was changed after
+  posting (`WIRE` → `W1RE`): the pack flags exactly that entry, `evidence_invalidated`, 11 of 12 clean; restored, 12 of
+  12 again. The first attempt raised four false findings: the skeleton had applied the cash before the worker took its
+  snapshot, so the snapshot showed balances after posting. The snapshot now adds back what earlier passes posted.
+- **Cash application, the part that is not the easy 90%** (`src/router/__tests__/cashDepth.test.ts`): one payment
+  naming three invoices is applied to each and posts from code; a second payment for an invoice already paid is held
+  as unapplied cash in customer credits with the bank line quoted as its source and parks for a person (the kernel had
+  been rejecting it for lack of a quoted source, leaving no record at all). Not built: the $12.40-style small
+  difference as its own seeded case (it would be learned exactly as the wire fee is, given history).
+- **Three rules changed under this, each with tests:**
+  1. *Trust is earned only where there is judgment.* A cash application planned by code that touches only control
+     accounts carries no judgment amount and is fully re-performed by the kernel, so under `"earned"` it posts from
+     day one. An overpayment held as a customer credit is judged like everything else.
+  2. *An intent closes on its end condition in the ledger* (lane B's `end_condition_json`: bank line applied,
+     documents settled), not because an entry posted. A dispute hold leaves it with people.
+  3. *The code tier stops at an entry that parks.* Nothing is adjusted on top of cash a person has not approved yet;
+     the case comes round again and is planned from the ledger as it then stands.
+- **Human desk (new, `pnpm desk <db>`):** every open question goes to the person it was addressed to and every parked
+  entry to the least senior approver whose limit covers it (not the person who asked for the credit, when someone else
+  can sign), each once, with the controller's note attached; the request is recorded on the decision's timeline
+  (`decision_step.kind = 'human_request'`). It keeps the Socket Mode connection open so clicks come back through
+  `recordHumanAnswer` and `approveDecision`. **Not yet run against the live workspace**: it sends real DMs, and a
+  person has to click. Slack tokens are verified read-only.
+- **Paid runs, disclosed:** `pnpm skeleton` loads `.env`, so with the Anthropic key present it runs the model tiers. One
+  such run was started by mistake and killed after about $0.13. For code-only runs blank the key in the shell
+  (`export ANTHROPIC_API_KEY= OPENAI_API_KEY=`) and use `pnpm worker --code-only`. Deliberate spend so far tonight on
+  the merged world: Initech $0.069, Wayne in progress.
+- `pnpm test` → 45 files, **443 passing**; typecheck clean. The independent review of tonight's lane A commits is
+  still running; its findings will be logged with their fixes.
