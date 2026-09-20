@@ -38,6 +38,9 @@ export function earnedLevel(db: Db, fn: string, kind: string): AutonomyLevel {
 export function resolveAutonomy(db: Db, setting: AutonomySetting, subject: AutonomySubject, tier: number | undefined): AutonomyLevel {
   if (setting !== "earned") return setting;
   if (tier === 0 && subject.kind === "apply_payment" && subject.entries.every((l) => CONTROL_ACCOUNTS.has(l.account))) return "auto";
+  // Realized FX planned by code is the same kind of thing: arithmetic the kernel re-performs to the cent (F9) from
+  // the two rates and the bank's own advice. There is no judgment in it to earn trust for.
+  if (tier === 0 && subject.kind === "fx_realized") return "auto";
   const level = earnedLevel(db, subject.function, subject.kind);
   if (level !== "auto") return level;
   const compiled = tier === 0 || subject.policy_refs.length > 0 || subject.fact_refs.length > 0;

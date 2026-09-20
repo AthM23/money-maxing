@@ -1,0 +1,12 @@
+customers_scored,18
+customers_exact,15
+customer_accuracy,0.8333
+total_absolute_error_usd,79013.00
+missing_customers,0
+unexpected_customers,0
+
+Mismatches:
+customer_id,expected_net_spend_usd,actual_net_spend_usd,absolute_error_usd
+C001,290107.51,251364.99,38742.52
+C003,319435.57,302895.33,16540.24
+C015,137276.66,113546.42,23730.24

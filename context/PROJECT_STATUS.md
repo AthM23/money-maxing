@@ -1340,3 +1340,40 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   answer's wording, QuickBooks multicurrency, customer name, the reader's task on this scene) · who is Person A and B
   under the team roadmap (it did not infer names; the 19:55 entry says A = Karan, B = Atharv) · confirmation that the
   Plume project was created before 23:59 on 09-19.
+
+### 2026-09-20 00:07 ET — The international main scene runs through the harness; Gate 1 answered; the global July rehearsed end to end (Person A)
+
+- **Owned plainly:** the 22:17 entry recommended against building foreign currency tonight although the site read had
+  flagged it from Kiteworks. Karan asked for the harness to be built to the case studies; that call was wrong and is
+  reversed here. A second, narrower research pass on what global cash teams actually get wrong is in
+  `context/research/global-cash-pains-2026-09-20.md` (sources inline; includes the mistakes a finance judge would catch).
+- **Gate 1** (`context/GATE1_ANSWERS_A.md`): booked rate 1.1000; FX on the right path (own kind, own account, kernel
+  check), not misc expense; the $40 fee rides compiled history for this customer, tested on the fee alone; the standing
+  answer is a **2% rate** with an end date, not an amount; no QuickBooks multicurrency; rename display names, keep ids.
+- **Built and on `main`, additive contract change:** kind `fx_realized`, account `7100 Realized FX gain/loss`, tables
+  `invoice_fx` and `bank_txn_fx` (**lane B: do not create `bank_txn_fx` in `schema-b.sql`**), kernel check **F9**
+  (foreign amount × (booked − settlement rate), both from records, the bank's advice cited and stating the amount and
+  the rate; once per receipt; losses only). The code tier splits a converted receipt's shortfall into the bank's fee
+  (quoted from the advice, under an approved rule tested on the fee alone), the rate effect, and what the customer
+  held back; only the last goes to memory, a rule or the judgment tiers, who are told how much is actually left. A
+  person's answer books only what is still open on the invoice.
+- **Measured on the main scene** (`src/demo/scenario/mainScene.ts`, stand-ins for the model tiers, no model call):
+  code posts 105,800.00 + 40.00 + 1,960.00; 2,200.00 stays open; **one** question covers both Vossberg receipts; the
+  CFO's standing 2% to 30 September settles the first after a person's approval and prepares the add-on invoice's
+  $550 credit **without asking** (parked: over $500); nothing for another customer; replay posts and asks nothing
+  twice; the auditor finds nothing. Refused, each tested: the whole shortfall called FX, FX in 6990, FX without the
+  advice cited, FX twice on one receipt.
+- **The global July rehearsal** (`src/demo/scenario/`, `context/SCENARIO.md`): ten USD receipts from six countries
+  into four accounts at three banks, run through Learns, Runs (with a document reader), the 2%, people acting,
+  Improves (rule v2), run 2 from cold with only memory, and the auditor. Gaps it exposed, fixed: a fact an agent
+  proposed could never be approved (inbox `approve-fact` / `reject-fact`, a Slack "Remember this?" message, and
+  waiting cases of that customer reopen); the code tier never used a payer fact; carried memory broke on a
+  `supersedes` link once foreign keys were on; the auditor read a rule as it stands today, not as it stood at posting.
+- **On the UI question** (Karan): not an upload-a-document dashboard. The product watches the bank feed and the
+  ledger and works from the company's own mail and Slack; the UI is a work console (receipts and their state, an
+  "Awaiting you" queue, the workpaper with quotes beside sources, rule and memory cards, run 1 against run 2, the
+  auditor). A **bank-file drop** as the on-stage trigger is honest, because that is how bank data really arrives.
+- **Not built, so not claimed:** multi-currency books, FX gains, intercompany entries for a payment into the wrong
+  Northwind entity, month-end remeasurement as an agent function, VAT reverse-charge short-pays, real base and
+  fine-tuned Qwen rows through `pnpm bench:reader` (queued on lane C's GPU).
+- `pnpm test` with all lanes merged → 70 files, **655 passing**; typecheck clean.

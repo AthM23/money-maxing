@@ -3,6 +3,7 @@ import { Proposal } from "../contract/types.js";
 import { evaluateBlockRules, type TriggeredRule } from "./blockRules.js";
 import { evidenceMarks } from "./evidence.js";
 import { formalMarks } from "./formal.js";
+import { checkFxRealized } from "./fx.js";
 import { checkJ3, judgmentMarks } from "./judgment.js";
 import { processMarks } from "./process.js";
 import type { KernelContext } from "./types.js";
@@ -18,7 +19,7 @@ export function runKernel(proposal: Proposal, ctx: KernelContext, stage: KernelS
   const validated = parsed.data;
 
   const adjustment = adjustmentCents(validated, ctx);
-  const formal = formalMarks(validated, ctx);
+  const formal = [...formalMarks(validated, ctx), ...(validated.kind === "fx_realized" ? [checkFxRealized(validated, ctx)] : [])];
   const evidence = evidenceMarks(validated, ctx);
   const judgment = judgmentMarks(validated, ctx, adjustment, checkJ3(validated));
   const extra = extraMarks(validated, ctx);

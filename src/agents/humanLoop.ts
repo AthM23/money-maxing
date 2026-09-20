@@ -124,15 +124,23 @@ function resume(
   if (answer.treatment === "chase") return null;
   const docId = c.doc_ids[c.doc_ids.length - 1];
   if (!docId) return null;
+  // The answer covers what is still open, which can be less than the case's shortfall: a bank fee and a rate
+  // difference on the same receipt are booked from code before anyone is asked about the rest.
+  const amount = stillOpenOn(db, docId, c.shortfall_cents);
   const proposal: Proposal = {
     intent_id: c.intent_id, function: c.function, kind: answer.treatment, party_id: c.party_id, entry_date: c.entry_date,
-    applications: [{ doc_id: docId, amount_cents: c.shortfall_cents }],
+    applications: [{ doc_id: docId, amount_cents: amount }],
     entries: answer.treatment === "dispute_hold" ? [] : [
-      { account: ADJUSTMENT_ACCOUNT[answer.treatment], debit_cents: c.shortfall_cents, credit_cents: 0, memo: `Per answer to escalation (${traceId})` },
-      { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: c.shortfall_cents, memo: `Per answer to escalation (${traceId})` },
+      { account: ADJUSTMENT_ACCOUNT[answer.treatment], debit_cents: amount, credit_cents: 0, memo: `Per answer to escalation (${traceId})` },
+      { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: amount, memo: `Per answer to escalation (${traceId})` },
     ],
     evidence: [{ claim: "the account owner's answer", trace_id: traceId, quote: answer.text }],
     policy_refs: [], fact_refs: factId ? [factId] : [], judgment: [],
   };
   return proposeEntry(db, proposal, { actor: "router:resume", mode: "live", autonomy_level: "review", tier: 0 }, deps);
+}
+
+function stillOpenOn(db: Db, docId: string, shortfallCents: number): number {
+  const row = db.prepare("SELECT open_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number } | undefined;
+  return row && row.open_cents > 0 ? Math.min(shortfallCents, row.open_cents) : shortfallCents;
 }

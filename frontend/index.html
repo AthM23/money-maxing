@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Maxer — the agent finance team</title>
+<style>
+  :root{
+    --lime:#d9f24f; --ink:#101012; --paper:#f4f4f1; --mut:#5b5b57;
+    --coral:#f0645c; --green:#3fae52;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--ink);color:var(--ink);-webkit-font-smoothing:antialiased}
+
+  /* ---------- nav (floats above the deck) ---------- */
+  nav{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;
+      padding:20px 48px;z-index:100;pointer-events:none}
+  nav>*{pointer-events:auto}
+  .logo{font-weight:700;font-size:20px;position:relative;background:#fff;border-radius:999px;padding:10px 22px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
+  .logo::after{content:"";position:absolute;right:10px;top:8px;width:14px;height:14px;background:var(--lime);border-radius:50%;z-index:-0}
+  .nav-links{display:flex;gap:6px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
+  .nav-links a{color:var(--ink);text-decoration:none;font-size:14.5px;padding:9px 16px;border-radius:999px;transition:background .2s}
+  .nav-links a:hover{background:#f0f0ec}
+  .btn{border:0;cursor:pointer;font-size:15px;font-weight:600;border-radius:999px;padding:14px 26px;
+       transition:transform .18s,box-shadow .18s;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.2)}
+  .btn-ink{background:var(--ink);color:#fff}
+  .btn-lime{background:var(--lime);color:var(--ink)}
+  .btn-white{background:#fff;color:var(--ink)}
+  @media(max-width:900px){.nav-links{display:none}}
+
+  /* ---------- the deck: full-screen slides that stack over each other ---------- */
+  .slide{position:sticky;top:0;min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+         padding:110px 72px 70px;border-radius:44px 44px 0 0;box-shadow:0 -28px 70px rgba(0,0,0,.28);
+         will-change:transform,filter;overflow:hidden}
+  @media(max-width:900px){.slide{padding:100px 22px 40px}}
+  .s-lime{background:var(--lime)}
+  .s-white{background:#fff}
+  .s-paper{background:var(--paper)}
+  .s-dark{background:#131315;color:#fff}
+  .kick{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.55;margin-bottom:22px}
+  h1{font-size:clamp(46px,6.4vw,92px);line-height:.97;letter-spacing:-.03em;font-weight:700}
+  h2{font-size:clamp(36px,4.6vw,64px);letter-spacing:-.02em;line-height:1.02;font-weight:700}
+  .sub{color:var(--mut);font-size:18px;line-height:1.65;margin-top:22px;max-width:520px}
+  .s-dark .sub{color:#b7b7bd}
+
+  /* reveal */
+  .rv{opacity:0;transform:translateY(40px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .rv.on{opacity:1;transform:none}
+  .rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
+
+  /* hero */
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:30px;align-items:center;flex:1}
+  @media(max-width:900px){.hero-grid{grid-template-columns:1fr}}
+  .spark{display:inline-block;animation:spin 7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hero-more{margin-top:52px;display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);text-decoration:none}
+  .hero-more .arr{display:inline-block;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(5px)}}
+  .stage{position:relative;height:560px}
+  .app-card{position:absolute;border-radius:26px;box-shadow:0 30px 60px rgba(20,22,6,.25);will-change:transform}
+  .card-light{background:#fff;width:330px;padding:26px;left:2%;top:4%;transform:rotate(-6deg);z-index:2}
+  .card-dark{background:#141416;color:#fff;width:330px;padding:26px;right:0;top:12%;transform:rotate(7deg);z-index:1}
+  .app-card h4{font-size:21px;margin-bottom:14px}
+  .pillrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{font-size:11px;padding:5px 10px;border-radius:999px;background:#f0f0ed;color:#444}
+  .card-dark .chip{background:#26262a;color:#cfcfd4}
+  .mini{border-radius:16px;padding:14px;margin-bottom:10px;font-size:13px}
+  .mini .row{display:flex;justify-content:space-between;margin-top:6px;gap:10px}
+  .mini-ink{background:var(--ink);color:#fff}
+  .mini-soft{background:#f4f4f1}
+  .up{color:var(--green);font-weight:600}.dn{color:var(--coral);font-weight:600}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:110px;margin:16px 0 6px}
+  .bars i{flex:1;border-radius:4px 4px 2px 2px;background:var(--green);opacity:.9;animation:grow 1.2s cubic-bezier(.2,.8,.2,1) both}
+  .bars i.r{background:var(--coral)}
+  @keyframes grow{from{height:6px !important}}
+  .doodle{position:absolute;left:42%;top:56%;width:170px;opacity:.9;pointer-events:none}
+
+  /* story slide */
+  .cards2{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:56px}
+  @media(max-width:900px){.cards2{grid-template-columns:1fr}}
+  .feature{background:var(--paper);border-radius:32px;padding:52px;position:relative;overflow:hidden;min-height:320px}
+  .feature h3{font-size:27px;margin-bottom:16px}
+  .feature p{color:var(--mut);line-height:1.65;max-width:360px;font-size:16.5px}
+  .blob{position:absolute;pointer-events:none}
+
+  /* loop slide */
+  .adv{display:grid;grid-template-columns:.9fr 1.5fr;gap:70px;align-items:center;flex:1}
+  @media(max-width:900px){.adv{grid-template-columns:1fr}}
+  .adv-grid{display:grid;grid-template-columns:1fr 1fr;background:#fff;border-radius:32px;overflow:hidden}
+  .adv-cell{padding:42px 44px;border-left:1px solid #ececе8;border-top:1px solid #ecece8}
+  .adv-cell:nth-child(1),.adv-cell:nth-child(2){border-top:0}
+  .adv-cell:nth-child(odd){border-left:0}
+  .adv-ic{width:42px;height:42px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:18px}
+  .adv-cell h4{font-size:22px;margin-bottom:10px}
+  .adv-cell p{color:var(--mut);line-height:1.6;font-size:15px}
+  .adv-cell .tag{display:inline-block;margin-top:18px;font-size:12.5px;font-weight:600;background:#f0f0ec;border-radius:999px;padding:8px 14px;color:#333}
+
+  /* model slide (dark) */
+  .model-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:50px;align-items:center;flex:1}
+  @media(max-width:900px){.model-grid{grid-template-columns:1fr}}
+  .stat-card{background:#fff;color:var(--ink);border-radius:24px;padding:30px;width:320px;justify-self:end;
+             box-shadow:0 30px 70px rgba(0,0,0,.5);transform:rotate(4deg);animation:floaty 5s ease-in-out infinite}
+  @keyframes floaty{50%{transform:rotate(4deg) translateY(-14px)}}
+  .stat-card .k{font-size:12px;color:#8b8b86;letter-spacing:.08em;text-transform:uppercase}
+  .stat-card .v{font-size:34px;font-weight:700;margin:6px 0 2px}
+  .stat-inner{background:var(--ink);color:#fff;border-radius:16px;padding:18px;margin-top:16px}
+  .stat-inner .v{font-size:22px}
+  .squig{position:absolute;left:60px;top:120px;opacity:.5}
+
+  /* benchmark slide */
+  .bench{display:grid;grid-template-columns:.85fr 1.15fr;gap:60px;align-items:center;flex:1}
+  @media(max-width:900px){.bench{grid-template-columns:1fr}}
+  .tbl{width:100%;border-collapse:collapse;background:#fff;border-radius:24px;overflow:hidden;font-size:15px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+  .tbl th{background:var(--ink);color:#fff;text-align:left;padding:15px 18px;font-weight:600}
+  .tbl td{padding:15px 18px;border-top:1px solid #ebebe7}
+  .tbl tr.hero-row td{background:var(--lime);font-weight:700}
+  .tbl .num{font-variant-numeric:tabular-nums}
+  .foot-note{font-size:13px;color:#8a8a85;margin-top:14px;line-height:1.55}
+
+  /* live slide */
+  .live{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center;flex:1}
+  @media(max-width:900px){.live{grid-template-columns:1fr}}
+  .orb-zone{position:relative;height:480px}
+  .orb{position:absolute;right:0;top:50px;width:380px;height:380px;background:var(--lime);border-radius:50%}
+  .tick{position:absolute;background:#fff;border-radius:16px;box-shadow:0 18px 44px rgba(0,0,0,.14);
+        padding:15px 18px;display:flex;gap:14px;align-items:center;font-size:14px;min-width:310px;animation:floaty2 6s ease-in-out infinite}
+  .tick b{display:block;font-size:15px}
+  .tick small{color:#8a8a85}
+  .tick .amt{margin-left:auto;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .tick .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#f1f1ee}
+  @keyframes floaty2{50%{transform:translateY(-10px)}}
+  .t1{left:6%;top:40px}.t2{left:0;top:190px;animation-delay:1.2s}.t3{left:12%;top:340px;animation-delay:2.2s}
+
+  /* final slide */
+  .final{align-items:center;text-align:center;justify-content:space-between}
+  .final h2{color:#fff;max-width:1000px;margin:0 auto}
+  .final .sub{margin:24px auto 36px;max-width:640px}
+  .final-foot{width:100%;display:flex;justify-content:space-between;align-items:flex-end;gap:30px;
+              border-top:1px solid #2a2a2e;padding-top:34px;text-align:left;flex-wrap:wrap}
+  .final-foot a{color:#a5a5aa;text-decoration:none;font-size:14.5px;display:block;margin-top:8px}
+  .final-foot a:hover{color:#fff}
+  .final-foot h5{color:#fff;font-size:15px}
+  .tiny{font-size:12.5px;color:#77777d}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Money Maxer</div>
+  <div class="nav-links">
+    <a href="#story">The close</a><a href="#loop">The loop</a><a href="#model">The model</a><a href="#bench">Benchmark</a>
+  </div>
+  <a class="btn btn-ink" href="#bench">▦&nbsp;See the numbers</a>
+</nav>
+
+<!-- SLIDE 1 · HERO -->
+<section class="slide s-lime" id="top">
+  <div class="hero-grid">
+    <div>
+      <h1 class="rv">Close the books<br>while you sleep <span class="spark">✦</span></h1>
+      <p class="sub rv d1" style="color:#20220c">An agent finance team: it reads the inbox, matches the bank,
+      books every entry through a kernel that cannot be fooled — and asks a human exactly once.</p>
+      <a class="hero-more rv d2" href="#story">Scroll <span class="arr">↓</span></a>
+    </div>
+    <div class="stage" id="stage">
+      <div class="app-card card-light" data-depth="18">
+        <h4>Drift board</h4>
+        <div class="pillrow"><span class="chip">Bank</span><span class="chip">Ledger</span><span class="chip">CRM</span><span class="chip">Contracts</span><span class="chip">Inbox</span></div>
+        <div class="mini mini-ink">
+          <b>Initech · short-pay</b>
+          <div class="row"><span>Invoice INV-1042</span><span>$12,000.00</span></div>
+          <div class="row"><span>Bank received</span><span>$10,800.00</span></div>
+          <div class="row"><span class="up">reason found · CEO email</span><span class="up">−10%</span></div>
+        </div>
+        <div class="mini mini-soft">
+          <div class="row"><b>Wayne Corp</b><span class="dn">−$3,300</span></div>
+          <div class="row"><span>no evidence anywhere</span><span>→ ask once</span></div>
+        </div>
+        <div class="mini mini-soft">
+          <div class="row"><b>Globex · wire fee</b><span class="up">auto-posted</span></div>
+          <div class="row"><span>$20 short · compiled policy</span><span>0 model calls</span></div>
+        </div>
+      </div>
+      <div class="app-card card-dark" data-depth="34">
+        <h4>Seeded July · 11 receipts</h4>
+        <div class="pillrow"><span class="chip">AR</span><span class="chip">AP</span><span class="chip">Bank rec</span><span class="chip">Revenue</span><span class="chip">Close</span></div>
+        <div class="bars" id="bars"></div>
+        <div style="font-size:12px;color:#9a9aa0">measured: <span class="up">8 settled in code</span> · <span class="dn">3 escalated to a person</span></div>
+        <div class="mini" style="background:#232327;color:#fff;margin-top:14px">
+          <div class="row"><span>Books tied out</span><b class="up">✓ to the cent</b></div>
+          <div class="row"><span>Wrong entries posted</span><b>0</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <svg class="doodle" viewBox="0 0 200 160" fill="none"><path d="M10 20 C 90 10, 150 40, 120 90 S 40 150, 70 120 S 140 100, 185 128" stroke="#101012" stroke-width="3" stroke-linecap="round"/><path d="M172 118 l14 10 -16 6" stroke="#101012" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</section>
+
+<!-- SLIDE 2 · STORY -->
+<section class="slide s-white" id="story">
+  <div class="kick rv">01 · one event, every book</div>
+  <h2 class="rv">A payment lands<br>$1,200 short. Watch.</h2>
+  <div class="cards2">
+    <div class="feature rv d1">
+      <svg class="blob" style="right:-20px;bottom:-30px;width:230px" viewBox="0 0 200 200"><path d="M45 130 C 20 90, 60 40, 110 55 S 190 90, 160 140 S 70 170, 45 130 Z" fill="var(--lime)"/><path d="M85 155 C 70 135, 95 120, 115 132 S 140 165, 112 172 S 100 175, 85 155 Z" fill="#101012"/></svg>
+      <h3>The reason is in somebody's inbox</h3>
+      <p>The drift monitor flags the gap. The agent checks the contract, the CRM — then finds the CEO's
+      discount email nobody told finance about. Revenue, forecast, billing and audit all move together,
+      to the same cent.</p>
+    </div>
+    <div class="feature rv d2">
+      <svg class="blob" style="right:24px;top:34px;width:190px" viewBox="0 0 200 200" fill="none">
+        <path d="M100 20 a80 80 0 0 1 78 62" stroke="#101012" stroke-width="16" stroke-linecap="round"/>
+        <path d="M178 118 a80 80 0 0 1 -60 58" stroke="var(--lime)" stroke-width="16" stroke-linecap="round"/>
+        <path d="M60 172 a80 80 0 0 1 -38 -80" stroke="var(--coral)" stroke-width="16" stroke-linecap="round"/>
+      </svg>
+      <h3>Nothing posts without proof</h3>
+      <p>Every entry carries a workpaper: the math, the exact quoted evidence, the approval.
+      Deterministic code re-performs every check. Change one letter of the quote — rejected.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3 · LOOP -->
+<section class="slide s-paper" id="loop">
+  <div class="adv">
+    <div>
+      <div class="kick rv">02 · the loop</div>
+      <h2 class="rv">Every close,<br>smarter</h2>
+      <p class="sub rv d1">Four beats, run live — with a kernel that makes the trust checkable.</p>
+    </div>
+    <div class="adv-grid rv d1">
+      <div class="adv-cell"><div class="adv-ic">📖</div><h4>Learns</h4><p>Replays the quarter humans closed with the answers hidden; compiles their repeated judgment into policies.</p><span class="tag">wire-fee write-offs → compiled policy</span></div>
+      <div class="adv-cell"><div class="adv-ic">⚡</div><h4>Runs</h4><p>Routine work clears through compiled rules and a fine-tuned local model. The kernel re-checks everything.</p><span class="tag">measured: 8 of 11 receipts, zero model calls</span></div>
+      <div class="adv-cell"><div class="adv-ic">🙋</div><h4>Escalates</h4><p>A genuine blocker goes to a person's phone — asked once, answered once, remembered with a scope and an expiry.</p><span class="tag">Wayne −$3,300 · answered from Slack</span></div>
+      <div class="adv-cell"><div class="adv-ic">📈</div><h4>Improves</h4><p>Corrections become policy v2. Replay agreement is CI: a change that drops it cannot ship.</p><span class="tag">run 2 asks fewer questions than run 1</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4 · MODEL -->
+<section class="slide s-dark" id="model">
+  <svg class="squig" width="150" height="60" viewBox="0 0 150 60" fill="none"><path d="M4 50 C 30 10, 50 10, 70 34 S 110 58 146 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+  <div class="model-grid">
+    <div>
+      <div class="kick rv" style="opacity:.5">03 · the model</div>
+      <h2 class="rv">A small model,<br>taught by the audit trail</h2>
+      <p class="sub rv d1">Every kernel-verified decision becomes training data. Overnight, the same
+      open-weight model went from failing this work to leading our table — trained and served on the
+      ASUS GX10 sitting at this table.</p>
+      <a class="btn btn-white rv d2" style="margin-top:34px" href="#bench">Full benchmark ↓</a>
+    </div>
+    <div class="stat-card rv d1">
+      <div class="k">field-F1 · held-out · n=120</div>
+      <div class="v">0.084 → 0.960</div>
+      <div class="up">same model, before vs after training</div>
+      <svg width="250" height="70" viewBox="0 0 250 70" fill="none" style="margin-top:10px">
+        <path d="M6 62 L70 14 L134 11 L198 9" stroke="#101012" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="6" cy="62" r="5" fill="#f0645c"/><circle cx="70" cy="14" r="5" fill="#101012"/>
+        <circle cx="134" cy="11" r="5" fill="#101012"/><circle cx="198" cy="9" r="6" fill="#9db521" stroke="#101012" stroke-width="2"/>
+      </svg>
+      <div class="stat-inner">
+        <div class="k" style="color:#8f8f95">cost per routine decision</div>
+        <div class="v">$0.00 <span class="up" style="font-size:13px">measured · on-device</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5 · BENCHMARK -->
+<section class="slide s-white" id="bench">
+  <div class="bench">
+    <div>
+      <div class="kick rv">04 · the receipts</div>
+      <h2 class="rv">NorthwindBench</h2>
+      <p class="sub rv d1">120 documents, only never-seen vendors and never-seen styles.
+      <b>exact</b> = whole answer perfect to the cent · <b>field-F1</b> = share of fields right.
+      Muse gets the answer schema pasted into every call; ours gets nothing — it was trained to know it.</p>
+      <p class="sub rv d2" style="margin-top:14px"><b>External check:</b> ciru-ai's Invoice Sandbox
+      (their hidden answers, their scorer): <b>15 of 18 customers exact to the penny</b>, 0 missing,
+      0 invented, all planted traps excluded.</p>
+    </div>
+    <div class="rv d1">
+      <table class="tbl" id="benchTable">
+        <thead><tr><th>model</th><th class="num">exact</th><th class="num">field-F1</th><th class="num">held-out F1</th><th class="num">avg latency</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="foot-note" id="benchNote">Loading results…</p>
+      <p class="foot-note" id="progNote"></p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6 · LIVE -->
+<section class="slide s-paper" id="live">
+  <div class="live">
+    <div>
+      <div class="kick rv">05 · live</div>
+      <h2 class="rv">Decisions,<br>as they happen</h2>
+      <p class="sub rv d1">Real cases from the seeded month: what arrived, what the system did,
+      what it cost. Green ran with no human. Coral waited for one — once.</p>
+    </div>
+    <div class="orb-zone rv d1">
+      <div class="orb"></div>
+      <svg style="position:absolute;left:30%;top:0;height:100%" width="120" viewBox="0 0 120 460" fill="none"><path d="M60 0 C 10 90, 110 150, 60 230 S 10 370, 60 460" stroke="#101012" stroke-width="3"/></svg>
+      <div class="tick t1"><div class="ic">📩</div><div><b>Initech Corp</b><small>credit memo · CEO email cited</small></div><div class="amt up">−$1,200.00<br><small>kernel ✓</small></div></div>
+      <div class="tick t2"><div class="ic">🏦</div><div><b>Globex Systems</b><small>wire fee · compiled policy</small></div><div class="amt up">−$20.00<br><small>0 model calls</small></div></div>
+      <div class="tick t3"><div class="ic">🙋</div><div><b>Wayne Corp</b><small>no evidence · asked once</small></div><div class="amt dn">−$3,300.00<br><small>awaiting you</small></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 7 · FINAL -->
+<section class="slide s-dark final">
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
+    <h2 class="rv">You asked how much of a finance team<br>an agentic system can run.</h2>
+    <p class="sub rv d1">Measured on the seeded July: 8 of 11 receipts settled by code with zero model
+    calls, 3 escalated to a person exactly once, 0 wrong entries posted. Books tied to the cent.</p>
+    <div class="rv d2"><a class="btn btn-lime" style="font-size:17px;padding:16px 30px" href="#bench">Every number carries its n</a></div>
+  </div>
+  <div class="final-foot rv">
+    <div><h5>Money Maxer</h5><a class="tiny" style="max-width:280px">An agent finance team for the office of the CFO. Built in 24 hours at HackMIT 2026 by Preet, Karan & Atharv.</a></div>
+    <div><h5>The code</h5><a href="https://github.com/AthM23/money-maxing" target="_blank" rel="noopener">github.com/AthM23/money-maxing</a><a class="tiny">gen_data.py --seed 7 rebuilds the exact exam</a></div>
+    <div class="tiny">© 2026 Money Maxer</div>
+  </div>
+</section>
+
+<script>
+/* reveal on scroll */
+const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('on')), {threshold:.2});
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* seeded-July receipts: 8 settled (green), 3 escalated (coral) — real outcome, heights are rhythm only */
+const bars = document.getElementById('bars');
+[['g',62],['g',80],['r',95],['g',55],['g',72],['g',88],['r',95],['g',66],['g',77],['r',95],['g',59]]
+  .forEach(([k,h],i)=>{const b=document.createElement('i');if(k==='r')b.className='r';
+   b.style.height=h+'%';b.style.animationDelay=(0.06*i)+'s';bars.appendChild(b);});
+
+/* hero parallax */
+const stage=document.getElementById('stage');
+if(stage && matchMedia('(pointer:fine)').matches){
+  addEventListener('mousemove',e=>{
+    const r=stage.getBoundingClientRect();
+    if(r.bottom<0)return;
+    const cx=(e.clientX-(r.left+r.width/2))/r.width, cy=(e.clientY-(r.top+r.height/2))/r.height;
+    stage.querySelectorAll('.app-card').forEach(c=>{
+      const d=+c.dataset.depth, rot=c.classList.contains('card-light')?-6:7;
+      c.style.transform=`rotate(${rot}deg) translate(${cx*d}px, ${cy*d}px)`;
+    });
+  });
+}
+
+/* deck effect: as the next slide rises, the covered slide sinks back and dims (PowerPoint push) */
+const slides=[...document.querySelectorAll('.slide')];
+function deck(){
+  const vh=innerHeight;
+  slides.forEach((s,i)=>{
+    const next=slides[i+1]; if(!next) return;
+    const p=Math.min(Math.max(1-(next.getBoundingClientRect().top/vh),0),1); /* 0 → 1 as next covers */
+    s.style.transform=`scale(${1-p*.06}) translateY(${p*-26}px)`;
+    s.style.filter=`brightness(${1-p*.35})`;
+  });
+  requestAnimationFrame(deck);
+}
+requestAnimationFrame(deck);
+
+/* benchmark table: measured numbers only; one row per system */
+const NAMES = {
+  "ours": "ours — Qwen3-4B fine-tuned (no schema given)",
+  "muse-hinted": "Muse Spark 1.3 (answer schema given each call)",
+  "muse": "Muse Spark 1.3 (no schema given)",
+  "base4b": "Qwen3-4B base (no schema, same model as ours)",
+  "tiny": "Qwen3-0.6B base (no schema)",
+};
+const fallback = {
+  "ours":{exact:0.692,f1:0.960,ho:0.964,lat:6.3,scorer:"v1"},
+  "muse-hinted":{exact:0.767,f1:0.957,ho:0.967,lat:6.7,scorer:"v1"},
+  "muse":{exact:0.0,f1:0.140,ho:0.155,lat:8.1,scorer:"v1"},
+  "base4b":{exact:0.0,f1:0.084,ho:0.094,lat:6.4,scorer:"v1"},
+  "tiny":{exact:0.0,f1:0.010,ho:0.014,lat:1.3,scorer:"v1"},
+};
+const PROG = "Training progression, same model, same exam: F1 0.084 (untrained) → 0.953 (epoch 1) → 0.958 (epoch 2) → 0.960 (epoch 3). Measured under the v1 scorer; re-validation under the stricter v2 scorer is running.";
+function renderBench(rows, note){
+  const tb=document.querySelector('#benchTable tbody'); tb.innerHTML='';
+  Object.entries(rows)
+    .filter(([k])=>!/ep\d|epoch/.test(k))
+    .sort((a,b)=>b[1].f1-a[1].f1)
+    .forEach(([k,r])=>{
+      const tr=document.createElement('tr'); if(k==='ours') tr.className='hero-row';
+      tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
+        <td class="num">${r.f1.toFixed(3)}</td><td class="num">${r.ho!=null?r.ho.toFixed(3):'—'}</td>
+        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'—'}</td>`;
+      tb.appendChild(tr);
+    });
+  document.getElementById('benchNote').textContent = note;
+  document.getElementById('progNote').textContent = PROG;
+}
+renderBench(fallback, "n=120 per row · measured on the GX10 and the Muse API · v1 scorer · v2 re-validation running.");
+(async()=>{
+  const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
+               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_results_v2.json'];
+  const rows={...fallback}; let anyV2=false;
+  for(const url of files){
+    try{
+      const j=await (await fetch(url)).json();
+      const models=j.models||j; const v2=!!j.protocol;
+      for(const [k,v] of Object.entries(models)){
+        if(typeof v!=='object'||v.field_f1===undefined) continue;
+        if(!v2 && rows[k] && rows[k].scorer==="v2") continue;
+        rows[k]={exact:v.exact??0,f1:v.field_f1,ho:v.held_out_f1,lat:v.avg_latency_s,scorer:v2?"v2":"v1"};
+        if(v2) anyV2=true;
+      }
+    }catch(_){}
+  }
+  const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
+  renderBench(rows, anyV2
+    ? `LIVE · n=120 per row · ${n} of ${Object.keys(rows).length} rows re-scored under the stricter v2 audit scorer (rest still v1, re-running).`
+    : "n=120 per row · measured · v1 scorer · v2 re-validation running.");
+})();
+</script>
+</body>
+</html>

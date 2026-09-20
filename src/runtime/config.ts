@@ -23,6 +23,9 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
   standard_accounts: {
     rev_recognition: [ACCOUNTS.deferred_revenue, ACCOUNTS.subscription_revenue],
     amortization: [ACCOUNTS.prepaid],
+    // 7100 is where realized FX always goes; what has to be evidenced is the arithmetic, and F9 re-performs that
+    // against the bank's cited advice.
+    fx_realized: [ACCOUNTS.fx_gain_loss],
   },
   allowed_accounts: {
     // A price concession on a subscription still being delivered reduces deferred revenue, or contra-revenue once earned.
@@ -31,6 +34,8 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
     write_off: [ACCOUNTS.bank_charges, ACCOUNTS.misc_expense],
     // Tax withheld at source is an asset recoverable against the certificate. It is never a discount or an expense.
     tax_withholding: [ACCOUNTS.wht_receivable],
+    // A rate difference between booking and settlement is a financing result. It is never a discount, a fee or misc expense.
+    fx_realized: [ACCOUNTS.fx_gain_loss],
     customer_credit: [ACCOUNTS.customer_credits],
     apply_payment: [ACCOUNTS.customer_credits],
   },

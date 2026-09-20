@@ -37,10 +37,30 @@ export function postEntry(db: Db, clock: Clock, input: PostInput): PostResult {
     const entryId = writeLedger(db, clock, input);
     applyToDocuments(db, input.proposal);
     if (entryId) writeArtifact(db, clock, input, entryId);
+    if (input.proposal.kind === "tax_withholding") openCertificateFollowUp(db, clock, input);
     db.prepare("UPDATE decision SET posted_at = ? WHERE id = ?").run(clock.now(), input.decision_id);
     return { entry_id: entryId, event_ids: emitEvents(db, clock, input, entryId) };
   });
   return run();
+}
+
+/**
+ * A remittance that says "tax deducted" is a claim. The tax credit can only be taken against the official
+ * certificate, which arrives weeks later (India's Form 16A is issued quarterly). So booking the receivable opens a
+ * follow-up that stays with the account owner until the certificate is on file: the gap in the evidence is on the
+ * record as open work, not implied away. It carries no case file, so no agent ever picks it up.
+ */
+function openCertificateFollowUp(db: Db, clock: Clock, input: PostInput): void {
+  const { proposal } = input;
+  const cents = proposal.applications.reduce((n, a) => n + a.amount_cents, 0);
+  const owner = (db.prepare("SELECT owner_user FROM party WHERE id = ?").get(proposal.party_id) as { owner_user: string | null } | undefined)?.owner_user;
+  const docs = proposal.applications.map((a) => a.doc_id).join(", ");
+  db.prepare(
+    `INSERT INTO intent (id, parent_id, function, question, owner, status, end_condition_json, created_at)
+     VALUES (?, ?, ?, ?, ?, 'waiting_on_human', ?, ?)`,
+  ).run(newId("int"), input.intent_id, proposal.function,
+    `Obtain the withholding tax certificate from ${proposal.party_id} for ${docs}: ${(cents / 100).toFixed(2)} was deducted at source and booked to the tax receivable; the credit cannot be claimed without it`,
+    owner ?? "controller", JSON.stringify({ certificate_for_decision: input.decision_id, amount_cents: cents }), clock.now());
 }
 
 function writeLedger(db: Db, clock: Clock, input: PostInput): string | null {

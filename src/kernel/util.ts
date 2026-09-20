@@ -69,6 +69,8 @@ const NON_CASH_REDUCING: ReadonlySet<string> = new Set([...NON_CASH_SETTLEMENT_K
  * amount applied counts too, so booking a write-off against cash or AR cannot make it read as zero.
  */
 export function adjustmentCents(proposal: Proposal, ctx: KernelContext): number {
+  // Realized FX is arithmetic the kernel re-performs to the cent (F9), not an amount anyone judged.
+  if (proposal.kind === "fx_realized") return 0;
   const lines = proposal.entries.filter((line) => !isControlAccount(line.account, ctx));
   const outsideControl = Math.max(sumDebits(lines), sumCredits(lines));
   if (!NON_CASH_REDUCING.has(proposal.kind)) return outsideControl;
