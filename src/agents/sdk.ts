@@ -26,6 +26,8 @@ export interface ClaudeInvestigatorOptions {
 }
 
 const DEFAULT_MAX_SECONDS = 240;
+/** How long a run that has been asked to stop is given to say what it used, before it is cut off. */
+const GRACE_SECONDS = 8;
 
 /**
  * The Claude Agent SDK as one Investigator. The model gets our tools and nothing else: no file, shell or web
@@ -62,9 +64,11 @@ export function claudeInvestigator(opts: ClaudeInvestigatorOptions): Investigato
         },
       });
       const seconds = opts.max_seconds ?? DEFAULT_MAX_SECONDS;
-      const usage = await withinSeconds(seconds, consume(stream), () => abort.abort());
-      if (usage === "timed_out") {
-        return { outcome: "budget_exhausted", summary: `no answer within ${seconds} seconds; the run was stopped`, places_looked: [], model_calls: 0, cost_micros: 0 };
+      const usage = await usageWithin(stream as SdkStream, seconds, GRACE_SECONDS, () => abort.abort());
+      if (usage.timed_out) {
+        // The turns it took are known either way. The cost is known only if the run reported it while stopping; a
+        // zero here means "not recorded", and the trace says so rather than showing $0.
+        return { outcome: "budget_exhausted", summary: `no answer within ${seconds} seconds; the run was stopped`, places_looked: [], model_calls: usage.turns, cost_micros: Math.round(usage.cost * 1_000_000) };
       }
       if (usage.problem) return { outcome: "budget_exhausted", summary: usage.problem, places_looked: [], model_calls: 0, cost_micros: 0 };
       const base: InvestigationReport = finished ?? { outcome: "budget_exhausted", summary: "ended without calling finish", places_looked: [] };
@@ -73,11 +77,27 @@ export function claudeInvestigator(opts: ClaudeInvestigatorOptions): Investigato
   };
 }
 
-interface Usage { cost: number; turns: number; problem?: string }
-type SdkStream = AsyncIterable<{ type: string } & Record<string, unknown>> & { interrupt(): Promise<unknown> };
+export interface Usage { cost: number; turns: number; problem?: string }
+export type SdkStream = AsyncIterable<{ type: string } & Record<string, unknown>> & { interrupt(): Promise<unknown> };
 
-async function consume(stream: SdkStream): Promise<Usage> {
-  const usage: Usage = { cost: 0, turns: 0 };
+/**
+ * Run the stream against the clock and come back with what it used either way. A run reports its cost only in its
+ * last message, so cutting it off loses the bill: a four-minute turn was once recorded as 0 calls and $0. On the
+ * clock the run is first asked to stop, which still produces that last message, and given a few seconds; only if it
+ * says nothing is it cut off, and then the turns counted so far are kept and the cost stays unknown.
+ */
+export async function usageWithin(stream: SdkStream, seconds: number, graceSeconds: number, cutOff: () => void): Promise<Usage & { timed_out: boolean }> {
+  const seen: Usage = { cost: 0, turns: 0 };
+  const consuming = consume(stream, seen);
+  const first = await withinSeconds(seconds, consuming, () => undefined);
+  if (first !== "timed_out") return { ...first, timed_out: false };
+  await stream.interrupt().catch(() => undefined);
+  // A run that was asked to stop may end by throwing. What was counted before that still stands.
+  const late = await withinSeconds(graceSeconds, consuming.catch((): Usage => ({ ...seen })), cutOff);
+  return late === "timed_out" ? { ...seen, timed_out: true } : { ...late, timed_out: true };
+}
+
+async function consume(stream: SdkStream, usage: Usage = { cost: 0, turns: 0 }): Promise<Usage> {
   for await (const message of stream) {
     if (DEBUG) debugMessage(message);
     const given = Array.isArray(message.tools) ? message.tools.length : ALL_TOOLS.length;
@@ -86,9 +106,12 @@ async function consume(stream: SdkStream): Promise<Usage> {
       await stream.interrupt().catch(() => undefined);
       return { ...usage, problem: `the agent was given ${given} of ${ALL_TOOLS.length} tools; a tool schema is being rejected` };
     }
+    // Every assistant message is one model turn. Counting them as they arrive means a run that is cut off still
+    // says how many it took; the final result message, when there is one, is authoritative for both figures.
+    if (message.type === "assistant") usage.turns += 1;
     if (message.type !== "result") continue;
-    usage.cost = typeof message.total_cost_usd === "number" ? message.total_cost_usd : 0;
-    usage.turns = typeof message.num_turns === "number" ? message.num_turns : 0;
+    usage.cost = typeof message.total_cost_usd === "number" ? message.total_cost_usd : usage.cost;
+    usage.turns = typeof message.num_turns === "number" ? message.num_turns : usage.turns;
   }
   return usage;
 }
