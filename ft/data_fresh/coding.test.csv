@@ -1,0 +1,377 @@
+vendor,memo,amount_cents,account
+Carta,usage charges,549242,6600 Professional Services
+Salesforce,services B-1702,3663684,6300 Software Subscriptions
+DocuSign,services B-3248,5408826,6300 Software Subscriptions
+Slack Technologies,,1829518,6300 Software Subscriptions
+Salesforce,usage charges,256699,6300 Software Subscriptions
+Deel Inc,annual renewal,4725075,6000 Payroll
+Slack Technologies,,408692,6300 Software Subscriptions
+Linear,usage charges,2690826,6300 Software Subscriptions
+LaunchDarkly,monthly subscription,2158000,6300 Software Subscriptions
+Stripe Billing,,2271167,6500 Payment Processing Fees
+Brex,services B-6118,5614320,6510 Bank Fees
+Brex,services B-8229,574490,6510 Bank Fees
+WeWork,,5592606,6200 Rent & Facilities
+Carta,annual renewal,2406386,6600 Professional Services
+Stripe Billing,monthly subscription,3592801,6500 Payment Processing Fees
+NetSuite,annual renewal,4405895,6300 Software Subscriptions
+Slack Technologies,monthly subscription,2015171,6300 Software Subscriptions
+Brex,auto-pay,2843142,6510 Bank Fees
+Slack Technologies,invoice B-1182,3477583,6300 Software Subscriptions
+NetSuite,invoice B-1531,1977174,6300 Software Subscriptions
+GitHub,invoice B-9066,282530,6410 Monitoring & Tooling
+Stripe Billing,services B-1160,2043427,6500 Payment Processing Fees
+Brex,services B-2232,580720,6510 Bank Fees
+Carta,auto-pay,3576766,6600 Professional Services
+Salesforce,usage charges,762594,6300 Software Subscriptions
+Google Cloud,invoice B-3273,2519819,6400 Cloud Infrastructure
+DocuSign,services B-7273,2047651,6300 Software Subscriptions
+Slack Technologies,invoice B-8976,1016157,6300 Software Subscriptions
+Figma,auto-pay,5515976,6300 Software Subscriptions
+Salesforce,invoice B-3729,4805496,6300 Software Subscriptions
+NetSuite,usage charges,4805049,6300 Software Subscriptions
+Google Cloud,monthly subscription,5150015,6400 Cloud Infrastructure
+Carta,invoice B-3262,877957,6600 Professional Services
+Salesforce,invoice B-8824,1979828,6300 Software Subscriptions
+Linear,services B-7711,4840669,6300 Software Subscriptions
+Segment,annual renewal,5010010,6300 Software Subscriptions
+NetSuite,annual renewal,2504667,6300 Software Subscriptions
+Carta,annual renewal,4153697,6600 Professional Services
+Airtable,usage charges,5251680,6300 Software Subscriptions
+Vercel,auto-pay,5771855,6400 Cloud Infrastructure
+Google Cloud,services B-4425,5382468,6400 Cloud Infrastructure
+Slack Technologies,services B-2728,1972574,6300 Software Subscriptions
+Figma,monthly subscription,4631139,6300 Software Subscriptions
+Slack Technologies,annual renewal,4258049,6300 Software Subscriptions
+Salesforce,monthly subscription,629818,6300 Software Subscriptions
+GitHub,auto-pay,1227215,6410 Monitoring & Tooling
+Slack Technologies,services B-2558,1488148,6300 Software Subscriptions
+Airtable,invoice B-9367,861402,6300 Software Subscriptions
+Carta,usage charges,2647825,6600 Professional Services
+Deel Inc,monthly subscription,4841792,6000 Payroll
+Carta,services B-8455,1244659,6600 Professional Services
+Vercel,auto-pay,3450834,6400 Cloud Infrastructure
+Retool,invoice B-1196,3997058,6300 Software Subscriptions
+Vercel,,5434173,6400 Cloud Infrastructure
+Zoom Video,,2220369,6300 Software Subscriptions
+Segment,usage charges,3275633,6300 Software Subscriptions
+Slack Technologies,services B-1384,3847596,6300 Software Subscriptions
+Carta,,1658199,6600 Professional Services
+GitHub,auto-pay,3354833,6410 Monitoring & Tooling
+Brex,usage charges,111977,6510 Bank Fees
+Slack Technologies,monthly subscription,507642,6300 Software Subscriptions
+Slack Technologies,,2091843,6300 Software Subscriptions
+Rippling,annual renewal,1203145,6000 Payroll
+Retool,,2475943,6300 Software Subscriptions
+LaunchDarkly,annual renewal,2187107,6300 Software Subscriptions
+Vercel,invoice B-1815,65847,6400 Cloud Infrastructure
+Figma,usage charges,1072540,6300 Software Subscriptions
+Carta,monthly subscription,3648888,6600 Professional Services
+Stripe Billing,auto-pay,2879509,6500 Payment Processing Fees
+Salesforce,usage charges,3611597,6300 Software Subscriptions
+Slack Technologies,auto-pay,1482448,6300 Software Subscriptions
+Retool,,1203552,6300 Software Subscriptions
+OpenPhone,,5508777,6420 Communications
+Segment,auto-pay,1245030,6300 Software Subscriptions
+Mercury Bank,monthly subscription,5806843,6510 Bank Fees
+Carta,auto-pay,5042499,6600 Professional Services
+OpenPhone,usage charges,5841643,6420 Communications
+Datadog,auto-pay,5856966,6410 Monitoring & Tooling
+Vercel,usage charges,2177468,6400 Cloud Infrastructure
+OpenPhone,auto-pay,2124007,6420 Communications
+Slack Technologies,auto-pay,2048465,6300 Software Subscriptions
+Airtable,annual renewal,3817854,6300 Software Subscriptions
+Stripe Billing,auto-pay,2047561,6500 Payment Processing Fees
+Atlassian,services B-5295,2697223,6300 Software Subscriptions
+NetSuite,invoice B-3508,5758996,6300 Software Subscriptions
+Salesforce,invoice B-7484,1814416,6300 Software Subscriptions
+Vercel,auto-pay,693045,6400 Cloud Infrastructure
+GitHub,services B-5051,4007923,6410 Monitoring & Tooling
+Carta,invoice B-6879,238965,6600 Professional Services
+OpenPhone,usage charges,1823868,6420 Communications
+Carta,annual renewal,877948,6600 Professional Services
+Salesforce,annual renewal,5923679,6300 Software Subscriptions
+Salesforce,auto-pay,245706,6300 Software Subscriptions
+Amplitude,services B-3753,3398979,6300 Software Subscriptions
+Amplitude,auto-pay,4233417,6300 Software Subscriptions
+NetSuite,annual renewal,1942234,6300 Software Subscriptions
+Carta,monthly subscription,5555801,6600 Professional Services
+Vercel,usage charges,4033984,6400 Cloud Infrastructure
+NetSuite,monthly subscription,561750,6300 Software Subscriptions
+NetSuite,usage charges,4543197,6300 Software Subscriptions
+Slack Technologies,monthly subscription,5964747,6300 Software Subscriptions
+Twilio,invoice B-2081,3850112,6420 Communications
+Vercel,monthly subscription,1229205,6400 Cloud Infrastructure
+WeWork,auto-pay,822482,6200 Rent & Facilities
+Salesforce,usage charges,5217131,6300 Software Subscriptions
+GitHub,auto-pay,3235898,6410 Monitoring & Tooling
+Google Cloud,monthly subscription,3192506,6400 Cloud Infrastructure
+NetSuite,auto-pay,5903147,6300 Software Subscriptions
+Gusto Payroll,annual renewal,5700327,6000 Payroll
+Vercel,invoice B-1914,1052568,6400 Cloud Infrastructure
+Zoom Video,invoice B-4925,1950942,6300 Software Subscriptions
+Slack Technologies,services B-3432,5138600,6300 Software Subscriptions
+Carta,,915624,6600 Professional Services
+Slack Technologies,auto-pay,346601,6300 Software Subscriptions
+Carta,annual renewal,1267273,6600 Professional Services
+Salesforce,services B-2548,3286266,6300 Software Subscriptions
+Brex,usage charges,1660741,6510 Bank Fees
+Carta,,1660233,6600 Professional Services
+NetSuite,monthly subscription,3842117,6300 Software Subscriptions
+NetSuite,annual renewal,5467411,6300 Software Subscriptions
+Deel Inc,invoice B-1228,5909782,6000 Payroll
+Vercel,annual renewal,3391836,6400 Cloud Infrastructure
+Atlassian,invoice B-7644,4838970,6300 Software Subscriptions
+LaunchDarkly,services B-1991,3491491,6300 Software Subscriptions
+Slack Technologies,,1855118,6300 Software Subscriptions
+Slack Technologies,,99035,6300 Software Subscriptions
+Vercel,services B-2901,5870640,6400 Cloud Infrastructure
+GitHub,annual renewal,976003,6410 Monitoring & Tooling
+Salesforce,annual renewal,1933385,6300 Software Subscriptions
+Retool,,4339062,6300 Software Subscriptions
+LaunchDarkly,auto-pay,5188498,6300 Software Subscriptions
+NetSuite,auto-pay,5542489,6300 Software Subscriptions
+Google Cloud,annual renewal,3263914,6400 Cloud Infrastructure
+Google Cloud,monthly subscription,2420812,6400 Cloud Infrastructure
+NetSuite,,4613401,6300 Software Subscriptions
+Carta,annual renewal,629172,6600 Professional Services
+Carta,,3958037,6600 Professional Services
+NetSuite,annual renewal,2298702,6300 Software Subscriptions
+Slack Technologies,monthly subscription,1218215,6300 Software Subscriptions
+Carta,annual renewal,4653042,6600 Professional Services
+Zoom Video,,5303412,6300 Software Subscriptions
+DocuSign,invoice B-3299,1715249,6300 Software Subscriptions
+Brex,auto-pay,4604928,6510 Bank Fees
+Salesforce,,2417352,6300 Software Subscriptions
+Vercel,,2877996,6400 Cloud Infrastructure
+Salesforce,monthly subscription,835147,6300 Software Subscriptions
+Salesforce,,1592354,6300 Software Subscriptions
+Gusto Payroll,annual renewal,2870840,6000 Payroll
+Mercury Bank,auto-pay,1821848,6510 Bank Fees
+Salesforce,annual renewal,2798210,6300 Software Subscriptions
+Deel Inc,auto-pay,245936,6000 Payroll
+Brex,invoice B-1837,2583274,6510 Bank Fees
+NetSuite,usage charges,2464436,6300 Software Subscriptions
+Twilio,,4951190,6420 Communications
+NetSuite,,2301729,6300 Software Subscriptions
+Gusto Payroll,auto-pay,1144926,6000 Payroll
+Snowflake,invoice B-5708,5735426,6400 Cloud Infrastructure
+Stripe Billing,,276988,6500 Payment Processing Fees
+Slack Technologies,annual renewal,5943492,6300 Software Subscriptions
+Slack Technologies,auto-pay,4517963,6300 Software Subscriptions
+Carta,monthly subscription,5835685,6600 Professional Services
+Salesforce,,2213403,6300 Software Subscriptions
+Gusto Payroll,,5088499,6000 Payroll
+Google Cloud,monthly subscription,1212225,6400 Cloud Infrastructure
+Stripe Billing,invoice B-7927,1140860,6500 Payment Processing Fees
+AWS,invoice B-5732,1245364,6400 Cloud Infrastructure
+Deel Inc,auto-pay,5788376,6000 Payroll
+NetSuite,annual renewal,3861507,6300 Software Subscriptions
+Carta,usage charges,863941,6600 Professional Services
+Mercury Bank,auto-pay,4203413,6510 Bank Fees
+Slack Technologies,monthly subscription,3816628,6300 Software Subscriptions
+OpenPhone,invoice B-1244,2494273,6420 Communications
+Carta,annual renewal,4453014,6600 Professional Services
+Slack Technologies,monthly subscription,3379582,6300 Software Subscriptions
+Amplitude,invoice B-5395,2324617,6300 Software Subscriptions
+Datadog,annual renewal,2476846,6410 Monitoring & Tooling
+Salesforce,monthly subscription,2907235,6300 Software Subscriptions
+Segment,,258603,6300 Software Subscriptions
+Salesforce,annual renewal,1129921,6300 Software Subscriptions
+DocuSign,services B-3875,3489237,6300 Software Subscriptions
+Slack Technologies,monthly subscription,4517189,6300 Software Subscriptions
+Salesforce,auto-pay,2174631,6300 Software Subscriptions
+Google Cloud,,3021777,6400 Cloud Infrastructure
+Carta,usage charges,1174017,6600 Professional Services
+Slack Technologies,usage charges,5613084,6300 Software Subscriptions
+Vercel,monthly subscription,1565465,6400 Cloud Infrastructure
+Carta,invoice B-1017,1873178,6600 Professional Services
+Slack Technologies,usage charges,664163,6300 Software Subscriptions
+Salesforce,,391151,6300 Software Subscriptions
+Brex,auto-pay,3265404,6510 Bank Fees
+Twilio,invoice B-2075,4767996,6420 Communications
+Mercury Bank,monthly subscription,4752172,6510 Bank Fees
+Carta,usage charges,398890,6600 Professional Services
+Vercel,,5453561,6400 Cloud Infrastructure
+Figma,services B-2239,4497903,6300 Software Subscriptions
+Vercel,annual renewal,5097662,6400 Cloud Infrastructure
+Vercel,services B-1542,1509849,6400 Cloud Infrastructure
+NetSuite,auto-pay,3952701,6300 Software Subscriptions
+Carta,services B-3538,2163900,6600 Professional Services
+Twilio,monthly subscription,421378,6420 Communications
+Figma,auto-pay,4652865,6300 Software Subscriptions
+Salesforce,annual renewal,1260059,6300 Software Subscriptions
+NetSuite,auto-pay,3442135,6300 Software Subscriptions
+Salesforce,annual renewal,4440930,6300 Software Subscriptions
+NetSuite,annual renewal,87907,6300 Software Subscriptions
+Carta,services B-9427,5033640,6600 Professional Services
+Slack Technologies,auto-pay,1892038,6300 Software Subscriptions
+Carta,,4525613,6600 Professional Services
+Slack Technologies,usage charges,1146263,6300 Software Subscriptions
+Zoom Video,services B-2385,2315707,6300 Software Subscriptions
+Mercury Bank,auto-pay,3712670,6510 Bank Fees
+Salesforce,,4730108,6300 Software Subscriptions
+Zoom Video,services B-9986,3263008,6300 Software Subscriptions
+Slack Technologies,services B-8285,2925900,6300 Software Subscriptions
+Gusto Payroll,annual renewal,2374902,6000 Payroll
+Slack Technologies,monthly subscription,1036783,6300 Software Subscriptions
+Vercel,services B-7954,3455823,6400 Cloud Infrastructure
+Figma,usage charges,5570106,6300 Software Subscriptions
+Slack Technologies,services B-8363,1734840,6300 Software Subscriptions
+Figma,annual renewal,645640,6300 Software Subscriptions
+Linear,services B-4758,2406100,6300 Software Subscriptions
+NetSuite,,669064,6300 Software Subscriptions
+Stripe Billing,annual renewal,1779573,6500 Payment Processing Fees
+DocuSign,services B-6620,3647372,6300 Software Subscriptions
+AWS,monthly subscription,3108480,6400 Cloud Infrastructure
+Salesforce,usage charges,366712,6300 Software Subscriptions
+Salesforce,monthly subscription,758514,6300 Software Subscriptions
+NetSuite,,1182581,6300 Software Subscriptions
+Datadog,annual renewal,221594,6410 Monitoring & Tooling
+Slack Technologies,auto-pay,5330592,6300 Software Subscriptions
+Slack Technologies,,4346697,6300 Software Subscriptions
+Twilio,services B-6045,2832793,6420 Communications
+NetSuite,,969569,6300 Software Subscriptions
+Carta,auto-pay,3680284,6600 Professional Services
+OpenPhone,,48873,6420 Communications
+WeWork,usage charges,5295818,6200 Rent & Facilities
+Slack Technologies,usage charges,5844876,6300 Software Subscriptions
+NetSuite,invoice B-7609,3853860,6300 Software Subscriptions
+Gusto Payroll,monthly subscription,1014341,6000 Payroll
+Slack Technologies,monthly subscription,2367335,6300 Software Subscriptions
+Salesforce,auto-pay,484973,6300 Software Subscriptions
+WeWork,annual renewal,2693594,6200 Rent & Facilities
+Salesforce,,20442,6300 Software Subscriptions
+GitHub,,3625277,6410 Monitoring & Tooling
+Vercel,annual renewal,3037378,6400 Cloud Infrastructure
+NetSuite,invoice B-1813,4899110,6300 Software Subscriptions
+Carta,,3588329,6600 Professional Services
+Snowflake,auto-pay,1424644,6400 Cloud Infrastructure
+Carta,invoice B-4005,1656430,6600 Professional Services
+Carta,auto-pay,3283085,6600 Professional Services
+NetSuite,,4903729,6300 Software Subscriptions
+Retool,services B-9576,4103378,6300 Software Subscriptions
+Linear,services B-3447,3495328,6300 Software Subscriptions
+Salesforce,invoice B-4800,1576061,6300 Software Subscriptions
+Linear,annual renewal,330487,6300 Software Subscriptions
+AWS,annual renewal,930865,6400 Cloud Infrastructure
+Retool,monthly subscription,2447401,6300 Software Subscriptions
+Gusto Payroll,services B-8067,2071437,6000 Payroll
+Amplitude,annual renewal,4167562,6300 Software Subscriptions
+Slack Technologies,monthly subscription,564913,6300 Software Subscriptions
+NetSuite,monthly subscription,741208,6300 Software Subscriptions
+NetSuite,services B-3219,1033394,6300 Software Subscriptions
+Vercel,annual renewal,2028383,6400 Cloud Infrastructure
+Carta,auto-pay,2534500,6600 Professional Services
+Snowflake,invoice B-1584,2670573,6400 Cloud Infrastructure
+Salesforce,invoice B-6351,1586815,6300 Software Subscriptions
+NetSuite,annual renewal,2783958,6300 Software Subscriptions
+Brex,usage charges,2377641,6510 Bank Fees
+NetSuite,auto-pay,1596130,6300 Software Subscriptions
+Linear,auto-pay,813258,6300 Software Subscriptions
+NetSuite,usage charges,1377735,6300 Software Subscriptions
+Snowflake,usage charges,5993334,6400 Cloud Infrastructure
+Segment,services B-2730,4803602,6300 Software Subscriptions
+Slack Technologies,auto-pay,3332169,6300 Software Subscriptions
+WeWork,,3531885,6200 Rent & Facilities
+Carta,monthly subscription,3328193,6600 Professional Services
+Deel Inc,annual renewal,986515,6000 Payroll
+NetSuite,,3061734,6300 Software Subscriptions
+Slack Technologies,auto-pay,4814167,6300 Software Subscriptions
+Carta,auto-pay,3819870,6600 Professional Services
+Stripe Billing,annual renewal,5264785,6500 Payment Processing Fees
+Carta,auto-pay,3048111,6600 Professional Services
+NetSuite,,18501,6300 Software Subscriptions
+Datadog,,3563212,6410 Monitoring & Tooling
+Vercel,annual renewal,1667252,6400 Cloud Infrastructure
+Brex,invoice B-5245,5505620,6510 Bank Fees
+Salesforce,auto-pay,3032464,6300 Software Subscriptions
+NetSuite,,4085194,6300 Software Subscriptions
+Gusto Payroll,invoice B-6105,2643179,6000 Payroll
+Slack Technologies,usage charges,1781906,6300 Software Subscriptions
+Slack Technologies,usage charges,367733,6300 Software Subscriptions
+Datadog,,878993,6410 Monitoring & Tooling
+Carta,auto-pay,1670829,6600 Professional Services
+Slack Technologies,services B-7531,5146987,6300 Software Subscriptions
+Atlassian,invoice B-8877,3774189,6300 Software Subscriptions
+Carta,usage charges,55875,6600 Professional Services
+Slack Technologies,usage charges,2952795,6300 Software Subscriptions
+Carta,auto-pay,5480418,6600 Professional Services
+Vercel,invoice B-9105,4184095,6400 Cloud Infrastructure
+Vercel,services B-5629,2742805,6400 Cloud Infrastructure
+Vercel,usage charges,2337017,6400 Cloud Infrastructure
+Notion Labs,auto-pay,3652536,6300 Software Subscriptions
+Atlassian,monthly subscription,729530,6300 Software Subscriptions
+WeWork,services B-6748,3486806,6200 Rent & Facilities
+Atlassian,monthly subscription,2102847,6300 Software Subscriptions
+Slack Technologies,services B-7373,1991706,6300 Software Subscriptions
+Vercel,invoice B-6242,2252215,6400 Cloud Infrastructure
+Salesforce,usage charges,4077076,6300 Software Subscriptions
+DocuSign,invoice B-3152,435812,6300 Software Subscriptions
+Vercel,invoice B-4806,3386620,6400 Cloud Infrastructure
+LaunchDarkly,services B-3457,5547602,6300 Software Subscriptions
+Airtable,invoice B-5861,2429197,6300 Software Subscriptions
+Airtable,usage charges,116476,6300 Software Subscriptions
+Slack Technologies,annual renewal,929651,6300 Software Subscriptions
+NetSuite,invoice B-4659,4331118,6300 Software Subscriptions
+NetSuite,invoice B-4331,5933954,6300 Software Subscriptions
+Carta,services B-3516,335542,6600 Professional Services
+Vercel,annual renewal,1082764,6400 Cloud Infrastructure
+NetSuite,invoice B-3266,771267,6300 Software Subscriptions
+NetSuite,auto-pay,4264776,6300 Software Subscriptions
+NetSuite,usage charges,807897,6300 Software Subscriptions
+Atlassian,monthly subscription,2778524,6300 Software Subscriptions
+Salesforce,auto-pay,4334103,6300 Software Subscriptions
+Slack Technologies,invoice B-6644,3551892,6300 Software Subscriptions
+DocuSign,monthly subscription,3266924,6300 Software Subscriptions
+Amplitude,auto-pay,5594525,6300 Software Subscriptions
+Slack Technologies,annual renewal,2226942,6300 Software Subscriptions
+Salesforce,annual renewal,2700905,6300 Software Subscriptions
+Stripe Billing,auto-pay,5396254,6500 Payment Processing Fees
+Notion Labs,services B-3982,1003152,6300 Software Subscriptions
+Linear,invoice B-2556,1910900,6300 Software Subscriptions
+NetSuite,annual renewal,3576015,6300 Software Subscriptions
+NetSuite,,4709604,6300 Software Subscriptions
+Slack Technologies,,2647585,6300 Software Subscriptions
+OpenPhone,services B-2773,4086070,6420 Communications
+Google Cloud,auto-pay,4444981,6400 Cloud Infrastructure
+Mercury Bank,annual renewal,1720497,6510 Bank Fees
+Slack Technologies,invoice B-1185,2090585,6300 Software Subscriptions
+NetSuite,invoice B-5859,3582019,6300 Software Subscriptions
+Snowflake,services B-8816,3501241,6400 Cloud Infrastructure
+Vercel,auto-pay,455247,6400 Cloud Infrastructure
+NetSuite,auto-pay,99204,6300 Software Subscriptions
+Carta,monthly subscription,2993042,6600 Professional Services
+NetSuite,monthly subscription,5890110,6300 Software Subscriptions
+Vercel,auto-pay,3906389,6400 Cloud Infrastructure
+Slack Technologies,usage charges,2672556,6300 Software Subscriptions
+Salesforce,auto-pay,5319266,6300 Software Subscriptions
+Vercel,,2346659,6400 Cloud Infrastructure
+Zoom Video,auto-pay,996979,6300 Software Subscriptions
+Vercel,invoice B-2663,3099914,6400 Cloud Infrastructure
+DocuSign,services B-9447,4188955,6300 Software Subscriptions
+Slack Technologies,annual renewal,5485055,6300 Software Subscriptions
+NetSuite,annual renewal,3807539,6300 Software Subscriptions
+Salesforce,monthly subscription,3829475,6300 Software Subscriptions
+Carta,,1894377,6600 Professional Services
+Vercel,monthly subscription,2270537,6400 Cloud Infrastructure
+Retool,annual renewal,4705460,6300 Software Subscriptions
+Carta,auto-pay,3879998,6600 Professional Services
+Slack Technologies,monthly subscription,2722701,6300 Software Subscriptions
+Slack Technologies,monthly subscription,2432994,6300 Software Subscriptions
+Brex,annual renewal,2302173,6510 Bank Fees
+Salesforce,monthly subscription,1198022,6300 Software Subscriptions
+Linear,services B-1612,5803656,6300 Software Subscriptions
+Carta,,1296014,6600 Professional Services
+Carta,usage charges,198347,6600 Professional Services
+Carta,annual renewal,1065452,6600 Professional Services
+WeWork,,2231071,6200 Rent & Facilities
+Carta,monthly subscription,2477413,6600 Professional Services
+Deel Inc,services B-1102,2296010,6000 Payroll
+Vercel,services B-8249,5481509,6400 Cloud Infrastructure
+Twilio,auto-pay,1905493,6420 Communications
+OpenPhone,invoice B-8695,812046,6420 Communications
+Vercel,invoice B-9331,2630831,6400 Cloud Infrastructure
+Notion Labs,,4296804,6300 Software Subscriptions
+Carta,usage charges,3253702,6600 Professional Services
+Zoom Video,auto-pay,5697843,6300 Software Subscriptions
