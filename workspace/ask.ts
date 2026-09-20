@@ -155,5 +155,10 @@ async function askAgent(db: Db, question: string, period: string, model: Exclude
     if (message.stop_reason === "refusal") throw new HttpError(422, "The model declined to answer that.");
     text = message.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim() || text;
   }
-  return { model, text: text || "The model returned no text; the tool results are below.", used, usage, handoffs };
+  return { model, text: plainWords(text) || "The model returned no text; the tool results are below.", used, usage, handoffs };
+}
+
+/** The page shows the answer as text, never as HTML or markdown, so the marks a model adds anyway are taken out: emphasis, headings, list bullets. */
+export function plainWords(text: string): string {
+  return text.replace(/\*\*|__|`/g, "").replace(/^\s{0,3}#{1,6}\s+/gm, "").replace(/^\s*[-*•]\s+/gm, "").replace(/\n{3,}/g, "\n\n").trim();
 }

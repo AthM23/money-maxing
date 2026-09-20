@@ -85,3 +85,10 @@ describe("the paid agent has an hourly cap, and the free mode never does", () =>
     expect(agentBudgetLeft(now + 2 * 3_600_000, { ASK_AGENT_MAX_PER_HOUR: "5" })).toBe(5);
   });
 });
+
+describe("an answer is shown as plain words", () => {
+  it("takes out the markdown a model adds anyway and keeps the sentences and the numbers", async () => {
+    const { plainWords } = await import("../ask.js");
+    expect(plainWords("## Close\n\n1. **Bank credits**: USD 29,694.98 unapplied\n- `BTX-308`\n\n\n\nDone.")).toBe("Close\n\n1. Bank credits: USD 29,694.98 unapplied\nBTX-308\n\nDone.");
+  });
+});
