@@ -21,6 +21,8 @@
     "worker": "tsx src/worker/cli.ts",
     "learn": "tsx src/learn/cli.ts",
     "rerun": "tsx src/learn/rerunCli.ts",
+    "demo:scenario": "tsx src/demo/scenario/cli.ts",
+    "state": "tsx src/readmodel/cli.ts",
     "demo:seed": "tsx src/demo/seedCli.ts",
     "desk": "tsx src/desk/cli.ts",
     "spine": "tsx --env-file-if-exists=.env src/spine/run.ts",

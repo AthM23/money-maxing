@@ -10,8 +10,9 @@ import type { Db } from "../../runtime/db.js";
  * Slack proves happened and nobody with authority has agreed to credit. Fictional company; the figures are the team's
  * agreed fixture (context/FIXTURE_INTL_PROPOSAL.md, GATE1_ANSWERS_A.md).
  */
-export const ADVICE_320 = "Incoming international wire. Originator VOSSBERG LOGISTIK GMBH, Hamburg. Amount received EUR 98,000.00. Exchange rate applied 1.0800 USD per EUR. USD equivalent 105,840.00. Incoming wire fee USD 40.00. Net credit USD 105,800.00 to account ending 4417. Value date 2026-07-15.";
-export const ADVICE_321 = "Incoming international wire. Originator VOSSBERG LOGISTIK GMBH, Hamburg. Amount received EUR 24,500.00. Exchange rate applied 1.0900 USD per EUR. USD equivalent 26,705.00. Incoming wire fee USD 25.00. Net credit USD 26,680.00 to account ending 4417. Value date 2026-07-22.";
+// The charge is stated before the amounts so that the first "40.00" in the advice is the charge, not the tail of 105,840.00.
+export const ADVICE_320 = "Credit advice: incoming international wire, charges SHA. By order of VOSSBERG LOGISTIK GMBH, Hamburg. Remittance information INV-3201. Bank charges deducted USD 40.00. Amount received EUR 98,000.00. Exchange rate applied 1.0800 USD per EUR. USD equivalent 105,840.00. Net credit USD 105,800.00 to account ending 4417. Value date 2026-07-15.";
+export const ADVICE_321 = "Credit advice: incoming international wire, charges SHA. By order of VOSSBERG LOGISTIK GMBH, Hamburg. Remittance information INV-3202. Bank charges deducted USD 25.00. Amount received EUR 24,500.00. Exchange rate applied 1.0900 USD per EUR. USD equivalent 26,705.00. Net credit USD 26,680.00 to account ending 4417. Value date 2026-07-22.";
 
 const DOCS: { id: string; source: string; kind: string; at: string; payload: Record<string, string> }[] = [
   { id: "tr_bank_BTX-320", source: "bank", kind: "bank_line", at: "2026-07-15T10:00:00Z", payload: { descriptor: "WIRE TYPE:INTL IN TRN:2026071500881203 ORG:VOSSBERG LOGISTIK GMBH HAMBURG OBI:INV-3201", account: "JPMorgan Chase USD operating ··4417", entity: "Northwind Systems Inc", currency: "USD" } },

@@ -196,6 +196,10 @@ function fromFact(db: Db, c: CaseFile, notes: string[], asOf?: string): Proposal
     });
     for (const r of refused) notes.push(`fact ${r.fact_id} not used: ${r.failed_dimension} (${r.detail})`);
     for (const fact of applicable) {
+      if (fact.predicate === "other") {
+        notes.push(`fact ${fact.fact_id} is a note, not a rate or an amount: not used`);
+        continue;
+      }
       const pct = fact.value[treatment.pct_key];
       const cents = typeof fact.value.amount_cents === "number" ? fact.value.amount_cents : null;
       const explains = typeof pct === "number" ? Math.round((c.expected_cents * pct) / 100) : cents;

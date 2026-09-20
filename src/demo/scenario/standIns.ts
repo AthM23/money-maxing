@@ -39,7 +39,7 @@ const PLAYS: Record<string, Play> = {
     call("mail_search", { query: "remittance advice tax deducted at source", party_id: c.party_id });
     call("policy_memo_lookup", { query: "tax deducted at source withholding", party_id: c.party_id });
     call("propose_entry", settle(c, "tax_withholding", ACCOUNTS.wht_receivable, "India TDS u/s 195 per remittance advice", [
-      { claim: "the customer deducted 10% tax at source and will send Form 16A", trace_id: "tr_mail_meridian_1", quote: TDS_QUOTE },
+      { claim: "the customer deducted 10% tax at source and will send the TDS certificate", trace_id: "tr_mail_meridian_1", quote: TDS_QUOTE },
       { claim: "policy: withheld tax is a receivable, not a discount", trace_id: "tr_policy_memo", quote: MEMO_TDS_QUOTE }]));
     call("record_fact_candidate", { party_id: c.party_id, predicate: "withholding_tax_pct", value: { pct_withheld: 10 }, kinds: ["tax_withholding"], uses: "standing",
       valid_from: "2026-07-01", valid_to: "2027-12-31", source_trace_ids: ["tr_mail_meridian_1"], stated_by: "accounts.payable@meridianinfotech.test" });

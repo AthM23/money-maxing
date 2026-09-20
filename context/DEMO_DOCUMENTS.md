@@ -54,8 +54,13 @@ That one line turns Wayne's case from "a mystery number" into what really happen
 a reason, and nobody on our side has a record of agreeing to it. The agent still finds no officer approval and still asks.
 
 Withholding (already in lane A's demo world as `tr_mail_7`; reuse the wording):
-> tax has been deducted at source at 10% (USD 1,800.00) and deposited with the Government of India. Form 16A for the
-> quarter will follow by 15 August.
+> As required under Section 393(2) of the Income-tax Act, 2025 (formerly Section 195), tax has been deducted at source
+> at 10% (USD 1,800.00) and deposited with the Government of India. The TDS certificate, Form 131 (formerly Form 16A),
+> for the quarter ending 30 September will follow by 15 November.
+
+(Wording checked on 20 Sep: `context/research/scenario-realism-check-2026-09-20.md`. A July deduction falls in the
+July to September quarter, so the certificate is due 15 November, not 15 August. 10% is the India-Singapore treaty
+cap, which is why Meridian is billed from the Singapore entity.)
 
 ## 4. AP documents, for the breadth line
 

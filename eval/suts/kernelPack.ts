@@ -1,5 +1,7 @@
 import type { CaseRow } from "../cases.js";
 import type { CaseOutcome, SystemUnderTest } from "../sut.js";
+import { caseA13, caseA14, caseB13, caseB23 } from "./kernelPackApDuplicateCases.js";
+import { caseB01, caseB02, caseB05, caseB06, caseB14 } from "./kernelPackApVarianceCases.js";
 import { caseB24, caseDuplicatePayment, caseF09, caseG02, caseG03, caseG04 } from "./kernelPackControlCases.js";
 import type { Outcome } from "./kernelPackFixtures.js";
 import { caseG05, caseG06, caseG07, caseG08 } from "./kernelPackLearningCases.js";
@@ -18,6 +20,15 @@ const CASE_HANDLERS: Readonly<Record<string, () => Outcome>> = {
   "G-06": caseG06,
   "G-07": caseG07,
   "G-08": caseG08,
+  "B-01": caseB01,
+  "B-02": caseB02,
+  "B-05": caseB05,
+  "B-06": caseB06,
+  "B-14": caseB14,
+  "B-13": caseB13,
+  "A-13": caseA13,
+  "A-14": caseA14,
+  "B-23": caseB23,
 };
 
 /**

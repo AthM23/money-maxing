@@ -96,6 +96,14 @@ describe("J2 facts are in scope", () => {
     expect(statusOf(runKernel(memo({ fact_refs: ["fact:terms"] }), ctx, "proposal"), "J2")).toBe("pass");
   });
 
+  it("a note that happens to carry a number cannot size an entry: a contract's 2% ceiling filed as a note is not a 2% entitlement", () => {
+    const note = { ...inScope, id: "fact:note", predicate: "other" };
+    const ctx = makeCtx({ ...world, facts: [note] });
+    const run = runKernel(memo({ fact_refs: ["fact:note"] }), ctx, "proposal");
+    expect(statusOf(run, "J2")).toBe("fail");
+    expect(run.marks.find((m) => m.check === "J2")?.detail).toContain("is a note");
+  });
+
   it("is n/a when no fact is cited", () => {
     expect(markOf(runKernel(memo(), makeCtx(world), "proposal"), "J2").detail).toMatch(/^n\/a:/);
   });

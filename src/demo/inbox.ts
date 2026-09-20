@@ -13,6 +13,8 @@ const out = (line: string): void => { process.stdout.write(`${line}\n`); };
  * post gate apply unchanged.
  *   pnpm inbox <db> list
  *   pnpm inbox <db> answer <escalation_id> --as U_SAM --treatment credit_memo --text "One-time credit for ..." [--uses standing --valid-to 2027-06-30]
+ *        [--pct-off 2]        a rate, remembered as a rate: it books 2% of the invoice now and explains next month's different amount
+ *        [--pct-withheld 10]  the same for tax deducted at source
  *   pnpm inbox <db> approve|reject <decision_id> --as U_CTRL
  *   pnpm inbox <db> approve-policy <policy_id> --as U_CTRL
  *   pnpm inbox <db> reopen <intent_id> --as U_CTRL
@@ -32,7 +34,8 @@ function main(): number {
     return 1;
   }
   if (command === "answer") {
-    const r = recordHumanAnswer(db, id, flags.as, { treatment: flags.treatment, text: flags.text, uses: flags.uses ?? "one_time", valid_to: flags["valid-to"] });
+    const r = recordHumanAnswer(db, id, flags.as, { treatment: flags.treatment, text: flags.text, uses: flags.uses ?? "one_time", valid_to: flags["valid-to"],
+      pct_off: percent(flags["pct-off"]), pct_withheld: percent(flags["pct-withheld"]) });
     out(JSON.stringify(r, null, 2));
     return r.status === "answered" ? 0 : 1;
   }
@@ -93,6 +96,11 @@ function listPolicyDrafts(db: Db): void {
     const bt = JSON.parse(d.backtest_json ?? "{}") as { n?: number; agree?: number; account_outliers?: string[] };
     out(`  ${d.id} · ${d.name}\n    backtest: matched ${bt.n ?? 0}, humans did exactly this ${bt.agree ?? 0}, other account ${(bt.account_outliers ?? []).length}`);
   }
+}
+
+/** A percentage flag as a number; anything else is passed through so the answer's own validation refuses it by name. */
+function percent(raw: string | undefined): number | undefined {
+  return raw === undefined ? undefined : Number(raw);
 }
 
 function parseFlags(args: string[]): Record<string, string> {

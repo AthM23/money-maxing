@@ -81,6 +81,9 @@ function factProblems(fact: FactLite, proposal: Proposal, ctx: KernelContext, ad
     problems.push(`fact ${id} learned ${fact.learned_at} is after as_of ${ctx.as_of}`);
   }
   if (NON_CASH_SETTLEMENT_KINDS.includes(proposal.kind)) {
+    // An agent may file what it learned as a note ("the contract caps credits at 2%"). A note that carries a number is
+    // still a note: only a fact stated as a rate or an amount the customer is entitled to can size an entry.
+    if (fact.predicate === "other") problems.push(`fact ${id} is a note (predicate "other"), not a rate or an amount: it cannot size an entry`);
     const value = fact.value ?? {};
     const pct = value[proposal.kind === "tax_withholding" ? "pct_withheld" : "pct_off"];
     const docs = [...new Set(proposal.applications.map(a => a.doc_id))].map(id => ctx.getDoc(id));

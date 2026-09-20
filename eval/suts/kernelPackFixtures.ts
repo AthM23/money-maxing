@@ -1,5 +1,6 @@
 import type { ApproveResult, Clock, Db, ProposeResult, RuntimeDeps } from "../../src/runtime/index.js";
 import { openDb } from "../../src/runtime/index.js";
+import type { RouteOutcome } from "../../src/router/route.js";
 import type { CaseOutcome } from "../sut.js";
 import type { Proposal, ProposalKind } from "../../src/contract/types.js";
 
@@ -62,6 +63,40 @@ export function insertBill(
   db.prepare(
     "INSERT INTO bill (id, party_id, vendor_invoice_no, bill_date, due_date, total_cents, open_cents, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(id, partyId, vendorInvoiceNo, billDate, dueDate, totalCents, openCents, status);
+}
+
+export function insertPo(db: Db, id: string, partyId: string, linesJson: string, totalCents: number): void {
+  db.prepare("INSERT INTO po (id, party_id, lines_json, total_cents) VALUES (?, ?, ?, ?)").run(id, partyId, linesJson, totalCents);
+}
+
+export function insertReceipt(db: Db, id: string, poId: string, receivedDate: string, linesJson: string): void {
+  db.prepare("INSERT INTO receipt (id, po_id, received_date, lines_json) VALUES (?, ?, ?, ?)").run(id, poId, receivedDate, linesJson);
+}
+
+export interface ApBillSpec {
+  id: string;
+  partyId: string;
+  vendorInvoiceNo: string;
+  totalCents: number;
+  poId?: string | null;
+  servicePeriod?: string | null;
+  status?: string;
+  billDate?: string;
+  traceId?: string | null;
+}
+
+/** A bill row with the columns AP's three-way match and duplicate-obligation checks read
+ *  (po_id, service_period, trace_id) — the plain insertBill above leaves those null. */
+export function insertApBill(db: Db, spec: ApBillSpec): void {
+  const status = spec.status ?? "open";
+  const billDate = spec.billDate ?? "2026-07-10";
+  db.prepare(
+    `INSERT INTO bill (id, party_id, po_id, vendor_invoice_no, bill_date, due_date, service_period, total_cents, open_cents, status, trace_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    spec.id, spec.partyId, spec.poId ?? null, spec.vendorInvoiceNo, billDate, "2026-08-09",
+    spec.servicePeriod ?? null, spec.totalCents, spec.totalCents, status, spec.traceId ?? null,
+  );
 }
 
 export function insertBankTxn(
@@ -226,4 +261,24 @@ export function fromApproveResult(r: ApproveResult): Outcome {
     default:
       return assertNever(r);
   }
+}
+
+/**
+ * routeTier0 through the AP pack: a bill that cannot tie, or repeats an obligation, is held rather
+ * than paid (src/agents/ap/tier0.ts holdPlan) — no entry lines post, so nothing is disbursed, but
+ * nothing is decided either. That is a hand-off naming what it does not know, which is ESCALATE by
+ * tests/README.md's own definition, not the generic "posted" -> AUTO a clean cash application gets.
+ * A proposal the kernel actually rejected or blocked still takes priority, same as everywhere else.
+ */
+export function fromApRouteOutcome(o: RouteOutcome): Outcome {
+  for (const r of o.results) {
+    if (r.status === "blocked") return { route: "BLOCK", block_rule: r.rule };
+    if (r.status === "rejected") return { route: "REFUSE", refuse_places_looked: r.failed.map((m) => `kernel:${m.check}`) };
+  }
+  if (o.status === "invalid") return { route: "NOT_RUN", error: `routeTier0 returned invalid: ${o.notes.join("; ")}` };
+  if (o.status === "needs_agent" || o.unexplained_cents > 0) {
+    return { route: "ESCALATE", escalate_unknown: o.notes.join(" ") || `${o.unexplained_cents} cents unexplained` };
+  }
+  const last = o.results[o.results.length - 1];
+  return last ? fromProposeResult(last) : { route: "NOT_RUN", error: "routeTier0 produced no proposals for an ap case" };
 }

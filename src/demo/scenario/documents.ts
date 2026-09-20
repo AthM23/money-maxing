@@ -18,7 +18,7 @@ export const DOCUMENTS: SeedDoc[] = [
 
   { id: "tr_mail_meridian_1", source: "gmail", kind: "email", party_id: "meridian", at: "2026-07-17T06:30:00Z", payload: {
     from: "accounts.payable@meridianinfotech.test", to: "ar-apac@northwind.test", subject: "Remittance advice: INV-3151",
-    body: `Dear Northwind AR team, we have remitted USD 16,200.00 today against invoice INV-3151 for USD 18,000.00. As required under Section 195 of the Income-tax Act, ${TDS_QUOTE}. Form 16A for the quarter will follow by 15 August. Regards, Accounts Payable, Meridian Infotech Pvt Ltd` } },
+    body: `Dear Northwind AR team, we have remitted USD 16,200.00 today against invoice INV-3151 for USD 18,000.00. As required under Section 393(2) of the Income-tax Act, 2025 (formerly Section 195), ${TDS_QUOTE}. The TDS certificate, Form 131 (formerly Form 16A), for the quarter ending 30 September will follow by 15 November. Regards, Accounts Payable, Meridian Infotech Pvt Ltd` } },
   { id: "tr_contract_meridian", source: "contract", kind: "order_form", party_id: "meridian", at: "2026-01-01T00:00:00Z", payload: {
     title: "Order form NW-MER-2026 (Northwind Systems Pte Ltd)", text: "Platform fee USD 18,000 per month, billed monthly in advance, net 30, payable in US dollars. Term 1 January 2026 to 31 December 2027. Fees are exclusive of taxes; where the customer is required by law to withhold tax it shall provide the official certificate within 60 days." } },
 
