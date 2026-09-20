@@ -48,9 +48,10 @@ export function openDecision(db: Db, clock: Clock, input: IntakeInput): string {
 /** Attach a proposal to a decision opened at intake. Refused once that decision has a route. */
 export function attachProposal(db: Db, decisionId: string, proposal: Proposal, meta: DecisionMeta): boolean {
   const info = db
-    .prepare("UPDATE decision SET kind = ?, proposal_json = ?, actor = ?, tier = ?, autonomy_level = ? WHERE id = ? AND intent_id = ? AND route IS NULL")
+    // Same mode only: a live entry attached to a replay decision would post cash the double-spend tracker never counts.
+    .prepare("UPDATE decision SET kind = ?, proposal_json = ?, actor = ?, tier = ?, autonomy_level = ? WHERE id = ? AND intent_id = ? AND mode = ? AND route IS NULL")
     .run(proposal.kind, canonicalJson(proposal), meta.actor, meta.tier ?? null,
-      resolveAutonomy(db, meta.autonomy_level, proposal, meta.tier), decisionId, proposal.intent_id);
+      resolveAutonomy(db, meta.autonomy_level, proposal, meta.tier), decisionId, proposal.intent_id, meta.mode);
   return info.changes === 1;
 }
 

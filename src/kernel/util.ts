@@ -86,7 +86,9 @@ export function adjustmentCents(proposal: Proposal, ctx: KernelContext): number 
   if (proposal.kind === "fx_realized") return 0;
   const lines = proposal.entries.filter((line) => !isControlAccount(line.account, ctx));
   const outsideControl = Math.max(sumDebits(lines), sumCredits(lines));
-  if (!NON_CASH_REDUCING.has(proposal.kind)) return outsideControl;
+  // A vendor payment moves only control accounts (payables and cash), which read as zero judgment. It is money out:
+  // it is sized by what it pays, so materiality and the approver's limit bind on it.
+  if (!NON_CASH_REDUCING.has(proposal.kind) && proposal.kind !== "schedule_payment") return outsideControl;
   const applied = proposal.applications.reduce((n, a) => n + a.amount_cents, 0);
   return Math.max(outsideControl, applied);
 }

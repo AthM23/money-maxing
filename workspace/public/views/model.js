@@ -20,14 +20,14 @@ export async function renderModel() {
   return h("section", {},
     h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Model"), h("p", { class: "muted" }, "The document reader is a 4B open-weight model we fine-tuned ourselves. It turns remittances, bills and contract clauses into a fixed schema; the kernel checks every reading before anything posts.")),
       h("span", { class: "chip lime" }, "every number is measured, with its n")),
-    hero(m.extraction), h("div", { class: "grid2" }, recipe(m), extraction(m.extraction)), harness(m.harness), generalises(m), notes(m));
+    hero(m.extraction), h("div", { class: "grid2" }, recipe(m), extraction(m.extraction)), harness(m.harness), generalises(m), scaling(m.ablation), heads(m), outside(m.external), notes(m));
 }
 
 function hero(x) {
   const base = x?.rows.find((r) => r.key === "base4b"), ours = x?.rows.find((r) => r.ours);
   if (!base || !ours) return null;
   const fact = (label, from, to) => h("div", { class: "fact" }, h("b", {}, `${from} → ${to}`), h("span", {}, label));
-  return h("div", { class: "console modelhero" },
+  return h("div", { class: "darkhero modelhero" },
     h("div", {}, h("p", { class: "kick" }, "Same model, before and after our training"), h("div", { class: "herofig" }, h("span", { class: "from" }, base.field_f1.toFixed(3)), h("span", { class: "arrow" }, "→"), h("b", {}, ours.field_f1.toFixed(3))), h("p", { class: "muted" }, `field-F1 on ${x.n} July documents, graded by code (${x.scorer})`)),
     h("div", { class: "tracetotals" }, fact("valid against the schema", pct(base.schema_valid ?? 0), pct(ours.schema_valid ?? 0)), fact("whole document exactly right", pct(base.exact), pct(ours.exact)),
       ours.held_out_f1 === undefined ? null : h("div", { class: "fact" }, h("b", {}, ours.held_out_f1.toFixed(3)), h("span", {}, `F1 on the ${ours.held_out_n} documents from customers it never saw`))));
@@ -66,13 +66,69 @@ function harness(x) {
         h("div", {}, h("div", { class: "stack" }, seg(r.settled_from_code, r.n, "ours"), seg(r.applied_deduction_open, r.n, "api"), seg(r.left_for_judgment, r.n, "base"), seg(r.wrong_postings, r.n, "bad")),
           why ? h("p", { class: "muted small" }, `kernel: "${why[0]}" × ${why[1]}`) : null),
         h("div", { class: "stackend" }, h("b", { class: r.wrong_postings ? "short" : "" }, `${r.wrong_postings} wrong`), h("span", { class: "muted small" }, `of ${r.n} · books ${r.books_tied ? "tied" : "NOT tied"}`)));
-    }));
+    }), families(x.rows.find((r) => r.reader === "Qwen3-4B + our LoRA")));
 }
+
+const FAMILY = { remit_ocr: "Scanned, with OCR noise (never in training)", remit_plain: "Plain text advice", remit_shortpay: "Short-pay with a claimed deduction", remit_terse: "Terse one-liner", remit_email: "Free-form email" };
+
+/** The same run, by the kind of document. A short-pay's deduction is judgment, so it is left open on purpose. */
+function families(run) {
+  const rows = Object.entries(run?.by_family ?? {});
+  if (!rows.length) return null;
+  return h("div", { class: "families" }, h("p", { class: "metricname" }, `Our reader, by kind of document (n = ${run.n})`),
+    rows.map(([key, f]) => h("div", { class: "barrow" }, h("span", { class: "barlabel" }, FAMILY[key] ?? key), h("div", { class: "bartrack" }, h("div", { class: `barfill ${f.settled ? "ours" : "api"}`, style: { width: `${f.settled ? (f.settled / f.n) * 100 : 100}%` } })),
+      h("b", { class: "barvalue" }, f.settled ? `${f.settled}/${f.n}` : `0/${f.n}`))),
+    h("p", { class: "muted small" }, "The dark bar is by design: on a short-pay the reader's job is the cash; what the customer deducted is left to judgment, never settled by a reading."));
+}
+
+/** Two scaling curves, drawn only when lane C has run the ablation: how much model, and how much data, the result needs. */
+function scaling(a) {
+  if (!a) return null;
+  const chart = (title, rows, label) => rows.length < 2 ? null : h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, title), h("span", { class: "chip" }, `n = ${a.n} · ${a.scorer}`)),
+    rows.map((r) => bar(label(r.x), r.field_f1, r.field_f1.toFixed(3), r === rows.at(-1) ? "ours" : "api", `exact ${pct(r.exact)}${r.held_out_f1 === null ? "" : ` · held-out F1 ${r.held_out_f1.toFixed(3)}`}`)),
+    h("p", { class: "muted small" }, "Field-F1. Same LoRA recipe, same test slice, same scorer as the headline; hover a bar for exact match and held-out F1."));
+  return h("div", {}, h("div", { class: "sectionhead" }, h("h2", {}, "How much model, how much data"), h("p", { class: "muted" }, "An ablation of the same recipe: what the result costs in parameters and in training rows.")),
+    h("div", { class: "grid2 even" }, chart("By size of the base model", a.by_size, (x) => `Qwen3-${x}B + LoRA`), chart("By share of the training data (4B)", a.by_data, (x) => `${x}% of the rows`)));
+}
+
+/** Lane C trained three things, one job each. The two smaller ones are shown with where they are weak, because that is what the harness is for. */
+function heads(m) {
+  const b = m.matcher, d = m.coder;
+  if (!b && !d) return null;
+  const card = (title, kind, big, bigLabel, lines, weak) => h("div", { class: "panel headcard" }, h("div", { class: "panelhead" }, h("h2", {}, title), h("span", { class: "chip" }, kind)),
+    h("div", { class: "tilevalue" }, h("b", {}, big), h("span", { class: "muted" }, bigLabel)), h("ul", { class: "plain" }, lines.map((l) => h("li", {}, l))), h("p", { class: "weak" }, weak));
+  return h("div", {}, h("div", { class: "sectionhead" }, h("h2", {}, "Two more trained heads, one job each"), h("p", { class: "muted" }, "Same split by month, same held-out customers and vendors, graded by code.")),
+    h("div", { class: "grid2 even" },
+      !b ? null : card("Which invoice does this bank line pay?", "gradient-boosted trees on pair features · CPU", pct(b.top1), `top-1 on ${b.n_test_txns} July bank lines`,
+        [`Right invoice in the top three: ${pct(b.recall_at_3)}`, `Clears ${pct(b.test_auto_clear_coverage)} of lines by itself at ${pct(b.test_auto_clear_precision)} precision`, `Threshold frozen on ${b.n_cal_txns} June lines (${b.threshold_source}), never tuned on the test`, `${count(b.n_train_pairs)} training pairs`],
+        `Weak spot, stated: ${b.test_false_auto_clears} wrong auto-clears on the test. That is why a match is a proposal the kernel re-performs against open balances, not a posting.`),
+      !d ? null : card("Which ledger account does this bill go to?", "classifier on vendor and line text", pct(d.acc_seen_vendor), `on the ${d.n_seen} bills from vendors it has seen`,
+        [`All ${d.n_test} test bills: ${pct(d.acc_all)}`, `Vendors it never saw (${d.n_unseen} bills): ${pct(d.acc_unseen_vendor)}`],
+        "Weak spot, stated: a new vendor is close to a coin toss. So a new vendor's first bill is never coded alone; it goes to a person, and their answer becomes the precedent.")));
+}
+
+/** A benchmark this team did not write, scored by its own scorer. */
+function outside(x) {
+  if (!x) return null;
+  const d = x.documents;
+  return h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "A benchmark we did not build"), h("p", { class: "muted" }, `${x.name}, the one the track brief cites: an accounts-payable inbox of PDFs with planted traps and a hidden answer key, graded by its own scorer.`)), h("span", { class: "chip lime" }, "external")),
+    h("div", { class: "tracetotals" }, fact(`${x.customers_exact} of ${x.customers_scored}`, "customers' net spend exact to the cent"),
+      d ? fact(d.n, `PDFs read: ${Object.entries(d.kinds).map(([k, n]) => `${n} ${k.replaceAll("_", " ")}${n === 1 ? "" : "s"}`).join(", ")}`) : null,
+      d ? fact(`${d.parsed}/${d.n}`, "readings that parsed") : null, d ? fact(d.void + d.revised, `traps in the inbox: ${d.void} void, ${d.revised} revised`) : null),
+    h("p", { class: "muted" }, "Same division of labour as the product: the fine-tuned model reads each document; plain code spots the voids, statements, duplicates and superseded invoices and does all the arithmetic."),
+    x.missed.length ? h("table", { class: "tbl" }, h("thead", {}, h("tr", {}, ["Customer we got wrong", "Expected", "Ours", "Off by"].map((t, i) => h("th", { class: i ? "num" : "" }, t)))),
+      h("tbody", {}, x.missed.map((r) => h("tr", {}, h("td", { class: "mono" }, r.customer), h("td", { class: "num" }, usd(r.expected_usd)), h("td", { class: "num" }, usd(r.actual_usd)), h("td", { class: "num short" }, usd(r.error_usd)))))) : null);
+}
+
+const usd = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const fact = (value, label) => h("div", { class: "fact" }, h("b", {}, value), h("span", {}, label));
 
 function generalises(m) {
   const f = m.fresh?.result, ours = m.extraction?.rows.find((r) => r.ours);
   const tile = (label, value, note) => h("div", { class: "tile" }, h("span", { class: "tilelabel" }, label), h("div", { class: "tilevalue" }, h("b", {}, value)), h("span", { class: "muted small" }, note));
+  const seen = m.seen?.result;
   return h("div", { class: "tiles four" },
+    !seen ? null : tile("Customers it trained on", seen.field_f1.toFixed(3), `field-F1 on ${count(seen.n)} documents from customers in its training data. Set beside the two tiles to the right, the line is flat: it learned the task, not the names`),
     ours?.held_out_f1 === undefined ? null : tile("Customers it never saw", ours.held_out_f1.toFixed(3), `field-F1 on ${ours.held_out_n} held-out documents, against ${ours.field_f1.toFixed(3)} overall: no sign it memorised names`),
     !f ? null : [tile("Fresh exam, new seed", f.field_f1.toFixed(3), `${count(f.n)} documents generated after training, ${m.fresh.protocol.data}; ${pct(f.exact)} exact, ${f.errors} errors`),
       tile("Throughput on one box", `${f.docs_per_min} docs/min`, `${f.effective_s_per_doc} s a document at batch ${f.avg_batch_size} · ${Math.round(f.tokens_per_s_aggregate)} tokens/s`)],

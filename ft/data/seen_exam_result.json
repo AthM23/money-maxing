@@ -1,0 +1,18 @@
+{
+ "protocol": {
+  "scorer": "strict-v2",
+  "data": "seed-99 fresh, zero overlap"
+ },
+ "result": {
+  "n": 120,
+  "schema_valid": 1.0,
+  "exact": 0.625,
+  "field_f1": 0.961,
+  "wall_s": 277.7,
+  "docs_per_min": 25.9,
+  "effective_s_per_doc": 2.31,
+  "tokens_per_s_aggregate": 57.5,
+  "avg_batch_size": 8.0,
+  "errors": 0
+ }
+}

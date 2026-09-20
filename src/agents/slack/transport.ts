@@ -76,7 +76,7 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     return;
   }
   if (body.type === "block_actions" && action && (action.action_id === "approve" || action.action_id === "reject")) {
-    const approver = approverFor(db, body.user.id);
+    const approver = approverFor(db, body.user.id, askedToApprove(db, action.value));
     const result = approveDecision(db, action.value, { approver_id: approver, approver_kind: "human", outcome: action.action_id === "approve" ? "approved" : "rejected" }, { config: APP_CONFIG });
     await web.chat.postMessage({ channel: body.user.id, text: describe(result) } as never);
     return;
@@ -91,7 +91,7 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
   if (body.type === "view_submission" && body.view) {
     const meta = safeJson(body.view.private_metadata) as { escalation_id: string; treatment: string };
     const values = body.view.state.values;
-    const out = recordHumanAnswer(db, meta.escalation_id, approverFor(db, body.user.id), {
+    const out = recordHumanAnswer(db, meta.escalation_id, approverFor(db, body.user.id, askedToAnswer(db, meta.escalation_id)), {
       treatment: meta.treatment, text: values.why?.text?.value ?? "", uses: values.uses?.uses?.selected_option?.value ?? "one_time",
       valid_to: values.expiry?.date?.selected_date ?? undefined,
       ...(values.rate?.pct?.value?.trim() ? { [meta.treatment === "tax_withholding" ? "pct_withheld" : "pct_off"]: Number(values.rate.pct.value) } : {}),
@@ -100,10 +100,28 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
   }
 }
 
-/** Map a Slack user to the approval matrix. Someone not in the matrix is passed through and refused downstream. */
-function approverFor(db: Db, slackUser: string): string {
-  const row = db.prepare("SELECT id FROM approver WHERE slack_user = ?").get(slackUser) as { id: string } | undefined;
-  return row?.id ?? slackUser;
+/**
+ * Map a Slack user to the approval matrix. Someone not in the matrix is passed through and refused downstream. In a
+ * demo workspace one real Slack user can stand for several people; taking the first row made every click the CFO's.
+ * The click belongs to the person who was asked (the desk records that on the decision, a question carries it), if
+ * this Slack user is them. Where that cannot be told, the most limited of the people this user stands for signs,
+ * never the most senior.
+ */
+export function approverFor(db: Db, slackUser: string, asked?: string | null): string {
+  const people = db.prepare("SELECT id FROM approver WHERE slack_user = ? ORDER BY limit_cents, id").all(slackUser) as { id: string }[];
+  if (people.length <= 1) return people[0]?.id ?? slackUser;
+  return people.find((p) => p.id === asked)?.id ?? people[0]!.id;
+}
+
+/** Who the desk asked to approve this decision, from the decision's own timeline. */
+export function askedToApprove(db: Db, decisionId: string): string | null {
+  const row = db.prepare("SELECT json_extract(output_json, '$.approver_id') AS id FROM decision_step WHERE decision_id = ? AND kind = 'human_request' ORDER BY step_no DESC LIMIT 1").get(decisionId) as { id: string | null } | undefined;
+  return row?.id ?? null;
+}
+
+/** Who a question was put to. */
+function askedToAnswer(db: Db, escalationId: string): string | null {
+  return (db.prepare("SELECT asked_user FROM escalation WHERE id = ?").get(escalationId) as { asked_user: string } | undefined)?.asked_user ?? null;
 }
 
 function describe(result: ReturnType<typeof approveDecision>): string {

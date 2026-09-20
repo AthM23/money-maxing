@@ -1668,6 +1668,25 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   path; nothing is deployed; lane B's `console/` still says Footnote (three strings, left to lane B).
 - `pnpm test` → 83 files, **731 passing**; typecheck clean. Pushed as `3ebf835`, `148f366` and this commit.
 
+### 2026-09-20 03:50 ET — A false auto-post found and closed; Agents page holds the traces; a read-only public mode (Person A)
+
+- **Reproduced, then closed: a fee and an FX gain netted into a "short-pay".** Vossberg pays INV-3202 in full at a
+  better rate, $25.00 fee, $10.00 gain, so the wire is $15.00 short; the split refuses a gain and the code tier fell
+  through to SHORT-PAY-01 on the net figure (Dr 6150 15.00, AUTO, resolved, no person). A model citing the rule posted
+  too. Now: the code tier leaves a converted receipt it cannot split to the judgment tiers, and **kernel check F10**
+  refuses a rule-backed write-off on a converted receipt that is not exactly the bank's fee. Each layer has an
+  assertion that fails without it. The demo month still re-performs clean under F10 (14 of 14). Pushed as `c5480e3`.
+- **Agents page** (Karan: the trace belongs there, not under Cash): the team as cards with what the database proves
+  each did (an idle one says so), a run list, and the picked run's trace in place, flow or timeline. The timeline is
+  light like the rest of the app. `workspace/roster.ts`, `src/readmodel/runs.ts`. Pushed as `e3a987d`.
+- **`WORKSPACE_PUBLIC=1`** (`workspace/publicMode.ts`): refuses every action that writes or spends, by name, answers
+  Ask from code only, and is the only mode that listens beyond 127.0.0.1. `context/DEPLOY.md` is the ten-minute
+  version. **Nothing has been deployed.** Pushed as `21e97bc`.
+- `/` is the marketing page and `/dashboard` the app; the logo mark is in both and is the favicon of both
+  (`frontend/index.html`: the nav logo, a "Dashboard" link and an inline favicon, nothing else).
+- `context/JUDGE_QA.md`: the hard questions, answered as the code stands now.
+- `pnpm test` → 85 files, **735 passing**; typecheck clean.
+
 ### 2026-09-20 ~04:05 ET — One diagram of what is actually built; a Windows-only test failure closed (AthM23 + Claude Code session)
 
 - **`context/diagrams/current-architecture.mmd`** (+ `.svg`, `.png`), one sheet: the agentic workflow end to end **as built**,
@@ -1698,6 +1717,48 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   locks the file: the test's cleanup threw `EBUSY`, the file survived, and the next seed returned 1 instead of 0.
   `db.close()` added in the CLI and in the test. Unix would not have shown this.
 - Measured after the fix, this machine: `pnpm test` → **84 files, 734 passing**; typecheck clean.
+
+### 2026-09-20 04:23 ET — An outside review's 15 findings checked against HEAD and 11 closed; Ask remembers and hands off; Model page and marketing page (Person A)
+
+- **The review Karan pasted (Cursor) was current, not old**: it names `src/mirror/reset.ts` (landed 02:01). Its "488
+  tests, 11 of 110" came from our own stale `tests/RESULTS.md`, now brought up to date. A read-only agent reproduced
+  13 of the 15 findings at HEAD with probes (2 partly). **Closed tonight, each with a test that fails without the fix:**
+  - an agent can only propose under the case it was assigned; a customer-scoped rule is tested on the customer whose
+    invoice the entry touches; a rule-backed entry cannot exceed the shortfall the rule was tested on (reproduced
+    first: an agent on Initech's $30 case AUTO-posted a $450 write-off on Wayne's invoice under earned autonomy);
+  - a fee and an FX gain are never netted into a small short-pay (code tier guard + kernel check **F10**);
+  - a remembered answer does not post alone once the person it came from, or the same thread, has written again
+    (`src/memory/laterWord.ts`, J2 marks it judgment, the entry parks);
+  - cash is tied net to the bank line; a live entry cannot attach to a replay decision; a "corrected" approval is
+    refused instead of posting the original; the auditor orders same-millisecond postings by rowid;
+  - an AR or AP kind cannot be proposed under the other function; a payment needs an approved bill and is sized by
+    what it pays, so materiality and the approver's limit bind on it;
+  - replay opens no question and writes no fact; a Slack click is signed by the person who was asked, never by the
+    most senior person a shared Slack user stands for; `ft/export.ts` reads the real bank columns; the eval reports
+    AUTO results whose journal went unchecked and refuses a baseline it cannot run.
+- **Still open, all in lane B's files, for Atharv (not fixed by lane A because they touch live connectors):**
+  (4) `src/connectors/gmail.ts:146-149` takes a mail's id from the sender-controlled `X-Footnote-Id` header and both
+  clocks from the `Date` header, and `src/connectors/slack.ts:123-137` believes `footnote_seed` metadata: a forged
+  mail can arrive as version 2 of the CEO's mail. Fix sketch: `internalDate` as recorded_time; honour the header or
+  metadata only for mail and messages provably ours. (8) `src/drift/invoiceVsCash.ts:49-54` keeps a case's stored
+  amounts after a bank line is restated (fails closed for cash; the brief handed to a model is wrong). (13)
+  `src/seed/quickbooks.ts:171-197`: `seed --reset` deletes or deactivates QuickBooks records it adopted, because the
+  manifest does not store whether a record was created or adopted. (9) replay testing a rule approved later is the
+  backtest's design and is disclosed in the README.
+- **Ask**: the page sends the last six turns, so a follow-up means something, and being asked to do something gets a
+  button to where a person does it (or the free code-tier run), never a write. Checked on Haiku: 3.3 s, about half a
+  cent.
+- **Model page**: all of lane C's research, read from its files: the matcher, the GL coder, the reader by kind of
+  document inside the harness, the outside benchmark (ciru-ai sandbox, 15 of 18 exact), Preet's seen-customer exam.
+  `context/ABLATION_PLAN.md` is a turnkey size and data ablation; the page draws both curves once
+  `ft/data/ablation_v2.json` exists.
+- **Marketing page** (Karan's asks): line icons instead of emoji, in-page links that scroll (the slides are sticky),
+  "Open the dashboard" as the nav's button, and four captions aligned with the demo month's measured numbers.
+- **The demo path was re-run end to end through the workspace API after all of the above**: decide → fact active →
+  credit memo posted → Run the code tier prepares the add-on's credit from memory with 0 model calls → audit 15 of 15
+  clean, 5 findings with one character changed.
+- `pnpm test` → 88 files, **752 passing**; typecheck clean. Pushed through `2354a3c`, rebased twice onto Preet's pushes
+  (`0c3db9c`, `d9eac18`) with nothing overwritten.
 
 ### 2026-09-20 ~04:55 ET — The three "For Atharv" findings from the outside review, closed in lane B's files (AthM23 + Claude Code session)
 
@@ -1741,3 +1802,4 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
 - (9) replay testing a rule approved later is the backtest's design and is disclosed in the README: no change, as the
   review itself concluded.
 - Not touched: `pnpm desk` and everything under `src/desk` / `src/agents/slack` (lane A's, and it needs nothing here).
+- Merged with `main` at `b3097ea` (04:58 ET; only this file conflicted, entries kept in time order): `pnpm test` → **90 files, 764 passing**; typecheck clean.

@@ -84,7 +84,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     description: "Propose an accounting entry with evidence. A deterministic kernel re-checks it. `applications` lists, for each document this entry settles, the amount THIS entry takes off its open balance: for an entry that moves no cash it equals the debit outside the control accounts, not the cash that arrived. `evidence[].trace_id` is a trace id from a search or read_trace result, never a bank or invoice id. `bank_txn_id` belongs only on an entry that applies cash. `policy_refs` and `fact_refs` take ids of compiled rules and stored facts (from memory_facts); a written policy memo or a contract is a document, so cite it in `evidence` with a quote. On reject you get the failed marks; fix the cause, never the symptom.",
     run: (input, env) => compactResult(proposeEntry(env.db, input, {
       actor: env.actor, mode: env.mode, autonomy_level: env.autonomy_level, tier: env.tier, as_of: env.as_of,
-      decision_id: env.decision_id, features: env.features, replay_docs: env.replay_docs,
+      decision_id: env.decision_id, bound_intent_id: env.intent_id, features: env.features, replay_docs: env.replay_docs,
     }, { clock: env.clock, config: env.config })),
   },
   {
@@ -92,6 +92,8 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     description: "Ask the one person who knows. Only after the search plan is exhausted. `predicate` is what you do not know, picked from the list; `decision_kind` is the kind of entry the answer would unlock; the sentence goes in `what_is_unknown`. `treatments` are two to four buttons: each id is one of the fixed treatments (credit_memo = an agreed concession, write_off = we will not collect it, tax_withholding = tax deducted at source, dispute_hold = hold it open as disputed, chase = collect the balance) and each label is at most 60 characters. If this was already asked, the stored answer comes back instead.",
     run: (input, env) => {
       const q = EscalateInput.parse(input);
+      // Replay asks what would have happened. A question raised there is recorded on the turn, and goes to nobody.
+      if (env.mode === "replay") return { status: "replay_recorded", asked_user: q.asked_user, reason: "replay opens no question: nothing here reaches a person" };
       // The cheapest tier may ask a person only once it has verifiably looked everywhere an answer could be. On the
       // first real run it reached the right question in fifty seconds and six cents, was refused on tier alone, and the
       // stronger tiers took ten minutes and a dollar to ask the same thing. What earns the question is the search, not
@@ -112,7 +114,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
     name: "record_fact_candidate", registry_name: "record_fact_candidate", input: FactCandidateToolInput,
     description: "Store what you learned as a candidate fact: party, scope, end date, source traces. It applies to nothing until approved.",
-    run: (input, env) => recordFactCandidate(env.db, env.clock, input),
+    run: (input, env) => (env.mode === "replay" ? { status: "replay_recorded", reason: "replay remembers nothing: memory is written by live turns only" } : recordFactCandidate(env.db, env.clock, input)),
   },
   {
     name: "finish", registry_name: "finish", input: FinishInput,

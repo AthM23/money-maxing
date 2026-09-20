@@ -25,7 +25,7 @@ export function getDoc(db: Db, id: string): DocLite | undefined {
     .get(id) as Omit<DocLite, "kind"> | undefined;
   if (inv) return { ...inv, kind: "invoice" };
   const bill = db
-    .prepare("SELECT id, party_id, total_cents, open_cents, bill_date AS date FROM bill WHERE id = ?")
+    .prepare("SELECT id, party_id, total_cents, open_cents, bill_date AS date, status FROM bill WHERE id = ?")
     .get(id) as Omit<DocLite, "kind"> | undefined;
   return bill ? { ...bill, kind: "bill" } : undefined;
 }

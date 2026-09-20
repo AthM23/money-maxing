@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Money Maxer</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22%23101012%22%2F%3E%3Cpath%20d%3D%22M8%2023.5V11.5l7%207.5%208.6-10.4%22%20fill%3D%22none%22%20stroke%3D%22%23d9f24f%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%228.2%22%20r%3D%222.7%22%20fill%3D%22%23d9f24f%22%2F%3E%3C%2Fsvg%3E">
 <style>
   :root{
     --lime:#d9f24f; --ink:#101012; --paper:#f4f4f1; --mut:#5b5b57;
@@ -17,8 +18,8 @@
   nav{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;
       padding:20px 48px;z-index:100;pointer-events:none}
   nav>*{pointer-events:auto}
-  .logo{font-weight:700;font-size:20px;position:relative;background:#fff;border-radius:999px;padding:10px 22px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
-  .logo::after{content:"";position:absolute;right:10px;top:8px;width:14px;height:14px;background:var(--lime);border-radius:50%;z-index:-0}
+  .logo{font-weight:800;font-size:20px;letter-spacing:-.03em;display:flex;align-items:center;gap:10px;background:#fff;border-radius:999px;padding:7px 20px 7px 8px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
+  .logo svg{display:block;border-radius:9px}
   .nav-links{display:flex;gap:6px;background:#fff;border-radius:999px;padding:6px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
   .nav-links a{color:var(--ink);text-decoration:none;font-size:14.5px;padding:9px 16px;border-radius:999px;transition:background .2s}
   .nav-links a:hover{background:#f0f0ec}
@@ -150,6 +151,15 @@
   .tbl .num{font-variant-numeric:tabular-nums}
   .foot-note{font-size:13px;color:#8a8a85;margin-top:14px;line-height:1.55}
 
+  /* chart slide */
+  .chartwrap{background:#fff;border-radius:24px;padding:34px 38px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+  .legend{display:flex;gap:22px;margin:6px 0 18px;flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:#444}
+  .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .cbar{cursor:default}
+  .cbar:hover rect{filter:brightness(1.12)}
+  .ctip{position:fixed;background:#101012;color:#fff;font-size:12.5px;padding:8px 12px;border-radius:10px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;max-width:260px}
+
   /* live slide */
   .live{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center;flex:1}
   @media(max-width:900px){.live{grid-template-columns:1fr}}
@@ -179,11 +189,11 @@
 <body>
 
 <nav>
-  <div class="logo">Money Maxer</div>
+  <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>Money Maxer</div>
   <div class="nav-links">
-    <a href="#story">The close</a><a href="#loop">The loop</a><a href="#model">The model</a><a href="#bench">Benchmark</a><a href="/dashboard">Dashboard ↗</a>
+    <a href="#story">The close</a><a href="#loop">The loop</a><a href="#model">The model</a><a href="#bench">Benchmark</a>
   </div>
-  <a class="btn btn-ink" href="#bench">▦&nbsp;See the numbers</a>
+  <a class="btn btn-ink" href="/dashboard">Open the dashboard&nbsp;→</a>
 </nav>
 
 <!-- SLIDE 1 · HERO -->
@@ -191,7 +201,7 @@
   <div class="hero-grid">
     <div>
       <h1 class="rv">Close the books<br>while you sleep <span class="spark">✦</span></h1>
-      <p class="sub rv d1" style="color:#20220c">An agent finance team: it reads the inbox, matches the bank, books every entry through a checker that cannot be fooled, and asks a human exactly once.</p>
+      <p class="sub rv d1" style="color:#20220c">An agent finance team: it reads the inbox, matches the bank, books every entry through a checker that re-performs it, and asks a human exactly once.</p>
       <a class="hero-more rv d2" href="#story">Scroll <span class="arr">↓</span></a>
     </div>
     <div class="stage" id="stage">
@@ -217,7 +227,7 @@
         <h4>One month, closed</h4>
         <div class="pillrow"><span class="chip">AR</span><span class="chip">AP</span><span class="chip">Bank rec</span><span class="chip">Revenue</span><span class="chip">Close</span></div>
         <div class="bars" id="bars"></div>
-        <div style="font-size:12px;color:#9a9aa0"><span class="up">8 payments booked by code</span> · <span class="dn">3 sent to a human</span></div>
+        <div style="font-size:12px;color:#9a9aa0"><span class="up">14 entries posted by code</span> · <span class="dn">2 sent to a human</span></div>
         <div class="mini" style="background:#232327;color:#fff;margin-top:14px">
           <div class="row"><span>Books tied out</span><b class="up">✓ to the cent</b></div>
           <div class="row"><span>Wrong entries posted</span><b>0</b></div>
@@ -262,19 +272,19 @@
       <p class="sub rv d1">Four beats, run live, with a checker that makes the trust provable.</p>
     </div>
     <div class="adv-grid rv d1">
-      <div class="adv-cell"><div class="adv-ic">📖</div><h4>Learns</h4><p>Replays the quarter humans closed with the answers hidden; compiles their repeated judgment into policies.</p><span class="tag">wire-fee write-offs → compiled policy</span></div>
-      <div class="adv-cell"><div class="adv-ic">⚡</div><h4>Runs</h4><p>Routine work clears through compiled rules and a fine-tuned local model. The kernel re-checks everything.</p><span class="tag">8 of 11 payments booked with zero AI calls</span></div>
-      <div class="adv-cell"><div class="adv-ic">🙋</div><h4>Escalates</h4><p>A genuine blocker goes to a person's phone, asked once, answered once, remembered with a scope and an expiry.</p><span class="tag">Wayne −$3,300 · answered from Slack</span></div>
-      <div class="adv-cell"><div class="adv-ic">📈</div><h4>Improves</h4><p>Corrections become policy v2. Replay agreement is CI: a change that drops it cannot ship.</p><span class="tag">run 2 asks fewer questions than run 1</span></div>
+      <div class="adv-cell"><div class="adv-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4a2 2 0 012-2h12v17H7a2 2 0 00-2 2z"/><path d="M5 21V4"/><path d="M12.5 6l1 2.8 2.8 1-2.8 1-1 2.8-1-2.8-2.8-1 2.8-1z"/></svg></div><h4>Learns</h4><p>Replays the quarter humans closed with the answers hidden; compiles their repeated judgment into policies.</p><span class="tag">wire-fee write-offs → compiled policy</span></div>
+      <div class="adv-cell"><div class="adv-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-5 6 5 6"/><path d="M16 6l5 6-5 6"/><path d="M10.5 9l4.5 3-4.5 3z"/></svg></div><h4>Runs</h4><p>Routine work clears through rules your team approved. The kernel re-performs every entry before it posts.</p><span class="tag">14 entries posted by code · zero AI calls · $0</span></div>
+      <div class="adv-cell"><div class="adv-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M4 21a8 8 0 0116 0"/></svg></div><h4>Escalates</h4><p>A genuine blocker goes to a person's phone, asked once, answered once, remembered with a scope and an expiry.</p><span class="tag">Vossberg −$2,200 · Haiku, 10 cents · decided once</span></div>
+      <div class="adv-cell"><div class="adv-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg></div><h4>Improves</h4><p>Corrections become policy v2, re-tested on all of history. Replay agreement is measured on every learn.</p><span class="tag">replay agreement: 0 of 9 → 8 of 9</span></div>
     </div>
     <div class="flow rv d2">
       <div class="flow-lane">
         <span class="pulse"></span>
-        <div class="agent"><div class="dot">📩</div><b>Reader</b><small>our model reads the mail</small></div>
-        <div class="agent"><div class="dot">🧾</div><b>Preparer</b><small>drafts the entry</small></div>
-        <div class="agent"><div class="dot">🔍</div><b>Checker</b><small>code re-does the math</small></div>
-        <div class="agent"><div class="dot">🙋</div><b>Human</b><small>only when truly stuck</small></div>
-        <div class="agent"><div class="dot">📚</div><b>Auditor</b><small>re-tests at month end</small></div>
+        <div class="agent"><div class="dot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg></div><b>Reader</b><small>our model reads the mail</small></div>
+        <div class="agent"><div class="dot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h7"/><path d="M9 17h5"/></svg></div><b>Preparer</b><small>drafts the entry</small></div>
+        <div class="agent"><div class="dot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div><b>Checker</b><small>code re-does the math</small></div>
+        <div class="agent"><div class="dot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M4 21a8 8 0 0116 0"/></svg></div><b>Human</b><small>only when truly stuck</small></div>
+        <div class="agent"><div class="dot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 18a7 7 0 100-14 7 7 0 000 14z"/><path d="M20 20l-4-4"/><path d="M8.5 11l2 2 3-3.5"/></svg></div><b>Auditor</b><small>re-tests at month end</small></div>
       </div>
     </div>
   </div>
@@ -324,7 +334,7 @@
     </div>
     <div class="rv d1">
       <table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">hard cases</th><th class="num">speed</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">new vendors and formats</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="foot-note" id="benchNote">Loading results…</p>
@@ -333,7 +343,38 @@
   </div>
 </section>
 
-<!-- SLIDE 6 · LIVE -->
+<!-- SLIDE 6 · CHART -->
+<section class="slide s-white" id="chart">
+  <div class="kick rv">05 · one picture</div>
+  <h2 class="rv">Every model, one exam</h2>
+  <p class="sub rv d1">Accuracy on the same 120 documents, same grading script. Colors: what kind of help each model had.</p>
+  <div class="chartwrap rv d1">
+    <div class="legend">
+      <span><i style="background:#6f8a00"></i>fine-tuned by us</span>
+      <span><i style="background:#4a55b8"></i>told the answer format each call</span>
+      <span><i style="background:#b06f2e"></i>no help, as-is</span>
+    </div>
+    <svg id="cmpChart" width="100%" height="360" viewBox="0 0 980 360" preserveAspectRatio="none" role="img" aria-label="Accuracy by model"></svg>
+    <p class="foot-note" style="margin:20px 0 10px"><b>And what a million generated tokens costs.</b> API rows are published prices; ours is measured all-in cost on our own hardware (electricity plus the machine over 3 years).</p>
+    <svg width="100%" height="150" viewBox="0 0 980 150" preserveAspectRatio="none" role="img" aria-label="Cost per million tokens">
+      <text x="318" y="26" text-anchor="end" font-size="14" fill="#444">Our model on the GX10</text>
+      <rect x="330" y="12" width="10" height="20" rx="3" fill="#6f8a00"/>
+      <text x="350" y="27" font-size="13.5" font-weight="700" fill="#101012">$0.40 measured</text>
+      <text x="318" y="62" text-anchor="end" font-size="14" fill="#444">Claude Haiku 4.5</text>
+      <rect x="330" y="48" width="120" height="20" rx="3" fill="#4a55b8"/>
+      <text x="460" y="63" font-size="13.5" font-weight="600" fill="#101012">$5</text>
+      <text x="318" y="98" text-anchor="end" font-size="14" fill="#444">Claude Sonnet 5</text>
+      <rect x="330" y="84" width="360" height="20" rx="3" fill="#4a55b8"/>
+      <text x="700" y="99" font-size="13.5" font-weight="600" fill="#101012">$15</text>
+      <text x="318" y="134" text-anchor="end" font-size="14" fill="#444">Claude Opus 5</text>
+      <rect x="330" y="120" width="600" height="20" rx="3" fill="#4a55b8"/>
+      <text x="940" y="135" font-size="13.5" font-weight="600" fill="#101012">$25</text>
+    </svg>
+  </div>
+  <div class="ctip" id="ctip"></div>
+</section>
+
+<!-- SLIDE 7 · LIVE -->
 <section class="slide s-paper" id="live">
   <div class="live">
     <div>
@@ -345,9 +386,9 @@
     <div class="orb-zone rv d1">
       <div class="orb"></div>
       <svg style="position:absolute;left:30%;top:0;height:100%" width="120" viewBox="0 0 120 460" fill="none"><path d="M60 0 C 10 90, 110 150, 60 230 S 10 370, 60 460" stroke="#101012" stroke-width="3"/></svg>
-      <div class="tick t1"><div class="ic">📩</div><div><b>Initech Corp</b><small>credit memo · CEO email cited</small></div><div class="amt up">−$1,200.00<br><small>kernel ✓</small></div></div>
-      <div class="tick t2"><div class="ic">🏦</div><div><b>Globex Systems</b><small>wire fee · compiled policy</small></div><div class="amt up">−$20.00<br><small>0 model calls</small></div></div>
-      <div class="tick t3"><div class="ic">🙋</div><div><b>Wayne Corp</b><small>no evidence · asked once</small></div><div class="amt dn">−$3,300.00<br><small>awaiting you</small></div></div>
+      <div class="tick t1"><div class="ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18v12H3z"/><path d="M3 7l9 6 9-6"/></svg></div><div><b>Initech Corp</b><small>credit memo · CEO email cited</small></div><div class="amt up">−$1,200.00<br><small>kernel ✓</small></div></div>
+      <div class="tick t2"><div class="ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l9-6 9 6"/><path d="M5 10v8"/><path d="M9.5 10v8"/><path d="M14.5 10v8"/><path d="M19 10v8"/><path d="M3 20h18"/></svg></div><div><b>Globex Systems</b><small>wire fee · compiled policy</small></div><div class="amt up">−$20.00<br><small>0 model calls</small></div></div>
+      <div class="tick t3"><div class="ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#101012" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12a4 4 0 100-8 4 4 0 000 8z"/><path d="M4 21a8 8 0 0116 0"/></svg></div><div><b>Wayne Corp</b><small>no evidence · asked once</small></div><div class="amt dn">−$3,300.00<br><small>awaiting you</small></div></div>
     </div>
   </div>
 </section>
@@ -371,9 +412,9 @@
 const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('on')), {threshold:.2});
 document.querySelectorAll('.rv').forEach(el => io.observe(el));
 
-/* month outcome: 8 booked by code (green), 3 sent to a human (coral); heights are rhythm only */
+/* month outcome: 14 entries posted by code (green), 2 sent to a human (coral); heights are rhythm only */
 const bars = document.getElementById('bars');
-[['g',62],['g',80],['r',95],['g',55],['g',72],['g',88],['r',95],['g',66],['g',77],['r',95],['g',59]]
+[['g',62],['g',80],['g',70],['g',55],['r',95],['g',72],['g',88],['g',64],['g',66],['g',77],['g',58],['r',95],['g',59],['g',83],['g',68],['g',74]]
   .forEach(([k,h],i)=>{const b=document.createElement('i');if(k==='r')b.className='r';
    b.style.height=h+'%';b.style.animationDelay=(0.06*i)+'s';bars.appendChild(b);});
 
@@ -391,6 +432,33 @@ if(stage && matchMedia('(pointer:fine)').matches){
   });
 }
 
+/* comparison chart: rendered from the same merged rows as the table */
+function groupOf(k){ if(k==='ours'||k.startsWith('tuned')) return 0; if(/-hinted$/.test(k)) return 1; return 2; }
+const GCOL=['#6f8a00','#4a55b8','#b06f2e'];
+function renderChart(rows){
+  const svg=document.getElementById('cmpChart'); if(!svg) return;
+  const items=Object.entries(rows).filter(([k])=>!/ep\d|epoch/.test(k))
+    .map(([k,r])=>({k,name:(NAMES[k]||k),f1:r.f1,g:groupOf(k)}))
+    .sort((a,b)=>b.f1-a.f1);
+  const H=items.length*44+20, W=980, LX=330, BW=W-LX-90;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',Math.min(H,420));
+  let out=`<line x1="${LX}" y1="4" x2="${LX}" y2="${H-8}" stroke="#e3e3de" stroke-width="1.5"/>`;
+  items.forEach((it,i)=>{
+    const y=14+i*44, w=Math.max(3,it.f1*BW);
+    out+=`<g class="cbar" data-name="${it.name}" data-f1="${it.f1.toFixed(3)}">
+      <text x="${LX-12}" y="${y+15}" text-anchor="end" font-size="14" fill="#444">${it.name}</text>
+      <rect x="${LX}" y="${y}" width="${w}" height="22" rx="4" fill="${GCOL[it.g]}"/>
+      <text x="${LX+w+10}" y="${y+16}" font-size="13.5" font-weight="600" fill="#101012">${(it.f1*100).toFixed(1)}%</text>
+    </g>`;
+  });
+  svg.innerHTML=out;
+  const tip=document.getElementById('ctip');
+  svg.querySelectorAll('.cbar').forEach(g=>{
+    g.addEventListener('mousemove',e=>{tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-10)+'px';
+      tip.textContent=`${g.dataset.name}: ${(parseFloat(g.dataset.f1)*100).toFixed(1)}% accuracy, n=120, same grader`;});
+    g.addEventListener('mouseleave',()=>tip.style.opacity=0);
+  });
+}
 /* deck effect: as the next slide rises, the covered slide sinks back and dims (PowerPoint push) */
 const slides=[...document.querySelectorAll('.slide')];
 function deck(){
@@ -405,15 +473,28 @@ function deck(){
 }
 requestAnimationFrame(deck);
 
+/* in-page links: a sticky slide reports itself as already at the top, so "#bench" went nowhere. Each slide starts
+   where the ones before it end. */
+const startOf=(el)=>slides.slice(0,slides.indexOf(el)).reduce((n,x)=>n+x.offsetHeight,0);
+const goTo=(hash,smooth)=>{const el=document.getElementById(hash.slice(1)); if(!el||!slides.includes(el)) return false;
+  scrollTo({top:startOf(el)+2,behavior:smooth?'smooth':'auto'}); return true;};
+document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{
+  if(goTo(a.getAttribute('href'),true)){e.preventDefault();history.replaceState(null,'',a.getAttribute('href'));}}));
+if(location.hash) addEventListener('load',()=>goTo(location.hash,false));
+
 /* benchmark table: measured numbers only; one row per system */
 const NAMES = {
   "ours": "Our model (Qwen3-4B, fine-tuned by us)",
-  "muse-hinted": "Muse Spark 1.3, told the answer format",
-  "muse": "Muse Spark 1.3, no help",
+  "muse-hinted": "Muse Spark 1.3, given a cheat sheet",
+  "muse": "Muse Spark 1.3, no cheat sheet",
   "base4b": "Qwen3-4B before our training",
-  "tiny": "Qwen3-0.6B, tiny model",
-  "haiku-hinted": "Claude Haiku 4.5, told the answer format",
-  "haiku-bare": "Claude Haiku 4.5, no help",
+  "tiny": "Qwen3-0.6B before our training",
+  "haiku-hinted": "Claude Haiku 4.5, given a cheat sheet",
+  "haiku-bare": "Claude Haiku 4.5, no cheat sheet",
+  "tuned06": "Our small model (Qwen3-0.6B, fine-tuned by us)",
+  "sonnet-hinted": "Claude Sonnet 5, given a cheat sheet",
+  "opus-hinted": "Claude Opus 5, given a cheat sheet",
+  "fable-hinted": "Claude Fable 5, given a cheat sheet",
 };
 const fallback = {
   "ours":{exact:0.700,f1:0.972,ho:0.977,lat:6.2,scorer:"v2"},
@@ -423,7 +504,36 @@ const fallback = {
   "tiny":{exact:0.0,f1:0.010,ho:0.014,lat:1.3,scorer:"v1"},
   "haiku-hinted":{exact:0.742,f1:0.962,ho:0.969,lat:null,scorer:"v2"},
   "haiku-bare":{exact:0.0,f1:0.106,ho:0.120,lat:null,scorer:"v2"},
+  "tuned06":{exact:0.717,f1:0.972,ho:0.977,lat:2.1,scorer:"v2"},
+  "sonnet-hinted":{exact:0.775,f1:0.976,ho:0.979,lat:null,scorer:"v2"},
+  "opus-hinted":{exact:0.775,f1:0.974,ho:0.979,lat:null,scorer:"v2"},
 };
+/* speed and cost, kept out of the accuracy JSONs. lat is effective seconds per document in each
+   system's normal serving mode: ours through our batching server on the GX10 (measured over 614
+   docs), Claude rows are Claude Code agent wall clock divided by documents answered (measured).
+   cost is dollars per million generated tokens: our rows are measured all-in on our own hardware
+   (electricity plus the machine over 3 years), Claude rows are published API output prices. */
+const EXTRA = {
+  "ours":{lat:1.2,cost:0.40},
+  "tuned06":{lat:0.5,cost:0.15},
+  "base4b":{lat:6.4,cost:0.40},
+  "tiny":{lat:1.3,cost:0.40},
+  "muse-hinted":{cost:null},
+  "muse":{cost:null},
+  "haiku-hinted":{lat:1.2,cost:5},
+  "haiku-bare":{cost:5},
+  "sonnet-hinted":{lat:2.7,cost:15},
+  "opus-hinted":{lat:1.7,cost:25},
+  "fable-hinted":{lat:1.9,cost:50},
+};
+function applyExtra(rows){
+  for(const [k,e] of Object.entries(EXTRA)){
+    if(!rows[k]) continue;
+    if(e.lat!=null) rows[k].lat=e.lat;
+    rows[k].cost=('cost' in e)?e.cost:null;
+  }
+  return rows;
+}
 const PROG = "Same model, same exam, same grader, before and after training: 6% accurate untrained, 97% after training.";
 function renderBench(rows, note){
   const tb=document.querySelector('#benchTable tbody'); tb.innerHTML='';
@@ -431,19 +541,24 @@ function renderBench(rows, note){
     .filter(([k])=>!/ep\d|epoch/.test(k))
     .sort((a,b)=>b[1].f1-a[1].f1)
     .forEach(([k,r])=>{
-      const tr=document.createElement('tr'); if(k==='ours') tr.className='hero-row';
+      const tr=document.createElement('tr'); if(k==='ours'||k==='tuned06') tr.className='hero-row';
       tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
-        <td class="num">${r.f1.toFixed(3)}</td><td class="num">${r.ho!=null?r.ho.toFixed(3):'n/a'}</td>
-        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>`;
+        <td class="num">${(r.f1*100).toFixed(1)}%</td><td class="num">${r.ho!=null?(r.ho*100).toFixed(1)+'%':'n/a'}</td>
+        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>
+        <td class="num">${r.cost!=null?'$'+r.cost.toFixed(2):'n/a'}</td>`;
       tb.appendChild(tr);
     });
   document.getElementById('benchNote').textContent = note;
   document.getElementById('progNote').textContent = PROG;
+  renderChart(rows);
 }
-renderBench(fallback, "120 test documents per model, same exam for everyone. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
+renderBench(applyExtra({...fallback}), "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. New vendors and formats: accuracy on only the companies and document styles we deliberately kept out of training, proof the model learned the job instead of memorizing answers. Cheat sheet means we handed that model the exact answer template in its prompt; our models get no cheat sheet, the format is trained in. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
-               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json','../ft/data/benchmark_results_v2.json'];
+               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json',
+               '../ft/data/benchmark_v2_sonnet.json','../ft/data/benchmark_v2_opus.json',
+               '../ft/data/benchmark_v2_fable.json',
+               '../ft/data/benchmark_results_v2.json'];
   const rows={...fallback}; let anyV2=false;
   for(const url of files){
     try{
@@ -458,7 +573,7 @@ renderBench(fallback, "120 test documents per model, same exam for everyone. A p
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(rows, "120 test documents per model, same exam, same grading script. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
+  renderBench(applyExtra(rows), "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. New vendors and formats: accuracy on only the companies and document styles we deliberately kept out of training, proof the model learned the job instead of memorizing answers. Cheat sheet means we handed that model the exact answer template in its prompt; our models get no cheat sheet, the format is trained in. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
 })();
 </script>
 </body>

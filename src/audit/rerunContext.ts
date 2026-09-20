@@ -105,18 +105,21 @@ function asOfDocs(db: Db, subject: RerunSubject, neutralised: string[]): DocLite
   return [...byId.values()];
 }
 
-/** Cents taken off a document by this decision, plus by any decision that posted at the same instant or later. */
+/**
+ * Cents taken off a document by this decision, plus by any decision that posted after it. Two entries can share a
+ * millisecond (the code tier posts several within one), so a tie is broken by the order they were recorded in.
+ */
 function restoredCents(db: Db, subject: RerunSubject, docId: string): number {
   const kinds = REDUCES_OPEN.map(() => "?").join(",");
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
        FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
-       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND (d.id = ? OR d.posted_at >= ?)
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND (d.id = ? OR d.posted_at > ? OR (d.posted_at = ? AND d.rowid > (SELECT rowid FROM decision WHERE id = ?)))
          AND json_extract(d.proposal_json, '$.kind') IN (${kinds})
          AND a.value ->> '$.doc_id' = ?`,
     )
-    .get(subject.decision_id, subject.posted_at, ...REDUCES_OPEN, docId) as { n: number };
+    .get(subject.decision_id, subject.posted_at, subject.posted_at, subject.decision_id, ...REDUCES_OPEN, docId) as { n: number };
   return row.n;
 }
 
@@ -157,10 +160,10 @@ function appliedByOthers(db: Db, subject: RerunSubject, bankTxnId: string, neutr
     .prepare(
       `SELECT COALESCE(SUM(ABS((l.value ->> '$.debit_cents') - (l.value ->> '$.credit_cents'))), 0) AS n
        FROM decision d, json_each(json_extract(d.proposal_json, '$.entries')) l
-       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.id <> ? AND d.posted_at <= ?
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.id <> ? AND (d.posted_at < ? OR (d.posted_at = ? AND d.rowid < (SELECT rowid FROM decision WHERE id = ?)))
          AND json_extract(d.proposal_json, '$.bank_txn_id') = ? AND l.value ->> '$.account' = ?`,
     )
-    .get(subject.decision_id, subject.posted_at, bankTxnId, ACCOUNTS.cash) as { n: number };
+    .get(subject.decision_id, subject.posted_at, subject.posted_at, subject.decision_id, bankTxnId, ACCOUNTS.cash) as { n: number };
   neutralised.push(`bank line ${bankTxnId} counted as ${row.n} cents applied, excluding this decision's own application`);
   return row.n;
 }
@@ -194,10 +197,10 @@ function asOfFact(db: Db, subject: RerunSubject, base: KernelContext, id: string
   const row = db
     .prepare(
       `SELECT COUNT(*) AS n FROM decision d
-       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.id <> ? AND d.posted_at <= ?
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.id <> ? AND (d.posted_at < ? OR (d.posted_at = ? AND d.rowid < (SELECT rowid FROM decision WHERE id = ?)))
          AND EXISTS (SELECT 1 FROM json_each(json_extract(d.proposal_json, '$.fact_refs')) j WHERE j.value = ?)`,
     )
-    .get(subject.decision_id, subject.posted_at, id) as { n: number };
+    .get(subject.decision_id, subject.posted_at, subject.posted_at, subject.decision_id, id) as { n: number };
   if (row.n !== fact.used_count) neutralised.push(`fact ${id} counted as used ${row.n} time(s) before this posting, not ${fact.used_count}`);
   return { ...fact, used_count: row.n };
 }

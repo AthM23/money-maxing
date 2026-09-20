@@ -14,7 +14,7 @@ export interface RippleRow { function: string; kind: string; ref: string; summar
 export type RippleOutcome = { status: "refreshed"; engine_passes: number; close_done: number; close_items: number } | { status: "skipped" | "failed"; reason: string };
 
 /** Actions after which the other books have something to react to. Learning and remembering move no ledger line. */
-export const MOVES_THE_LEDGER: ReadonlySet<string> = new Set(["run", "approve", "answer", "decide"]);
+export const MOVES_THE_LEDGER: ReadonlySet<string> = new Set(["run", "approve", "answer", "decide", "accruals"]);
 
 function hasTable(db: Db, name: string): boolean {
   return db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name) !== undefined;

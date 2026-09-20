@@ -11,6 +11,8 @@ import { postEntry } from "./post.js";
 export interface ProposeMeta extends DecisionMeta {
   /** A decision opened at intake. When absent, or already routed, a new decision is recorded. */
   decision_id?: string;
+  /** The case the caller was assigned. A proposal under any other intent is refused: an agent works its own case only. */
+  bound_intent_id?: string;
   as_of?: string;
   features?: Record<string, string | number | boolean>;
   extra_checks?: ExtraCheck[];
@@ -47,6 +49,9 @@ function proposeInTransaction(db: Db, input: unknown, meta: ProposeMeta, deps: R
   if (!parsed.success) return { status: "invalid", issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) };
   const proposal = parsed.data;
   if (!intentExists(db, proposal.intent_id)) return { status: "invalid", issues: [`intent_id: unknown intent ${proposal.intent_id}`] };
+  if (meta.bound_intent_id && proposal.intent_id !== meta.bound_intent_id) {
+    return { status: "invalid", issues: [`intent_id: you were assigned ${meta.bound_intent_id}; an entry under ${proposal.intent_id} is not yours to propose`] };
+  }
 
   const existing = meta.mode === "live" ? findExisting(db, proposal) : undefined;
   if (existing?.posted_at) return { status: "posted", decision_id: existing.decision_id, route: existing.route === "PROPOSE" ? "PROPOSE" : "AUTO", entry_id: existing.entry_id };

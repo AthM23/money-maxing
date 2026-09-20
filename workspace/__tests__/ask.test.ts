@@ -58,3 +58,19 @@ describe("asking in words", () => {
     await expect(ask(db, "Why is Vossberg short?", PERIOD, "claude-haiku-4-5")).rejects.toThrow(/No ANTHROPIC_API_KEY/);
   });
 });
+
+describe("asked to do something, the Ask page hands it to a person and changes nothing", () => {
+  it("in code mode: approving, running and closing each get a button to where a person does it, and questions are still answered", async () => {
+    const { ask } = await import("../ask.js");
+    const { workedWorld } = await import("./world.js");
+    const db = await workedWorld();
+    const before = (db.prepare("SELECT COUNT(*) AS n FROM decision").get() as { n: number }).n;
+    expect((await ask(db, "approve the Vossberg credit memo", "2026-07", "code")).handoffs).toEqual([{ to: "input_needed", why: "Decisions are made by a person, with the evidence in front of them." }]);
+    expect((await ask(db, "run the code tier", "2026-07", "code")).handoffs.map((x) => x.to)).toEqual(["run_code_tier"]);
+    expect((await ask(db, "close the month", "2026-07", "code")).handoffs.map((x) => x.to)).toEqual(["close"]);
+    // A question about closing is a question: it gets the report, not a hand-off.
+    const asked = await ask(db, "Can we close the month?", "2026-07", "code");
+    expect([asked.handoffs, asked.used.map((u) => u.tool)]).toEqual([[], ["close_status"]]);
+    expect((db.prepare("SELECT COUNT(*) AS n FROM decision").get() as { n: number }).n).toBe(before);
+  });
+});

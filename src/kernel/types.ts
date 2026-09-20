@@ -21,6 +21,8 @@ export interface DocLite {
   total_cents: number;
   open_cents: number;
   date: string;
+  /** A bill's status in the payables ledger (open, held, approved, scheduled, paid, void). Absent on invoices and in snapshots. */
+  status?: string;
 }
 
 export interface BankTxnLite {
@@ -132,6 +134,10 @@ export interface KernelContext {
   bankTxnAppliedDocs?(bank_txn_id: string): string[] | undefined;
   getDocFx?(doc_id: string): DocFxLite | undefined;
   getBankFx?(bank_txn_id: string): BankFxLite | undefined;
+  /** What the ledger shows a vendor costing us in the three months before `period`, and what is already booked for it. */
+  expenseHistory?(party_id: string, account: string, period: string): { prior: { period: string; cents: number }[]; booked_cents: number } | undefined;
+  /** Messages about a fact's customer, written after what the fact rests on, by the same person or in the same thread. */
+  laterWordOnFact?(fact_id: string): { trace_id: string; at: string }[];
   /** The foreign-currency records of the receipts whose cash was applied to this document. Undefined in replay. */
   bankFxForDoc?(doc_id: string): BankFxLite[] | undefined;
   /** Cents of realized FX already posted against this receipt. FX on one receipt is realized once. */

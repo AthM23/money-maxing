@@ -1,3 +1,5 @@
+import { expenseHistory } from "../agents/close/history.js";
+import { laterWordOnFact } from "../memory/laterWord.js";
 import { ACCOUNTS } from "../contract/accounts.js";
 import { getBill } from "../agents/ap/match.js";
 import { normalizeInvoiceNo, sameObligation } from "../agents/ap/obligation.js";
@@ -39,13 +41,18 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     control: meta.mode === "replay" && meta.replay_docs?.length ? replayControl(meta.replay_docs) : readControlTotals(db),
     standardAccounts: (kind) => config.standard_accounts[kind] ?? [],
     allowedAccounts: (kind) => config.allowed_accounts[kind] ?? [],
-    features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
+    // The proposal's own kind, function and party come last: a rule scoped to one customer is tested on the customer
+    // whose invoice the entry touches, never on the case the agent happened to be working.
+    features: { ...(meta.features ?? {}), kind: proposal.kind, function: proposal.function, party_id: proposal.party_id },
     getTrace: (id) => getTrace(db, id, meta.mode === "replay" ? meta.as_of : undefined),
     getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),
     getBankTxn: (id) => visibleBankTxn(db, id, meta),
     bankTxnAppliedCents: (id) => meta.mode === "replay" ? 0 : bankTxnAppliedCents(db, id),
     bankTxnAppliedDocs: (id) => meta.mode === "replay" ? undefined : bankTxnAppliedDocs(db, id),
+    expenseHistory: (party, account, period) => expenseHistory(db, party, account, period),
     getFact: (id) => getFact(db, id),
+    // In replay the question is what was known then, and `getTrace` already hides later evidence; this guard is for live entries.
+    laterWordOnFact: (id) => meta.mode === "replay" ? [] : laterWordOnFact(db, id),
     getDocFx: (id) => getDocFx(db, id),
     getBankFx: (id) => getBankFx(db, id),
     bankFxForDoc: (id) => meta.mode === "replay" ? undefined : bankFxForDoc(db, id),

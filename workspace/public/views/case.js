@@ -2,8 +2,7 @@ import { flow, getJson, h, money, pill, plain, rate, statusPill, words } from "/
 import { openDrawer } from "/app.js";
 import { evidencePanel } from "/views/evidence.js";
 import { parkedCard, questionCard } from "/views/queue.js";
-import { flowView } from "/views/flow.js";
-import { traceView } from "/views/traceview.js";
+import { tracePanel } from "/views/tracepanel.js";
 
 /** One receipt: the bank line on the left, the book lines that explain it on the right, then how the agents got there. */
 export async function renderCase(app) {
@@ -37,17 +36,6 @@ function otherBooks(rows) {
   return h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "What it touched in the other books"), h("p", { class: "muted" }, "Each function reacts to the posted entry on its own, in code. One that looked and changed nothing says so."))),
     h("div", { class: "ripple" }, rows.map((x) => h("div", { class: "ripplerow" }, h("span", { class: `chip ${x.function === "ar" ? "code" : ""}` }, BOOKS[x.function] ?? words(x.function)),
       h("span", {}, x.summary), h("b", { class: "num" }, x.delta_cents ? flow(Math.abs(x.delta_cents), x.delta_cents > 0 ? "in" : "out") : "")))));
-}
-
-let traceMode = "flow";
-
-/** The same trace two ways: a flow on a grid for reading the story, a timeline for reading every call in order. */
-function tracePanel(v) {
-  const body = h("div", {});
-  const draw = () => body.replaceChildren(traceMode === "flow" ? flowView(v) : h("div", { class: "console" }, traceView(v.trace)));
-  const toggle = h("div", { class: "seg2" }, ["flow", "timeline"].map((m) => h("button", { class: traceMode === m ? "on" : "", on: { click: (e) => { traceMode = m; for (const b of e.target.parentElement.children) b.classList.toggle("on", b === e.target); draw(); } } }, m === "flow" ? "Flow" : "Timeline")));
-  draw();
-  return h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "Agent trace"), h("p", { class: "muted" }, "Every turn anyone took on this case. Click a bubble for what the tool was given and what it gave back.")), toggle), body);
 }
 
 function cashApplication(v) {

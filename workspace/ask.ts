@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { z } from "zod";
 import type { Db } from "../src/runtime/db.js";
 import { HttpError } from "./http.js";
 import { TOOLS, toolByName, type BookTool, type ToolResult } from "./tools.js";
@@ -19,14 +20,25 @@ export interface AskAnswer {
   /** Every tool that actually ran, in order, with how long it took and how many rows it returned: the page shows these as receipts. */
   used: { tool: string; title: string; input: unknown; result: ToolResult; ms: number; rows: number }[];
   usage: { input_tokens: number; output_tokens: number; turns: number } | null;
+  /** Buttons the page puts under the answer. The agent cannot change the books; it can put the place where a person does one click away. */
+  handoffs: Handoff[];
   elapsed_ms: number;
 }
+
+/** Where a person goes to do what was asked, or the one free action that may be offered: a pass of the code tier. */
+export const HANDOFF_TARGETS = ["input_needed", "cash", "close", "policies", "agents", "run_code_tier"] as const;
+export interface Handoff { to: (typeof HANDOFF_TARGETS)[number]; why: string }
+
+/** What was said before, so that "yes, that one" means something. Bounded, and only text: no tool result is replayed. */
+export const AskHistory = z.array(z.object({ question: z.string().min(1).max(300), answer: z.string().max(2000) })).max(6).default([]);
+export type AskHistory = z.infer<typeof AskHistory>;
 
 const SYSTEM = `You answer questions about one company's books for its CFO, inside a finance workspace.
 Use the tools: they are read-only reports computed by code from the ledger. Every amount in a tool result is already written out in dollars: copy amounts exactly as given, and never convert, round, add up or restate a number in another form.
 Say only what the tool results state. Do not guess at causes, motives or what might be going on.
 The page shows each tool's table under your answer, so do not repeat tables: say what matters in two to four plain sentences, then stop. Plain text only: no markdown, no bullet points, no bold.
-If the question asks you to change, approve or post anything, say that changes are made by a person under "Input needed", and offer the report that helps them decide.
+You cannot change the books, and you never say you did. If you are asked to approve, decide, post, run, close or fix anything, call hand_off so the page shows a button to the place where a person does that (or, for running the agents, the free code-tier pass), and say in one sentence what they will find there.
+Earlier questions and your answers may be shown to you: use them to understand a follow-up such as "yes" or "that customer", and run the tool again rather than quoting an old figure.
 If no tool covers the question, say which reports you can build. The company is fictional and the month is simulated.`;
 
 const KEYWORDS: [RegExp, string][] = [
@@ -35,9 +47,9 @@ const KEYWORDS: [RegExp, string][] = [
   [/agent|model|cost|spend|refus|trace/, "agent_activity"], [/rule|polic|memory|learn|fact/, "policies_and_memory"], [/wait|need|approv|question|stuck|open|settled/, "waiting_on_people"], [/cash|bank|came in|received/, "cash_received"],
 ];
 
-export async function ask(db: Db, question: string, period: string, model: AskModel): Promise<AskAnswer> {
+export async function ask(db: Db, question: string, period: string, model: AskModel, history: AskHistory = []): Promise<AskAnswer> {
   const started = Date.now();
-  const answer = model === "code" ? askInCode(db, question, period) : await askAgent(db, question, period, model);
+  const answer = model === "code" ? askInCode(db, question, period) : await askAgent(db, question, period, model, history);
   return { ...answer, elapsed_ms: Date.now() - started };
 }
 
@@ -50,14 +62,23 @@ export function runTool(db: Db, name: string, input: unknown, period: string): T
   return tool.run({ db, period }, parsed.data);
 }
 
+/** Words that ask for something to be done, not shown. Code mode hands those to a person too; it never acts on a sentence. */
+const DOING: [RegExp, Handoff][] = [
+  [/\brun\b.*\b(code|agents?|tier|month)\b|\bwork the (cases|month)\b/, { to: "run_code_tier", why: "A pass of the code tier is free and instant. Anything it cannot settle stays open." }],
+  [/\b(approve|decide|sign|post|book|reject|decline|answer|hold)\b/, { to: "input_needed", why: "Decisions are made by a person, with the evidence in front of them." }],
+  [/\b(close|lock)\b.*\b(month|period|books)\b/, { to: "close", why: "The period locks when every check on the ledger holds." }],
+];
+
 function askInCode(db: Db, question: string, period: string): Omit<AskAnswer, "elapsed_ms"> {
   const q = question.toLowerCase();
+  const doing = DOING.find(([pattern]) => pattern.test(q))?.[1];
+  if (doing && !/^(can|could|what|why|who|how|is|are|show|list)\b/.test(q)) return { model: "code", text: `I cannot change the books. ${doing.why}`, used: [], usage: null, handoffs: [doing] };
   const name = KEYWORDS.find(([pattern]) => pattern.test(q))?.[1];
-  if (!name) return { model: "code", text: `I can build these from the books: ${TOOLS.map((t) => t.title.toLowerCase()).join(", ")}.`, used: [], usage: null };
+  if (!name) return { model: "code", text: `I can build these from the books: ${TOOLS.map((t) => t.title.toLowerCase()).join(", ")}.`, used: [], usage: null, handoffs: [] };
   // The one tool that takes an argument gets the question's own words to search with.
   const input = name === "explain_receipt" ? { customer: subjectOf(question) } : {};
   const used = timed(name, toolByName(name)!.title, input, () => runTool(db, name, input, period));
-  return { model: "code", text: used.result.summary, used: [used], usage: null };
+  return { model: "code", text: used.result.summary, used: [used], usage: null, handoffs: [] };
 }
 
 function timed(tool: string, title: string, input: unknown, run: () => ToolResult): AskAnswer["used"][number] {
@@ -84,7 +105,7 @@ export function forReading(result: ToolResult): Record<string, string | number |
   return t.rows.map((row) => Object.fromEntries(t.columns.map((c, i) => [c, t.money_columns.includes(i) ? money(row[i] ?? null) : row[i] ?? null])));
 }
 
-async function askAgent(db: Db, question: string, period: string, model: Exclude<AskModel, "code">): Promise<Omit<AskAnswer, "elapsed_ms">> {
+async function askAgent(db: Db, question: string, period: string, model: Exclude<AskModel, "code">, history: AskHistory): Promise<Omit<AskAnswer, "elapsed_ms">> {
   if (!process.env.ANTHROPIC_API_KEY) throw new HttpError(503, "No ANTHROPIC_API_KEY is set, so the agent cannot run. Choose \"Code only\": it builds the same reports for free.");
   const used: AskAnswer["used"] = [];
   const tools = (TOOLS as readonly BookTool[]).map((t) => betaZodTool({
@@ -96,8 +117,19 @@ async function askAgent(db: Db, question: string, period: string, model: Exclude
       return JSON.stringify({ title: result.title, summary: result.summary, rows: forReading(result), source_tables: result.source });
     },
   }));
+  const handoffs: Handoff[] = [];
+  const handOff = betaZodTool({
+    name: "hand_off", description: "Show the person a button to the place where what they asked for is done. It changes nothing. input_needed: approvals, questions, held amounts and rules waiting for a person. cash: receipts and their cases. close: the checklist and the audit. policies: rules and memory. agents: traces and cost. run_code_tier: offer the free pass of the code tier over open cases.",
+    inputSchema: z.object({ to: z.enum(HANDOFF_TARGETS), why: z.string().min(3).max(200).describe("One sentence: what they will find or what the button does") }),
+    run: (input) => {
+      if (!handoffs.some((x) => x.to === input.to)) handoffs.push(input);
+      return "A button is shown under your answer. Nothing has been changed.";
+    },
+  });
   const client = new Anthropic();
-  const runner = client.beta.messages.toolRunner({ model, max_tokens: 1500, max_iterations: 6, system: SYSTEM, tools, messages: [{ role: "user", content: `The month being closed is ${period}. ${question}` }] });
+  const messages = [...history.flatMap((t) => [{ role: "user" as const, content: t.question }, { role: "assistant" as const, content: t.answer || "(no text)" }]),
+    { role: "user" as const, content: `The month being closed is ${period}. ${question}` }];
+  const runner = client.beta.messages.toolRunner({ model, max_tokens: 1500, max_iterations: 6, system: SYSTEM, tools: [...tools, handOff], messages });
   const usage = { input_tokens: 0, output_tokens: 0, turns: 0 };
   let text = "";
   for await (const message of runner) {
@@ -107,5 +139,5 @@ async function askAgent(db: Db, question: string, period: string, model: Exclude
     if (message.stop_reason === "refusal") throw new HttpError(422, "The model declined to answer that.");
     text = message.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim() || text;
   }
-  return { model, text: text || "The model returned no text; the tool results are below.", used, usage };
+  return { model, text: text || "The model returned no text; the tool results are below.", used, usage, handoffs };
 }

@@ -48,6 +48,7 @@ function renderHeadlineNumbers(metrics: Metrics): string {
     ["Auto-clear rate", formatRatio(metrics.auto_clear_rate), "70-85% credible; higher invites suspicion"],
     ["Auto-clear precision", formatRatio(metrics.auto_clear_precision), "100% — must not move"],
     ["False auto-posts", String(metrics.false_auto_posts), "0"],
+    ["AUTO results whose journal was not checked", String(metrics.auto_posts_journal_unchecked), "0: until then an AUTO is right on its route only"],
     ["Exception recall", formatRatio(metrics.exception_recall), "100%"],
     ["Cost per 1,000 transactions", formatUsd(metrics.cost_per_1000_usd), "beat the rules-disabled baseline"],
   ];
