@@ -389,6 +389,11 @@ play();
    from the model's actual output by the same kind of deterministic checks the kernel runs. ---- */
 let LASTREAD=null; const SEEN_REFS=new Set();
 const fmt=c=>'$'+(c/100).toLocaleString('en-US',{minimumFractionDigits:2});
+function logDoc(f,verdict,detail){
+  try{fetch('/api/do/log_doc',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({kind:f.doc_kind||'document',party:(f.vendor||f.payer||'unknown').slice(0,80),ref:f.ref?String(f.ref).slice(0,60):undefined,
+      amount_cents:f.amount_cents||undefined,verdict,detail:detail?detail.slice(0,300):undefined})});}catch(_){}
+}
 async function runDoc(){
   if(!LASTREAD) return;
   const my=++runId, guard=()=>my!==runId;
@@ -431,6 +436,7 @@ async function runDoc(){
   stage(2);agent('a-check','hot');$('wire').style.width='64%';
   if(trap){
     pulled.push('the trap scanner, a code rule that reads refusal markers');
+    logDoc(f,'refused','carries a VOID or do-not-pay marker');
     msg('Checker','REFUSED: the document says it should not be paid. The rule that catches VOID and duplicate markers is code, not a model, and it fires before anything posts.','reject');
     card.querySelector('.chip').textContent='refused';card.querySelector('.chip').className='chip wait';
     $('wire').style.width='100%';agent('a-check','on');
@@ -441,6 +447,7 @@ async function runDoc(){
   }
   if(dupe){
     pulled.push('the duplicate scanner, matching refs across everything read');
+    logDoc(f,'duplicate','same ref already read this session');
     msg('Checker',`REFUSED: ref ${f.ref} was already read this session. The same invoice does not post twice.`,'reject');
     card.querySelector('.chip').textContent='duplicate';card.querySelector('.chip').className='chip wait';
     $('wire').style.width='100%';agent('a-check','on');
@@ -461,6 +468,7 @@ async function runDoc(){
     const inScope=match&&(match.customer_scope||[]).some(slug=>(f.payer||'').toLowerCase().includes(slug));
     if(match&&inScope){
       pulled.push('the write-off engine, acting under an earned policy');
+      logDoc(f,'policy_applied',`${match.code} v${match.version}: shortfall written off to GL ${match.action.account}`);
       msg('Checker',`${fmt(short)} is unexplained, and ${match.code} v${match.version} covers it: a policy learned from last quarter and approved by the controller. Written off to GL ${match.action.account}, no question asked.`);
       card.querySelector('.chip').textContent='policy applied';card.querySelector('.chip').className='chip done';
       stage(4);agent('a-check','on');$('wire').style.width='100%';

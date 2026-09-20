@@ -11,5 +11,8 @@ export function renderReports(app) {
     r && r.bills && r.bills.rows.length ? h("div", { class: "panel" }, h("h2", {}, "Bills on file, not yet paid"),
       h("p", { class: "muted small" }, r.bills.summary || ""),
       dataTable(r.bills, {})) : null,
+    r && r.pipeline && r.pipeline.rows.length ? h("div", { class: "panel" }, h("h2", {}, "Pipeline decisions"),
+      h("p", { class: "muted small" }, r.pipeline.summary || ""),
+      dataTable(r.pipeline, {})) : null,
     r ? h("div", { class: "panel" }, h("h2", {}, `Trial balance through ${app.period}`), dataTable(r.trial_balance, { totalLast: true })) : null);
 }

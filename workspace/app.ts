@@ -106,12 +106,27 @@ function billsOnFile(db: Db): { columns: string[]; rows: (string | number | null
     rows: rows.map((r) => [r.vendor, r.ref, r.bill_date, r.service_period, r.total_cents, r.status, r.review ?? "waiting"]) };
 }
 
+/** What the pipeline decided about each document it processed, newest first, read back from the evidence rows. */
+function pipelineLog(db: Db): { columns: string[]; rows: (string | number | null)[][]; money_columns: number[]; summary?: string } {
+  const rows = db.prepare("SELECT recorded_time, payload_json FROM trace WHERE id LIKE 'tr_pipe_%' ORDER BY recorded_time DESC LIMIT 20")
+    .all() as { recorded_time: string; payload_json: string }[];
+  const parsed = rows.map((r) => {
+    try { const outer = JSON.parse(r.payload_json); const d = JSON.parse(outer.text);
+      return [r.recorded_time.slice(11, 19), d.party ?? "", d.kind ?? "", d.ref ?? "", d.amount_cents ?? null, (d.verdict ?? "").replaceAll("_", " "), d.detail ?? ""]; }
+    catch { return null; }
+  }).filter((x): x is (string | number | null)[] => x !== null);
+  const usd = (c: number): string => (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const sum = (v: string): number => parsed.filter((r) => r[5] === v).reduce((n, r) => n + (Number(r[4]) || 0), 0);
+  return { columns: ["Time", "Party", "Kind", "Ref", "Amount", "Decision", "Why"], money_columns: [4], rows: parsed,
+    summary: `${usd(sum("policy applied"))} decided under learned policy with no approval; ${usd(sum("asked a person"))} routed to a person; refusals cost nothing.` };
+}
+
 /** Forecast, close, revenue and the standing reports for one month. A month that is not YYYY-MM is refused. */
 function modules(db: Db, period: string): unknown {
   if (!/^\d{4}-\d{2}$/.test(period)) throw new HttpError(400, "period must be YYYY-MM");
   const lastDay = new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0)).toISOString().slice(0, 10);
   return { period, forecast: forecastView(db), close: closeView(db), revenue: revenueView(db),
-    reports: { ageing: arAgeing(db, lastDay), trial_balance: trialBalance(db, period), cash_by_week: cashByWeek(db, period), bills: billsOnFile(db) } };
+    reports: { ageing: arAgeing(db, lastDay), trial_balance: trialBalance(db, period), cash_by_week: cashByWeek(db, period), bills: billsOnFile(db), pipeline: pipelineLog(db) } };
 }
 
 function found(res: ServerResponse, body: unknown): void {

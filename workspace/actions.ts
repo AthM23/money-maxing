@@ -46,6 +46,12 @@ const UploadBill = z.object({
   period: z.string().regex(/^\d{4}-\d{2}( to .*)?$/).optional(), amount_cents: z.number().int().min(1).max(1_000_000_000),
   terms_days: z.number().int().min(0).max(365).optional(), raw: z.string().min(10).max(6000),
 });
+const LogDoc = z.object({
+  kind: z.string().min(2).max(30), party: z.string().min(1).max(80), ref: z.string().max(60).optional(),
+  amount_cents: z.number().int().min(0).max(1_000_000_000).optional(),
+  verdict: z.enum(["policy_applied", "refused", "duplicate", "asked_a_person", "prepared"]),
+  detail: z.string().max(300).optional(),
+});
 const BillReview = z.object({ bill_id: Id, as: Id, outcome: z.enum(["approved", "rejected"]) });
 const Audit = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/), tamper: z.boolean().optional() });
 const Ask = z.object({ question: z.string().min(2).max(300), period: z.string().regex(/^\d{4}-\d{2}$/), model: z.enum(ASK_MODELS).default("code"), history: AskHistory });
@@ -81,6 +87,17 @@ export const ACTIONS: Record<string, Handler> = {
     const hist = db.prepare("SELECT COUNT(*) AS n, COALESCE(AVG(total_cents), 0) AS avg_cents FROM bill WHERE party_id = ? AND id <> ?").get(slug, billId) as { n: number; avg_cents: number };
     const within_pct = hist.n ? Math.round(Math.abs(u.amount_cents - hist.avg_cents) / hist.avg_cents * 100) : null;
     return { status: "filed", bill_id: billId, vendor_id: slug, trace_id: traceId, history: { prior_bills: hist.n, avg_cents: Math.round(hist.avg_cents), within_pct } };
+  },
+  // Every verdict the pipeline page reaches is kept as an evidence row, so the decision exists on the system
+  // and shows on the Reports page. Nothing here touches the ledger: it is the log of what was decided and why.
+  log_doc: (db, body) => {
+    const d = parse(LogDoc, body);
+    const now = new Date().toISOString();
+    const id = "tr_pipe_" + createHash("sha256").update(now + (d.ref ?? "") + d.party).digest("hex").slice(0, 12);
+    const json = JSON.stringify({ title: `Pipeline: ${d.verdict}`, text: JSON.stringify(d) });
+    db.prepare("INSERT INTO trace (id, source, kind, external_id, event_time, recorded_time, ingested_at, party_id, content_hash, payload_json) VALUES (?, 'file', 'document', ?, ?, ?, ?, NULL, ?, ?)")
+      .run(id, id, now, now, now, createHash("sha256").update(json).digest("hex"), json);
+    return { status: "logged", trace_id: id };
   },
   // Accept or reject a bill that arrived as an upload, as a person on the approval matrix whose limit covers it.
   // Accepting records who accepted and leaves the bill open (its status moves only through the kernel); rejecting voids it.
