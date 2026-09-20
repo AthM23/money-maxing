@@ -8,6 +8,7 @@ import { ACTIONS } from "./actions.js";
 import { assertSameOrigin, HttpError, readJson, sendJson, sendStatic } from "./http.js";
 import { modelView } from "./model.js";
 import { arAgeing, cashByWeek, closeView, forecastView, revenueView, trialBalance } from "./modules.js";
+import { assertAllowed, listening } from "./publicMode.js";
 import { afterLedgerMoved, MOVES_THE_LEDGER, storesFor } from "./ripple.js";
 import { caseView, fleetView, overview, workpaperView } from "./views.js";
 
@@ -33,12 +34,13 @@ function main(): void {
   const port = flagInt(args, "port") ?? 4320;
   if (process.env.MARKETING_URL && !marketingUrl()) warn("MARKETING_URL is not an http(s) address; the logo will open the local marketing page instead");
   const stores = storesFor(dbPath, flagString(args, "stores"));
-  createServer((req, res) => void handle(db, stores, req, res)).listen(port, "127.0.0.1", () => {
-    process.stdout.write(`${BRAND}: http://localhost:${port}/dashboard  (marketing page at /; db ${dbPath}; other books ${stores ? `refresh from ${stores}` : "not refreshed: no stores folder"})\n`);
+  const { host, readOnly } = listening();
+  createServer((req, res) => void handle(db, stores, readOnly, req, res)).listen(port, host, () => {
+    process.stdout.write(`${BRAND}: http://localhost:${port}/dashboard  (marketing page at /; db ${dbPath}; other books ${stores ? `refresh from ${stores}` : "not refreshed: no stores folder"}${readOnly ? `; PUBLIC and read-only on ${host}` : ""})\n`);
   });
 }
 
-async function handle(db: Db, stores: string | null, req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handle(db: Db, stores: string | null, readOnly: boolean, req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (req.method === "GET") return get(db, url, res);
@@ -47,7 +49,9 @@ async function handle(db: Db, stores: string | null, req: IncomingMessage, res: 
       const action = ACTIONS[url.pathname.slice("/api/do/".length)];
       if (!action) throw new HttpError(404, "no such action");
       const name = url.pathname.slice("/api/do/".length);
-      const result = await action(db, await readJson(req));
+      const body = await readJson(req);
+      assertAllowed(name, body, readOnly);
+      const result = await action(db, body);
       // The entry is in; now the other books react to it. Their outcome rides along, it never replaces the action's.
       const other_books = MOVES_THE_LEDGER.has(name) ? await afterLedgerMoved(db, stores) : undefined;
       return sendJson(res, 200, other_books && typeof result === "object" && result !== null ? { ...result, other_books } : result);
