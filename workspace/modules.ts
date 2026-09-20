@@ -26,12 +26,18 @@ export function forecastView(db: Db): { available: boolean; as_of?: string; week
   return { available: true, as_of: asOf, weeks, not_modelled: lines.filter((l) => l.kind === "not_modelled").map((l) => l.source_ref ?? "") };
 }
 
+/** Lane B's checklist speaks to its builders in one place. The CFO's seat says the same thing in plain words. */
+const IN_PLAIN_WORDS: Record<string, string> = {
+  "Phase 3: accrual engine not built": "Not automated: accruals and prepaid amortisation are still booked by a person",
+};
+
 export function closeView(db: Db): { available: boolean; period?: string; items?: { area: string; name: string; status: string; reason: string | null }[]; done?: number } {
   if (!hasTable(db, "checklist_item")) return { available: false };
   const period = (db.prepare("SELECT MAX(period) AS p FROM checklist_item").get() as { p: string | null }).p;
   if (!period) return { available: false };
   const items = db.prepare("SELECT function AS area, name, status, blocked_reason AS reason FROM checklist_item WHERE period = ? ORDER BY rowid").all(period) as { area: string; name: string; status: string; reason: string | null }[];
-  return { available: true, period, items, done: items.filter((i) => i.status === "done").length };
+  const shown = items.map((i) => ({ ...i, reason: i.reason === null ? null : IN_PLAIN_WORDS[i.reason] ?? i.reason }));
+  return { available: true, period, items: shown, done: items.filter((i) => i.status === "done").length };
 }
 
 export function revenueView(db: Db): { available: boolean; contracts?: unknown[] } {

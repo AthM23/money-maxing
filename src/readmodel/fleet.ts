@@ -45,8 +45,8 @@ export function buildFleet(db: Db, feedLimit = 60): FleetView {
   const decisions = db
     .prepare(
       `SELECT d.id, d.intent_id, d.actor, d.tier, d.kind, d.route, d.model_calls, d.cost_micros, d.latency_ms, d.posted_at, d.created_at, d.proposal_json,
-              json_extract(i.case_json, '$.party_id') AS party
-       FROM decision d JOIN intent i ON i.id = d.intent_id WHERE d.mode = 'live' AND d.actor NOT IN ('seed', ?) ORDER BY d.rowid`,
+              COALESCE(p.name, json_extract(i.case_json, '$.party_id')) AS party
+       FROM decision d JOIN intent i ON i.id = d.intent_id LEFT JOIN party p ON p.id = json_extract(i.case_json, '$.party_id') WHERE d.mode = 'live' AND d.actor NOT IN ('seed', ?) ORDER BY d.rowid`,
     )
     // The router's own note that nothing settled a case is bookkeeping, not a turn anybody took.
     .all(UNSETTLED_ACTOR) as DecisionRow[];
@@ -125,14 +125,16 @@ function feedOf(d: DecisionRow, worker: string, refusals: number, approved: bool
 function peopleFeed(db: Db): FeedItem[] {
   const rows = db
     .prepare(
-      `SELECT a.approved_at AS at, a.approver_id, a.outcome, a.note, d.intent_id, d.kind, d.proposal_json, json_extract(i.case_json, '$.party_id') AS party
-       FROM approval a JOIN decision d ON d.id = a.decision_id JOIN intent i ON i.id = d.intent_id WHERE a.approver_kind = 'human' AND d.mode = 'live'`,
+      `SELECT a.approved_at AS at, COALESCE(who.name, a.approver_id) AS approver_id, a.outcome, a.note, d.intent_id, d.kind, d.proposal_json, COALESCE(p.name, json_extract(i.case_json, '$.party_id')) AS party
+       FROM approval a JOIN decision d ON d.id = a.decision_id JOIN intent i ON i.id = d.intent_id
+       LEFT JOIN party p ON p.id = json_extract(i.case_json, '$.party_id') LEFT JOIN approver who ON who.id = a.approver_id
+       WHERE a.approver_kind = 'human' AND d.mode = 'live'`,
     )
     .all() as { at: string; approver_id: string; outcome: string; note: string | null; intent_id: string; kind: string | null; proposal_json: string | null; party: string | null }[];
   return rows.map((r) => {
     // A hold that a person decided instead of keeping is not a refusal: it is them taking the decision (see decideHold).
     const decided = r.outcome === "rejected" && r.note?.startsWith(DECIDED_INSTEAD_OF_HELD) ? r.note.slice(DECIDED_INSTEAD_OF_HELD.length).trim() : null;
-    const what = decided ? `set the hold aside and decided it: ${words(decided)}` : `${r.outcome === "approved" ? "approved" : "declined"} ${words(r.kind)}`;
+    const what = decided ? `set the hold aside and decided it as ${words(decided)}` : `${r.outcome === "approved" ? "approved" : "declined"} ${words(r.kind)}`;
     return { at: r.at, intent_id: r.intent_id, party: r.party, worker: r.approver_id, what, amount_cents: amountOf(r.proposal_json),
       tone: r.outcome === "approved" || decided ? "person" as const : "refused" as const };
   });
@@ -141,9 +143,11 @@ function peopleFeed(db: Db): FeedItem[] {
 function answersFeed(db: Db): FeedItem[] {
   const rows = db
     .prepare(
-      `SELECT e.answered_at AS at, json_extract(e.answer_json, '$.answered_by') AS who, json_extract(e.answer_json, '$.uses') AS uses, d.intent_id,
-              json_extract(i.case_json, '$.party_id') AS party
-       FROM escalation e JOIN decision d ON d.id = e.decision_id JOIN intent i ON i.id = d.intent_id WHERE e.answered_at IS NOT NULL`,
+      `SELECT e.answered_at AS at, COALESCE(person.name, json_extract(e.answer_json, '$.answered_by')) AS who, json_extract(e.answer_json, '$.uses') AS uses, d.intent_id,
+              COALESCE(p.name, json_extract(i.case_json, '$.party_id')) AS party
+       FROM escalation e JOIN decision d ON d.id = e.decision_id JOIN intent i ON i.id = d.intent_id
+       LEFT JOIN party p ON p.id = json_extract(i.case_json, '$.party_id') LEFT JOIN approver person ON person.id = json_extract(e.answer_json, '$.answered_by')
+       WHERE e.answered_at IS NOT NULL`,
     )
     .all() as { at: string; who: string | null; uses: string | null; intent_id: string; party: string | null }[];
   return rows.map((r) => ({ at: r.at, intent_id: r.intent_id, party: r.party, worker: r.who ?? "a person", what: `answered the question${r.uses === "standing" ? ", as a standing answer" : ""}`, amount_cents: null, tone: "person" as const }));
@@ -161,5 +165,10 @@ function amountOf(proposalJson: string | null): number | null {
   return Array.isArray(apps) && apps.length > 0 ? apps.reduce((n, a) => n + (a.amount_cents ?? 0), 0) : null;
 }
 
-const words = (kind: string | null): string => (kind ? kind.replaceAll("_", " ") : "an entry");
+/** Entry kinds as a finance person says them. Anything not listed falls back to the kind with its underscores removed. */
+const KIND_WORDS: Record<string, string> = {
+  apply_payment: "a cash application", write_off: "a bank-charge write-off", fx_realized: "a realized FX loss", credit_memo: "a credit memo",
+  dispute_hold: "a dispute hold", tax_withholding: "tax withheld at source", unapplied_cash: "unapplied cash",
+};
+const words = (kind: string | null): string => (kind ? KIND_WORDS[kind] ?? kind.replaceAll("_", " ") : "an entry");
 const sum = (rows: WorkerRow[], key: "cost_micros" | "model_calls" | "tool_calls" | "kernel_refusals"): number => rows.reduce((n, r) => n + r[key], 0);

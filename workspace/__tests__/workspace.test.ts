@@ -46,7 +46,9 @@ describe("the trace of a case, and of the whole month", () => {
     const code = fleet.workers.find((w) => w.worker === "Code tier")!;
     expect(code.posted_alone).toBeGreaterThanOrEqual(14);
     expect(code.cost_micros).toBe(0);
-    expect(fleet.feed.some((f) => f.what === "asked a person one question" && f.party === "vossberg")).toBe(true);
+    // The feed is read by a person: it names the customer, not the party id.
+    expect(fleet.feed.some((f) => f.what === "asked a person one question" && f.party === "Vossberg Logistik GmbH")).toBe(true);
+    expect(fleet.feed.some((f) => f.what === "posted a cash application with no person involved")).toBe(true);
   });
 });
 
