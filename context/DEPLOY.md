@@ -45,9 +45,13 @@ npx vercel deploy          # a preview, behind Vercel's login; check it with: np
 npx vercel deploy --prod   # the public address above
 ```
 
-**On `main` since 20 Sep 2026, 05:12 EDT (`06411a9`), and still a hand deploy.** `npx vercel git connect` was refused at
-05:13: the repository is private and Vercel's GitHub app has not been given access to it. Until it is connected, the
-copy is as old as the last `npx vercel deploy --prod` (run from any checkout of `main`, signed in to the project).
+**Every push to `main` redeploys it** (since 20 Sep 2026, 05:22 EDT): `.github/workflows/deploy-vercel.yml` runs
+`vercel deploy --prod` with the repository secret `VERCEL_TOKEN` (a token from AthM23's Vercel account), whoever wrote
+the commit; the build still happens on Vercel, about 20 seconds. Without the secret the job does nothing and passes. A
+failed build leaves the last good copy up. The project is **not** connected through Vercel's GitHub app (refused at
+05:13: private repository, app not given access), so there are no preview deployments for branches. By hand, from any
+checkout signed in to the project, the two commands above still work. Vercel's Hobby limit is about 100 deployments a
+day (UNVERIFIED, from their published limits).
 
 `.vercelignore` replaces `.gitignore` for the CLI, so `.env` is named in it; keep it named.
 

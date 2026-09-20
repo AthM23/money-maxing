@@ -1905,3 +1905,20 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   deploy only when their author is the account's owner, so Karan's and Preet's pushes may not deploy even once
   connected. Proposed instead, not yet on `main`: a GitHub Actions job that runs `vercel deploy --prod` with a token
   on every push to `main`, which deploys whoever wrote the commit.
+
+
+### 2026-09-20 ~05:25 ET — Every push to `main` now redeploys the Vercel copy (AthM23 + Claude Code session)
+
+- **Supersedes "Blocked on a person" and "Proposed instead, not yet on `main`"** (05:15 entry). Picked: the GitHub
+  Actions job, `.github/workflows/deploy-vercel.yml`, over Vercel's GitHub app. It runs `vercel deploy --prod` on every
+  push to `main` with the repository secret `VERCEL_TOKEN` (added by AthM23), so it deploys whoever wrote the commit;
+  without the secret it does nothing and passes. The build still runs on Vercel. No preview deployments for branches.
+- **Measured:** the push that carried the job (`a540171`, 05:21:53) produced a production deployment nobody started by
+  hand, created 05:22:33 and Ready in 26 s; after it `/` on https://money-maxing-mu.vercel.app is byte-identical to
+  `frontend/index.html` at `a540171`, `/dashboard` and `/api/overview` 401 before signing in. Before the push:
+  `pnpm test` → 91 files, **769 passing**; typecheck clean. Still not checked signed in (the password is a sensitive
+  variable and cannot be pulled).
+- To stop it: delete the `VERCEL_TOKEN` secret, or the workflow file. UNVERIFIED: Vercel's Hobby limit of about 100
+  deployments a day; if it is reached, deploys are refused until it resets and the last good copy stays up.
+- Noticed, not changed (not this lane's): `DEPLOY.md` still names `scripts/deploy-public.sh`, which `main` has since
+  renamed `scripts/deploy-aws.sh`.
