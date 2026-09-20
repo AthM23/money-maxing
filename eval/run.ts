@@ -81,6 +81,7 @@ function formatSummary(metrics: Metrics, reportPath: string): string {
     `  auto-clear rate:      ${formatRatio(metrics.auto_clear_rate)}`,
     `  auto-clear precision: ${formatRatio(metrics.auto_clear_precision)}`,
     `  false auto-posts:     ${metrics.false_auto_posts}`,
+    `  AUTO, journal unchecked: ${metrics.auto_posts_journal_unchecked}`,
     `  exception recall:     ${formatRatio(metrics.exception_recall)}`,
     `  cost / 1,000 txns:    ${formatUsd(metrics.cost_per_1000_usd)}`,
     `  report: ${reportPath}`,

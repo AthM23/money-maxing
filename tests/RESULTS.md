@@ -4,16 +4,18 @@ Scoreboard for the edge-case corpus. Update this as cases move from `todo` to
 `passing`. Per-case status lives in [`cases.csv`](./cases.csv); this file is the
 summary and the history.
 
-**19 September 2026 audit:** the runtime corpus adapter runs **11 of 110 routed cases**;
-all 11 match their expected routes, with **0 false auto-posts**. The remaining 99 routed cases are
-`NOT_RUN`; the other five corpus rows describe engineering invariants. This is limited fixture
-coverage, not evidence that the entire corpus passes.
+**20 September 2026, 04:22 EDT:** the runtime corpus adapter runs **20 of 110 routed cases** (`pnpm eval --sut
+kernel-pack`). 16 routes match the corpus; 4 differ, and all 4 are more conservative than the corpus asks (A-14
+refused where AUTO was expected, B-01 and B-02 escalated where PROPOSE was expected, B-13 refused where BLOCK was
+expected). **0 false auto-posts**, and 0 AUTO results whose posted journal went unchecked against the answer key.
+The remaining 90 routed cases are `NOT_RUN`; the other five corpus rows describe engineering invariants. This is
+limited fixture coverage, not evidence that the entire corpus passes.
 
-Separately: **488 TypeScript tests across 50 files**, clean typecheck, and **4 Python scoring tests**.
-A fresh eleven-receipt seeded run resolves six cases with zero model calls; ten posted entries
-re-perform cleanly. After approving the learned policy in the isolated fixture, two write-offs park
-for review rather than silently posting. The fourteen-invoice remittance rehearsal applies $13,505
-and leaves the stated $495 dispute open. See [the audit](../context/AUDIT_2026-09-19.md).
+Separately: **752 TypeScript tests across 88 files**, clean typecheck, and **4 Python scoring tests**. The demo
+month (`scripts/demo-build.sh`) posts 14 entries from code with zero model calls, parks 1, re-performs 324 of 324
+tick marks, and the auditor's pack re-performs the posted entries clean; one real model pass (Haiku, $0.10) settles
+the month's one judgment case as a dispute hold for a person to decide. Earlier history is in
+[the 19 September audit](../context/AUDIT_2026-09-19.md).
 
 ---
 
@@ -23,10 +25,10 @@ The five from the corpus's rubric (section J). These are what go on the slide.
 
 | Metric | Target | Current |
 |---|---|---|
-| Auto-clear rate | 70–85% (whole-corpus target) | 1/11 (9.1%, executed safety subset only) |
+| Auto-clear rate | 70–85% (whole-corpus target) | 1/20 (5.0%, executed safety subset only) |
 | **Auto-clear precision** | **100% — the number that must not move** | 1/1 (one observed auto) |
-| **False auto-posts** | **0 — eval exits non-zero on any** | 0 among 11 executed |
-| Exception recall | 100% | 10/10 executed exceptions |
+| **False auto-posts** | **0 — eval exits non-zero on any** | 0 among 20 executed |
+| Exception recall | 100% | 18/18 executed exceptions |
 | Cost per 1,000 transactions | beat the rules-disabled baseline | $0 for these code-only fixtures; model baseline unmeasured |
 
 Baseline comparison (deterministic tier disabled, everything through the model):
