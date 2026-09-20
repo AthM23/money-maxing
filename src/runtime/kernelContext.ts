@@ -32,6 +32,7 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     open_escalations: countOpenEscalations(db, meta.intent_id),
     control: meta.mode === "replay" && meta.replay_docs ? replayControl(meta.replay_docs) : readControlTotals(db),
     standardAccounts: (kind) => config.standard_accounts[kind] ?? [],
+    allowedAccounts: (kind) => config.allowed_accounts[kind] ?? [],
     features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
     getTrace: (id) => getTrace(db, id),
     getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),

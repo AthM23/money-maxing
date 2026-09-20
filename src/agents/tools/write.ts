@@ -17,11 +17,26 @@ export const EscalateInput = z.object({
   treatments: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).min(2).max(4),
 });
 
+const MIN_ESCALATION_TIER = 2;
+
 export const FinishInput = z.object({
   summary: z.string().min(1),
   /** REFUSE must say everywhere it looked; ESCALATE must name what is not known. */
   outcome: z.enum(["proposed", "escalated", "refused", "handed_off"]),
   places_looked: z.array(z.string()).default([]),
+});
+
+/**
+ * What the model may say a fact's value is. Typed on purpose: a free-form record in a tool schema makes the Agent SDK
+ * drop the whole tool list without an error, and the model then invents tool calls in plain text.
+ */
+export const FactCandidateToolInput = FactCandidate.extend({
+  value: z.object({
+    pct_off: z.number().min(0).max(100).optional(),
+    amount_cents: z.number().int().nonnegative().optional(),
+    payer_party_id: z.string().min(1).optional(),
+    note: z.string().optional(),
+  }),
 });
 
 /** The only tools that change anything. `propose_entry` goes through the kernel; an agent cannot post any other way. */
@@ -39,6 +54,10 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     description: "Ask the one person who knows. Only after the search plan is exhausted. If this was already asked, the stored answer comes back instead.",
     run: (input, env) => {
       const q = EscalateInput.parse(input);
+      // A person's time costs more than a stronger model's. The cheapest tier hands up instead of asking.
+      if (env.tier < MIN_ESCALATION_TIER && (env.max_tier ?? env.tier) > env.tier) {
+        return { status: "handed_up", reason: `tier ${env.tier} may not ask a person while a stronger tier is available; call finish with outcome handed_off` };
+      }
       return openEscalation(env.db, env.clock, {
         decision_id: env.decision_id, intent_id: env.intent_id, asked_user: q.asked_user,
         dedupe_key: dedupeKey(q.party_id, q.predicate, q.decision_kind), question: q, entry_date: env.entry_date,
@@ -46,7 +65,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     },
   },
   {
-    name: "record_fact_candidate", registry_name: "record_fact_candidate", input: FactCandidate,
+    name: "record_fact_candidate", registry_name: "record_fact_candidate", input: FactCandidateToolInput,
     description: "Store what you learned as a candidate fact: party, scope, end date, source traces. It applies to nothing until approved.",
     run: (input, env) => recordFactCandidate(env.db, env.clock, input),
   },

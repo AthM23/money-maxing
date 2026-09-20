@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { loadEnv } from "../env.js";
 import { openDb } from "../runtime/db.js";
 import { runCase } from "./runCase.js";
 import { defaultTiers } from "./sdk.js";
@@ -10,8 +11,9 @@ async function main(): Promise<number> {
     process.stderr.write("usage: tsx src/agents/cli.ts <db path> <case.json>\n");
     return 1;
   }
+  loadEnv();
   if (!process.env.ANTHROPIC_API_KEY) {
-    process.stderr.write("ANTHROPIC_API_KEY is not set; the model tiers cannot run. Tier 0 still works through runCase in code.\n");
+    process.stderr.write("ANTHROPIC_API_KEY is not set (put it in .env); the model tiers cannot run. Tier 0 still works in code.\n");
     return 1;
   }
   const db = openDb(dbPath);

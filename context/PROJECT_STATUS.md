@@ -421,3 +421,34 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
 - What this changes in how we talk about it: "zero wrong auto-posts" is a property we test for, and a reviewer found two
   ways to break it within an hour. Say that in the limitations section, with the count of adversarial probes run.
 - Contract change: `decision.posted_at`. `FactLite.value` added to the kernel's input types.
+
+### 2026-09-19 ~20:52 ET — First real model runs; one key is enough; controller caught a treatment error (Person A)
+
+- **One key is enough now.** `ANTHROPIC_API_KEY` lives in the repo's git-ignored `.env` (loaded by the CLIs; never committed).
+  The controller falls back to a different Claude model (`claude-opus-5`, structured output, fails closed on refusal,
+  truncation or an unreadable reply) when there is no OpenAI key; with one it uses GPT. Same family means weaker
+  independence than GPT: say so in the limitations. Slack is optional: `pnpm inbox <db> list|answer|approve|reject` is
+  the human side in a terminal and calls the same functions as the Slack transport.
+- `pnpm demo [party]` seeds a small on-disk July (`src/demo/seed.ts`: three customers, a mailbox with the answer
+  buried among ordinary mail, one approved policy) and runs the cases with the real tiers. Person B's seeder replaces it.
+- **Measured, real models, 19 Sep:** Umbrella's $20 wire shortfall: AUTO → AUTO at tier 0, 7 ms, zero model calls, books
+  tied. Initech's $1,200: Haiku (tier 1) searched facts, policy, workbook, bank, ledger, CRM, mail, Slack, contracts,
+  found and read the CEO's email, recorded a fact candidate, and had four proposals rejected by the kernel before one
+  passed every mark and parked as PROPOSE: 25 model turns, 82 s, **$0.085**. The controller (Opus 5) then **disagreed**:
+  the draft was a `write_off` debiting revenue 4000 rather than a credit memo against deferred revenue 2400, and the
+  email itself says "I have not told finance yet". Nothing posted. n = 1 run; not a rate.
+- Three defects found by running it for real, each fixed with a test:
+  1. The Agent SDK silently returned an **empty tool list** because one tool's input used a free-form record
+     (`propertyNames` in JSON Schema). With no tools the model wrote fake tool calls as prose. The fact tool's input is
+     now typed, a test bans `propertyNames` in any tool schema, and the investigator aborts loudly if the model starts
+     with fewer tools than we defined.
+  2. Trace search required every query word to match, so a query with one wrong word missed the CEO email and the
+     agent escalated. Search is now ranked by how many terms match.
+  3. The kernel accepted a concession booked straight to revenue. New mark **J4**: the judgment amount must land on an
+     account the chart-of-accounts policy permits for that kind (credit memo → 2400 or 4900; write-off → 6150 or 6990).
+- Also added: only tier 2 and above may ask a person when a stronger tier exists (a person's time costs more than a
+  stronger model), lower tiers' findings are handed up as notes, and **preparer → reviewer → one revision**
+  (`src/agents/review.ts`): a controller disagreement declines the draft on the record and sends its concerns to a
+  stronger tier once; a person sees only what survives, with the controller's notes.
+- `pnpm test` → 25 files, **270 passing**. Model ids per Anthropic's current list: `claude-haiku-4-5`, `claude-sonnet-5`,
+  `claude-opus-5`.

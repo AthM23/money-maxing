@@ -6,6 +6,8 @@ export interface RuntimeConfig {
   fiscal_window: { from: string; to: string };
   /** Accounts that are routine for a kind. Anything else on a line needs evidence (kernel E5). */
   standard_accounts: Partial<Record<ProposalKind, readonly string[]>>;
+  /** Accounts a kind may post its judgment amount to (kernel J4). From the written policy memo; a kind not listed is unrestricted. */
+  allowed_accounts: Partial<Record<ProposalKind, readonly string[]>>;
 }
 
 export const DEFAULT_CONFIG: RuntimeConfig = {
@@ -14,6 +16,14 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
   standard_accounts: {
     rev_recognition: [ACCOUNTS.deferred_revenue, ACCOUNTS.subscription_revenue],
     amortization: [ACCOUNTS.prepaid],
+  },
+  allowed_accounts: {
+    // A price concession on a subscription still being delivered reduces deferred revenue, or contra-revenue once earned.
+    credit_memo: [ACCOUNTS.deferred_revenue, ACCOUNTS.concessions],
+    // A write-off is an expense of collecting, never a direct hit to revenue.
+    write_off: [ACCOUNTS.bank_charges, ACCOUNTS.misc_expense],
+    customer_credit: [ACCOUNTS.customer_credits],
+    apply_payment: [ACCOUNTS.customer_credits],
   },
 };
 

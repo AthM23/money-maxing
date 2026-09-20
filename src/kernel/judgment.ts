@@ -1,7 +1,7 @@
 import type { Mark, Proposal } from "../contract/types.js";
 import { evaluateCondition } from "./condition.js";
 import type { FactLite, KernelContext } from "./types.js";
-import { isAfterAsOf, mark, naMark, passMark, verdictMark } from "./util.js";
+import { isAfterAsOf, isControlAccount, mark, naMark, passMark, verdictMark } from "./util.js";
 
 /** J1 — every cited policy resolves, is approved, and its condition holds on this decision. */
 export function checkJ1(proposal: Proposal, ctx: KernelContext): Mark {
@@ -82,11 +82,21 @@ export function checkJ3(proposal: Proposal): Mark[] {
   );
 }
 
+/** J4 — the judgment amount lands on an account the chart-of-accounts policy permits for this kind of entry. */
+export function checkJ4(proposal: Proposal, ctx: KernelContext): Mark {
+  const allowed = ctx.allowedAccounts?.(proposal.kind) ?? [];
+  const refs = [proposal.intent_id];
+  if (allowed.length === 0) return naMark("J", "J4", `no account policy for kind ${proposal.kind}`, refs);
+  const wrong = proposal.entries.filter((l) => !isControlAccount(l.account, ctx) && !allowed.includes(l.account)).map((l) => l.account);
+  const problems = wrong.length > 0 ? [`kind ${proposal.kind} may post to ${allowed.join(", ")}; found ${[...new Set(wrong)].join(", ")}`] : [];
+  return verdictMark("J", "J4", problems, `accounts permitted for kind ${proposal.kind}`, refs);
+}
+
 export function judgmentMarks(
   proposal: Proposal,
   ctx: KernelContext,
   adjustment: number,
   j3: readonly Mark[],
 ): Mark[] {
-  return [checkJ1(proposal, ctx), checkJ2(proposal, ctx, adjustment), ...j3];
+  return [checkJ1(proposal, ctx), checkJ2(proposal, ctx, adjustment), checkJ4(proposal, ctx), ...j3];
 }

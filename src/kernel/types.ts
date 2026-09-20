@@ -105,6 +105,8 @@ export interface KernelContext {
   control: ControlTotals;
   /** Accounts that are routine for a kind. Any other account on a line needs evidence (E5). */
   standardAccounts(kind: ProposalKind): readonly string[];
+  /** Chart-of-accounts policy: the accounts a kind may post its judgment amount to. Absent or empty means unrestricted. */
+  allowedAccounts?(kind: ProposalKind): readonly string[];
   /** Facts the policy condition evaluator may read, e.g. shortfall_cents, method, party_id. */
   features: Readonly<Record<string, string | number | boolean>>;
   getTrace(id: string): TraceLite | undefined;

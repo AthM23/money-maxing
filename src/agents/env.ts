@@ -12,6 +12,8 @@ export interface ToolEnv {
   as_of?: string;
   actor: string;
   tier: number;
+  /** The highest model tier configured for this run. Only tier 2 and above may ask a person, when one exists. */
+  max_tier?: number;
   autonomy_level: AutonomyLevel;
   intent_id: string;
   /** Date of the case in hand. */

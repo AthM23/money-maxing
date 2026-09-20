@@ -17,6 +17,10 @@ export interface RunCaseOptions {
   /** Investigators by tier, cheapest first. Tier numbers start at 1; tier 0 is code. */
   investigators: Investigator[];
   max_turns?: number;
+  /** Skip the cheaper tiers, e.g. when a reviewer sent the case back. 1-based; tier 0 (code) always runs first. */
+  start_tier?: number;
+  /** Extra context for the investigators, e.g. the reviewer's concerns. */
+  extra_notes?: string[];
   clock?: Clock;
   config?: RuntimeConfig;
 }
@@ -44,9 +48,12 @@ export async function runCase(db: Db, input: unknown, opts: RunCaseOptions): Pro
     return { status: "done", routes: t0.routes, final_route: t0.routes.at(-1) ?? null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
   }
   let last: CaseResult | null = null;
+  const notes = [...t0.notes, ...(opts.extra_notes ?? [])];
   for (const [i, investigator] of opts.investigators.entries()) {
-    last = await runTier(db, c, i + 1, investigator, t0.notes, t0.routes, opts, deps);
+    if (i + 1 < (opts.start_tier ?? 1)) continue;
+    last = await runTier(db, c, i + 1, investigator, notes, t0.routes, opts, deps);
     if (last.final_route !== null) return last;
+    if (last.report) notes.push(`tier ${i + 1} (${investigator.name}) stopped: ${last.report.outcome}. ${last.report.summary}`);
   }
   return last ?? { status: "done", routes: t0.routes, final_route: null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
 }
@@ -61,7 +68,7 @@ async function runTier(
   });
   const env: ToolEnv = {
     db, clock: deps.clock, config: deps.config, mode: opts.mode, as_of: opts.as_of, actor: `agent:${c.function}:${investigator.name}`,
-    tier, autonomy_level: opts.autonomy_level, intent_id: c.intent_id, decision_id: decisionId, features: caseFeatures(c),
+    tier, max_tier: opts.investigators.length, autonomy_level: opts.autonomy_level, intent_id: c.intent_id, decision_id: decisionId, features: caseFeatures(c),
     replay_docs: c.docs_snapshot, entry_date: c.entry_date,
   };
   const seen: ToolCallResult[] = [];

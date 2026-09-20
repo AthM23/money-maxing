@@ -125,3 +125,15 @@ describe("review findings: no path to the ledger around the kernel", () => {
     expect(getFact(db, id)?.kinds).toEqual([]);
   });
 });
+
+describe("found by the controller agent on the first real model run", () => {
+  it("a concession booked as a write-off straight to revenue is rejected on J4; the same amount as a credit memo to deferred revenue parks", () => {
+    const db = seedInitech();
+    const wrong = { ...creditMemo(), kind: "write_off" as const, terms_change: undefined,
+      entries: [{ account: ACCOUNTS.subscription_revenue, debit_cents: 120000, credit_cents: 0, memo: "x" }, { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 120000, memo: "x" }] };
+    const r = proposeEntry(db, wrong, agent, deps);
+    expect(r.status).toBe("rejected");
+    if (r.status === "rejected") expect(r.failed.map((m) => m.check)).toContain("J4");
+    expect(proposeEntry(db, creditMemo(), agent, deps).status).toBe("pending_approval");
+  });
+});
