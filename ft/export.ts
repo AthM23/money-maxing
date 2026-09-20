@@ -105,8 +105,8 @@ for (const a of applied) {
     pairRows.push(
       [bt.id, c.id, chosen.has(c.id) ? 1 : 0,
        Math.abs(bt.amount_cents - c.total_cents),
-       Math.round((Date.parse(bt.date ?? a.created_at) - Date.parse(c.issue_date)) / 86400000),
-       nameSim(bt.description ?? "", c.party_id ?? ""), (bt.description ?? "").includes(c.id) ? 1 : 0,
+       Math.round((Date.parse(bt.posted_date ?? a.created_at) - Date.parse(c.issue_date)) / 86400000),
+       nameSim(bt.descriptor ?? "", c.party_id ?? ""), (bt.descriptor ?? "").includes(c.id) ? 1 : 0,
        cands.length].join(",")
     );
   }

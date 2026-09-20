@@ -102,3 +102,48 @@ describe("a vendor payment cannot call itself accounts receivable", () => {
     expect([db.prepare("SELECT status, open_cents FROM bill WHERE id = ?").get(BILL_ID), readControlTotals(db)]).toEqual(before);
   });
 });
+
+describe("nothing an agent does in replay reaches a person or memory", () => {
+  it("a question raised in replay opens no escalation, leaves the closed intent closed, and the desk has nothing to send", async () => {
+    const { runCase } = await import("../../agents/runCase.js");
+    const { deskPass } = await import("../../desk/deskPass.js");
+    const db = seedInitech();
+    db.exec("INSERT INTO intent (id, function, question, owner, status, created_at, closed_at) VALUES ('int_hist','ar','Replay of a May decision','replay','resolved','2026-05-16T00:00:00Z','2026-05-16T00:00:00Z');");
+    let answers: unknown[] = [];
+    const asks = { name: "scripted", async investigate(_t: unknown, call: (tool: string, input: unknown) => { output: unknown }) {
+      for (const tool of ["policy_memo_lookup", "mail_search", "chat_search", "contracts_find_clause"]) call(tool, { query: "Wayne credit discount", party_id: "wayne" });
+      call("memory_facts", { party_id: "wayne", kind: "credit_memo", entry_date: "2026-05-16", amount_cents: 330000 });
+      answers = [call("escalate", { asked_user: "U_SAM", party_id: "wayne", predicate: "shortfall_reason", decision_kind: "credit_memo", what_happened: "historic short pay",
+        what_was_checked: [{ source: "mail_search", query: "Wayne credit", hits: 0 }], what_is_unknown: "whether anyone agreed a credit", treatments: [{ id: "credit_memo", label: "Agreed credit" }, { id: "chase", label: "Chase it" }] }).output,
+      call("record_fact_candidate", { party_id: "wayne", predicate: "one_time_credit", value: { cents: 330000 }, kinds: ["credit_memo"], uses: "one_time", valid_from: "2026-05-01", valid_to: "2026-05-31", source_trace_ids: ["tr_email_1"], stated_by: "agent" }).output];
+      return { outcome: "escalated" as const, summary: "", places_looked: ["mail"] };
+    } };
+    const historic = { intent_id: "int_hist", function: "ar", party_id: "wayne", entry_date: "2026-05-16", doc_ids: ["INV-1050"], expected_cents: 3300000, received_cents: 2970000, shortfall_cents: 330000, method: "ach", trace_ids: [],
+      docs_snapshot: [{ id: "INV-1050", kind: "invoice" as const, party_id: "wayne", total_cents: 3300000, open_cents: 3300000, date: "2026-05-01" }] };
+    await runCase(db, historic, { mode: "replay", as_of: "2026-05-16T12:00:00Z", autonomy_level: "shadow", investigators: [asks as never], clock: fixedClock, config: APP_CONFIG });
+    expect(answers).toEqual([expect.objectContaining({ status: "replay_recorded" }), expect.objectContaining({ status: "replay_recorded" })]);
+    expect([(db.prepare("SELECT COUNT(*) AS n FROM escalation").get() as { n: number }).n, (db.prepare("SELECT COUNT(*) AS n FROM fact").get() as { n: number }).n]).toEqual([0, 0]);
+    expect((db.prepare("SELECT status FROM intent WHERE id = 'int_hist'").get() as { status: string }).status).toBe("resolved");
+    const report = await deskPass(db, { postEscalation: async () => "1.0", postApproval: async () => undefined }, fixedClock);
+    expect(report.escalations_posted).toEqual([]);
+  });
+});
+
+describe("a Slack click is signed by the person who was asked", () => {
+  it("when one Slack user stands for several people, it is the one the desk asked, and otherwise never the most senior", async () => {
+    const { approverFor, askedToApprove } = await import("../../agents/slack/transport.js");
+    const db = seedInitech();
+    db.exec(`UPDATE approver SET slack_user = 'U_REAL';
+             INSERT OR IGNORE INTO approver (id, name, role, slack_user, limit_cents) VALUES ('U_CFO','Alex','cfo','U_REAL',100000000);`);
+    const limits = db.prepare("SELECT id, limit_cents FROM approver WHERE slack_user = 'U_REAL' ORDER BY limit_cents, id").all() as { id: string; limit_cents: number }[];
+    expect(limits.length).toBeGreaterThan(1);
+    expect(approverFor(db, "U_REAL")).toBe(limits[0]!.id);
+    expect(approverFor(db, "U_REAL", "U_CFO")).toBe("U_CFO");
+    expect(approverFor(db, "U_REAL", "U_NOT_THEM")).toBe(limits[0]!.id);
+    expect(approverFor(db, "U_STRANGER")).toBe("U_STRANGER");
+    const r = proposeEntry(db, creditMemo(), { actor: "agent:ar", mode: "live", autonomy_level: "auto", tier: 1 }, deps);
+    if (r.status !== "pending_approval") throw new Error(r.status);
+    db.prepare("INSERT INTO decision_step (decision_id, step_no, ts, kind, tool, output_json) VALUES (?, 99, ?, 'human_request', 'desk:approval_request', ?)").run(r.decision_id, fixedClock.now(), JSON.stringify({ approver_id: "U_CTRL", slack_ts: "1.0" }));
+    expect(approverFor(db, "U_REAL", askedToApprove(db, r.decision_id))).toBe("U_CTRL");
+  });
+});

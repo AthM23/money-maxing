@@ -92,6 +92,8 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     description: "Ask the one person who knows. Only after the search plan is exhausted. `predicate` is what you do not know, picked from the list; `decision_kind` is the kind of entry the answer would unlock; the sentence goes in `what_is_unknown`. `treatments` are two to four buttons: each id is one of the fixed treatments (credit_memo = an agreed concession, write_off = we will not collect it, tax_withholding = tax deducted at source, dispute_hold = hold it open as disputed, chase = collect the balance) and each label is at most 60 characters. If this was already asked, the stored answer comes back instead.",
     run: (input, env) => {
       const q = EscalateInput.parse(input);
+      // Replay asks what would have happened. A question raised there is recorded on the turn, and goes to nobody.
+      if (env.mode === "replay") return { status: "replay_recorded", asked_user: q.asked_user, reason: "replay opens no question: nothing here reaches a person" };
       // The cheapest tier may ask a person only once it has verifiably looked everywhere an answer could be. On the
       // first real run it reached the right question in fifty seconds and six cents, was refused on tier alone, and the
       // stronger tiers took ten minutes and a dollar to ask the same thing. What earns the question is the search, not
@@ -112,7 +114,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
     name: "record_fact_candidate", registry_name: "record_fact_candidate", input: FactCandidateToolInput,
     description: "Store what you learned as a candidate fact: party, scope, end date, source traces. It applies to nothing until approved.",
-    run: (input, env) => recordFactCandidate(env.db, env.clock, input),
+    run: (input, env) => (env.mode === "replay" ? { status: "replay_recorded", reason: "replay remembers nothing: memory is written by live turns only" } : recordFactCandidate(env.db, env.clock, input)),
   },
   {
     name: "finish", registry_name: "finish", input: FinishInput,
