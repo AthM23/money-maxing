@@ -100,7 +100,10 @@ function renderNav(o) {
     const active = app.route.view === key || (key === "run" && app.route.view === "case");
     return h("button", { class: active ? "active" : "", on: { click: () => app.go(key) } }, icon(v.icon, 17), v.label, n > 0 ? h("span", { class: "count" }, n) : null);
   };
-  document.getElementById("nav").replaceChildren(...GROUPS.flatMap(([title, keys]) => [h("p", { class: "railgroup" }, title), ...keys.map(button)]));
+  document.getElementById("nav").replaceChildren(
+    ...GROUPS.flatMap(([title, keys]) => [h("p", { class: "railgroup" }, title), ...keys.map(button)]),
+    h("button", { on: { click: () => { location.href = "/flow.html"; } } }, icon("flow", 17), "The pipeline"),
+  );
 }
 
 function renderMe(o) {
