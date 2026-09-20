@@ -8,7 +8,7 @@ import { isAfterAsOf, isControlAccount, mark, naMark, passMark, verdictMark } fr
  * entry: same function, same kind, and the judgment amount lands on the rule's account. Citing a valid rule that
  * says something else (a bank-fee rule stapled to a revenue concession) is not cover, it is a wrong citation.
  */
-export function checkJ1(proposal: Proposal, ctx: KernelContext): Mark {
+export function checkJ1(proposal: Proposal, ctx: KernelContext, adjustment = 0): Mark {
   const refs = proposal.policy_refs;
   if (refs.length === 0) return naMark("J", "J1", "proposal cites no policy", [proposal.intent_id]);
   const problems: string[] = [];
@@ -27,6 +27,9 @@ export function checkJ1(proposal: Proposal, ctx: KernelContext): Mark {
     }
     problems.push(...actionProblems(policy, proposal, ctx));
   }
+  // The condition was tested on the case's shortfall. An entry for more than that is not what the rule was shown.
+  const tested = ctx.features.shortfall_cents;
+  if (typeof tested === "number" && adjustment > tested) problems.push(`the entry adjusts ${adjustment}, the cited rule was tested on a shortfall of ${tested}`);
   return verdictMark("J", "J1", problems, `${refs.length} cited policy(s) approved and in condition`, refs);
 }
 
@@ -128,5 +131,5 @@ export function judgmentMarks(
   adjustment: number,
   j3: readonly Mark[],
 ): Mark[] {
-  return [checkJ1(proposal, ctx), checkJ2(proposal, ctx, adjustment), checkJ4(proposal, ctx), ...j3];
+  return [checkJ1(proposal, ctx, adjustment), checkJ2(proposal, ctx, adjustment), checkJ4(proposal, ctx), ...j3];
 }

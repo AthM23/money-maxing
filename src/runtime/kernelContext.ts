@@ -39,7 +39,9 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     control: meta.mode === "replay" && meta.replay_docs?.length ? replayControl(meta.replay_docs) : readControlTotals(db),
     standardAccounts: (kind) => config.standard_accounts[kind] ?? [],
     allowedAccounts: (kind) => config.allowed_accounts[kind] ?? [],
-    features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
+    // The proposal's own kind, function and party come last: a rule scoped to one customer is tested on the customer
+    // whose invoice the entry touches, never on the case the agent happened to be working.
+    features: { ...(meta.features ?? {}), kind: proposal.kind, function: proposal.function, party_id: proposal.party_id },
     getTrace: (id) => getTrace(db, id, meta.mode === "replay" ? meta.as_of : undefined),
     getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),
     getBankTxn: (id) => visibleBankTxn(db, id, meta),
