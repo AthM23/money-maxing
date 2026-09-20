@@ -9,16 +9,18 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~23:15 ET |
-| **Phase** | Phase 1 of lanes A and B is merged on `main` and runs end to end (log, 09-19 ~21:35 merge entry); Phase 2 in progress. Demo focus **proposed**, not agreed |
-| **Repo state** | `main` = lanes A, B and C. `atharv-branch` adds lane B's Phase 2: `pnpm test` → 58 files, 584 passing; `pnpm typecheck` clean (measured 09-19 ~23:15, before merging the newer `main`) |
+| **Last updated** | 2026-09-20 ~00:35 ET |
+| **Phase** | Phases 1 and 2 of lanes A and B and lane C's reader are merged on `main`. **Team direction (09-19 ~23:35): one international payment investigation first**, see [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md). Next gate: A/B/C agree the fixture and contract |
+| **Repo state** | `main` = lanes A, B (incl. Phase 2) and C; `atharv-branch` = `main`. `pnpm test` → 68 files, 651 passing; `pnpm typecheck` clean (measured 09-20 ~00:00 on `d08879d`; later commits are docs and Python only) |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
 | **Judge feedback v2** | [`judge-feedback-v2-2026-09-19.md`](./judge-feedback-v2-2026-09-19.md): do not be generic; 2-3 processes as one customer story; own benchmark + fine-tune comparison |
 | **Test bar** | [`../tests/README.md`](../tests/README.md) — 115 edge cases, each with an expected route |
 | **Agent onboarding** | [`../AGENTS.md`](../AGENTS.md) |
 | **Proposed spec** | [`PROJECT_SPEC.md`](./PROJECT_SPEC.md) |
-| **Roadmap (two builders)** | [`ROADMAP.md`](./ROADMAP.md) — proposed, not yet agreed |
+| **Team roadmap (three builders, current)** | [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md) — direction from the live team conversation; fixture and owners proposed |
+| **Fixture proposal for Gate 1** | [`FIXTURE_INTL_PROPOSAL.md`](./FIXTURE_INTL_PROPOSAL.md) — lane B's numbers, entries, harness gaps and decisions; proposed |
+| **Roadmap (two builders)** | [`ROADMAP.md`](./ROADMAP.md) — lanes and directory ownership still apply; its demo priority is narrowed by the team roadmap |
 | **Architecture board** | [`diagrams/architecture/`](./diagrams/architecture/README.md) — 20 sheets, target architecture, nothing built |
 | **Research** | [`research/`](./research/README.md) |
 
@@ -62,6 +64,14 @@ Why (B): the track doc lists "ambition and creativity" first, calls several agen
 How breadth stays buildable: the judgment layer is built once (investigate → propose an entry → a deterministic kernel re-checks its workpaper → post or escalate → learn; plus replay of human-closed Q2 and compiling repeated judgment into approved policies). Each function is a thin pack on top. The demo spine is one event (a short-paid invoice explained by a CEO email) rippling through five functions. Build order and cut order are in the spec.
 
 Known risk, stated plainly: at Maximor's own Syndicate hackathon two weeks ago, breadth-only entries and multi-agent swarms did not win; narrow, finished, measured projects did. See [`research/syndicate-hackathon-analysis.md`](./research/syndicate-hackathon-analysis.md). The spec answers this with a deterministic core, real counts per function, and a hard checkpoint: the spine must work across AR, revenue, forecast and close by 22:30 tonight, or scope is cut from the bottom of the list.
+
+### Team direction — 2026-09-19 ~23:35 ET (live team conversation, all three builders)
+
+Narrows what the demo proves first; does not replace the cross-function build above. **One realistic international
+payment investigation, end to end on the existing harness with Claude, while Preet fine-tunes and benchmarks
+independently.** Source: [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md). Lane B's concrete fixture and the
+harness gaps: [`FIXTURE_INTL_PROPOSAL.md`](./FIXTURE_INTL_PROPOSAL.md). The fixture, owners and FX treatment are still
+**proposed** until Gate 1.
 
 ---
 
@@ -1284,3 +1294,49 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - This supersedes the earlier demo priority for this planning direction, not the existing cross-function architecture or safety rules. New evidence for narrowing the first proof is the judges' realistic-story feedback plus this team conversation. FX is new scope relative to the 22:17 recommendation; inspect the existing harness before extending it, rather than rewriting it or assuming this scenario works already.
 - Gates: agree fixture, expected outcome and model contract; B builds while A wires Claude and C prepares training/eval; A/B prove end-to-end behavior and truthful impact; verify memory scope, recovery and idempotency; swap models and measure; finish UI/demo. No fabricated scores, no guarantee fine-tuning improves results, and no reuse of held-out benchmark answers as training data.
 - Documentation only: no code, services, existing ROADMAP.md, builds or benchmarks changed/run. Exact fixture and contract agreement remain the first implementation gate; this documentation task is complete.
+
+### 2026-09-20 ~00:35 ET — Lane B Phase 2, the research and the team roadmap are on `main`; fixture proposal for Gate 1 (AthM23 + Claude Code session)
+
+- **On `main` now** (`e77f9cb` and this commit): lane B's Phase 2 (`21d9286`: revenue schedule, forecast, close conductor,
+  C1 drift, QuickBooks mirror dry run, console ripple view, `pnpm spine`), the storytelling research, and
+  `TEAM_ROADMAP_2026-09-19.md` with the three status entries that had sat uncommitted in the shared working tree.
+  `atharv-branch` was fast-forwarded to `main` and pushed; a stash on this machine keeps a copy of the pre-merge
+  files. The sponsor's PDF is still untracked (human call). `b-phase2-on-main` and `research/storytelling` are local
+  leftovers, fully contained in `main`.
+- `main` moved three times during the merge (Codex's audit patch `3f33a96`, lane C's reader `4dd3177..551d4fe`, then
+  `6b9d2bd`); each was merged in a throwaway worktree, never forced. Text conflicts: `console/server.ts` and
+  `console/index.html` (lane B's Phase 2 rewrite kept; the audit's two console changes ported into it: the
+  stale-workpaper notice and the loopback bind), `package.json` scripts and this Log (unions, time order).
+- **One semantic conflict the text merge did not show:** the audit patch makes `approveDecision` refuse a signer who is
+  not in the approval matrix, so the revenue engine's withdrawal of a stale recognition (`engine:revenue`) was refused
+  and 3 of 640 tests failed. Fixed on lane B's side only: the seed adds `engine:revenue` as `controller_agent` with a
+  limit of 0, so it can decline and can never approve. No lane A file changed.
+- **Closed by the audit patch:** finding 1 for Karan in the 23:15 entry (a declined decision could be approved later).
+  `approve.ts` now treats a rejection as terminal, and lane B's regression test for it passes on `main`.
+- **Supersedes** item 7 of "Remaining work" in `AUDIT_2026-09-19.md`, which lists revenue recognition, close
+  schedules, forecasts and QuickBooks mirroring as not built: the audit was written before Phase 2 reached `main`.
+  They are built as the 23:15 entry describes, with its limits (scripted Initech stand-in without a model key; the
+  mirror has never written to the sandbox).
+- **Measured on the merged tree** (`d08879d`, no model key, local stores): typecheck clean; `pnpm test` → 68 files,
+  **651 passing**; `pnpm seed --target=local --reset && pnpm spine --approve-as U_CTRL --recognise --recognise-as U_CFO`
+  gives the 23:15 entry's result (schedule v2 $129,600, forecast v2, C1 explained with nobody asked, 7 of 11 checklist
+  items, AR and deferred revenue tied); console `/api/state` and the page answer on that database. **Not re-run:** any
+  model tier, the console in a browser, anything live. `6b9d2bd` and the docs commits changed no TypeScript.
+- **Added, proposed, not agreed:** [`FIXTURE_INTL_PROPOSAL.md`](./FIXTURE_INTL_PROPOSAL.md), lane B's input to Gate 1
+  of the team roadmap. EUR 100,000 booked at 1.10; EUR 98,000 received at 1.08 less $40 = $105,800; the $4,200 gap is
+  FX $1,960 + fee $40 + EUR 2,000 withheld ($2,200), and only the last is judgment. Findings from a read-only
+  assessment of the harness, the two load-bearing ones re-read by hand: no currency, rate, fee or entity exists
+  anywhere (schema, bank CSV, `CaseFile`, fact scope, tools, mirror); one combined entry is impossible (F2 refuses
+  relieving more AR than cash arrived, J4 limits `apply_payment` to 2100); a fact fires only when it explains the whole
+  shortfall; there is no FX account or kind; the dispute-hold → question → fact → credit-memo leg works as built. A
+  path with zero contract or kernel edits exists (lane-B side table, fee and FX as two `write_off`s to 6150 and 6990)
+  at the cost of FX sitting in misc expense and parking for a click; the better path is one additive change the size
+  of `tax_withholding` (account 7100, kind `fx_realized`, one deterministic check), which is lane A's call.
+- **Correction for anything said on stage,** from the planning conversation: the fine-tuned model does not make the
+  judgment calls or decide whether a precedent applies. Code decides applicability (memory scope) and routes (Tried &
+  rejected, 09-19); frontier models investigate; the fine-tune is a **document reader** whose readings code verifies
+  (23:39 entry). On this fixture its natural job is the bank credit advice and the remittance advice.
+- **Blocked on humans:** Gate 1 decisions 1-7 in the fixture proposal (booked rate, FX path, fee cover, the standing
+  answer's wording, QuickBooks multicurrency, customer name, the reader's task on this scene) · who is Person A and B
+  under the team roadmap (it did not infer names; the 19:55 entry says A = Karan, B = Atharv) · confirmation that the
+  Plume project was created before 23:59 on 09-19.
