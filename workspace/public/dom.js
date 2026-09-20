@@ -17,6 +17,12 @@ export function h(tag, attrs = {}, ...children) {
 }
 
 export const money = (cents) => (cents === null || cents === undefined ? "" : (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" }));
+/** Money with its direction: what came in is green with a plus, what went out or is missing is red with a minus. */
+export function flow(cents, direction) {
+  if (!cents) return h("span", { class: "flat" }, "—");
+  return h("span", { class: direction === "in" ? "in" : "out" }, `${direction === "in" ? "+" : "−"}${money(Math.abs(cents))}`);
+}
+
 export const plain = (cents) => (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const rate = (ppm) => (ppm / 1_000_000).toFixed(4);
 export const cost = (micros) => (micros === 0 ? "$0" : `$${(micros / 1_000_000).toFixed(micros < 10_000 ? 4 : 2)}`);

@@ -1,4 +1,4 @@
-import { act, h, money, statusPill, toast, words } from "/dom.js";
+import { act, flow, h, money, statusPill, toast, words } from "/dom.js";
 import { icon } from "/icons.js";
 
 /** The month as one run: what came in, what settled itself, what is waiting for a person. */
@@ -41,9 +41,9 @@ function receiptsTable(app, cases) {
   const rows = cases.map((r) => h("tr", { class: "click", on: { click: () => app.go("case", r.intent_id) } },
     h("td", {}, h("b", {}, r.party_name ?? r.party_id), h("div", { class: "muted mono" }, r.doc_ids.join(", ") || "no invoice named")),
     h("td", { class: "mono" }, r.bank_line.id, h("div", { class: "muted" }, r.bank_line.posted_date)),
-    h("td", { class: "num" }, money(r.received_cents)),
+    h("td", { class: "num" }, flow(r.received_cents, "in")),
     h("td", { class: "num" }, r.expected_cents ? money(r.expected_cents) : "—"),
-    h("td", { class: `num ${r.shortfall_cents > 0 ? "short" : ""}` }, r.shortfall_cents > 0 ? `−${money(r.shortfall_cents)}` : "—"),
+    h("td", { class: "num" }, flow(r.shortfall_cents > 0 ? r.shortfall_cents : 0, "out")),
     h("td", {}, statusPill(r.status)),
     h("td", {}, chips(r))));
   return h("table", { class: "tbl" }, h("thead", {}, head), h("tbody", {}, rows));

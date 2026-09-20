@@ -9,6 +9,7 @@ import { renderReports } from "/views/reports.js";
 import { renderQueue } from "/views/queue.js";
 import { renderPolicies } from "/views/policies.js";
 import { renderFleet } from "/views/fleet.js";
+import { renderAsk } from "/views/ask.js";
 
 // One object holds what the page knows. Views read it and call `app.go` or `app.refresh`; nothing else is shared.
 export const app = {
@@ -47,6 +48,7 @@ export const app = {
 
 const VIEWS = {
   overview: { label: "Overview", icon: "grid", render: renderOverview },
+  ask: { label: "Ask", icon: "spark", render: renderAsk },
   run: { label: "Cash", icon: "cash", render: renderRun },
   revenue: { label: "Revenue", icon: "trend", render: renderRevenue },
   close: { label: "Close", icon: "list", render: renderClose },

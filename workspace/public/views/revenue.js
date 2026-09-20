@@ -7,7 +7,31 @@ export function renderRevenue(app) {
   return h("section", {},
     h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Revenue"), h("p", { class: "muted" }, "Every contract on file, and the schedule code built from its terms. A concession approved in Cash revises the schedule as a new version."))),
     !rev?.available ? h("div", { class: "panel" }, h("p", { class: "muted" }, "This database has no revenue schedules. Seed the world with pnpm seed and run pnpm spine.")) :
-      h("div", { class: "panel" }, table(rev.contracts)));
+      [h("div", { class: "grid2 wide" }, h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "Revenue scheduled by month"), h("span", { class: "chip" }, "all contracts")), monthly(rev.contracts, app.period)), totals(rev.contracts, app.period)),
+       h("div", { class: "panel" }, h("h2", {}, "Contracts"), table(rev.contracts))]);
+}
+
+/** Every schedule line summed by month. The month being closed is marked; what is before it is recognised, what is after is still to come. */
+function monthly(contracts, period) {
+  const byMonth = new Map();
+  for (const c of contracts) for (const l of c.lines) byMonth.set(l.period, (byMonth.get(l.period) ?? 0) + l.amount_cents);
+  const months = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
+  if (!months.length) return h("p", { class: "muted" }, "No schedule lines.");
+  const W = 760, H = 240, PAD = { l: 52, b: 28, t: 10 }, max = Math.max(...months.map(([, v]) => v)), bw = (W - PAD.l) / months.length;
+  return s("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", class: "chart" },
+    [0, 0.5, 1].map((t) => [s("line", { x1: PAD.l, x2: W, y1: PAD.t + (1 - t) * (H - PAD.t - PAD.b), y2: PAD.t + (1 - t) * (H - PAD.t - PAD.b), stroke: "#eeeeea" }), s("text", { x: PAD.l - 8, y: PAD.t + (1 - t) * (H - PAD.t - PAD.b) + 4, "text-anchor": "end", class: "axis" }, `$${Math.round((max * t) / 100_000)}k`)]),
+    months.map(([m, v], i) => {
+      const bh = (v / max) * (H - PAD.t - PAD.b);
+      return [s("rect", { x: PAD.l + i * bw + 3, y: H - PAD.b - bh, width: Math.max(bw - 6, 2), height: bh, rx: 4, fill: m === period ? "#d9f24f" : m < period ? "#101012" : "#c9c9c2", stroke: m === period ? "#101012" : "none" }, s("title", {}, `${m}: ${money(v)}`)),
+        i % Math.ceil(months.length / 12) === 0 ? s("text", { x: PAD.l + i * bw + bw / 2, y: H - 8, "text-anchor": "middle", class: "axis" }, m.slice(2)) : null];
+    }));
+}
+
+function totals(contracts, period) {
+  const lines = contracts.flatMap((c) => c.lines);
+  const sum = (test) => lines.filter((l) => test(l.period)).reduce((n, l) => n + l.amount_cents, 0);
+  const tile = (label, cents, note) => h("div", { class: "tile" }, h("span", { class: "tilelabel" }, label), h("div", { class: "tilevalue" }, h("b", {}, money(cents)), h("span", { class: "delta" }, note)));
+  return h("div", { class: "tiles" }, tile("Scheduled this month", sum((p) => p === period), period), tile("Recognised before it", sum((p) => p < period), "earlier months"), tile("Still to come", sum((p) => p > period), "deferred"));
 }
 
 function table(contracts) {

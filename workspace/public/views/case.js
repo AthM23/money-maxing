@@ -41,7 +41,7 @@ function cashApplication(v) {
     v.fx ? h("p", { class: "fxline" }, `${v.fx.currency} ${plain(v.fx.foreign_amount_cents)} at ${rate(v.fx.rate_ppm)}, less ${money(v.fx.fee_cents)} bank charges`) : null,
     v.invoice_fx[0] ? h("p", { class: "fxline dim" }, `Invoiced ${v.invoice_fx[0].currency} ${plain(v.invoice_fx[0].foreign_total_cents)} at ${rate(v.invoice_fx[0].booked_rate_ppm)} = ${money(v.receipt.expected_cents)}`) : null);
   const rows = v.lines.map((l) => h("button", { class: `bookline ${l.state}`, disabled: !l.decision_id, on: l.decision_id ? { click: () => showEvidence(l.decision_id) } : {} },
-    h("span", { class: "amt" }, l.kind === "apply_payment" ? `+${money(l.amount_cents)}` : money(l.amount_cents)),
+    h("span", { class: `amt ${l.kind === "apply_payment" ? "in" : "out"}` }, l.kind === "apply_payment" ? `+${money(l.amount_cents)}` : `−${money(l.amount_cents)}`),
     h("span", { class: "what" }, h("b", {}, l.label), h("span", { class: "muted" }, l.settled_by)),
     h("span", { class: "chips" }, l.account ? h("span", { class: "chip mono" }, `GL ${l.account}`) : null, l.fx_note ? h("span", { class: "chip mono lime" }, l.fx_note) : null),
     l.state === "posted" ? pill("posted", "ok") : l.state === "parked" ? pill("awaiting approval", "wait") : pill("awaiting you", "wait")));

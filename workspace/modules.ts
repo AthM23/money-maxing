@@ -83,29 +83,3 @@ export function cashByWeek(db: Db, period: string): { week: string; cents: numbe
   return db.prepare("SELECT strftime('%Y-%m-%d', posted_date, 'weekday 0', '-6 days') AS week, SUM(amount_cents) AS cents FROM bank_txn WHERE substr(posted_date, 1, 7) = ? AND amount_cents > 0 GROUP BY week ORDER BY week")
     .all(period) as { week: string; cents: number }[];
 }
-
-/**
- * "Ask the books." A question is matched to a report that code builds from the ledger; no model writes a number here,
- * and the answer says which tables it came from. A question it has no report for is answered with what it can do.
- */
-export function ask(db: Db, question: string, period: string): { title: string; summary: string; table: Table | null; source: string } {
-  const q = question.toLowerCase();
-  const lastDay = new Date(Date.UTC(Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0)).toISOString().slice(0, 10);
-  if (/ag(e)?ing|owe|outstanding|receivable|\bar\b/.test(q)) {
-    const table = arAgeing(db, lastDay);
-    const total = table.rows[0]?.[5] as number | undefined;
-    return { title: "AR ageing by customer", summary: `${table.rows.length - 1} customers owe ${dollars(total ?? 0)} as of ${lastDay}.`, table, source: "invoice (open balances and due dates)" };
-  }
-  if (/trial|balance sheet|\btb\b|ledger/.test(q)) return { title: `Trial balance through ${period}`, summary: "Debits and credits by account. The last row has to foot.", table: trialBalance(db, period), source: "gl_entry, gl_line" };
-  if (/cash|bank|receipts?/.test(q)) {
-    const weeks = cashByWeek(db, period);
-    return { title: `Cash received by week, ${period}`, summary: `${dollars(weeks.reduce((n, w) => n + w.cents, 0))} landed in ${weeks.length} weeks.`, table: { columns: ["Week starting", "Cash received"], money_columns: [1], rows: weeks.map((w) => [w.week, w.cents]) }, source: "bank_txn" };
-  }
-  if (/wait|person|approv|question|stuck|open/.test(q)) {
-    const rows = db.prepare("SELECT i.id, json_extract(i.case_json, '$.party_id') AS party, i.status, i.question FROM intent i WHERE i.status != 'resolved' AND i.case_json IS NOT NULL ORDER BY i.created_at").all() as { id: string; party: string; status: string; question: string }[];
-    return { title: "What is not settled yet", summary: `${rows.length} case(s) are open or waiting for a person.`, table: { columns: ["Customer", "Status", "Question"], money_columns: [], rows: rows.map((r) => [r.party, r.status.replaceAll("_", " "), r.question]) }, source: "intent" };
-  }
-  return { title: "I can build these from the books", summary: "AR ageing by customer · the trial balance · cash received by week · what is waiting for a person. Each answer is computed by code from the ledger, and says which tables it read.", table: null, source: "—" };
-}
-
-const dollars = (cents: number): string => (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });

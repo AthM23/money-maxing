@@ -1,6 +1,6 @@
-import { act, cost, dataTable, h, money, s, statusPill, toast } from "/dom.js";
-import { openDrawer } from "/app.js";
+import { act, cost, flow, h, s, statusPill, toast } from "/dom.js";
 import { icon } from "/icons.js";
+import { askFromElsewhere } from "/views/ask.js";
 
 /** The first screen: what the agents did with the month, what it cost, and the little that is waiting for you. */
 export function renderOverview(app, o) {
@@ -15,6 +15,7 @@ export function renderOverview(app, o) {
       h("div", { class: "actions" },
         h("button", { class: "btn white", on: { click: () => learn(app) } }, icon("book", 16), "Learn from last quarter"),
         h("button", { class: "btn ink", on: { click: () => run(app) } }, icon("play", 15), "Run the code tier"))),
+    h("div", { class: "brief" }, h("span", { class: "kick" }, "This month in plain words"), h("p", {}, brief(o, cases))),
     h("div", { class: "grid3" },
       h("div", { class: "panel" }, h("h2", {}, "Receipts this month"), gauge(cases)),
       h("div", { class: "panel" }, chartPanel(app)),
@@ -85,16 +86,22 @@ const PROMPTS = ["AR ageing by customer", "What is waiting for a person?", "Cash
 
 function askBox(app) {
   const input = h("input", { type: "text", placeholder: "Ask for a report…", "aria-label": "Ask the books" });
-  const submit = async (question) => {
-    if (!question.trim()) return;
-    try {
-      const a = await act("ask", { question, period: app.period });
-      openDrawer(h("div", {}, h("p", { class: "kick" }, "Built by code from the ledger"), h("h2", {}, a.title), h("p", { class: "lead" }, a.summary), a.table ? dataTable(a.table, { totalFirst: a.title.startsWith("AR"), totalLast: a.title.startsWith("Trial") }) : null, h("p", { class: "muted small" }, `Source tables: ${a.source}`)));
-    } catch (err) { toast(err.message, "bad"); }
-  };
   return h("div", { class: "askbox" },
-    h("div", { class: "prompts" }, PROMPTS.map((p) => h("button", { class: "prompt", on: { click: () => submit(p) } }, p, icon("send", 13)))),
-    h("form", { class: "askrow", on: { submit: (e) => { e.preventDefault(); submit(input.value); } } }, input, h("button", { class: "btn lime", type: "submit" }, icon("spark", 15), "Ask")));
+    h("div", { class: "prompts" }, PROMPTS.map((p) => h("button", { class: "prompt", on: { click: () => askFromElsewhere(app, p) } }, p, icon("send", 13)))),
+    h("form", { class: "askrow", on: { submit: (e) => { e.preventDefault(); if (input.value.trim()) askFromElsewhere(app, input.value, null); } } }, input, h("button", { class: "btn lime", type: "submit" }, icon("spark", 15), "Ask")));
+}
+
+/** The month in three sentences, written by code from the same figures the page shows. */
+function brief(o, cases) {
+  const sb = o.scoreboard;
+  const settled = cases.filter((r) => r.status === "resolved").length;
+  const waiting = cases.filter((r) => r.status === "waiting_on_human");
+  const open = cases.filter((r) => r.status === "open").length;
+  const parts = [`${cases.length} customer payments came in. Code matched and posted ${sb.auto_posted} ledger entries on its own${sb.model_calls ? `, and the models were called ${sb.model_calls} times for ${cost(sb.cost_micros)}` : " without calling a model"}; ${settled} payment${settled === 1 ? " is" : "s are"} fully settled.`];
+  if (waiting.length) parts.push(`${waiting.length === 1 ? "One payment is" : `${waiting.length} payments are`} waiting for you: ${waiting.map((r) => r.party_name ?? r.party_id).join(", ")}.`);
+  if (open) parts.push(`${open} more ${open === 1 ? "is" : "are"} short or unexplained and still being worked.`);
+  parts.push(o.books.tied ? "The receivable ledger agrees to the open invoices to the cent." : "The receivable ledger does NOT agree to the open invoices.");
+  return parts.join(" ");
 }
 
 function recent(app, cases) {
@@ -103,7 +110,7 @@ function recent(app, cases) {
   return h("table", { class: "tbl" }, h("thead", {}, h("tr", {}, ["Customer", "Status", "Received", "Short"].map((t, i) => h("th", { class: i > 1 ? "num" : "" }, t)))),
     h("tbody", {}, rows.map((r) => h("tr", { class: "click", on: { click: () => app.go("case", r.intent_id) } },
       h("td", {}, h("div", { class: "namecell" }, h("span", { class: "sq" }, icon("bank", 18)), h("div", {}, h("b", {}, r.party_name ?? r.party_id), h("small", {}, r.doc_ids.join(", ") || "no invoice named")))),
-      h("td", {}, statusPill(r.status)), h("td", { class: "num" }, money(r.received_cents)), h("td", { class: `num ${r.shortfall_cents > 0 ? "short" : ""}` }, r.shortfall_cents > 0 ? `−${money(r.shortfall_cents)}` : "—")))));
+      h("td", {}, statusPill(r.status)), h("td", { class: "num" }, flow(r.received_cents, "in")), h("td", { class: "num" }, flow(r.shortfall_cents > 0 ? r.shortfall_cents : 0, "out"))))));
 }
 
 async function run(app) {

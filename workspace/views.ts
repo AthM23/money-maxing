@@ -8,6 +8,7 @@ import { buildWorkpaper } from "../src/readmodel/workpaper.js";
 import type { Db } from "../src/runtime/db.js";
 import { readControlTotals } from "../src/runtime/kernelContext.js";
 import { getTrace, safeJson } from "../src/runtime/lookups.js";
+import { TOOLS, type BookTool } from "./tools.js";
 
 /** Everything the first screen needs, in one read. */
 export function overview(db: Db, brand: string): unknown {
@@ -19,6 +20,7 @@ export function overview(db: Db, brand: string): unknown {
     ladder: db.prepare("SELECT function, kind, agree, n, covered, level FROM autonomy ORDER BY function, kind").all(),
     people: db.prepare("SELECT id, name, role, limit_cents FROM approver WHERE role != 'controller_agent' ORDER BY limit_cents DESC").all(),
     viewer: viewerOf(db),
+    tools: (TOOLS as readonly BookTool[]).map((t) => ({ name: t.name, title: t.title, description: t.description, icon: t.icon, example: t.example, needs_input: t.name === "explain_receipt" })),
   };
 }
 
