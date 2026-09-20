@@ -1,4 +1,4 @@
-export { openDb, type Db } from "./db.js";
+export { openDb, cloneDb, type Db } from "./db.js";
 export { proposeEntry, type ProposeMeta, type ProposeResult, type RuntimeDeps } from "./proposeEntry.js";
 export { approveDecision, type ApprovalInput, type ApproveResult } from "./approve.js";
 export { emit } from "./events.js";

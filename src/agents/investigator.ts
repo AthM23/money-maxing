@@ -5,6 +5,8 @@ export interface InvestigationTask {
   case_file: CaseFile;
   tier: number;
   system_prompt: string;
+  /** The opening message for this case, written by the function's pack. */
+  task_message: string;
   /** Why tier 0 did not settle it: refused facts, policies whose condition missed. */
   notes: string[];
   max_turns: number;

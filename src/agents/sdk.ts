@@ -1,7 +1,6 @@
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { arTaskMessage } from "./ar/prompt.js";
 import type { InvestigationReport, InvestigationTask, Investigator, ToolCaller } from "./investigator.js";
 import { ALL_TOOLS } from "./toolset.js";
 import { FinishInput } from "./tools/write.js";
@@ -42,7 +41,7 @@ export function claudeInvestigator(opts: ClaudeInvestigatorOptions): Investigato
         }, { alwaysLoad: true }),
       );
       const stream = sdk.query({
-        prompt: arTaskMessage(task.case_file, task.notes),
+        prompt: task.task_message,
         options: {
           model: opts.model,
           systemPrompt: task.system_prompt,

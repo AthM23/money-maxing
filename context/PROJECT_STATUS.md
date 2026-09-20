@@ -513,3 +513,46 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   code with no model call. 11 of 11 routes correct, 0 false auto-posts. For the learning-layer cases the route is the
   harness's mapping of what the compile step did (a refused draft reads as BLOCK). The other 99 report NOT_RUN.
 - `pnpm test` → 27 files, **306 passing**. In progress: audit pack, AP pack, run 1 → learn → run 2.
+
+### 2026-09-19 21:45 ET — Run 1 → learn → run 2 works end to end; audit pack and AP pack landed; one approval-gate hole closed (Person A)
+
+- **The same month twice, only memory changed** (`src/learn/harvest.ts`, `carry.ts`, `scoreboard.ts`, test
+  `src/learn/__tests__/cycle.test.ts`). Six customers short-pay a wire by a bank fee; nothing on file explains it.
+  - Run 1, cold: a model tier settles all six (24 model calls), nothing auto-posts, a person clicks 12 approvals.
+  - Learn: six decision points are cut from what the **person** approved (entries the agents posted alone, or the
+    controller agent approved, are never learned from: that would be the system agreeing with itself). Compile drafts
+    one rule, backtest 6 of 6, a person approves it. Ladder: `apply_payment` earns auto (six covered agreements);
+    `write_off` earns **review only**, because all six agreements were free inference by a model.
+  - Run 2, from a cold copy of the same month plus only the carried memory (approved policies, active facts with
+    their sources, the ladder): **0 model calls, $0, 12 of 12 decisions settled by code**, cash auto-posts, the six
+    write-offs park for review. Once a person approves the rule's own entries, `write_off` earns auto, and run 3
+    auto-posts 12 of 12 with zero approvals and the AR control account tied at zero.
+  - The ladder now reads two kinds of evidence: replay of closed periods, and a person approving or rejecting what
+    the agent proposed in the live month. Replays of points cut from the live month are left out (double counting).
+- **Commands** (all code-only unless told otherwise, so they cost nothing): `pnpm demo:seed <db>`,
+  `pnpm worker <db> [--code-only] [--review]` (keeps `<db>.cold` before its first pass), `pnpm inbox <db> list |
+  approve | reject | answer | approve-policy | reopen`, `pnpm learn <db> [--replay] [--approve-as U]`,
+  `pnpm rerun <db> [--models]` (prints run 1 against run 2), `pnpm auditpack <db> <period> [seed] [size]`.
+- **Audit pack** (`src/audit/`, 31 tests, code only): a seeded, reproducible, risk-weighted sample (always tests
+  material entries, entries with judgment marks, agent-approved entries, and model-tier auto-posts); independent
+  re-performance of each sampled entry through the kernel as of its posting, plus ledger tie-out, evidence integrity
+  (hash and quoted spans) and the approval on file; six control tests (duplicate vendors, round-number payments,
+  entries after period lock, self-approval, just-under-the-line and split adjustments, agent-approved share); and the
+  independence fence in the tool layer (the auditor cannot read preparer memory and cannot write).
+  Editing one character of a quoted email after posting raises `evidence_invalidated`.
+- **AP pack** (`src/agents/ap/`, 26 tests): three-way match as kernel mark E4 (partial receipts, split deliveries,
+  tolerance, wrong vendor's PO, malformed lines fail closed), duplicate **obligation** as P7 (vendor + service period
+  + amount + PO, so a re-numbered invoice is caught), a code tier that approves what ties and holds what does not,
+  and an AP prompt. Limits: every expense lands in 6990, no PO consumption across bills, no freight, tax or FX.
+- **Packs are now a registry** (`src/packs/`): the function on the case file picks the code tier, the case features,
+  the prompt and the kernel's extra checks. A function with no pack is never worked on another function's prompt; it
+  goes to a person.
+- **Hole closed (corpus H-1), found by the AP build:** pack checks ran when an entry was proposed but not when a
+  person approved it, so a bill parked for approval could be approved after a duplicate of it had been taken on.
+  Pack checks now come from the configuration (`APP_CONFIG`) and are rebuilt from the database at **every** gate.
+  For AP their absence fails the entry (mark X2): a forgotten configuration must never read as a pass.
+- **Kernel:** any mark with status `judgment`, the kernel's own or a pack's, now forces approval. Before, only J3
+  did, so a bill with no purchase order auto-posted.
+- Notes for lane B from the audit build: `period.locked_at` should be set whenever `status = 'locked'`; trace
+  `content_hash` must be the sha256 of `payload_json` or every entry citing it reads as tampered in the audit pack.
+- `pnpm test` → 38 files, **373 passing**; typecheck clean. Not yet reviewed by the independent reviewer.

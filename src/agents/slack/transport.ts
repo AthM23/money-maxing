@@ -4,6 +4,7 @@ import type { Db } from "../../runtime/db.js";
 import { safeJson } from "../../runtime/lookups.js";
 import { recordHumanAnswer } from "../humanLoop.js";
 import { answerModal, approvalBlocks, escalationBlocks, type EscalationQuestion } from "./blocks.js";
+import { APP_CONFIG } from "../../packs/index.js";
 
 interface Action { action_id: string; value: string }
 interface InteractiveBody {
@@ -65,7 +66,7 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
   }
   if (body.type === "block_actions" && action && (action.action_id === "approve" || action.action_id === "reject")) {
     const approver = approverFor(db, body.user.id);
-    const result = approveDecision(db, action.value, { approver_id: approver, approver_kind: "human", outcome: action.action_id === "approve" ? "approved" : "rejected" });
+    const result = approveDecision(db, action.value, { approver_id: approver, approver_kind: "human", outcome: action.action_id === "approve" ? "approved" : "rejected" }, { config: APP_CONFIG });
     await web.chat.postMessage({ channel: body.user.id, text: describe(result) } as never);
     return;
   }

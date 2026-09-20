@@ -1,12 +1,11 @@
 import { CaseFile, type Route } from "../contract/types.js";
 import type { AutonomySetting } from "../runtime/autonomy.js";
-import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
+import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
-import { intentStanding, settleIntent } from "../runtime/intentStatus.js";
+import { settleIntent } from "../runtime/intentStatus.js";
 import { openDecision, setRoute } from "../runtime/persist.js";
-import { caseFeatures } from "../router/tier0.js";
+import { APP_CONFIG, packFor, type Pack } from "../packs/index.js";
 import { routeTier0 } from "../router/route.js";
-import { AR_SYSTEM_PROMPT } from "./ar/prompt.js";
 import type { ToolEnv } from "./env.js";
 import type { InvestigationReport, Investigator } from "./investigator.js";
 import { recordStep } from "./steps.js";
@@ -46,15 +45,15 @@ export async function runCase(db: Db, input: unknown, opts: RunCaseOptions): Pro
   const result = await runTiers(db, parsed.data, opts);
   if (opts.mode === "live") {
     const clock = opts.clock ?? systemClock;
-    if (result.final_route === null && intentStanding(db, parsed.data.intent_id) !== "waiting_on_human") recordUnsettled(db, clock, parsed.data, result);
+    if (result.final_route === null) recordUnsettled(db, clock, parsed.data, result);
     settleIntent(db, clock, parsed.data.intent_id);
   }
   return result;
 }
 
 /**
- * Nothing settled the case, yet the record would read as done (the cash was applied) or untouched. Say so on the
- * record, so the case waits on a person with the reasons attached instead of looking finished.
+ * Nothing settled the case. Say so on the record as its newest decision, so that it keeps waiting on a person with
+ * the reasons attached, even after someone approves the cash application that parked alongside it.
  */
 function recordUnsettled(db: Db, clock: Clock, c: CaseFile, result: CaseResult): void {
   const id = openDecision(db, clock, {
@@ -65,7 +64,7 @@ function recordUnsettled(db: Db, clock: Clock, c: CaseFile, result: CaseResult):
 }
 
 async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<CaseResult> {
-  const deps = { clock: opts.clock ?? systemClock, config: opts.config ?? DEFAULT_CONFIG };
+  const deps = { clock: opts.clock ?? systemClock, config: opts.config ?? APP_CONFIG };
   db.prepare("UPDATE intent SET case_json = COALESCE(case_json, ?) WHERE id = ?").run(JSON.stringify(c), c.intent_id);
   const t0 = routeTier0(db, c, { mode: opts.mode, autonomy_level: opts.autonomy_level, as_of: opts.as_of }, deps);
   if (t0.status === "done") {
@@ -73,9 +72,12 @@ async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<Case
   }
   let last: CaseResult | null = null;
   const notes = [...t0.notes, ...(opts.extra_notes ?? [])];
-  for (const [i, investigator] of opts.investigators.entries()) {
-    if (i + 1 < (opts.start_tier ?? 1)) continue;
-    last = await runTier(db, c, i + 1, investigator, notes, t0.routes, opts, deps);
+  const pack = packFor(c.function);
+  // No pack, no agent: a case is never worked on another function's instructions.
+  const investigators = pack ? opts.investigators : [];
+  for (const [i, investigator] of investigators.entries()) {
+    if (!pack || i + 1 < (opts.start_tier ?? 1)) continue;
+    last = await runTier(db, c, i + 1, investigator, notes, t0.routes, opts, { ...deps, pack });
     if (last.final_route !== null) return last;
     if (last.report) notes.push(`tier ${i + 1} (${investigator.name}) stopped: ${last.report.outcome}. ${last.report.summary}`);
   }
@@ -84,7 +86,7 @@ async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<Case
 
 async function runTier(
   db: Db, c: CaseFile, tier: number, investigator: Investigator, notes: string[], priorRoutes: Route[],
-  opts: RunCaseOptions, deps: { clock: Clock; config: RuntimeConfig },
+  opts: RunCaseOptions, deps: { clock: Clock; config: RuntimeConfig; pack: Pack },
 ): Promise<CaseResult> {
   const decisionId = openDecision(db, deps.clock, {
     intent_id: c.intent_id, function: c.function, mode: opts.mode, actor: `agent:${c.function}:${investigator.name}`,
@@ -92,7 +94,7 @@ async function runTier(
   });
   const env: ToolEnv = {
     db, clock: deps.clock, config: deps.config, mode: opts.mode, as_of: opts.as_of, actor: `agent:${c.function}:${investigator.name}`,
-    tier, max_tier: opts.investigators.length, autonomy_level: opts.autonomy_level, intent_id: c.intent_id, decision_id: decisionId, features: caseFeatures(c),
+    tier, max_tier: opts.investigators.length, autonomy_level: opts.autonomy_level, intent_id: c.intent_id, decision_id: decisionId, features: deps.pack.features(c),
     replay_docs: c.docs_snapshot, entry_date: c.entry_date,
   };
   const seen: ToolCallResult[] = [];
@@ -102,7 +104,7 @@ async function runTier(
     return r;
   };
   const report = await investigator.investigate(
-    { case_file: c, tier, system_prompt: AR_SYSTEM_PROMPT, notes, max_turns: opts.max_turns ?? 15 }, call);
+    { case_file: c, tier, system_prompt: deps.pack.system_prompt, task_message: deps.pack.taskMessage(c, notes), notes, max_turns: opts.max_turns ?? 15 }, call);
   if (report.model_calls || report.cost_micros) {
     db.prepare("UPDATE decision SET model_calls = model_calls + ?, cost_micros = cost_micros + ? WHERE id = ?")
       .run(report.model_calls ?? 0, report.cost_micros ?? 0, decisionId);

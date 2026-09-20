@@ -23,7 +23,7 @@ export function compareOutcome(proposal: Proposal | null, human: HumanOutcome): 
 }
 
 /** The judgment account is the line that is not cash and not a control account; the amount is what was applied. */
-function summarise(p: Proposal): NonNullable<OutcomeDiff["agent"]> {
+export function summarise(p: Proposal): NonNullable<OutcomeDiff["agent"]> {
   const judgmentLine = p.entries.find((l) => !CONTROL.has(l.account));
   const amount = p.applications.reduce((n, a) => n + a.amount_cents, 0);
   return { kind: p.kind, account: judgmentLine?.account ?? null, amount_cents: amount, doc_ids: p.applications.map((a) => a.doc_id) };

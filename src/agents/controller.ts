@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { Proposal, type Mark } from "../contract/types.js";
 import { approveDecision, type ApproveResult } from "../runtime/approve.js";
-import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
+import { APP_CONFIG } from "../packs/index.js";
+import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { getTrace, safeJson } from "../runtime/lookups.js";
 
@@ -47,7 +48,7 @@ export async function controllerReview(
   if (!verdict.agrees) return { status: "disagreed", decision_id: decisionId, verdict };
 
   const result = approveDecision(db, decisionId, { approver_id: controller.id, approver_kind: "controller_agent", outcome: "approved", note: verdict.note },
-    { clock: deps.clock, config: deps.config ?? DEFAULT_CONFIG });
+    { clock: deps.clock, config: deps.config ?? APP_CONFIG });
   if (result.status === "posted") return { status: "approved_by_controller", decision_id: decisionId, verdict, result };
   return { status: "needs_human", decision_id: decisionId, verdict };
 }
