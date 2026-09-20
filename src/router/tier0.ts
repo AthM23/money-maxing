@@ -37,11 +37,13 @@ function cashApplication(db: Db, c: CaseFile): Proposal {
   }
   const applied = applications.reduce((n, a) => n + a.amount_cents, 0);
   const memo = `Cash application ${c.bank_txn_id}`;
-  return base(c, "apply_payment", applications, [
+  const p = base(c, "apply_payment", applications, [
     { account: ACCOUNTS.cash, debit_cents: c.received_cents, credit_cents: 0, memo },
     { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: applied, memo },
     ...(c.received_cents > applied ? [{ account: ACCOUNTS.customer_credits, debit_cents: 0, credit_cents: c.received_cents - applied, memo: `${memo}: unapplied` }] : []),
   ]);
+  if (c.received_cents > applied) p.evidence = c.trace_ids.map((trace_id) => ({ claim: "bank line showing the overpayment", trace_id }));
+  return p;
 }
 
 /** In replay the balance comes from the case snapshot: today's ledger already shows the invoice settled. */

@@ -222,8 +222,8 @@ describe("the checkable fraction", () => {
   it("counts every mark in the denominator and re-performed marks in the numerator", () => {
     const result = runKernel(clean, makeCtx(world), "proposal");
     expect(result.checkable_den).toBe(result.marks.length);
-    expect(result.checkable_den).toBe(18);
-    expect(result.checkable_num).toBe(18);
+    expect(result.checkable_den).toBe(19);
+    expect(result.checkable_num).toBe(19);
   });
 
   it("leaves residual judgment out of the numerator", () => {
@@ -235,8 +235,8 @@ describe("the checkable fraction", () => {
       ],
     });
     const result = runKernel(withJudgment, makeCtx(world), "proposal");
-    expect(result.checkable_den).toBe(19);
-    expect(result.checkable_num).toBe(17);
+    expect(result.checkable_den).toBe(20);
+    expect(result.checkable_num).toBe(18);
     expect(result.checkable_den - result.checkable_num).toBe(2);
   });
 
@@ -246,8 +246,8 @@ describe("the checkable fraction", () => {
     ];
     const ctx = makeCtx(world, { extra_checks: [extra], period: { id: "2026-08", status: "locked" } });
     const result = runKernel(clean, ctx, "proposal");
-    expect(result.checkable_den).toBe(20);
-    expect(result.checkable_num).toBe(20);
+    expect(result.checkable_den).toBe(21);
+    expect(result.checkable_num).toBe(21);
     expect(result.verdict).toBe("block");
   });
 

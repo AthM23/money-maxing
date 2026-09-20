@@ -144,15 +144,43 @@ describe("E3 ties to the party", () => {
     expect(mark.detail).toContain(`document INV-9001 party ${OTHER} != proposal party ${INITECH}`);
   });
 
-  it("allows the mismatch when an active parent_pays fact covers this party", () => {
+  it("lets a named payer's bank line through when an active parent_pays fact names that payer", () => {
+    const proposal = makeProposal({
+      kind: "apply_payment", bank_txn_id: "BT-1", fact_refs: ["fact:parent"],
+      applications: [{ doc_id: "INV-9001", amount_cents: 120_000 }],
+      entries: [line(CASH, 120_000, 0), line(AR, 0, 120_000)],
+    });
+    const ctx = makeCtx({
+      ...demoWorld,
+      bankTxns: [bankTxn("BT-1", 120_000, { party_id: OTHER })],
+      facts: [fact("fact:parent", { predicate: "parent_pays", party_id: INITECH, value: { payer_party_id: OTHER } })],
+    });
+    expect(statusOf(runKernel(proposal, ctx, "proposal"), "E3")).toBe("pass");
+  });
+
+  it("an alias fact never covers a document that belongs to someone else (reviewer finding 3)", () => {
     const ctx = makeCtx({
       ...demoWorld,
       docs: [invoice("INV-9001", OTHER, 120_000)],
-      facts: [fact("fact:parent", { predicate: "parent_pays", party_id: INITECH })],
+      facts: [fact("fact:parent", { predicate: "parent_pays", party_id: INITECH, value: { payer_party_id: OTHER } })],
     });
     const result = runKernel(creditMemo({ fact_refs: ["fact:parent"] }), ctx, "proposal");
-    expect(statusOf(result, "E3")).toBe("pass");
-    expect(markOf(result, "E3").detail).toContain("permitted by active fact fact:parent");
+    expect(statusOf(result, "E3")).toBe("fail");
+    expect(markOf(result, "E3").detail).toContain(`document INV-9001 party ${OTHER}`);
+  });
+
+  it("an alias fact that names a different payer does not cover this bank line", () => {
+    const proposal = makeProposal({
+      kind: "apply_payment", bank_txn_id: "BT-1", fact_refs: ["fact:parent"],
+      applications: [{ doc_id: "INV-9001", amount_cents: 120_000 }],
+      entries: [line(CASH, 120_000, 0), line(AR, 0, 120_000)],
+    });
+    const ctx = makeCtx({
+      ...demoWorld,
+      bankTxns: [bankTxn("BT-1", 120_000, { party_id: OTHER })],
+      facts: [fact("fact:parent", { predicate: "parent_pays", party_id: INITECH, value: { payer_party_id: "someone-else" } })],
+    });
+    expect(statusOf(runKernel(proposal, ctx, "proposal"), "E3")).toBe("fail");
   });
 
   it("does not allow the mismatch when the payer_alias fact is not active", () => {

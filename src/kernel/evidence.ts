@@ -41,28 +41,25 @@ export function checkE2(proposal: Proposal, ctx: KernelContext): Mark {
 }
 
 /**
- * A standing fact can say that a different party pays for this one. Only an ACTIVE
- * payer_alias or parent_pays fact for this party opens that door.
+ * A standing fact can say that ONE named payer pays for this party (a parent company, a payment agent).
+ * It opens the door for that payer's bank line only. Documents must always belong to the proposal's party.
  */
-function aliasAllowed(proposal: Proposal, ctx: KernelContext): string | undefined {
+function aliasedPayer(proposal: Proposal, ctx: KernelContext, payerPartyId: string): string | undefined {
   for (const id of proposal.fact_refs) {
     const fact = ctx.getFact(id);
     if (!fact || fact.status !== "active" || fact.party_id !== proposal.party_id) continue;
-    if (fact.predicate === "payer_alias" || fact.predicate === "parent_pays") return fact.id;
+    if (fact.predicate !== "payer_alias" && fact.predicate !== "parent_pays") continue;
+    if (fact.value?.payer_party_id === payerPartyId) return fact.id;
   }
   return undefined;
 }
 
-/** E3 — the documents and the bank line belong to the party the proposal names. */
+/** E3 — the documents belong to the party the proposal names, and so does the bank line unless a fact names its payer. */
 export function checkE3(proposal: Proposal, ctx: KernelContext): Mark {
   const refs = [...proposal.applications.map((a) => a.doc_id), ...(proposal.bank_txn_id ? [proposal.bank_txn_id] : [])];
   if (refs.length === 0) return naMark("E", "E3", "nothing to tie to a party", [proposal.intent_id]);
-  const alias = aliasAllowed(proposal, ctx);
-  const problems = alias === undefined ? partyProblems(proposal, ctx) : [];
-  const ok = alias === undefined
-    ? `${refs.length} reference(s) belong to ${proposal.party_id}`
-    : `party mismatches permitted by active fact ${alias} for ${proposal.party_id}`;
-  return verdictMark("E", "E3", problems, ok, refs);
+  const problems = partyProblems(proposal, ctx);
+  return verdictMark("E", "E3", problems, `${refs.length} reference(s) tie to ${proposal.party_id}`, refs);
 }
 
 function partyProblems(proposal: Proposal, ctx: KernelContext): string[] {
@@ -76,8 +73,8 @@ function partyProblems(proposal: Proposal, ctx: KernelContext): string[] {
   }
   if (!proposal.bank_txn_id) return problems;
   const txn = ctx.getBankTxn(proposal.bank_txn_id);
-  if (txn?.party_id && txn.party_id !== proposal.party_id) {
-    problems.push(`bank transaction ${txn.id} party ${txn.party_id} != proposal party ${proposal.party_id}`);
+  if (txn?.party_id && txn.party_id !== proposal.party_id && !aliasedPayer(proposal, ctx, txn.party_id)) {
+    problems.push(`bank transaction ${txn.id} party ${txn.party_id} != proposal party ${proposal.party_id}, and no active fact names it as the payer`);
   }
   return problems;
 }

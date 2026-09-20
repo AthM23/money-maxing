@@ -39,12 +39,19 @@ export const READ_TOOL_SPECS: ToolSpec[] = [
   {
     name: "ledger_open_invoices", registry_name: "ledger.open_invoices", input: Party,
     description: "Open invoices for a customer, oldest first, amounts in integer cents.",
-    run: (i, env) => env.db.prepare("SELECT id, issue_date, due_date, total_cents, open_cents, status FROM invoice WHERE party_id = ? AND open_cents > 0 ORDER BY issue_date").all(str(i.party_id)),
+    run: (i, env) => (env.mode === "replay"
+      ? (env.replay_docs ?? []).filter((d) => d.kind === "invoice" && d.party_id === str(i.party_id))
+      : env.db.prepare("SELECT id, issue_date, due_date, total_cents, open_cents, status FROM invoice WHERE party_id = ? AND open_cents > 0 ORDER BY issue_date").all(str(i.party_id))),
   },
   {
     name: "bank_get_transaction", registry_name: "bank.get_transaction", input: z.object({ bank_txn_id: z.string().min(1) }),
     description: "One bank line: posted date, signed amount in cents, descriptor, method.",
-    run: (i, env) => env.db.prepare("SELECT id, posted_date, amount_cents, descriptor, method, party_id FROM bank_txn WHERE id = ?").get(str(i.bank_txn_id)) ?? { error: "no such bank line" },
+    run: (i, env) => {
+      const row = env.db.prepare("SELECT id, posted_date, amount_cents, descriptor, method, party_id FROM bank_txn WHERE id = ?")
+        .get(str(i.bank_txn_id)) as { posted_date: string } | undefined;
+      const hidden = row && env.mode === "replay" && env.as_of && row.posted_date > env.as_of.slice(0, 10);
+      return row && !hidden ? row : { error: "no such bank line (or not yet posted at this point in time)" };
+    },
   },
   {
     name: "crm_owner", registry_name: "crm.owner", input: Party,

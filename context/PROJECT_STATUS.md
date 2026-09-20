@@ -396,3 +396,28 @@ _Heading time corrected from "~20:20": commit `805e468` is stamped 19:59._
   typechecked against their installed SDKs only.
 - Blocked on a human (Karan): `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, and a Slack app in Socket Mode
   (`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN` with `connections:write`; bot scopes `chat:write`, `im:write`).
+
+### 2026-09-19 ~20:29 ET — Independent review of Person A's code: nine confirmed holes, all fixed with regression tests
+
+An independent reviewer agent (read-only, reproduced each finding with a probe) went through `src/kernel`, `runtime`,
+`memory`, `router` and `agents`. **Two findings were false auto-post or double-post paths, which is the one thing this
+system claims cannot happen.** They were real. All are fixed; each has a regression test in
+`src/runtime/__tests__/reviewFindings.test.ts` that posted wrongly before the fix.
+
+| # | Severity | What was wrong | Fix |
+|---|---|---|---|
+| 1 | critical | A write-off booked Dr cash / Cr AR read as a zero adjustment (control accounts were excluded), needed no evidence, and **posted AUTO** | Adjustment for non-cash reducing kinds is at least the amount applied; new check **F8** (entry shape fits the kind: a concession or write-off never touches cash; its outside-control debit equals what it applies) |
+| 1b | critical | `apply_payment` with no bank line was accepted; one bank line could be applied twice | A cash application requires a bank line; the kernel subtracts what posted decisions already applied from it |
+| 2 | critical | The same proposal parked twice, approved twice, **posted twice** | An identical proposal on the same intent that is pending or posted is handed back, not recorded again; approval refuses a decision whose twin already posted |
+| 3 | high | Any active alias fact switched off the whole party tie, so one customer's cash could pay another's invoice | Documents must always belong to the proposal's party; an alias fact covers only the bank line of the one payer it names |
+| 4 | high | Re-proposing a human-approved entry reported route AUTO | The stored route is returned |
+| 5 | high | Kinds that write no ledger entry (dispute hold) were never deduped, and one-time facts cited on them never counted as used | `decision.posted_at` (schema addition) is stamped inside the post transaction for every kind; idempotency and fact-use counting key on it |
+| 6 | medium | Ledger and bank tools had no as-of guard in replay | In replay, open invoices come from the case snapshot and a bank line posted after the as-of date does not exist |
+| 7 | medium | Two applications to one document each passed F2, then the post threw and aborted the run | F2 adds applications per document; a failed post now returns a rejection (mark X1) instead of throwing |
+| 8 | medium | The approval row was written outside the post transaction | Approval and post are one transaction |
+| 9 | low | A fact with unreadable scope JSON was treated as unrestricted | It now covers no kind (fails closed) |
+
+- Measured after the fixes: `pnpm test` → 22 files, **263 passing**; `pnpm typecheck` clean.
+- What this changes in how we talk about it: "zero wrong auto-posts" is a property we test for, and a reviewer found two
+  ways to break it within an hour. Say that in the limitations section, with the count of adversarial probes run.
+- Contract change: `decision.posted_at`. `FactLite.value` added to the kernel's input types.

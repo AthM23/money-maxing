@@ -9,6 +9,7 @@ import {
   sumCredits,
   sumDebits,
   verdictMark,
+  isControlAccount,
 } from "./util.js";
 
 /** Kinds that legitimately post no entry lines. Anything else with no lines is unfooted. */
@@ -49,35 +50,55 @@ export function checkF2(proposal: Proposal, ctx: KernelContext): Mark {
 
 function applicationProblems(proposal: Proposal, ctx: KernelContext): string[] {
   const problems: string[] = [];
+  const perDoc = new Map<string, number>();
   for (const app of proposal.applications) {
     if (app.amount_cents <= 0) problems.push(`application to ${app.doc_id} is ${app.amount_cents}, must be > 0`);
-    const doc = ctx.getDoc(app.doc_id);
-    if (!doc) {
-      problems.push(`document ${app.doc_id} not found`);
-      continue;
-    }
-    if (app.amount_cents > doc.open_cents) {
-      problems.push(`application ${app.amount_cents} exceeds ${app.doc_id} open balance ${doc.open_cents}`);
-    }
+    perDoc.set(app.doc_id, (perDoc.get(app.doc_id) ?? 0) + app.amount_cents);
+  }
+  for (const [docId, total] of perDoc) {
+    const doc = ctx.getDoc(docId);
+    if (!doc) problems.push(`document ${docId} not found`);
+    else if (total > doc.open_cents) problems.push(`applications ${total} exceed ${docId} open balance ${doc.open_cents}`);
   }
   return problems;
 }
 
 function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
-  if (!proposal.bank_txn_id) return [];
+  if (!proposal.bank_txn_id) {
+    return proposal.kind === "apply_payment" ? ["apply_payment has no bank_txn_id: cash cannot be applied without a bank line"] : [];
+  }
   const txn = ctx.getBankTxn(proposal.bank_txn_id);
   if (!txn) return [`bank transaction ${proposal.bank_txn_id} not found`];
   const problems: string[] = [];
   const total = applicationsTotal(proposal);
-  const available = Math.abs(txn.amount_cents);
-  if (total > available) problems.push(`applications ${total} exceed bank amount ${available}`);
+  const spent = ctx.bankTxnAppliedCents?.(txn.id) ?? 0;
+  const available = Math.abs(txn.amount_cents) - spent;
+  if (total > available) problems.push(`applications ${total} exceed what is left of bank line ${txn.id}: ${available} (already applied ${spent})`);
   if (proposal.kind === "apply_payment") {
     const cashDebit = sumDebits(linesOn(proposal, ctx.control.cash_account));
-    if (cashDebit !== txn.amount_cents) {
-      problems.push(`cash debit ${cashDebit} != bank amount ${txn.amount_cents} on ${txn.id}`);
-    }
+    if (cashDebit !== txn.amount_cents) problems.push(`cash debit ${cashDebit} != bank amount ${txn.amount_cents} on ${txn.id}`);
+    if (spent > 0) problems.push(`bank line ${txn.id} was already applied (${spent} cents)`);
   }
   return problems;
+}
+
+const NO_CASH_KINDS: ReadonlySet<string> = new Set(["credit_memo", "write_off", "dispute_hold", "accrual", "payroll_accrual", "amortization", "rev_recognition"]);
+
+/** F8 — the entry has the shape its kind claims. A concession or write-off moves no cash; only a cash application does. */
+export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
+  const refs = [proposal.intent_id];
+  const cashLines = linesOn(proposal, ctx.control.cash_account);
+  const problems: string[] = [];
+  if (NO_CASH_KINDS.has(proposal.kind) && cashLines.length > 0) {
+    problems.push(`kind ${proposal.kind} must not touch the cash account ${ctx.control.cash_account}`);
+  }
+  if ((proposal.kind === "credit_memo" || proposal.kind === "write_off") && proposal.entries.length > 0) {
+    const outside = proposal.entries.filter((l) => !isControlAccount(l.account, ctx));
+    const debitOutside = sumDebits(outside);
+    const applied = applicationsTotal(proposal);
+    if (debitOutside !== applied) problems.push(`${proposal.kind} debits ${debitOutside} outside the control accounts but applies ${applied}`);
+  }
+  return verdictMark("F", "F8", problems, `entry shape fits kind ${proposal.kind}`, refs);
 }
 
 /** GL movement on the AR control account, as a receivable (debit increases it). */
@@ -154,5 +175,5 @@ function entryAmountProblems(proposal: Proposal): string[] {
 }
 
 export function formalMarks(proposal: Proposal, ctx: KernelContext): Mark[] {
-  return [checkF1(proposal), checkF2(proposal, ctx), checkF3(proposal, ctx), checkF7(proposal)];
+  return [checkF1(proposal), checkF2(proposal, ctx), checkF3(proposal, ctx), checkF7(proposal), checkF8(proposal, ctx)];
 }

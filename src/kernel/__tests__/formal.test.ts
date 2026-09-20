@@ -100,7 +100,7 @@ describe("F2 applications fit", () => {
     });
     const ctx = makeCtx({ ...world, bankTxns: [bankTxn("BT-2", 1_300_000)] });
     expect(markOf(runKernel(proposal, ctx, "proposal"), "F2").detail).toContain(
-      "application 1300000 exceeds INV-9001 open balance 1200000",
+      "applications 1300000 exceed INV-9001 open balance 1200000",
     );
   });
 
@@ -119,7 +119,7 @@ describe("F2 applications fit", () => {
   it("fails when the applications exceed the bank amount", () => {
     const ctx = makeCtx({ ...world, bankTxns: [bankTxn("BT-1", 500_000)] });
     expect(markOf(runKernel(payment(), ctx, "proposal"), "F2").detail).toContain(
-      "applications 1080000 exceed bank amount 500000",
+      "applications 1080000 exceed what is left of bank line",
     );
   });
 
@@ -190,7 +190,7 @@ describe("F3 control accounts stay tied", () => {
       entries: [],
     });
     const result = runKernel(proposal, makeCtx(world), "proposal");
-    expect(markOf(result, "F2").detail).toContain("application 2000000 exceeds INV-9001 open balance 1200000");
+    expect(markOf(result, "F2").detail).toContain("applications 2000000 exceed INV-9001 open balance 1200000");
     expect(statusOf(result, "F3")).toBe("pass");
   });
 

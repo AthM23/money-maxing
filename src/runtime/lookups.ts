@@ -33,17 +33,19 @@ export function getBankTxn(db: Db, id: string): BankTxnLite | undefined {
 
 interface FactRow {
   id: string; party_id: string; predicate: string; status: FactLite["status"]; valid_from: string; valid_to: string;
-  learned_at: string; uses: FactLite["uses"]; scope_json: string; max_amount_cents: number | null; approved_by: string | null;
+  learned_at: string; uses: FactLite["uses"]; scope_json: string; value_json: string; max_amount_cents: number | null; approved_by: string | null;
 }
 
 export function getFact(db: Db, id: string): FactLite | undefined {
   const row = db.prepare("SELECT * FROM fact WHERE id = ?").get(id) as FactRow | undefined;
   if (!row) return undefined;
   const scope = safeJson(row.scope_json) as { kinds?: ProposalKind[] } | null;
+  // Fail closed: a fact whose scope cannot be read covers no kind at all.
+  const kinds = Array.isArray(scope?.kinds) ? scope.kinds : [];
   return {
     id: row.id, party_id: row.party_id, predicate: row.predicate, status: row.status,
     valid_from: row.valid_from, valid_to: row.valid_to, learned_at: row.learned_at, uses: row.uses,
-    used_count: countFactUses(db, id), kinds: scope?.kinds,
+    used_count: countFactUses(db, id), kinds, value: (safeJson(row.value_json) as Record<string, unknown> | null) ?? {},
     max_amount_cents: row.max_amount_cents, approved_by: row.approved_by,
   };
 }
@@ -53,8 +55,7 @@ export function countFactUses(db: Db, factId: string): number {
   const row = db
     .prepare(
       `SELECT COUNT(*) AS n FROM decision d
-       WHERE d.mode = 'live' AND d.route IN ('AUTO','PROPOSE')
-         AND EXISTS (SELECT 1 FROM gl_entry g WHERE g.source_decision_id = d.id)
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL
          AND EXISTS (SELECT 1 FROM json_each(json_extract(d.proposal_json, '$.fact_refs')) j WHERE j.value = ?)`,
     )
     .get(factId) as { n: number };

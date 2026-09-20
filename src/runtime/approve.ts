@@ -8,7 +8,7 @@ import { buildKernelContext } from "./kernelContext.js";
 import { safeJson } from "./lookups.js";
 import { insertWorkpaper, persistBlock } from "./persist.js";
 import { postEntry } from "./post.js";
-import type { RuntimeDeps } from "./proposeEntry.js";
+import { findExisting, postFailure, type RuntimeDeps } from "./proposeEntry.js";
 
 export interface ApprovalInput extends ApprovalLite {
   note?: string;
@@ -41,6 +41,8 @@ export function approveDecision(db: Db, decisionId: string, approval: ApprovalIn
   const parsed = Proposal.safeParse(safeJson(row.proposal_json));
   if (!parsed.success) return { status: "rejected", decision_id: decisionId, failed: [] };
   const proposal = parsed.data;
+  const twin = findExisting(db, proposal);
+  if (twin?.posted_at && twin.decision_id !== decisionId) return { status: "not_pending", decision_id: decisionId };
   if (approval.outcome === "rejected") {
     recordApproval(db, clock.now(), decisionId, approval);
     return { status: "declined", decision_id: decisionId };
@@ -57,13 +59,23 @@ export function approveDecision(db: Db, decisionId: string, approval: ApprovalIn
   }
   if (gate.verdict !== "accept") return { status: "rejected", decision_id: decisionId, failed: gate.failed };
 
-  recordApproval(db, clock.now(), decisionId, approval);
-  const posted = postEntry(db, clock, { decision_id: decisionId, intent_id: row.intent_id, proposal });
-  return { status: "posted", decision_id: decisionId, route: "PROPOSE", entry_id: posted.entry_id };
+  // The approval and the entry land together or not at all.
+  const approveAndPost = db.transaction(() => {
+    recordApproval(db, clock.now(), decisionId, approval);
+    return postEntry(db, clock, { decision_id: decisionId, intent_id: row.intent_id, proposal });
+  });
+  try {
+    const posted = approveAndPost();
+    return { status: "posted", decision_id: decisionId, route: "PROPOSE", entry_id: posted.entry_id };
+  } catch (err) {
+    return { status: "rejected", decision_id: decisionId, failed: [postFailure(err)] };
+  }
 }
 
+/** Keyed on the decision's own stamp, so kinds that write no ledger entry (a dispute hold) are covered too. */
 function isPosted(db: Db, decisionId: string): boolean {
-  return db.prepare("SELECT 1 FROM gl_entry WHERE source_decision_id = ?").get(decisionId) !== undefined;
+  const row = db.prepare("SELECT posted_at FROM decision WHERE id = ?").get(decisionId) as { posted_at: string | null } | undefined;
+  return Boolean(row?.posted_at);
 }
 
 function recordApproval(db: Db, now: string, decisionId: string, a: ApprovalInput): void {

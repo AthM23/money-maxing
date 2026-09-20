@@ -41,6 +41,8 @@ export interface FactLite {
   /** How many posted decisions already cited this fact. A one_time fact may be used once. */
   used_count: number;
   kinds?: ProposalKind[];
+  /** What the fact says. An alias fact names the payer it covers: `{ payer_party_id }`. */
+  value?: Record<string, unknown>;
   max_amount_cents?: number | null;
   approved_by?: string | null;
 }
@@ -111,6 +113,8 @@ export interface KernelContext {
   getFact(id: string): FactLite | undefined;
   getPolicy(id: string): PolicyLite | undefined;
   getApprover(id: string): ApproverLite | undefined;
+  /** Cents of this bank line already applied by posted decisions. A bank line cannot be spent twice. */
+  bankTxnAppliedCents?(bank_txn_id: string): number;
   /** DUPLICATE_PAYMENT: a different paid document for the same vendor and amount. */
   findPaidDuplicate?(party_id: string, amount_cents: number, exclude_doc_ids: string[]): { doc_id: string } | undefined;
   /** BANK_DETAILS_CHANGED: remit-to differs from the details last paid, with no out-of-band confirmation on record. */

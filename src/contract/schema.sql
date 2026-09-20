@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS decision (
   tier INTEGER,                             -- ADDED: router tier that produced the accepted proposal (0-3)
   model_calls INTEGER NOT NULL DEFAULT 0, cost_micros INTEGER NOT NULL DEFAULT 0,
   latency_ms INTEGER,                       -- ADDED
+  posted_at TEXT,                           -- ADDED: set when the decision took effect, including kinds that write no ledger entry
   created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS decision_step (  -- ADDED per-step trace: the timeline in the console, and training data

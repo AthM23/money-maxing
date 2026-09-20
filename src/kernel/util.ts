@@ -60,13 +60,20 @@ export function linesOn(proposal: Proposal, account: string): EntryLine[] {
   return proposal.entries.filter((line) => line.account === account);
 }
 
+/** Kinds that reduce a receivable or a payable WITHOUT money moving. Whatever they apply is judgment, however it is booked. */
+const NON_CASH_REDUCING: ReadonlySet<string> = new Set(["credit_memo", "write_off", "customer_credit", "dispute_hold", "bank_adjustment"]);
+
 /**
- * The judgment amount: what this entry moves outside the control accounts (credit memo,
- * write-off, accrual). An exact-match cash application has an adjustment of 0.
+ * The judgment amount: what this entry moves outside the control accounts (credit memo, write-off, accrual).
+ * An exact-match cash application has an adjustment of 0. For a kind that reduces a balance without cash, the
+ * amount applied counts too, so booking a write-off against cash or AR cannot make it read as zero.
  */
 export function adjustmentCents(proposal: Proposal, ctx: KernelContext): number {
   const lines = proposal.entries.filter((line) => !isControlAccount(line.account, ctx));
-  return Math.max(sumDebits(lines), sumCredits(lines));
+  const outsideControl = Math.max(sumDebits(lines), sumCredits(lines));
+  if (!NON_CASH_REDUCING.has(proposal.kind)) return outsideControl;
+  const applied = proposal.applications.reduce((n, a) => n + a.amount_cents, 0);
+  return Math.max(outsideControl, applied);
 }
 
 /** Sum of applications landing on documents of one kind. Unknown documents contribute nothing. */

@@ -37,6 +37,7 @@ export function postEntry(db: Db, clock: Clock, input: PostInput): PostResult {
     const entryId = writeLedger(db, clock, input);
     applyToDocuments(db, input.proposal);
     if (entryId) writeArtifact(db, clock, input, entryId);
+    db.prepare("UPDATE decision SET posted_at = ? WHERE id = ?").run(clock.now(), input.decision_id);
     return { entry_id: entryId, event_ids: emitEvents(db, clock, input, entryId) };
   });
   return run();

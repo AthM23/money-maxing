@@ -25,7 +25,7 @@ export type ProposeResult =
   | { status: "invalid"; issues: string[] }
   | { status: "rejected"; decision_id: string; failed: Mark[]; marks: Mark[] }
   | { status: "blocked"; decision_id: string; rule: BlockRule }
-  | { status: "posted"; decision_id: string; route: "AUTO"; entry_id: string | null }
+  | { status: "posted"; decision_id: string; route: "AUTO" | "PROPOSE"; entry_id: string | null }
   | { status: "pending_approval"; decision_id: string; route: "PROPOSE"; marks: Mark[] }
   | { status: "replay_recorded"; decision_id: string; route: "AUTO" | "PROPOSE" };
 
@@ -41,8 +41,9 @@ export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: Ru
   const proposal = parsed.data;
   if (!intentExists(db, proposal.intent_id)) return { status: "invalid", issues: [`intent_id: unknown intent ${proposal.intent_id}`] };
 
-  const already = findPosted(db, proposal);
-  if (already) return { status: "posted", decision_id: already.decision_id, route: "AUTO", entry_id: already.entry_id };
+  const existing = findExisting(db, proposal);
+  if (existing?.posted_at) return { status: "posted", decision_id: existing.decision_id, route: existing.route === "PROPOSE" ? "PROPOSE" : "AUTO", entry_id: existing.entry_id };
+  if (existing && meta.mode === "live") return { status: "pending_approval", decision_id: existing.decision_id, route: "PROPOSE", marks: [] };
 
   const reuse = meta.decision_id && attachProposal(db, meta.decision_id, proposal, meta) ? meta.decision_id : undefined;
   const decisionId = reuse ?? insertDecision(db, clock, proposal, meta);
@@ -83,22 +84,39 @@ function postThroughGate(
     return { status: "blocked", decision_id: decisionId, rule: gate.block_rule };
   }
   if (gate.verdict !== "accept") return { status: "rejected", decision_id: decisionId, failed: gate.failed, marks: gate.marks };
-  const posted = postEntry(db, clock, { decision_id: decisionId, intent_id: proposal.intent_id, proposal });
-  return { status: "posted", decision_id: decisionId, route: "AUTO", entry_id: posted.entry_id };
+  try {
+    const posted = postEntry(db, clock, { decision_id: decisionId, intent_id: proposal.intent_id, proposal });
+    return { status: "posted", decision_id: decisionId, route: "AUTO", entry_id: posted.entry_id };
+  } catch (err) {
+    return { status: "rejected", decision_id: decisionId, failed: [postFailure(err)], marks: [...gate.marks, postFailure(err)] };
+  }
+}
+
+/** The post rolled back. That is a rejection the caller can act on, not a crash. */
+export function postFailure(err: unknown): Mark {
+  return { cls: "F", check: "X1", status: "fail", detail: `post failed and rolled back: ${err instanceof Error ? err.message : String(err)}`, refs: [] };
 }
 
 function intentExists(db: Db, intentId: string): boolean {
   return db.prepare("SELECT 1 FROM intent WHERE id = ?").get(intentId) !== undefined;
 }
 
-/** Same intent, same proposal, already posted: return it instead of posting twice. */
-function findPosted(db: Db, proposal: Proposal): { decision_id: string; entry_id: string | null } | undefined {
-  const row = db
+/**
+ * Same intent, same proposal, already posted or still waiting for approval: hand that decision back instead of
+ * recording a second one. Two identical parked proposals would otherwise both post once approved.
+ */
+export function findExisting(db: Db, proposal: Proposal): { decision_id: string; entry_id: string | null; route: string | null; posted_at: string | null } | undefined {
+  return db
     .prepare(
-      `SELECT d.id AS decision_id, g.id AS entry_id FROM decision d
-       JOIN gl_entry g ON g.source_decision_id = d.id
-       WHERE d.intent_id = ? AND d.mode = 'live' AND d.proposal_json = ? LIMIT 1`,
+      `SELECT d.id AS decision_id, d.route AS route, d.posted_at AS posted_at,
+              (SELECT g.id FROM gl_entry g WHERE g.source_decision_id = d.id) AS entry_id
+       FROM decision d
+       WHERE d.intent_id = ? AND d.mode = 'live' AND d.proposal_json = ?
+         AND (d.posted_at IS NOT NULL OR (d.route = 'PROPOSE'
+              AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected')))
+       ORDER BY d.posted_at IS NULL, d.rowid LIMIT 1`,
     )
-    .get(proposal.intent_id, canonicalJson(proposal)) as { decision_id: string; entry_id: string } | undefined;
-  return row;
+    .get(proposal.intent_id, canonicalJson(proposal)) as
+    | { decision_id: string; entry_id: string | null; route: string | null; posted_at: string | null }
+    | undefined;
 }

@@ -35,7 +35,8 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
     getTrace: (id) => getTrace(db, id),
     getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),
-    getBankTxn: (id) => getBankTxn(db, id),
+    getBankTxn: (id) => visibleBankTxn(db, id, meta),
+    bankTxnAppliedCents: (id) => bankTxnAppliedCents(db, id),
     getFact: (id) => getFact(db, id),
     getPolicy: (id) => getPolicy(db, id),
     getApprover: (id) => getApprover(db, id),
@@ -43,6 +44,25 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     remitChangedUnverified: (party) => remitChangedUnverified(db, party),
     extra_checks: meta.extra_checks,
   };
+}
+
+/** In replay, a bank line posted after the as-of date does not exist yet. */
+function visibleBankTxn(db: Db, id: string, meta: ContextMeta): ReturnType<typeof getBankTxn> {
+  const txn = getBankTxn(db, id);
+  if (txn && meta.mode === "replay" && meta.as_of && txn.posted_date > meta.as_of.slice(0, 10)) return undefined;
+  return txn;
+}
+
+/** Cents of a bank line already applied by decisions that took effect. A bank line cannot be spent twice. */
+function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND json_extract(d.proposal_json, '$.bank_txn_id') = ?`,
+    )
+    .get(bankTxnId) as { n: number };
+  return row.n;
 }
 
 /** A date with no period row is treated as locked: nothing posts to a month nobody opened. */
