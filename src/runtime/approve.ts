@@ -56,6 +56,10 @@ function decide(db: Db, decisionId: string, approval: ApprovalInput, deps: Runti
     return { status: "rejected", decision_id: decisionId, failed: [{ cls: "P", check: "P3", status: "fail",
       detail: "approval identity and actor kind must match the approval matrix", refs: [approval.approver_id] }] };
   }
+  if (approval.outcome === "corrected") {
+    return { status: "rejected", decision_id: decisionId, failed: [{ cls: "P", check: "P2", status: "fail",
+      detail: "a corrected approval carries no corrected entry on this path, so it would post the original unchanged: decline it and have the entry prepared again", refs: [approval.approver_id] }] };
+  }
   if (approval.outcome !== "rejected" && db.prepare("SELECT 1 FROM workpaper WHERE decision_id = ? AND stale = 1").get(decisionId)) {
     return { status: "rejected", decision_id: decisionId, failed: [{ cls: "E", check: "E1", status: "fail",
       detail: "source evidence changed; prepare a fresh decision before approving", refs: [decisionId] }] };

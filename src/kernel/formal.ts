@@ -79,8 +79,17 @@ function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
   const spent = ctx.bankTxnAppliedCents?.(txn.id) ?? 0;
   const available = Math.abs(txn.amount_cents) - spent;
   if (total > available) problems.push(`applications ${total} exceed what is left of bank line ${txn.id}: ${available} (already applied ${spent})`);
+  // Cash is tied net. A debit for the whole receipt with a credit to cash beside it moves less cash than the bank line
+  // says arrived, and cash debited with nothing applied is cash from nowhere.
+  const cashLines = linesOn(proposal, ctx.control.cash_account);
+  const cashOut = cashLines.reduce((n, l) => n + l.credit_cents, 0);
+  const cashNet = sumDebits(cashLines) - cashOut;
+  if (INBOUND_KINDS.has(proposal.kind)) {
+    if (cashOut > 0) problems.push(`kind ${proposal.kind} brings cash in: it cannot also credit the cash account (${cashOut})`);
+    if (cashNet > available) problems.push(`the entry debits cash ${cashNet}, more than what is left of bank line ${txn.id}: ${available}`);
+  }
   if (proposal.kind === "apply_payment") {
-    const cashDebit = sumDebits(linesOn(proposal, ctx.control.cash_account));
+    const cashDebit = cashNet;
     if (cashDebit !== txn.amount_cents) problems.push(`cash debit ${cashDebit} != bank amount ${txn.amount_cents} on ${txn.id}`);
     if (spent > 0) problems.push(`bank line ${txn.id} was already applied (${spent} cents)`);
   }
