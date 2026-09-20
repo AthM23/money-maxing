@@ -1,0 +1,16 @@
+{
+  "muse": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.0,
+    "field_f1": 0.14,
+    "held_out_n": 88,
+    "held_out_exact": 0.0,
+    "held_out_f1": 0.155,
+    "avg_latency_s": 8.07,
+    "est_cost_usd": 0.0,
+    "ts": "21:25",
+    "kind": "api",
+    "model": "muse-spark-1.3"
+  }
+}

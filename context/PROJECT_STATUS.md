@@ -698,3 +698,7 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
      `open`, so a later pass with a model key will not pick them up; today that needs `pnpm seed --target=local --reset`.
 - **Not run:** any model tier, `pnpm demo` (needs `ANTHROPIC_API_KEY`, empty here), live QuickBooks, Gmail or Slack, and
   Lane C's `ft/` Python (no test covers it; merged as it was on `main`).
+- **While this was being validated, `main` moved** (`5fde82a`, `c930480`: Lane C benchmark rows, Python only, plus a
+  `__pycache__/` ignore rule), so the first push was refused. Merged rather than forced; one conflict, `.gitignore`,
+  resolved as a union (B's `data/` and answer-key rules + C's `__pycache__/`). Re-measured after it: typecheck clean,
+  365 passing, seed → skeleton → second pass unchanged. `ft/benchmark.py` and its F1 numbers were not run or checked here.
