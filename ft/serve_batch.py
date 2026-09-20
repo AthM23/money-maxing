@@ -51,6 +51,8 @@ async def batcher():
                           "latency_ms": dt, "batch_size": len(batch), "cost_micros": 0}})
 
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 @app.on_event("startup")
 async def start(): asyncio.create_task(batcher())

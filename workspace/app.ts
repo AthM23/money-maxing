@@ -17,8 +17,9 @@ const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..", "frontend")
 const SITE = join(FRONTEND, "index.html");
 /** Lane C's other self-contained pages, each at a short address. `gate.ts` leaves the same addresses open. */
 export const PAGES: Readonly<Record<string, string>> = { "/flow": "flow.html", "/flow.html": "flow.html" };
-// The marketing page is one self-contained file with its own inline style and script, and nothing from the network.
-const SITE_CSP = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'";
+// The marketing pages carry their own inline style and script. connect-src lets them read this server's own API
+// (the pipeline page quotes the live scoreboard) and the fine-tuned reader on the GX10 for the paste-a-document demo.
+const SITE_CSP = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://100.73.102.120:8000; frame-ancestors 'none'";
 
 /**
  * Every request the workspace answers, whoever is listening: `server.ts` on this machine, `vercel.ts` as a hosted
