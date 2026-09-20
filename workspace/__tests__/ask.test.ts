@@ -74,3 +74,14 @@ describe("asked to do something, the Ask page hands it to a person and changes n
     expect((db.prepare("SELECT COUNT(*) AS n FROM decision").get() as { n: number }).n).toBe(before);
   });
 });
+
+describe("the paid agent has an hourly cap, and the free mode never does", () => {
+  it("counts questions in the last hour against ASK_AGENT_MAX_PER_HOUR and forgets older ones", async () => {
+    const { agentBudgetLeft } = await import("../ask.js");
+    const now = Date.now();
+    expect(agentBudgetLeft(now, { ASK_AGENT_MAX_PER_HOUR: "0" })).toBe(0);
+    expect(agentBudgetLeft(now, { ASK_AGENT_MAX_PER_HOUR: "5" })).toBeLessThanOrEqual(5);
+    expect(agentBudgetLeft(now, { ASK_AGENT_MAX_PER_HOUR: "not a number" })).toBeGreaterThan(0);
+    expect(agentBudgetLeft(now + 2 * 3_600_000, { ASK_AGENT_MAX_PER_HOUR: "5" })).toBe(5);
+  });
+});

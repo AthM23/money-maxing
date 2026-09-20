@@ -47,8 +47,24 @@ const KEYWORDS: [RegExp, string][] = [
   [/agent|model|cost|spend|refus|trace/, "agent_activity"], [/rule|polic|memory|learn|fact/, "policies_and_memory"], [/wait|need|approv|question|stuck|open|settled/, "waiting_on_people"], [/cash|bank|came in|received/, "cash_received"],
 ];
 
+/**
+ * A paid question costs real money, and this page may be reachable by more people than the one who pays. The agent
+ * answers at most ASK_AGENT_MAX_PER_HOUR questions in any hour (default 120, a few dollars at the dearest model);
+ * past that it says so and the free code mode still answers. Counted in this process only, which is all a cap needs.
+ */
+const asked: number[] = [];
+export function agentBudgetLeft(now: number = Date.now(), env: NodeJS.ProcessEnv = process.env): number {
+  const limit = Number(env.ASK_AGENT_MAX_PER_HOUR ?? 120);
+  while (asked.length > 0 && now - asked[0]! > 3_600_000) asked.shift();
+  return Math.max(0, (Number.isFinite(limit) && limit >= 0 ? limit : 120) - asked.length);
+}
+
 export async function ask(db: Db, question: string, period: string, model: AskModel, history: AskHistory = []): Promise<AskAnswer> {
   const started = Date.now();
+  if (model !== "code") {
+    if (agentBudgetLeft(started) === 0) throw new HttpError(429, "The agent has answered its limit of questions for this hour. Choose \"Code only\": it builds the same reports for free.");
+    asked.push(started);
+  }
   const answer = model === "code" ? askInCode(db, question, period) : await askAgent(db, question, period, model, history);
   return { ...answer, elapsed_ms: Date.now() - started };
 }
