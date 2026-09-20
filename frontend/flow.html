@@ -167,7 +167,7 @@
       <span class="step" id="st2">03 Agents</span><span class="step" id="st3">04 Human</span><span class="step" id="st4">05 Loop</span>
     </div>
     <a href="/dashboard" style="font-size:13px;font-weight:700;color:var(--ink);text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 18px">Dashboard</a>
-    <button class="runbtn" onclick="play()"><span class="tri"></span>Run July</button>
+    <button class="runbtn" onclick="play()"><span class="tri"></span>Run September</button>
   </div>
 
   <div class="pipe">
@@ -209,7 +209,7 @@
         <div class="entry" id="e5"><span>Held back by the customer</span><span class="num">$2,200.00</span></div></div>
       <div class="bcard" id="l-learn"><b>What it learned <span class="chip">waiting</span></b>
         <div class="entry" id="e6"><span>SHORT-PAY-01, small shortfalls</span><span class="num">approved</span></div>
-        <div class="entry" id="e7"><span>Standing 2% credit to Sep 30</span><span class="num">said once</span></div>
+        <div class="entry" id="e7"><span>Standing 2% credit to Dec 31</span><span class="num">said once</span></div>
         <div class="entry" id="e8"><span>Next invoice: $550 credit</span><span class="num">0 questions</span></div></div>
       <div class="bcard" id="l-audit"><b>Audit pack <span class="chip">waiting</span></b>
         <div class="entry" id="e9"><span>Entries re-performed</span><span class="num">15/15 clean</span></div>
@@ -252,8 +252,18 @@ function stage(n){
   $('stageDesc').textContent=DESC[n];
 }
 
+let LIVE=null;
+async function fetchLive(){
+  try{
+    const r=await fetch('/api/overview',{cache:'no-store'});
+    if(r.ok){const j=await r.json();LIVE=j.scoreboard?{...j.scoreboard,tied:!!(j.books&&j.books.tied)}:null;}
+  }catch(_){LIVE=null;}
+}
 async function play(){
   const my=++runId;
+  await fetchLive();
+  document.querySelector('.pipe-head span').textContent=
+    LIVE?'live: this page reads the same books API as the dashboard':'replay of a measured run';
   const guard=()=>my!==runId;
   document.querySelectorAll('.bcard,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
   document.querySelectorAll('.bcard .chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
@@ -263,7 +273,7 @@ async function play(){
   await sleep(400);if(guard())return;
 
   for(const s of ['s-bank','s-mail','s-slack','s-docs']){$(s).classList.add('on');await sleep(240);if(guard())return;}
-  msg('Sources','July arrives: 12 bank receipts, the remittance emails, the Slack thread, the contract.');
+  msg('Sources','September arrives: 12 bank receipts, the remittance emails, the Slack thread, the contract.');
   await sleep(900);if(guard())return;
 
   stage(1);
@@ -276,12 +286,18 @@ async function play(){
   msg('Preparer','Code matches receipts to invoices and drafts entries. No model needed for the routine ones.');
   await sleep(1600);if(guard())return;
   hot('l-code',true);$('e1').classList.add('on');$('e2').classList.add('on');chip('l-code','posted','done');
-  msg('Preparer','14 entries posted across 12 receipts. Model calls: 0. Cost: $0.');
+  if(LIVE){
+    msg('Preparer',`${LIVE.auto_posted} entries posted with no person involved. Decisions ${LIVE.decisions}, by code ${LIVE.decided_by_code}, by a model ${LIVE.decided_by_model}. Model calls ${LIVE.model_calls}, cost $${(LIVE.cost_micros/1e6).toFixed(2)}. <span class="chip live">books API, just now</span>`);
+    $('e1').children[0].textContent=`${LIVE.auto_posted} entries posted by code`;
+    if(LIVE.tied) msg('Checker','The receivable ledger ties to the open invoices to the cent. <span class="chip live">books API, just now</span>');
+  } else {
+    msg('Preparer','14 entries posted across 12 receipts. Model calls: 0. Cost: $0.');
+  }
   await sleep(2000);if(guard())return;hot('l-code',false);agent('a-prep','on');
 
   agent('a-check','hot');$('wire').style.width='58%';
   hot('l-voss',true);
-  msg('Checker','Vossberg wired EUR 98,000 at 1.08 less a $40 fee: $105,800 against a $110,000 invoice. $4,200 is unexplained.');
+  msg('Checker','The Vossberg agreement says $110,000 is due. The account received $105,800: EUR 98,000 at 1.08 less a $40 fee. What was promised and what arrived disagree by $4,200, so a case opens.');
   await sleep(2200);if(guard())return;
   $('e3').classList.add('on');
   msg('Preparer','$40 is the bank\'s fee. The write-off rule for small wire shortfalls was learned from last quarter\'s bookings and approved by the controller like a pull request.');
@@ -290,7 +306,7 @@ async function play(){
   msg('Preparer','$1,960 is the exchange rate moving between invoice and payment. The kernel recomputes it from the two rates and the bank\'s advice. Believed from nobody, recomputed.');
   await sleep(2400);if(guard())return;
   $('e5').classList.add('on');chip('l-voss','2,200 open','wait');
-  msg('Checker','$2,200 left. A model reads the policy memo, the contract, Slack and the email: the customer held back 2% over the June outage.');
+  msg('Checker','$2,200 left. A model reads the policy memo, the contract, Slack and the email: the customer held back 2% over the August outage.');
   await sleep(2200);if(guard())return;
   msg('Checker','First draft REFUSED: a quote did not match its source character for character. Second draft rests on six verified quotes.','reject');
   await sleep(2200);if(guard())return;
@@ -299,7 +315,7 @@ async function play(){
   agent('a-check','on');agent('a-human','hot');$('wire').style.width='78%';
   msg('Checker','The contract says a credit needs an officer in writing. Nobody gave it. One question goes to the CFO, with everything that was checked attached.');
   await sleep(2000);if(guard())return;
-  msg('CFO','Agreed with their ops director: a standing 2% SLA credit for the June outage, valid to Sep 30.','human');
+  msg('CFO','Agreed with their ops director: a standing 2% SLA credit for the August outage, valid to Dec 31.','human');
   await sleep(1800);if(guard())return;
   hot('l-learn',true);$('e6').classList.add('on');$('e7').classList.add('on');chip('l-learn','remembered','live');
   msg('System','Answer recorded with scope and an end date. INV-3201 closes to $0.00.');
@@ -311,6 +327,7 @@ async function play(){
   stage(4);
   agent('a-audit','hot');$('wire').style.width='100%';
   hot('l-audit',true);$('e9').classList.add('on');
+  if(LIVE) msg('Auditor',`${LIVE.checkable_num} of ${LIVE.checkable_den} tick marks on the live books can be re-performed by code right now. <span class="chip live">books API, just now</span>`);
   msg('Auditor','Re-performing every sampled entry with fresh eyes: 15 of 15 clean.');
   await sleep(2000);if(guard())return;
   $('e10').classList.add('on');chip('l-audit','tamper caught','done');
