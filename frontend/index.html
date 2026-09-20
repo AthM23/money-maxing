@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Footnote — the agent finance team</title>
+<style>
+  :root{
+    --lime:#d9f24f; --lime-soft:#e6fa78; --ink:#101012; --paper:#f4f4f2; --card:#f7f7f5;
+    --mut:#5b5b57; --coral:#f0645c; --green:#3fae52; --radius:28px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+    background:#e8e8e6;color:var(--ink);-webkit-font-smoothing:antialiased;
+  }
+  .frame{max-width:1440px;margin:24px auto;background:#fff;border-radius:40px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.12)}
+  .wrap{padding:0 56px}
+  @media(max-width:900px){.wrap{padding:0 20px}}
+
+  /* ---------- nav ---------- */
+  nav{display:flex;align-items:center;justify-content:space-between;padding:28px 56px;position:sticky;top:0;background:rgba(255,255,255,.85);backdrop-filter:blur(14px);z-index:50}
+  .logo{font-weight:700;font-size:20px;position:relative;z-index:1}
+  .logo::after{content:"";position:absolute;right:-14px;top:-2px;width:22px;height:22px;background:var(--lime);border-radius:50%;z-index:-1}
+  .nav-links{display:flex;gap:34px;font-size:15px}
+  .nav-links a{color:var(--ink);text-decoration:none;opacity:.85;transition:opacity .2s}
+  .nav-links a:hover{opacity:1}
+  .nav-cta{display:flex;gap:12px}
+  .btn{border:0;cursor:pointer;font-size:15px;font-weight:600;border-radius:999px;padding:13px 24px;transition:transform .18s ease,box-shadow .18s ease;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.16)}
+  .btn:active{transform:translateY(0) scale(.98)}
+  .btn-ghost{background:#efefec;color:var(--ink)}
+  .btn-ink{background:var(--ink);color:#fff}
+  .btn-lime{background:var(--lime);color:var(--ink)}
+  .btn-white{background:#fff;color:var(--ink)}
+  @media(max-width:900px){.nav-links{display:none}}
+
+  /* ---------- hero ---------- */
+  .hero{margin:8px 24px 0;background:var(--lime);border-radius:var(--radius);padding:72px 60px 84px;position:relative;overflow:hidden}
+  .hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:24px;align-items:center}
+  h1{font-size:clamp(44px,6vw,84px);line-height:.98;letter-spacing:-.03em;font-weight:700}
+  .spark{display:inline-block;animation:spin 7s linear infinite;transform-origin:center}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hero p{margin:26px 0 34px;font-size:18px;line-height:1.55;max-width:440px;color:#20220c}
+  .hero-more{margin-top:46px;display:inline-flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);text-decoration:none}
+  .hero-more .arr{display:inline-block;animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(5px)}}
+  .doodle{position:absolute;left:44%;top:52%;width:180px;opacity:.9;pointer-events:none}
+
+  .stage{position:relative;height:560px}
+  .app-card{position:absolute;border-radius:26px;box-shadow:0 30px 60px rgba(20,22,6,.25);will-change:transform;transition:transform .1s linear}
+  .card-light{background:#fff;width:330px;padding:26px;left:2%;top:4%;transform:rotate(-6deg);z-index:2}
+  .card-dark{background:#141416;color:#fff;width:330px;padding:26px;right:0;top:12%;transform:rotate(7deg);z-index:1}
+  .app-card h4{font-size:22px;margin-bottom:14px}
+  .pillrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .chip{font-size:11px;padding:5px 10px;border-radius:999px;background:#f0f0ed;color:#444}
+  .card-dark .chip{background:#26262a;color:#cfcfd4}
+  .mini{border-radius:16px;padding:14px;margin-bottom:10px;font-size:13px}
+  .mini .row{display:flex;justify-content:space-between;margin-top:6px}
+  .mini-ink{background:var(--ink);color:#fff}
+  .mini-soft{background:#f4f4f1}
+  .up{color:var(--green);font-weight:600}.dn{color:var(--coral);font-weight:600}
+  .bars{display:flex;align-items:flex-end;gap:5px;height:110px;margin:16px 0 6px}
+  .bars i{flex:1;border-radius:4px 4px 2px 2px;background:var(--green);opacity:.9;animation:grow 1.2s cubic-bezier(.2,.8,.2,1) both}
+  .bars i.r{background:var(--coral)}
+  @keyframes grow{from{height:6px !important}}
+  .btn-pair{display:flex;gap:10px;margin-top:16px}
+  .btn-pair .b{flex:1;text-align:center;font-weight:700;border-radius:999px;padding:11px 0;font-size:14px}
+  .b-sell{background:var(--coral);color:#fff}.b-buy{background:var(--lime);color:var(--ink)}
+
+  /* ---------- reveal system ---------- */
+  .rv{opacity:0;transform:translateY(36px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+  .rv.on{opacity:1;transform:none}
+  .rv.d1{transition-delay:.08s}.rv.d2{transition-delay:.16s}.rv.d3{transition-delay:.24s}
+
+  /* ---------- sections ---------- */
+  section{padding:96px 0}
+  h2{font-size:clamp(34px,4vw,54px);letter-spacing:-.02em;line-height:1.05;font-weight:700}
+  .sub{color:var(--mut);font-size:17px;line-height:1.6;margin-top:16px;max-width:460px}
+
+  .cards2{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
+  @media(max-width:900px){.cards2{grid-template-columns:1fr}}
+  .feature{background:var(--card);border-radius:var(--radius);padding:44px;position:relative;overflow:hidden;min-height:280px}
+  .feature h3{font-size:26px;margin-bottom:14px}
+  .feature p{color:var(--mut);line-height:1.6;max-width:340px}
+  .feature .more{display:inline-flex;gap:8px;align-items:center;margin-top:24px;font-weight:600;color:var(--ink);text-decoration:none}
+  .more .a{transition:transform .2s}.more:hover .a{transform:translateX(5px)}
+  .blob{position:absolute;pointer-events:none}
+
+  /* advantages */
+  .adv{display:grid;grid-template-columns:.9fr 1.6fr;gap:60px}
+  @media(max-width:900px){.adv{grid-template-columns:1fr}}
+  .adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+  .adv-cell{padding:34px 38px;border-left:1px solid #eceae6;border-top:1px solid #eceae6}
+  .adv-cell:nth-child(1),.adv-cell:nth-child(2){border-top:0}
+  .adv-cell:nth-child(odd){border-left:0}
+  .adv-ic{width:40px;height:40px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px}
+  .adv-cell h4{font-size:21px;margin-bottom:10px}
+  .adv-cell p{color:var(--mut);line-height:1.55;font-size:15px}
+  .adv-cell .tag{display:inline-block;margin-top:16px;font-size:12.5px;font-weight:600;background:#f0f0ec;border-radius:999px;padding:8px 14px;color:#333}
+
+  /* stack row */
+  .stack{text-align:center}
+  .logo-row{display:flex;justify-content:center;flex-wrap:wrap;gap:18px;margin-top:44px}
+  .logo-chip{width:96px;height:96px;border-radius:50%;background:#f4f4f1;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#333;transition:transform .25s,background .25s}
+  .logo-chip:hover{transform:translateY(-6px);background:var(--lime)}
+
+  /* dark banner */
+  .banner{margin:0 0;background:#131315;border-radius:var(--radius);color:#fff;padding:64px;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center;position:relative;overflow:hidden}
+  @media(max-width:900px){.banner{grid-template-columns:1fr}}
+  .banner h2{color:#fff}
+  .banner .squig{position:absolute;left:34px;top:30px;opacity:.6}
+  .stat-card{background:#fff;color:var(--ink);border-radius:22px;padding:26px;width:300px;justify-self:end;box-shadow:0 26px 60px rgba(0,0,0,.45);transform:rotate(4deg);animation:floaty 5s ease-in-out infinite}
+  @keyframes floaty{50%{transform:rotate(4deg) translateY(-12px)}}
+  .stat-card .k{font-size:12px;color:#8b8b86;letter-spacing:.08em;text-transform:uppercase}
+  .stat-card .v{font-size:34px;font-weight:700;margin:4px 0 2px}
+  .stat-inner{background:var(--ink);color:#fff;border-radius:16px;padding:16px;margin-top:14px}
+  .stat-inner .v{font-size:22px}
+  .curve{margin-top:10px}
+
+  /* benchmark table */
+  .bench{display:grid;grid-template-columns:.8fr 1.2fr;gap:60px;align-items:start}
+  @media(max-width:900px){.bench{grid-template-columns:1fr}}
+  .tbl{width:100%;border-collapse:collapse;background:var(--card);border-radius:22px;overflow:hidden;font-size:15px}
+  .tbl th{background:var(--ink);color:#fff;text-align:left;padding:14px 18px;font-weight:600}
+  .tbl td{padding:14px 18px;border-top:1px solid #ebebe7}
+  .tbl tr.hero-row td{background:var(--lime);font-weight:700}
+  .tbl .num{font-variant-numeric:tabular-nums}
+  .foot-note{font-size:13px;color:#8a8a85;margin-top:12px;line-height:1.5}
+
+  /* live decisions */
+  .live{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center}
+  @media(max-width:900px){.live{grid-template-columns:1fr}}
+  .orb-zone{position:relative;height:460px}
+  .orb{position:absolute;right:0;top:40px;width:360px;height:360px;background:var(--lime);border-radius:50%}
+  .tick{position:absolute;background:#fff;border-radius:16px;box-shadow:0 18px 44px rgba(0,0,0,.14);padding:14px 18px;display:flex;gap:14px;align-items:center;font-size:14px;min-width:300px;animation:floaty2 6s ease-in-out infinite}
+  .tick b{display:block;font-size:15px}
+  .tick small{color:#8a8a85}
+  .tick .amt{margin-left:auto;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+  .tick .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;background:#f1f1ee}
+  @keyframes floaty2{50%{transform:translateY(-10px)}}
+  .t1{left:6%;top:30px}.t2{left:0;top:170px;animation-delay:1.2s}.t3{left:12%;top:310px;animation-delay:2.2s}
+
+  /* CTA + footer */
+  .cta{text-align:center;padding:110px 0 130px}
+  .cta h2{margin-bottom:36px}
+  footer{background:#111113;color:#fff;padding:70px 56px 60px;display:grid;grid-template-columns:1.3fr 1fr 1fr 1.3fr;gap:40px}
+  @media(max-width:900px){footer{grid-template-columns:1fr 1fr}}
+  footer h5{font-size:15px;margin-bottom:18px}
+  footer a{display:block;color:#a5a5aa;text-decoration:none;font-size:14.5px;margin-bottom:12px;transition:color .2s}
+  footer a:hover{color:#fff}
+  .news{display:flex;background:#1d1d21;border-radius:999px;padding:6px;border:1px solid #2c2c31}
+  .news input{flex:1;background:none;border:0;outline:0;color:#fff;padding:8px 14px;font-size:14px}
+  .news button{background:var(--lime);border:0;border-radius:999px;width:42px;height:42px;cursor:pointer;font-size:16px}
+  .tiny{font-size:12.5px;color:#77777d;margin-top:26px;grid-column:1/-1}
+</style>
+</head>
+<body>
+<div class="frame">
+
+  <nav>
+    <div class="logo">Footnote</div>
+    <div class="nav-links">
+      <a href="#story">The close</a><a href="#loop">The loop</a><a href="#bench">Benchmark</a><a href="#live">Live</a>
+    </div>
+    <div class="nav-cta">
+      <a class="btn btn-ghost" href="#bench">Results</a>
+      <a class="btn btn-ink" href="#live">▦&nbsp;Watch the close</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-grid">
+      <div>
+        <h1 class="rv">Close the books<br>while you sleep <span class="spark">✦</span></h1>
+        <p class="rv d1">Footnote is an agent finance team: it reads the inbox, matches the bank,
+        books every entry through a kernel that cannot be fooled — and asks a human exactly once.</p>
+        <a class="btn btn-ink rv d2" href="#bench">◎&nbsp;See the numbers</a>
+        <br>
+        <a class="hero-more rv d3" href="#story">Find out more <span class="arr">↓</span></a>
+      </div>
+      <div class="stage" id="stage">
+        <div class="app-card card-light" data-depth="18">
+          <h4>Drift board</h4>
+          <div class="pillrow"><span class="chip">Bank</span><span class="chip">Ledger</span><span class="chip">CRM</span><span class="chip">Contracts</span><span class="chip">Inbox</span></div>
+          <div class="mini mini-ink">
+            <b>Initech · short-pay</b>
+            <div class="row"><span>Invoice INV-1042</span><span>$12,000.00</span></div>
+            <div class="row"><span>Bank received</span><span>$10,800.00</span></div>
+            <div class="row"><span class="up">reason found · CEO email</span><span class="up">−10%</span></div>
+          </div>
+          <div class="mini mini-soft">
+            <div class="row"><b>Wayne Corp</b><span class="dn">−$3,300</span></div>
+            <div class="row"><span>no evidence anywhere</span><span>→ ask once</span></div>
+          </div>
+          <div class="mini mini-soft">
+            <div class="row"><b>Acme Freight</b><span class="up">auto-posted</span></div>
+            <div class="row"><span>SHORT-PAY-01 · ≤ $50</span><span>$0 model cost</span></div>
+          </div>
+        </div>
+        <div class="app-card card-dark" data-depth="34">
+          <h4>July close</h4>
+          <div class="pillrow"><span class="chip">AR</span><span class="chip">AP</span><span class="chip">Bank rec</span><span class="chip">Revenue</span><span class="chip">Close</span></div>
+          <div class="bars" id="bars"></div>
+          <div style="font-size:12px;color:#9a9aa0">decisions per day · <span class="up">green = no human</span> · <span class="dn">coral = escalated</span></div>
+          <div class="mini mini-soft" style="background:#232327;color:#fff;margin-top:14px">
+            <div class="row"><span>Books tied out</span><b class="up">✓ to the cent</b></div>
+            <div class="row"><span>Wrong entries posted</span><b>0</b></div>
+          </div>
+          <div class="btn-pair"><div class="b b-sell">Escalate</div><div class="b b-buy">Post</div></div>
+        </div>
+      </div>
+    </div>
+    <svg class="doodle" viewBox="0 0 200 160" fill="none"><path d="M10 20 C 90 10, 150 40, 120 90 S 40 150, 70 120 S 140 100, 185 128" stroke="#101012" stroke-width="3" stroke-linecap="round"/><path d="M172 118 l14 10 -16 6" stroke="#101012" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+
+  <!-- STORY CARDS -->
+  <section id="story" class="wrap">
+    <h2 class="rv">One event,<br>every book</h2>
+    <div class="cards2">
+      <div class="feature rv">
+        <svg class="blob" style="right:-20px;bottom:-30px;width:220px" viewBox="0 0 200 200"><path d="M45 130 C 20 90, 60 40, 110 55 S 190 90, 160 140 S 70 170, 45 130 Z" fill="var(--lime)"/><path d="M85 155 C 70 135, 95 120, 115 132 S 140 165, 112 172 S 100 175, 85 155 Z" fill="#101012"/></svg>
+        <h3>A payment lands $1,200 short</h3>
+        <p>The drift monitor flags it. The agent reads the contract, the CRM, then finds the CEO's
+        discount email nobody told finance about. Revenue, forecast, billing and audit all move together.</p>
+        <a class="more" href="#loop">Read more <span class="a">→</span></a>
+      </div>
+      <div class="feature rv d1">
+        <svg class="blob" style="right:20px;top:30px;width:190px" viewBox="0 0 200 200" fill="none">
+          <path d="M100 20 a80 80 0 0 1 78 62" stroke="#101012" stroke-width="16" stroke-linecap="round"/>
+          <path d="M178 118 a80 80 0 0 1 -60 58" stroke="var(--lime)" stroke-width="16" stroke-linecap="round"/>
+          <path d="M60 172 a80 80 0 0 1 -38 -80" stroke="var(--coral)" stroke-width="16" stroke-linecap="round"/>
+          <path d="M60 120 q 20 -30 34 -6 t 34 -10 t 26 12" stroke="#101012" stroke-width="3"/>
+        </svg>
+        <h3>Proof-carrying entries</h3>
+        <p>Nothing posts without a workpaper: the math, the exact quoted evidence, the approval.
+        Plain deterministic code re-performs every check. Change one letter of the quote — rejected.</p>
+        <a class="more" href="#bench">Read more <span class="a">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOOP / ADVANTAGES -->
+  <section id="loop" class="wrap">
+    <div class="adv">
+      <div>
+        <h2 class="rv">Every close, smarter</h2>
+        <p class="sub rv d1">The same four beats as the platforms CFOs already trust —
+        run live, with a kernel that makes the trust checkable.</p>
+      </div>
+      <div class="adv-grid">
+        <div class="adv-cell rv"><div class="adv-ic">📖</div><h4>Learns</h4><p>Replays the quarter humans closed with the answers hidden, and compiles their repeated judgment into policies.</p><span class="tag">SHORT-PAY-01 · short ≤ $50 → auto-close</span></div>
+        <div class="adv-cell rv d1"><div class="adv-ic">⚡</div><h4>Runs</h4><p>Routine work clears through compiled rules and a fine-tuned local model at $0 a call. The kernel re-checks everything.</p><span class="tag">6 of 11 receipts · zero model calls</span></div>
+        <div class="adv-cell rv d2"><div class="adv-ic">🙋</div><h4>Escalates</h4><p>A genuine blocker goes to a person's phone with options — asked once, answered once, remembered with a scope and an expiry.</p><span class="tag">Wayne −$3,300 · awaiting you</span></div>
+        <div class="adv-cell rv d3"><div class="adv-ic">📈</div><h4>Improves</h4><p>Corrections become policy v2. The replay suite gates every change: agreement with the past may never drop.</p><span class="tag">SHORT-PAY-01 v2 · ≤ $50 or ≤ 5% freight</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK -->
+  <section class="stack wrap">
+    <h2 class="rv">One shared picture of the company</h2>
+    <p class="sub rv d1" style="margin:16px auto 0">Live systems in, one ledger out — every figure traceable to its source.</p>
+    <div class="logo-row rv d2">
+      <div class="logo-chip">QuickBooks</div><div class="logo-chip">Gmail</div><div class="logo-chip">Slack</div>
+      <div class="logo-chip">HubSpot</div><div class="logo-chip">Bank feed</div><div class="logo-chip">Claude</div>
+      <div class="logo-chip">Qwen 4B</div><div class="logo-chip">GX10</div>
+    </div>
+  </section>
+
+  <!-- DARK BANNER -->
+  <section class="wrap">
+    <div class="banner rv">
+      <svg class="squig" width="150" height="60" viewBox="0 0 150 60" fill="none"><path d="M4 50 C 30 10, 50 10, 70 34 S 110 58 146 12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+      <div>
+        <h2>A small model,<br>taught by the audit trail</h2>
+        <p class="sub" style="color:#b7b7bd">Every kernel-verified decision becomes training data.
+        Overnight, the same open-weight model went from failing this work to leading our table —
+        trained and served on the ASUS box at this table.</p>
+        <a class="btn btn-white" style="margin-top:30px" href="#bench">◎&nbsp;Full benchmark</a>
+      </div>
+      <div class="stat-card">
+        <div class="k">field accuracy · held-out</div>
+        <div class="v" id="statHero">0.084 → 0.960</div>
+        <div class="up">11× the same base model</div>
+        <svg class="curve" width="240" height="70" viewBox="0 0 240 70" fill="none">
+          <path id="curvePath" d="M6 62 L66 14 L126 11 L186 9" stroke="#101012" stroke-width="3.5" stroke-linecap="round"/>
+          <circle cx="6" cy="62" r="5" fill="#f0645c"/><circle cx="66" cy="14" r="5" fill="#101012"/>
+          <circle cx="126" cy="11" r="5" fill="#101012"/><circle cx="186" cy="9" r="6" fill="#9db521" stroke="#101012" stroke-width="2"/>
+        </svg>
+        <div class="stat-inner">
+          <div class="k" style="color:#8f8f95">cost per routine decision</div>
+          <div class="v">$0.00 <span class="up" style="font-size:13px">local · no API</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BENCHMARK -->
+  <section id="bench" class="wrap">
+    <div class="bench">
+      <div>
+        <h2 class="rv">NorthwindBench</h2>
+        <p class="sub rv d1">One frozen test of never-seen vendors and never-seen document styles.
+        Every contender gets the same exam; zero-shot models even get the schema pasted into their
+        prompt. Scores load from the real results file when present.</p>
+        <a class="btn btn-lime rv d2" style="margin-top:26px" href="#live">Watch it work ↓</a>
+        <p class="foot-note rv d3" id="benchNote">Held-out F1, n=120 stratified · corrected v2 scorer · unflattering rows stay in.</p>
+      </div>
+      <div class="rv d1">
+        <table class="tbl" id="benchTable">
+          <thead><tr><th>model</th><th class="num">exact</th><th class="num">field-F1</th><th class="num">latency</th><th class="num">$/call</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIVE -->
+  <section id="live" class="wrap">
+    <div class="live">
+      <div>
+        <h2 class="rv">Decisions,<br>as they happen</h2>
+        <p class="sub rv d1">Each card is a real case from the seeded month: what arrived, what the
+        system did, and what it cost. Green ran with no human. Coral waited for one — once.</p>
+      </div>
+      <div class="orb-zone rv d1">
+        <div class="orb"></div>
+        <svg style="position:absolute;left:30%;top:0;height:100%" width="120" viewBox="0 0 120 460" fill="none"><path d="M60 0 C 10 90, 110 150, 60 230 S 10 370, 60 460" stroke="#101012" stroke-width="3"/></svg>
+        <div class="tick t1"><div class="ic">📩</div><div><b>Initech Corp</b><small>credit memo · CEO email cited</small></div><div class="amt up">−$1,200.00<br><small>kernel ✓</small></div></div>
+        <div class="tick t2"><div class="ic">🏦</div><div><b>Acme Freight</b><small>SHORT-PAY-01 · auto-closed</small></div><div class="amt up">−$38.00<br><small>$0 · tier 0</small></div></div>
+        <div class="tick t3"><div class="ic">🙋</div><div><b>Wayne Corp</b><small>no evidence · asked once</small></div><div class="amt dn">−$3,300.00<br><small>awaiting you</small></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta wrap">
+    <h2 class="rv">You asked how much of a finance team<br>an agentic system can run.</h2>
+    <a class="btn btn-ink rv d1" style="font-size:17px;padding:16px 30px" href="#story">In July — this much</a>
+  </section>
+
+  <footer>
+    <div><div class="logo" style="color:#fff">Footnote</div>
+      <p style="color:#a5a5aa;font-size:14px;margin-top:16px;max-width:260px">An agent finance team for the office of the CFO. Built in 24 hours at HackMIT 2026.</p>
+    </div>
+    <div><h5>System</h5><a href="#story">The close</a><a href="#loop">The loop</a><a href="#bench">Benchmark</a><a href="#live">Live decisions</a></div>
+    <div><h5>Honesty</h5><a href="#bench">Corrected scorer</a><a href="#bench">Held-out entities</a><a href="#bench">Unflattering rows</a><a href="#loop">Kernel invariants</a></div>
+    <div><h5>Get the write-up</h5>
+      <div class="news"><input placeholder="you@school.edu" aria-label="email"><button>→</button></div>
+    </div>
+    <div class="tiny">© 2026 Footnote · Preet, Karan & Atharv · every number on this page carries its n.</div>
+  </footer>
+</div>
+
+<script>
+/* -------- reveal on scroll -------- */
+const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('on')), {threshold:.18});
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* -------- hero bars -------- */
+const bars = document.getElementById('bars');
+const seq = [42,58,36,70,64,30,78,52,66,84,48,74,90,60];
+seq.forEach((h,i)=>{const b=document.createElement('i');
+  if(i===5||i===10)b.className='r';
+  b.style.height=h+'%';b.style.animationDelay=(0.06*i)+'s';bars.appendChild(b);});
+
+/* -------- hero parallax -------- */
+const stage=document.getElementById('stage');
+if(matchMedia('(pointer:fine)').matches){
+  addEventListener('mousemove',e=>{
+    const r=stage.getBoundingClientRect();
+    const cx=(e.clientX-(r.left+r.width/2))/r.width, cy=(e.clientY-(r.top+r.height/2))/r.height;
+    stage.querySelectorAll('.app-card').forEach(c=>{
+      const d=+c.dataset.depth;
+      const rot=c.classList.contains('card-light')?-6:7;
+      c.style.transform=`rotate(${rot}deg) translate(${cx*d}px, ${cy*d}px)`;
+    });
+  });
+}
+addEventListener('scroll',()=>{
+  const y=scrollY;
+  stage.querySelectorAll('.app-card').forEach((c,i)=>{c.style.marginTop=(y*(i?-0.03:0.05))+'px';});
+},{passive:true});
+
+/* -------- benchmark table: real data with embedded fallback -------- */
+const fallback = {
+  "ours (Qwen3-4B + LoRA)":{exact:0.692,f1:0.960,ho:0.964,lat:"6.3 s",cost:"$0 · local",hero:true},
+  "Muse Spark + schema hint":{exact:0.767,f1:0.957,ho:0.967,lat:"6.7 s",cost:"API"},
+  "ours · epoch 1":{exact:0.658,f1:0.953,ho:0.955,lat:"6.3 s",cost:"$0 · local"},
+  "Muse Spark · bare":{exact:0.0,f1:0.140,ho:0.155,lat:"8.1 s",cost:"API"},
+  "Qwen3-4B base · bare":{exact:0.0,f1:0.084,ho:0.094,lat:"6.4 s",cost:"$0 · local"},
+  "Qwen3-0.6B · bare":{exact:0.0,f1:0.010,ho:0.014,lat:"1.3 s",cost:"$0 · local"},
+};
+function renderBench(rows, live){
+  const tb=document.querySelector('#benchTable tbody'); tb.innerHTML='';
+  Object.entries(rows).sort((a,b)=>b[1].f1-a[1].f1).forEach(([name,r])=>{
+    const tr=document.createElement('tr'); if(r.hero) tr.className='hero-row';
+    tr.innerHTML=`<td>${name}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
+      <td class="num">${r.f1.toFixed(3)}</td><td class="num">${r.lat}</td><td class="num">${r.cost}</td>`;
+    tb.appendChild(tr);
+  });
+  if(live) document.getElementById('benchNote').textContent =
+    'LIVE: loaded from benchmark_results_v2.json · corrected v2 scorer · unflattering rows stay in.';
+}
+renderBench(fallback,false);
+/* try real result files (served from repo root or frontend/) */
+const CANDIDATES=['../ft/data/benchmark_results_v2.json','./benchmark_results_v2.json','../ft/data/benchmark_results.json'];
+(async()=>{
+  for(const url of CANDIDATES){
+    try{
+      const j=await (await fetch(url)).json();
+      const models=j.models||j; const rows={};
+      for(const [k,v] of Object.entries(models)){
+        if(typeof v!=='object'||v.field_f1===undefined) continue;
+        const pretty=k==='ours'?'ours (Qwen3-4B + LoRA)':k;
+        rows[pretty]={exact:v.exact??0,f1:v.field_f1,ho:v.held_out_f1,lat:(v.avg_latency_s??'—')+' s',
+          cost:(v.kind&&v.kind.startsWith('local'))?'$0 · local':'API',hero:k==='ours'};
+      }
+      if(Object.keys(rows).length){renderBench(rows,true);break;}
+    }catch(_){/* next candidate */}
+  }
+})();
+</script>
+</body>
+</html>
