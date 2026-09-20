@@ -3,6 +3,7 @@
 set -e
 cd "$(dirname "$0")/.."
 scripts/demo-serve.sh
+scripts/seed-polish.sh
 pkill -f "desk/cli.ts" 2>/dev/null || true
 sleep 1
 nohup pnpm desk runs/demo/live.db > /tmp/desk.log 2>&1 &
