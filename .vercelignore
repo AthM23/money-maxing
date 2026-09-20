@@ -1,0 +1,28 @@
+# When this file exists the Vercel CLI stops reading .gitignore, so everything secret or local is named again here.
+.env
+.env.*
+!.env.example
+node_modules/
+# Anchored: a bare data/ would also drop ft/data, which the Model page reads.
+/data/
+dist/
+*.db-journal
+*.db-wal
+*.db-shm
+world/answer-key*.json
+__pycache__/
+
+# runs/ is local state, except the reader bench the Model page shows and a month someone chose to publish.
+runs/*
+!runs/reader-bench
+!runs/snapshot
+
+# Not needed to build or serve the hosted copy.
+context/
+tests/
+eval/
+console/
+.github/
+ft/*.py
+ft/data/*.jsonl
+ft/data/*.csv

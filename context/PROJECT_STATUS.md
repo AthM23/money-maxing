@@ -1686,3 +1686,32 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   (`frontend/index.html`: the nav logo, a "Dashboard" link and an inline favicon, nothing else).
 - `context/JUDGE_QA.md`: the hard questions, answered as the code stands now.
 - `pnpm test` → 85 files, **735 passing**; typecheck clean.
+
+### 2026-09-20 ~04:40 ET — A read-only copy is live on Vercel: https://money-maxing-mu.vercel.app (AthM23 + Claude Code session)
+
+- **Supersedes "nothing is deployed"** (03:40 entry) **and the Vercel line of `DEPLOY.md`**, which planned Vercel for the
+  marketing page only and a paid AWS box for the workspace. Both are now one free Vercel project (`money-maxing`,
+  AthM23's account): `/` the marketing page, `/dashboard` the workspace, read-only. The AWS box is not needed and was
+  not created. Details and the two deploy commands: [`DEPLOY.md`](./DEPLOY.md).
+- **How:** `workspace/server.ts` started listening on import, so its request handler moved, unchanged, to
+  `workspace/app.ts`; `server.ts` and the new `workspace/vercel.ts` both call it. The hosted entry passes read-only
+  as a constant, not from `WORKSPACE_PUBLIC`. `scripts/vercel-build.mjs` builds the month on Vercel with
+  `scripts/demo-build.sh` (no model call; no database committed or uploaded), bundles the function with esbuild
+  (new devDependency, the version already in the lockfile), and ships `better-sqlite3` as built on the build machine
+  (Vercel Build Output API; the function's Node version is taken from the build's, since the module is native).
+- **Measured on the public address:** every page and read 200 in 0.1–0.3 s; approve, run, learn, answer, decide, fact
+  and policy each refused 403 by name; Ask with a model refused, Ask from code answers (AR ageing, $58,104.98 over 8
+  customers); audit 14 of 14 re-performed clean on a temp copy; a cross-origin write refused; `/.env`, `/package.json`,
+  the database and the bundle all 404; the Model page reads all its files (`problems: []`). **No environment variable
+  is set on the project.** `pnpm typecheck` clean; `pnpm test` 750 of 752 on this Windows machine, the two failures
+  being the scenario-CLI file lock already described in the 04:05 entry (fix not yet on `main`).
+- **The copy is `prepared.db` as built from the deployed code: it does not have the one paid model pass on it**, so the
+  main scene's question for a person is not there. To publish the demo's `start.db` instead, put it at
+  `runs/snapshot/month.db` and `npx vercel deploy --prod` from that machine.
+- **Three things that cost a deploy each, for whoever deploys next:** a Windows upload drops the execute bit (the build
+  now sets it); `.sh` files checked out CRLF break bash on Linux (new `.gitattributes` pins them LF); and a bare
+  `data/` in `.vercelignore` also excluded `ft/data`, which emptied the Model page (now `/data/`).
+- **Not done, on purpose:** the project is **not connected to GitHub**. Until `vercel.json` is on `main`, a push there
+  would publish the repo's files as a static site over the working copy. After the `vercel-setup` branch is merged:
+  `npx vercel git connect`. The marketing page still carries the seven lines `DEMO_PATH.md` lists as not backed by
+  code, and it is now public.

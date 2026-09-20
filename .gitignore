@@ -13,3 +13,4 @@ dist/
 data/
 world/answer-key*.json
 __pycache__/
+.vercel/

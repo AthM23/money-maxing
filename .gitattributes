@@ -1,0 +1,3 @@
+# Run by bash on Linux (Vercel, the box in context/DEPLOY.md) even when checked out or deployed from Windows.
+*.sh text eol=lf
+scripts/vercel/bin/* text eol=lf
