@@ -30,7 +30,7 @@ function roster(db: Db, workers: WorkerRow[]): RosterEntry[] {
     model("haiku", "Haiku · tier 1", "The first model a case meets. It investigates with read-only tools and can act only through propose_entry.", by("Haiku")),
     model("sonnet", "Sonnet · tier 2", "Takes a case the first tier could not settle or frame.", by("Sonnet")),
     model("opus", "Opus · tier 3", "The last model tier, for the case nobody cheaper could frame.", by("Opus")),
-    controller(db, by("Controller agent")), ...engines(db), auditor(), people(by("People"))];
+    controller(db, by("Controller agent")), ...engines(db), accruals(db), auditor(), people(by("People"))];
 }
 
 function connectors(db: Db): RosterEntry {
@@ -93,6 +93,15 @@ function engines(db: Db): RosterEntry[] {
       did: n ? `${plural(n, "step")} logged` : "nothing mirrored from here", idle: n === 0, cost_micros: 0 });
   }
   return out;
+}
+
+/** The close pack: the one place in the close where there is reading to do, not only arithmetic. */
+function accruals(db: Db): RosterEntry {
+  const posted = count(db, "SELECT COUNT(*) AS n FROM decision WHERE mode = 'live' AND kind = 'accrual' AND posted_at IS NOT NULL");
+  const parked = count(db, "SELECT COUNT(*) AS n FROM decision d WHERE d.mode = 'live' AND d.kind = 'accrual' AND d.route = 'PROPOSE' AND d.posted_at IS NULL AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected')");
+  const cases = count(db, "SELECT COUNT(*) AS n FROM intent WHERE function = 'close' AND case_json IS NOT NULL AND json_extract(case_json, '$.accrual.account') IS NOT NULL");
+  return { key: "accruals", name: "Accruals agent", kind: "model", role: "Finds recurring expenses nobody has billed for the month. Code estimates a steady one from the ledger; one that moves is read from the vendor's own words, never averaged.",
+    did: cases ? `${plural(cases, "unbilled expense")} found, ${posted} posted, ${parked} waiting for a person` : "has not looked yet: Close, Find unbilled expenses", idle: cases === 0, cost_micros: null };
 }
 
 function auditor(): RosterEntry {

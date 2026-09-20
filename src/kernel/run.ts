@@ -2,6 +2,7 @@ import type { KernelResult, KernelStage, KernelVerdict, Mark } from "../contract
 import { Proposal } from "../contract/types.js";
 import { evaluateBlockRules, type TriggeredRule } from "./blockRules.js";
 import { evidenceMarks } from "./evidence.js";
+import { checkAccrual } from "./accrual.js";
 import { formalMarks } from "./formal.js";
 import { checkFeeOnConvertedReceipt, checkFxRealized } from "./fx.js";
 import { checkJ3, judgmentMarks } from "./judgment.js";
@@ -20,7 +21,8 @@ export function runKernel(proposal: Proposal, ctx: KernelContext, stage: KernelS
 
   const adjustment = adjustmentCents(validated, ctx);
   const fee = checkFeeOnConvertedReceipt(validated, ctx);
-  const formal = [...formalMarks(validated, ctx), ...(validated.kind === "fx_realized" ? [checkFxRealized(validated, ctx)] : []), ...(fee ? [fee] : [])];
+  const formal = [...formalMarks(validated, ctx), ...(validated.kind === "fx_realized" ? [checkFxRealized(validated, ctx)] : []), ...(fee ? [fee] : []),
+    ...(validated.kind === "accrual" ? [checkAccrual(validated, ctx)] : [])];
   const evidence = evidenceMarks(validated, ctx);
   const judgment = judgmentMarks(validated, ctx, adjustment, checkJ3(validated));
   const extra = extraMarks(validated, ctx);

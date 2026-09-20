@@ -33,6 +33,6 @@ describe("one transaction, every book: the workspace lets the other functions re
     expect((await afterLedgerMoved(openWorldDb(), "/nowhere")).status).toBe("failed");
     expect(rippleView(openDb(), "int_none")).toEqual([]);
     expect(storesFor("/nowhere/x.db", undefined)).toBeNull();
-    expect([...MOVES_THE_LEDGER].sort()).toEqual(["answer", "approve", "decide", "run"]);
+    expect([...MOVES_THE_LEDGER].sort()).toEqual(["accruals", "answer", "approve", "decide", "run"]);
   });
 });

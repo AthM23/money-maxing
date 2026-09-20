@@ -1,3 +1,4 @@
+import { accrualsCheck } from "../agents/close/accruals.js";
 import { ACCOUNTS } from "../contract/accounts.js";
 import { periodEnd, periodOf } from "../engines/asOf.js";
 import type { Db } from "../ledger/db.js";
@@ -276,7 +277,8 @@ export const CLOSE_TEMPLATE: readonly ChecklistTemplateItem[] = [
   { slug: "forecast-current", function: "forecast", name: "13-week forecast rebuilt after the last schedule change", depends_on: [], check: (db) => checkForecast(db) },
   { slug: "escalations-answered", function: "close", name: "No open questions to people", depends_on: [], check: checkEscalations },
   { slug: "tb-foots", function: "close", name: "Trial balance foots", depends_on: [], check: checkTbFoots },
-  { slug: ACCRUALS_SLUG, function: "close", name: "Accruals and prepaid amortisation posted", depends_on: [], check: () => ({ done: false, reason: "Phase 3: accrual engine not built", decision_ids: [] }) },
+  // Lane A's close pack finds them (agents/close): a recurring vendor expense with nothing booked for the month. Prepaid amortisation is not built.
+  { slug: ACCRUALS_SLUG, function: "close", name: "Accruals posted for expenses not yet billed", depends_on: [], check: (db, period) => accrualsCheck(db, period) },
 ];
 
 /** Locking is a person's approval. Once everything else is done the item says so and waits; it never ticks itself. */

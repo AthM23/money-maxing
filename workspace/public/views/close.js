@@ -39,7 +39,21 @@ function moveIt(app, item) {
   const waiting = Object.values(app.overview.awaiting_you).reduce((n, list) => n + list.length, 0);
   if (item.area === "bank-rec") return h("button", { class: "btn ink sm", on: { click: () => runCode(app) } }, "Run the code tier");
   if (item.area === "ar" || /question|people/i.test(item.name)) return waiting ? h("button", { class: "btn lime sm", on: { click: () => app.go("queue") } }, `Review ${waiting} waiting`) : h("button", { class: "btn white sm", on: { click: () => app.go("run") } }, "Open the cases");
+  // Accruals: the close's own monitor looks for recurring expenses nobody has billed, and code estimates the steady ones.
+  if (/accrual/i.test(item.name)) {
+    const parked = app.overview.awaiting_you.parked_entries.filter((x) => x.kind === "accrual").length;
+    return parked ? h("button", { class: "btn lime sm", on: { click: () => app.go("queue") } }, `Review ${parked} accrual${parked === 1 ? "" : "s"}`) : h("button", { class: "btn ink sm", on: { click: () => findAccruals(app) } }, "Find unbilled expenses");
+  }
   return h("span", { class: "muted small" }, "not built yet");
+}
+
+async function findAccruals(app) {
+  try {
+    const r = await act("accruals", { period: app.modules?.close?.period ?? app.period });
+    toast(r.unbilled.length === 0 ? "Every recurring vendor expense has something booked for the month." :
+      `${r.prepared} accrual(s) prepared by code from the ledger's history and waiting for you; ${r.left_for_a_model} move too much to average and need their amount found in the vendor's own words.`);
+    await app.refresh();
+  } catch (err) { toast(err.message, "bad"); }
 }
 
 async function runCode(app) {

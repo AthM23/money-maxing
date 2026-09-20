@@ -102,6 +102,8 @@ export const CaseFile = z.object({
   trace_ids: z.array(z.string().min(1)),
   matching_issue: z.string().optional(),
   remittance: z.object({ trace_id: z.string().min(1), applications: z.array(z.object({ doc_id: z.string(), amount_cents: NonNegCents })) }).optional(),
+  /** Close only: the expense account and the month an accrual case is about (see agents/close). */
+  accrual: z.object({ account: z.string().min(1), period: z.string().regex(/^\d{4}-\d{2}$/) }).optional(),
   /** Replay only: document balances as they stood at the decision, because today's ledger already shows them paid. */
   docs_snapshot: z
     .array(z.object({
