@@ -117,6 +117,15 @@ export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
   if (NO_CASH_KINDS.has(proposal.kind) && cashLines.length > 0) {
     problems.push(`kind ${proposal.kind} must not touch the cash account ${ctx.control.cash_account}`);
   }
+  // Money leaves only against a bill somebody approved. An open or held bill is a decision nobody has taken yet.
+  if (proposal.kind === "schedule_payment") {
+    for (const app of proposal.applications) {
+      const bill = ctx.getDoc(app.doc_id);
+      if (bill?.kind === "bill" && bill.status !== undefined && bill.status !== "approved" && bill.status !== "scheduled") {
+        problems.push(`${app.doc_id} is ${bill.status}, not approved: a payment can only be scheduled against an approved bill`);
+      }
+    }
+  }
   const owner = KIND_FUNCTION[proposal.kind];
   if (owner && owner !== proposal.function) problems.push(`kind ${proposal.kind} is an ${owner} entry; it cannot be proposed as ${proposal.function}, where ${owner}'s own checks would not run`);
   // Said in so many words because a model that gets only F3's arithmetic back sends the same lines again.

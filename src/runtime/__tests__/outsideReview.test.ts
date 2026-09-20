@@ -147,3 +147,40 @@ describe("a Slack click is signed by the person who was asked", () => {
     expect(approverFor(db, "U_REAL", askedToApprove(db, r.decision_id))).toBe("U_CTRL");
   });
 });
+
+describe("money leaves only against an approved bill, and a payment is sized by what it pays", () => {
+  const payment = (billId: string, vendor: string, intent: string) => ({
+    intent_id: intent, function: "ap" as const, kind: "schedule_payment" as const, party_id: vendor, entry_date: "2026-07-12", applications: [{ doc_id: billId, amount_cents: 40000 }],
+    entries: [{ account: ACCOUNTS.ap, debit_cents: 40000, credit_cents: 0, memo: "Pay Acme" }, { account: ACCOUNTS.cash, debit_cents: 0, credit_cents: 40000, memo: "Pay Acme" }],
+    evidence: [], policy_refs: [], fact_refs: [], judgment: [],
+  });
+
+  it("a bill nobody approved cannot be paid, even with its three-way match tied, and the books stay usable", async () => {
+    const { apClock, BILL_ID, INTENT_ID, seedAp, VENDOR } = await import("../../agents/ap/__tests__/seed.js");
+    const db = seedAp();
+    expect((db.prepare("SELECT status FROM bill WHERE id = ?").get(BILL_ID) as { status: string }).status).toBe("open");
+    const r = proposeEntry(db, payment(BILL_ID, VENDOR, INTENT_ID), { actor: "agent:ap:x", mode: "live", autonomy_level: "auto", tier: 1 }, { clock: apClock, config: APP_CONFIG });
+    expect(r.status).toBe("rejected");
+    expect(r.status === "rejected" ? r.failed.map((m) => m.detail).join(" ") : "").toContain("is open, not approved");
+    expect(db.prepare("SELECT status, open_cents FROM bill WHERE id = ?").get(BILL_ID)).toMatchObject({ status: "open" });
+  });
+
+  it("a $400 payment on an approved bill waits for someone whose limit covers $400: a $100 clerk cannot release it", async () => {
+    const { apClock, BILL_ID, INTENT_ID, seedAp, VENDOR } = await import("../../agents/ap/__tests__/seed.js");
+    const { approveBillProposal } = await import("../../agents/ap/__tests__/helpers.js");
+    const apDeps = { clock: apClock, config: APP_CONFIG };
+    const db = seedAp();
+    // The bill is approved the real way first, so payables and the ledger agree before any payment is proposed.
+    const approval = proposeEntry(db, approveBillProposal(db), { actor: "agent:ap:x", mode: "live", autonomy_level: "earned", tier: 1 }, apDeps);
+    if (approval.status !== "pending_approval") throw new Error(`expected the bill approval to park, got ${approval.status}`);
+    expect(approveDecision(db, approval.decision_id, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, apDeps).status).toBe("posted");
+    db.exec("UPDATE approver SET limit_cents = 10000 WHERE id = 'U_AP';");
+
+    const r = proposeEntry(db, payment(BILL_ID, VENDOR, INTENT_ID), { actor: "agent:ap:y", mode: "live", autonomy_level: "earned", tier: 1 }, apDeps);
+    if (r.status !== "pending_approval") throw new Error(`expected the payment to park, got ${r.status}: ${JSON.stringify(r)}`);
+    const clerk = approveDecision(db, r.decision_id, { approver_id: "U_AP", approver_kind: "human", outcome: "approved" }, apDeps);
+    // Over the approver's limit is one of the hard blocks: it holds even though a person clicked approve.
+    expect(clerk).toMatchObject({ status: "blocked", rule: "OVER_APPROVER_LIMIT" });
+    expect((db.prepare("SELECT open_cents FROM bill WHERE id = ?").get(BILL_ID) as { open_cents: number }).open_cents).toBe(40000);
+  });
+});

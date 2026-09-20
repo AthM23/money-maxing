@@ -21,6 +21,8 @@ export interface DocLite {
   total_cents: number;
   open_cents: number;
   date: string;
+  /** A bill's status in the payables ledger (open, held, approved, scheduled, paid, void). Absent on invoices and in snapshots. */
+  status?: string;
 }
 
 export interface BankTxnLite {
