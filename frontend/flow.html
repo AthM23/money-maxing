@@ -504,7 +504,7 @@ async function runDoc(){
   if(f.doc_kind==='vendor_bill'&&f.vendor&&f.ref&&f.amount_cents&&f.date){
     try{
       const fr=await fetch('/api/do/upload_bill',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({vendor:f.vendor,ref:String(f.ref),bill_date:f.date,period:(f.period||'').slice(0,18)||undefined,amount_cents:f.amount_cents,terms_days:f.terms_days,raw:raw.slice(0,6000)})});
+        body:JSON.stringify({vendor:f.vendor,ref:String(f.ref),bill_date:f.date,period:(f.period||'').slice(0,7)||undefined,amount_cents:f.amount_cents,terms_days:f.terms_days,raw:raw.slice(0,6000)})});
       const fj=await fr.json();
       if(fj.status==='filed'){
         msg('System',`Filed into the company's books as ${fj.bill_id}, with the document kept as evidence. Ask the books "what bills are open?" on the dashboard and it is there. <span class="chip live">written to the books</span>`);
