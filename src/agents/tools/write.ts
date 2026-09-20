@@ -35,6 +35,12 @@ export const EscalateInput = z.object({
 });
 
 const MIN_ESCALATION_TIER = 2;
+/**
+ * Everywhere an approval or an explanation could be on record. A person's time is only worth asking for once all of
+ * these have been looked in, and that is checked against the steps this turn actually recorded, not against what the
+ * model says it searched.
+ */
+const SEARCH_PLAN = ["memory_facts", "policy_memo_lookup", "mail_search", "chat_search", "contracts_find_clause"] as const;
 
 export const FinishInput = z.object({
   summary: z.string().min(1),
@@ -64,6 +70,13 @@ export const FactCandidateToolInput = FactCandidate.extend({
   }),
 });
 
+/** The lookups in the search plan that this turn has not made, read from its own recorded steps. */
+function placesNotLooked(env: ToolEnv): string[] {
+  const rows = env.db.prepare("SELECT DISTINCT tool FROM decision_step WHERE decision_id = ? AND kind = 'tool_call' AND tier = ?").all(env.decision_id, env.tier) as { tool: string | null }[];
+  const made = new Set(rows.map((r) => r.tool));
+  return SEARCH_PLAN.filter((tool) => !made.has(tool));
+}
+
 /** The only tools that change anything. `propose_entry` goes through the kernel; an agent cannot post any other way. */
 export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
@@ -79,9 +92,15 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     description: "Ask the one person who knows. Only after the search plan is exhausted. `predicate` is what you do not know, picked from the list; `decision_kind` is the kind of entry the answer would unlock; the sentence goes in `what_is_unknown`. `treatments` are two to four buttons: each id is one of the fixed treatments (credit_memo = an agreed concession, write_off = we will not collect it, tax_withholding = tax deducted at source, dispute_hold = hold it open as disputed, chase = collect the balance) and each label is at most 60 characters. If this was already asked, the stored answer comes back instead.",
     run: (input, env) => {
       const q = EscalateInput.parse(input);
-      // A person's time costs more than a stronger model's. The cheapest tier hands up instead of asking.
+      // The cheapest tier may ask a person only once it has verifiably looked everywhere an answer could be. On the
+      // first real run it reached the right question in fifty seconds and six cents, was refused on tier alone, and the
+      // stronger tiers took ten minutes and a dollar to ask the same thing. What earns the question is the search, not
+      // the size of the model; a stronger tier is still there for the case the cheap one cannot even frame.
       if (env.tier < MIN_ESCALATION_TIER && (env.max_tier ?? env.tier) > env.tier) {
-        return { status: "handed_up", reason: `tier ${env.tier} may not ask a person while a stronger tier is available; call finish with outcome handed_off` };
+        const missing = placesNotLooked(env);
+        if (missing.length > 0) {
+          return { status: "handed_up", reason: `tier ${env.tier} may ask a person only after looking everywhere an answer could be on record. Not looked in yet: ${missing.join(", ")}. Look there first, or call finish with outcome handed_off` };
+        }
       }
       return openEscalation(env.db, env.clock, {
         decision_id: env.decision_id, intent_id: env.intent_id, asked_user: q.asked_user,

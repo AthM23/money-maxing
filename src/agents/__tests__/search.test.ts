@@ -31,13 +31,36 @@ describe("ranked search: a query with wrong words still finds the right document
     expect(hits.map((h) => h.trace_id)).toEqual(["tr_mail_1"]);
   });
 
-  it("the cheapest tier cannot ask a person while a stronger tier exists", () => {
-    const e = { ...env(), tier: 1 };
-    const r = callTool(e, "escalate", {
-      asked_user: "U_DANA", party_id: "initech", predicate: "shortfall_reason", decision_kind: "credit_memo", what_happened: "short",
-      what_was_checked: [{ source: "mail", query: "x", hits: 0 }], what_is_unknown: "why", treatments: [{ id: "credit_memo", label: "a" }, { id: "chase", label: "b" }],
-    });
-    expect(r.output).toMatchObject({ status: "handed_up" });
+  const question = {
+    asked_user: "U_DANA", party_id: "initech", predicate: "shortfall_reason", decision_kind: "credit_memo", what_happened: "short",
+    what_was_checked: [{ source: "mail", query: "x", hits: 0 }], what_is_unknown: "why", treatments: [{ id: "credit_memo", label: "a" }, { id: "chase", label: "b" }],
+  };
+
+  it("the cheapest tier may not ask a person until it has looked everywhere an answer could be, and saying so is not enough", () => {
+    const e = { ...env(), tier: 1, max_tier: 3 };
+    // It claims to have checked mail. The record says it has looked nowhere.
+    const refused = callTool(e, "escalate", question).output as { status: string; reason: string };
+    expect(refused.status).toBe("handed_up");
+    expect(refused.reason).toContain("memory_facts, policy_memo_lookup, mail_search, chat_search, contracts_find_clause");
     expect(e.db.prepare("SELECT COUNT(*) AS n FROM escalation").get()).toEqual({ n: 0 });
+
+    callTool(e, "memory_facts", { party_id: "initech", kind: "credit_memo", entry_date: "2026-07-12", amount_cents: 120000 });
+    callTool(e, "mail_search", { query: "Initech credit", party_id: "initech" });
+    callTool(e, "chat_search", { query: "Initech credit", party_id: "initech" });
+    const partly = callTool(e, "escalate", question).output as { status: string; reason: string };
+    expect(partly.status).toBe("handed_up");
+    expect(partly.reason).toContain("Not looked in yet: policy_memo_lookup, contracts_find_clause.");
+
+    callTool(e, "policy_memo_lookup", { query: "credit" });
+    callTool(e, "contracts_find_clause", { query: "credit", party_id: "initech" });
+    expect(callTool(e, "escalate", question).output).toMatchObject({ status: "opened" });
+    expect(e.db.prepare("SELECT COUNT(*) AS n FROM escalation").get()).toEqual({ n: 1 });
+  });
+
+  it("a stronger tier's lookups do not count for the cheap one: each turn earns its own question", () => {
+    const strong = { ...env(), tier: 2, max_tier: 3 };
+    for (const [tool, input] of [["memory_facts", { party_id: "initech", kind: "credit_memo", entry_date: "2026-07-12", amount_cents: 120000 }], ["mail_search", { query: "x", party_id: "initech" }],
+      ["chat_search", { query: "x", party_id: "initech" }], ["policy_memo_lookup", { query: "x" }], ["contracts_find_clause", { query: "x", party_id: "initech" }]] as const) callTool(strong, tool, input);
+    expect(callTool({ ...strong, tier: 1 }, "escalate", question).output).toMatchObject({ status: "handed_up" });
   });
 });
