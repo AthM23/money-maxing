@@ -505,7 +505,8 @@ async function runDoc(){
         else msg('Checker','Triage: first bill from this vendor. No history to lean on, so a person decides, and each approval builds the record the route needs to earn autonomy.');
         card.querySelector('.chip').textContent='in the books';card.querySelector('.chip').className='chip live';
       } else if(fj.status==='duplicate'){
-        msg('System',`Already on file as ${fj.bill_id}: the books take a bill once.`);
+        msg('Checker',`Already on file as ${fj.bill_id} from an earlier upload: the books take a bill once. To run this document fresh for a new audience, reset the demo world (boom) and reload.`,'reject');
+        card.querySelector('.chip').textContent='already on file';card.querySelector('.chip').className='chip wait';
       }
     }catch(_){/* read-only copy or offline: the draft stays on this page */}
   }
