@@ -22,6 +22,7 @@ describe("the scenario CLI, seeded onto a database file", () => {
     expect(main([dbPath])).toBe(0);
     const db = openDb(dbPath);
     const totals = readControlTotals(db);
+    db.close();
     expect(totals.ar_gl_cents).toBe(totals.ar_subledger_cents);
     expect(totals.ar_gl_cents).toBeGreaterThan(0);
   });

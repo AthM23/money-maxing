@@ -1,7 +1,23 @@
-# Putting a copy on the internet (read-only)
+# The public copies (read-only): AWS and Vercel
 
-Written 20 Sep 2026, 03:40 EDT. The box below has not been deployed; the Vercel copy has. The box is the ten-minute version for when Karan says go; it
-creates billable AWS resources, so it is run by a person or with their explicit go-ahead, not on a schedule.
+**Live since 20 Sep 2026, 05:02 EDT: `http://32.198.75.6/` is the marketing page and `http://32.198.75.6/dashboard` is
+the workspace**, on one t3.small in us-east-1 (Karan's account), running as a systemd service that restarts itself.
+Verified from outside: every page and read answers in about 100 ms; approve, run, accruals, decide and the paid Ask
+all answer 403; Ask in code mode and the tools answer. There is no `.env` on the box and no key in the service's
+environment, and the month on it has the real Slack member id scrubbed out. It is plain http on an IP: no domain, no
+TLS. The live demo, where decisions are made, stays on the laptop.
+
+- **Update it** after new commits or a new month: `scripts/deploy-public.sh 32.198.75.6`. It sends the code as
+  committed and a scrubbed copy of `runs/demo/start.db`, swaps them in, restarts the service and checks both answers.
+  The SSH key is `~/.ssh/money-maxer-demo.pem` on Karan's laptop; SSH is open only to the address it was deployed from
+  (if that changes: add the new address to security group `money-maxer-demo-sg`, port 22).
+- **Atharv, for Vercel:** the marketing page's "Open the dashboard" button points at `/dashboard`, which exists only
+  on this box. On Vercel it has to be `http://32.198.75.6/dashboard`.
+  *(AthM23, 05:25: not needed. The Vercel copy serves its own `/dashboard`, behind a password; see the next section.)*
+- **Take it down** when judging is over (it costs about 50 cents a day):
+  `aws ec2 terminate-instances --region us-east-1 --instance-ids i-0b4b617b2060e0d33`, then
+  `aws ec2 delete-security-group --region us-east-1 --group-id sg-02170e069ce23e142` and
+  `aws ec2 delete-key-pair --region us-east-1 --key-name money-maxer-demo`.
 
 ## On Vercel (done 20 Sep 2026, ~04:35 EDT): https://money-maxing-mu.vercel.app
 

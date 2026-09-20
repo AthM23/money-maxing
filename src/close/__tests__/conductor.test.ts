@@ -43,7 +43,9 @@ describe("evaluateChecklist on the freshly seeded world", () => {
     expect(board["bank-lines-applied"]).toEqual(["todo", "no bank credit lines ingested for 2026-07"]);
     expect(board["rev-recognised"]).toEqual(["todo", "no schedules built"]);
     expect(board["forecast-current"]).toEqual(["todo", "no forecast built yet"]);
-    expect(board["accruals-posted"]).toEqual(["todo", "Phase 3: accrual engine not built"]);
+    // Lane A's close pack (agents/close): on a freshly seeded month no recurring vendor has a July bill booked yet.
+    expect(board["accruals-posted"]![0]).toBe("todo");
+    expect(board["accruals-posted"]![1]).toMatch(/^\d+ recurring expense\(s\) have nothing booked for 2026-07: /);
     expect(board["lock-period"]![0]).toBe("blocked");
     expect(board["lock-period"]![1]).toMatch(/^waiting on: Bank credits applied or explained; /);
     expect(evaluateChecklist(db, JULY, clock)).toEqual([]);

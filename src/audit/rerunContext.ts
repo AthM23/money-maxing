@@ -69,6 +69,8 @@ export function buildRerunContext(db: Db, subject: RerunSubject, config: Runtime
     findPaidDuplicate: (party, amount, exclude) =>
       base.findPaidDuplicate?.(party, amount, [...exclude, ...paidLater(db, subject)]),
     remitChangedUnverified: (party) => remitChangedAsOf(db, subject, party),
+    // An accrual is itself what is booked for its month; only what OTHER entries had booked by then counts against it.
+    expenseHistory: (party, account, period) => expenseHistoryAsOf(db, subject, base, party, account, period, neutralised),
   };
   return { ctx, neutralised };
 }
@@ -223,6 +225,22 @@ function paidLater(db: Db, subject: RerunSubject): string[] {
     )
     .all(subject.posted_at) as { doc_id: string }[];
   return rows.map((row) => row.doc_id);
+}
+
+/** What a vendor had booked for a month when this entry posted: without the entry's own lines, and without anything booked after it. */
+function expenseHistoryAsOf(
+  db: Db, subject: RerunSubject, base: KernelContext, party: string, account: string, period: string, neutralised: string[],
+): ReturnType<NonNullable<KernelContext["expenseHistory"]>> {
+  const history = base.expenseHistory?.(party, account, period);
+  if (!history) return history;
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(l.debit_cents - l.credit_cents), 0) AS cents FROM gl_line l JOIN gl_entry e ON e.id = l.entry_id
+       WHERE l.party_id = ? AND l.account = ? AND e.period = ? AND e.source_decision_id <> ? AND e.posted_at <= ?`,
+    )
+    .get(party, account, period, subject.decision_id, subject.posted_at) as { cents: number };
+  if (row.cents !== history.booked_cents) neutralised.push(`${party} ${account} counted as ${row.cents} cents booked for ${period} when this entry posted, not the ${history.booked_cents} booked today`);
+  return { ...history, booked_cents: row.cents };
 }
 
 /** Vendor bank-detail changes as the record stood at posting. A change raised since is a later story. */

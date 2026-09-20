@@ -1687,6 +1687,37 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - `context/JUDGE_QA.md`: the hard questions, answered as the code stands now.
 - `pnpm test` → 85 files, **735 passing**; typecheck clean.
 
+### 2026-09-20 ~04:05 ET — One diagram of what is actually built; a Windows-only test failure closed (AthM23 + Claude Code session)
+
+- **`context/diagrams/current-architecture.mmd`** (+ `.svg`, `.png`), one sheet: the agentic workflow end to end **as built**,
+  drawn from the code, not from the spec. Connectors → as-of `trace` → drift comparators → `intent` → the fine-tuned
+  reader → the four tiers (code $0, haiku $0.15/150 s, sonnet $0.60/240 s, opus $1.50/300 s) → 11 read-only tools →
+  `propose_entry` → the kernel by tick-mark class (F1 F2 F3 F7 F8 F9 F10 · E1 E2 E3 E5 E_REMIT · P1–P6 P9 · J1–J4 ·
+  H1–H6) → `requiresApproval` → the five routes → the controller seat → **the post gate, where the kernel runs a
+  second time** → ledger → one-way QuickBooks mirror → event bus → the engines; plus the human loop, `fact` with its
+  applicability gate, the learning loop, the auditor fence and the workspace.
+- The **model layer is a band of its own inside the same sheet**: data split by month with whole entities and
+  template families held out, the LoRA adapter and the GBT floor, serving and the one variable that switches the
+  reader on, the document benchmark, and the system benchmark that scores readers on what the books did rather than
+  on field F1. It joins the main flow at exactly one point, the reader in stage 2 — which is the claim itself: the
+  model is a source of readings that code and the kernel then check, never a source of postings.
+- The sheet is **structure only**: the parts and how they connect, no measurements. Deliberate, so it does not go
+  stale and does not need re-auditing every time a number moves; the figures stay in this log, the README, `ft/data/`
+  and `runs/reader-bench/`, which is what the workspace's Model page reads.
+- Both follow `architecture/CONVENTIONS.md` so a sheet can move between them, but they are **not** part of that board
+  and `build.mjs` does not rebuild them. New `context/diagrams/README.md` states which files are **built** and which
+  are **target**, because the 20-sheet board still says "the repo has no code yet" and is now widely out of date
+  (it omits the post gate, the controller seat, the event bus and the reader, and shows functions never built).
+- Both sheets were checked against source rather than against the spec, which caught two things the older notes had
+  wrong: **F3 is the control-account tie, not the entry shape — the entry shape is F8**, and there is **no HOLD
+  route** (a hold is a `ProposalKind` that parks as `PROPOSE`).
+- **`pnpm typecheck` failed and 2 tests failed on a fresh checkout of `main`**, both now fixed:
+  `@modelcontextprotocol/sdk` was in `package.json` but not installed (`pnpm install` after pulling — worth telling
+  anyone who pulls `21e97bc` or later), and `src/demo/scenario/cli.ts` left its SQLite handle open, which on Windows
+  locks the file: the test's cleanup threw `EBUSY`, the file survived, and the next seed returned 1 instead of 0.
+  `db.close()` added in the CLI and in the test. Unix would not have shown this.
+- Measured after the fix, this machine: `pnpm test` → **84 files, 734 passing**; typecheck clean.
+
 ### 2026-09-20 04:23 ET — An outside review's 15 findings checked against HEAD and 11 closed; Ask remembers and hands off; Model page and marketing page (Person A)
 
 - **The review Karan pasted (Cursor) was current, not old**: it names `src/mirror/reset.ts` (landed 02:01). Its "488
@@ -1772,3 +1803,47 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   password 401 and no cookie; the right one 303 to `/dashboard`, after which all three are 200. Four tests in
   `workspace/__tests__/gate.test.ts`; `pnpm typecheck` clean. `main` (through `bddb030`, 5 commits) merged into
   `vercel-setup` first; the one conflict was this file, resolved as a union.
+
+### 2026-09-20 ~04:55 ET — The three "For Atharv" findings from the outside review, closed in lane B's files (AthM23 + Claude Code session)
+
+All three are from the 04:23 entry's **Still open, all in lane B's files** list. Each is closed with a test that fails
+without the fix. Measured on this branch after them: `pnpm test` → **85 files, 742 passing**; typecheck clean.
+
+- **(4) A sender can no longer name a mail or a message, or set the clock this system records it by.**
+  `trace` versions by `(source, external_id)`, so an id taken from a header is an invitation to arrive as version 2 of
+  someone else's mail. Now:
+  - **Gmail** (`src/connectors/gmail.ts`): the world id in `X-Footnote-Id` / a `<fn:...>` Message-ID is read only from
+    mail this mailbox was *given* rather than *delivered* — `insertedHere()`: it carries the seeder's label, or it
+    carries none of `INBOX SENT DRAFT SPAM TRASH UNREAD CATEGORY_*`, which only `messages.insert` on our own token can
+    produce. `recorded_time` is now always Gmail's `internalDate`; `event_time` stays the `Date` header (the sender's
+    claim about when they wrote, which is what it has always meant, and what the backdated seed depends on). New
+    `gmailToRawItems()` settles a contested world id in favour of the mail Gmail recorded **first**, so a late forgery
+    falls back to Gmail's own id even if it were bare. UNVERIFIED: that a `CATEGORY_*` label survives archiving.
+  - **Slack** (`src/connectors/slack.ts`): `footnote_seed` metadata is read only off messages **our own bot** posted
+    (`auth.test` → `bot_id`, new on the `SlackClient` interface, also used by the seeder's idempotency read), so
+    another app in the workspace cannot post as the CFO under a world id. `recorded_time` is always Slack's `ts`.
+  - **Checked against the live systems, read-only, 04:53 ET**: all **60** messages in the demo mailbox keep exactly the
+    external_id they had before the change (**28** with world ids), and `recorded_time` equals `event_time` on every
+    one of them, because the seed was inserted with `internalDateSource=dateHeader`. Slack `auth.test` → `B0C2XTW98V9`;
+    **10 of 10** seeded messages keep their world id. So `--live=gmail,slack` is unaffected.
+- **(8) A drift case no longer hands a model a brief the bank has since corrected** (`src/drift/invoiceVsCash.ts`).
+  C2 already re-ran on `evidence.reversioned`, but a known case only had `last_seen` touched: the stored CaseFile kept
+  the superseded amounts. It is now rebuilt from the ledger each pass and, when anything an agent reasons with moved
+  (expected / received / shortfall / entry_date / party / doc_ids), the intent's `case_json`, `question` and
+  `end_condition_json` and `drift_case.delta_cents` are rewritten and **`drift.updated`** names `was`, `now` and
+  `decisions_on_superseded_case` — any decision already taken on the old numbers, which the question then says in
+  words. `DriftFinding.restated` is the flag. Nothing is emitted when nothing moved, so a re-run stays silent.
+- **(13) `seed --reset` now removes only what the seeder created** (`src/seed/quickbooks.ts`). `seed_manifest` gained an
+  `origin` column (`'created' | 'adopted' | NULL`; `schema-b.sql`, plus an additive `ALTER` on open in
+  `src/ledger/db.ts`, since SQLite has no `ADD COLUMN IF NOT EXISTS`). A record the seeder **adopted** — a customer of
+  that name the company already had, an invoice already carrying that DocNumber, the stock "Bank charges" account —
+  and a row written before the column existed now only lose their manifest row, with a line saying so. The mirror's
+  own natural-key adoption (`src/mirror/mirror.ts`) writes `NULL` on purpose: a lookup cannot tell a record we made on
+  an earlier run from one the company always had.
+  **Consequence worth knowing before a demo:** after a *local* db reset, a re-seed adopts everything in the sandbox, so
+  a later `--reset` will no longer clean that sandbox — it will say, per record, that it left it alone. Seed into a
+  fresh sandbox to keep reset working.
+- (9) replay testing a rule approved later is the backtest's design and is disclosed in the README: no change, as the
+  review itself concluded.
+- Not touched: `pnpm desk` and everything under `src/desk` / `src/agents/slack` (lane A's, and it needs nothing here).
+- Merged with `main` at `b3097ea` (04:58 ET; only this file conflicted, entries kept in time order): `pnpm test` → **90 files, 764 passing**; typecheck clean.

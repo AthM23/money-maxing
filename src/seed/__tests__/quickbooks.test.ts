@@ -221,6 +221,37 @@ describe("seedQuickBooks", () => {
     expect(counts.invoice).toEqual({ created: 12, adopted: 0, skipped: 0, removed: 0 });
   });
 
+  it("reset never deletes or deactivates a record it only adopted", async () => {
+    const { fake, client } = setup();
+    await seedQuickBooks(openWorldDb(), world, client); // someone else's company, already holding these names and documents
+    const invoiceIds = new Set(fake.all("invoice").map((i) => i.Id));
+    const initech = fake.all("customer").find((c) => c.DisplayName === "Initech")?.Id;
+
+    const db2 = openWorldDb();
+    await seedQuickBooks(db2, world, client); // adopts all of it
+    expect(db2.prepare("SELECT COUNT(*) AS n FROM seed_manifest WHERE origin = 'adopted'").get()).toEqual({ n: 13 + 10 + 12 + 5 });
+    const counts = await seedQuickBooks(db2, world, client, { reset: true });
+
+    expect(counts.customer).toEqual({ created: 0, adopted: 13, skipped: 0, removed: 0 });
+    expect(counts.vendor).toEqual({ created: 0, adopted: 10, skipped: 0, removed: 0 });
+    expect(counts.invoice).toEqual({ created: 0, adopted: 12, skipped: 0, removed: 0 });
+    expect(fake.all("invoice").map((i) => i.Id).every((id) => invoiceIds.has(id))).toBe(true);
+    expect(fake.active("customer")).toHaveLength(13);
+    expect(fake.all("customer").find((c) => c.Id === initech)).toMatchObject({ Active: true, DisplayName: "Initech" });
+  });
+
+  it("reset leaves a manifest row alone when nothing says the record is ours", async () => {
+    const { db, fake, client } = setup();
+    await seedQuickBooks(db, world, client);
+    const invoiceIds = new Set(fake.all("invoice").map((i) => i.Id));
+    db.prepare("UPDATE seed_manifest SET origin = NULL WHERE system = 'quickbooks'").run(); // a row from before the column existed
+
+    const counts = await seedQuickBooks(db, world, client, { reset: true });
+    expect(counts.invoice).toEqual({ created: 0, adopted: 12, skipped: 0, removed: 0 });
+    expect(fake.all("invoice").map((i) => i.Id).every((id) => invoiceIds.has(id))).toBe(true);
+    expect(fake.active("customer")).toHaveLength(13);
+  });
+
   it("periods widens the invoice scope and leaves July alone", async () => {
     const { db, client, fake } = setup();
     await seedQuickBooks(db, world, client);

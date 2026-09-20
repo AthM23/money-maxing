@@ -111,6 +111,8 @@ export interface GmailConnectorOptions extends GmailClientOptions {
   query?: string;
   /** messages.get calls in flight at once. */
   concurrency?: number;
+  /** The seeder's label. Mail filed under it, and only that mail, is read for its world id. Default `footnote`. */
+  label?: string;
 }
 
 export class GmailConnector implements Connector {
@@ -118,36 +120,114 @@ export class GmailConnector implements Connector {
   private readonly api: GmailApi;
   private readonly query: string;
   private readonly concurrency: number;
+  private readonly label: string;
 
   /** Throws at construction when credentials are missing, so a misconfigured run dies before it pulls anything. */
   constructor(opts: GmailConnectorOptions = {}) {
     this.api = new GmailApi(opts);
     this.query = opts.query ?? SEEDED_MAIL_QUERY;
     this.concurrency = Math.max(1, opts.concurrency ?? 8);
+    this.label = opts.label ?? DEFAULT_GMAIL_LABEL;
   }
 
   async pull(): Promise<RawItem[]> {
+    const ourLabelIds = await findLabelId(this.api, this.label).then((id) => (id ? [id] : []));
     const ids = await this.api.listIds(this.query);
-    const items: RawItem[] = [];
+    const msgs: GmailMessage[] = [];
     for (let i = 0; i < ids.length; i += this.concurrency) {
-      const batch = await Promise.all(ids.slice(i, i + this.concurrency).map((id) => this.api.request<GmailMessage>("GET", `/messages/${id}`, { query: { format: "full" } })));
-      for (const msg of batch) items.push(gmailToRawItem(msg));
+      msgs.push(...await Promise.all(ids.slice(i, i + this.concurrency).map((id) => this.api.request<GmailMessage>("GET", `/messages/${id}`, { query: { format: "full" } }))));
     }
+    const items = gmailToRawItems(msgs, { ourLabelIds });
     return dedupeCopies(items).sort((a, b) => (a.event_time === b.event_time ? a.external_id.localeCompare(b.external_id) : a.event_time < b.event_time ? -1 : 1));
   }
 }
 
-/** One Gmail API message (format=full) as the RawItem ingestion expects. Pure, so it is tested without a network. */
-export function gmailToRawItem(msg: GmailMessage): RawItem {
+/** The id of an existing label by name, or null. Read-only: the pull side never creates one. */
+async function findLabelId(api: GmailApi, name: string): Promise<string | null> {
+  const { labels } = await api.request<{ labels?: { id: string; name: string }[] }>("GET", "/labels");
+  return labels?.find((l) => l.name.toLowerCase() === name.toLowerCase())?.id ?? null;
+}
+
+export interface GmailReadOptions {
+  /** The seeder's label, when the mailbox has one. A message under it was put there by us. */
+  ourLabelIds?: readonly string[];
+  /** Set by `gmailToRawItems` to null when another message already holds this one's world id: Gmail's id it is. */
+  worldId?: null;
+}
+
+/**
+ * Labels Gmail itself puts on a message that reached this mailbox from outside, or left it. `messages.insert` is the
+ * only way to get a message with none of them, and it needs our own token.
+ * Verified live 2026-09-20: every seeded message in the demo mailbox has `labelIds` empty (the `footnote` label was
+ * never created: labels.create is 403 on this token), and nothing else in it does.
+ * UNVERIFIED: that a CATEGORY_* label survives archiving. If it does not, a delivered message that someone archived
+ * and read could also end up bare — which is why a contested world id is settled by `internalDate` as well.
+ */
+const DELIVERY_LABELS = ["INBOX", "SENT", "DRAFT", "SPAM", "TRASH", "UNREAD"];
+
+/** Put here by us, rather than delivered to us: the only mail whose own headers are allowed to name it. */
+function insertedHere(msg: GmailMessage, ourLabelIds: readonly string[]): boolean {
+  const labels = msg.labelIds ?? [];
+  if (ourLabelIds.some((id) => labels.includes(id))) return true;
+  return !labels.some((l) => DELIVERY_LABELS.includes(l) || l.startsWith("CATEGORY_"));
+}
+
+/** The world id this message claims, if it is in a position to claim one. */
+function claimedWorldId(msg: GmailMessage, opts: GmailReadOptions): string | undefined {
+  if (!insertedHere(msg, opts.ourLabelIds ?? [])) return undefined;
+  const h = (name: string): string => decodeEncodedWords(header(msg.payload, name) ?? "");
+  return h(ID_HEADER).trim() || worldIdFromMessageId(h("Message-ID"));
+}
+
+/**
+ * A batch of messages as RawItems, with one world id going to at most one message. Two messages claiming the same id
+ * is the attack this guards: `trace` versions by (source, external_id), so a second claimant would arrive as the next
+ * version of the first — the CEO's mail, rewritten. The mail Gmail recorded first keeps the id (the seeder's insert
+ * is backdated to the world's clock, years before anything could answer it) and the other falls back to Gmail's id.
+ */
+export function gmailToRawItems(msgs: readonly GmailMessage[], opts: GmailReadOptions = {}): RawItem[] {
+  const keeper = new Map<string, GmailMessage>();
+  for (const msg of msgs) {
+    const id = claimedWorldId(msg, opts);
+    if (id === undefined) continue;
+    const held = keeper.get(id);
+    const older = (a: GmailMessage, b: GmailMessage): boolean =>
+      Number(a.internalDate ?? 0) === Number(b.internalDate ?? 0) ? a.id < b.id : Number(a.internalDate ?? 0) < Number(b.internalDate ?? 0);
+    if (!held || older(msg, held)) keeper.set(id, msg);
+  }
+  return msgs.map((msg) => {
+    const id = claimedWorldId(msg, opts);
+    const contested = id !== undefined && keeper.get(id) !== msg;
+    return gmailToRawItem(msg, contested ? { ...opts, worldId: null } : opts);
+  });
+}
+
+/**
+ * One Gmail API message (format=full) as the RawItem ingestion expects. Pure, so it is tested without a network.
+ *
+ * Two things here come from the sender and are not evidence of anything: every header, `X-Footnote-Id` and `Date`
+ * included, and the `<fn:...@northwind.test>` Message-ID. `trace` versions by (source, external_id), so believing a
+ * header for the id lets anyone who can send mail to this mailbox arrive as version 2 of the CEO's mail, carrying
+ * whatever clock they like. So the world id is honoured only for mail this mailbox was given rather than sent
+ * (`insertedHere`), and `recorded_time` — when this system could first have known — is always Gmail's `internalDate`.
+ * `event_time` stays the mail's own Date header: that is the sender's claim about when they wrote, which is what it
+ * has always meant, and the seeded history depends on it (inserted with internalDateSource=dateHeader, so for seeded
+ * mail the two agree anyway). Prefer `gmailToRawItems` for a whole pull: it also settles two messages claiming one id.
+ */
+export function gmailToRawItem(msg: GmailMessage, opts: GmailReadOptions = {}): RawItem {
   const h = (name: string): string => decodeEncodedWords(header(msg.payload, name) ?? "");
   const from = addresses(h("From"))[0] ?? "";
   const to = addresses(h("To"));
   const cc = addresses(h("Cc"));
-  const when = isoSeconds(h("Date"), msg.internalDate);
-  const payload: MailPayload = { thread_id: h(THREAD_HEADER).trim() || msg.threadId || msg.id, from, to, cc, subject: h("Subject"), date: when, body: bodyText(msg.payload) };
+  const sent = isoSeconds(h("Date"), msg.internalDate);
+  const received = msg.internalDate ? isoSeconds("", msg.internalDate) : sent;
+  const ours = insertedHere(msg, opts.ourLabelIds ?? []);
+  const worldId = ours && opts.worldId !== null ? h(ID_HEADER).trim() || worldIdFromMessageId(h("Message-ID")) : undefined;
+  const threadId = (ours && h(THREAD_HEADER).trim()) || msg.threadId || msg.id;
+  const payload: MailPayload = { thread_id: threadId, from, to, cc, subject: h("Subject"), date: sent, body: bodyText(msg.payload) };
   return {
-    source: "gmail", kind: "email", external_id: h(ID_HEADER).trim() || worldIdFromMessageId(h("Message-ID")) || msg.id,
-    event_time: when, recorded_time: when, payload: { ...payload },
+    source: "gmail", kind: "email", external_id: worldId || msg.id,
+    event_time: sent, recorded_time: received, payload: { ...payload },
     party_hint: { emails: [...new Set([from, ...to, ...cc].filter(Boolean))] },
   };
 }
@@ -299,8 +379,9 @@ export async function seedGmail(world: World, opts: SeedGmailOptions = {}): Prom
   // (which also finds mail whose label someone removed).
   const present = new Set<string>();
   const presentContent = new Set<string>(); // copies inserted before ID_HEADER existed are recognised by content
-  for (const id of await api.listIds(SEEDED_MAIL_QUERY)) {
-    const item = gmailToRawItem(await api.request<GmailMessage>("GET", `/messages/${id}`, { query: { format: "metadata" } }));
+  const seen: GmailMessage[] = [];
+  for (const id of await api.listIds(SEEDED_MAIL_QUERY)) seen.push(await api.request<GmailMessage>("GET", `/messages/${id}`, { query: { format: "metadata" } }));
+  for (const item of gmailToRawItems(seen, { ourLabelIds: labelId ? [labelId] : [] })) {
     const p = item.payload as unknown as MailPayload;
     present.add(item.external_id);
     presentContent.add(contentKey(p.from, p.date, p.subject));

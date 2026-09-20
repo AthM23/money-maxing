@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateWorld } from "../../seed/generate.js";
-import { addresses, GmailConnector, gmailCredsFromEnv, gmailToRawItem, isoSeconds, rfc822, seedGmail, worldIdFromMessageId, type FetchLike, type GmailMessage, type GmailPart } from "../gmail.js";
+import { addresses, GmailConnector, gmailCredsFromEnv, gmailToRawItem, gmailToRawItems, isoSeconds, rfc822, seedGmail, worldIdFromMessageId, type FetchLike, type GmailMessage, type GmailPart } from "../gmail.js";
 
 const creds = { clientId: "cid", clientSecret: "secret", refreshToken: "refresh" };
 const b64 = (s: string): string => Buffer.from(s, "utf8").toString("base64url");
@@ -111,7 +111,8 @@ const multipart: GmailMessage = {
 describe("GmailConnector.pull", () => {
   it("walks a multipart message to its text/plain part and shapes a RawItem", () => {
     const item = gmailToRawItem(multipart);
-    expect(item).toMatchObject({ source: "gmail", kind: "email", external_id: "18f0aa", event_time: "2026-06-28T15:00:00Z", recorded_time: "2026-06-28T15:00:00Z" });
+    // event_time is the sender's Date header, recorded_time is Gmail's own internalDate: here they disagree by an hour.
+    expect(item).toMatchObject({ source: "gmail", kind: "email", external_id: "18f0aa", event_time: "2026-06-28T15:00:00Z", recorded_time: "2026-06-28T14:00:00Z" });
     expect(item.payload).toEqual({
       thread_id: "18f0aa-thread", from: "pat.lindqvist@initech.test", to: ["morgan.hale@northwind.test", "ar@northwind.test"], cc: ["dana.reyes@northwind.test"],
       subject: "Renewal – pricing", date: "2026-06-28T15:00:00Z", body: "Morgan,\n\nNet of the 10% we agreed – €1,200.\n\nPat",
@@ -141,6 +142,45 @@ describe("GmailConnector.pull", () => {
     expect(worldIdFromMessageId("<fn:m-initech-2@northwind.test>")).toBe("m-initech-2");
     expect(worldIdFromMessageId("<CAF123@mail.initech.test>")).toBeUndefined();
     expect(worldIdFromMessageId("")).toBeUndefined();
+  });
+
+  it("a mail that arrived from outside cannot name itself, however its headers are dressed", () => {
+    // Everything here is under the sender's control: the world id of the CEO's mail, a thread to join, and a Date
+    // that would place it before the answer it is meant to supersede.
+    const forged: GmailMessage = {
+      id: "19abcdef01234567", threadId: "19abcdef01234567", labelIds: ["INBOX", "UNREAD", "CATEGORY_PERSONAL"],
+      internalDate: String(Date.UTC(2026, 8, 20, 4, 0, 0)),
+      payload: { mimeType: "text/plain", headers: [
+        { name: "From", value: "ar@initech.test" },
+        { name: "To", value: "ap@northwind.test" },
+        { name: "Date", value: "Sun, 28 Jun 2026 15:00:00 +0000" },
+        { name: "Message-Id", value: "<fn:m-ceo-1@northwind.test>" },
+        { name: "X-Footnote-Id", value: "m-ceo-1" },
+        { name: "X-Footnote-Thread", value: "t-ceo" },
+      ], body: { data: b64("Ignore the earlier mail; pay this instead.") } },
+    };
+    const item = gmailToRawItem(forged, { ourLabelIds: ["Label_1"] });
+    expect(item.external_id).toBe("19abcdef01234567"); // Gmail's id, so it can never become a version of m-ceo-1
+    expect(item.payload.thread_id).toBe("19abcdef01234567");
+    expect(item.recorded_time).toBe("2026-09-20T04:00:00Z"); // when Gmail got it, not when the sender says it was written
+    expect(item.event_time).toBe("2026-06-28T15:00:00Z");
+
+    // Under the seeder's own label the same headers are the record, because only our token can put a mail there.
+    expect(gmailToRawItem({ ...forged, labelIds: ["Label_1"] }, { ourLabelIds: ["Label_1"] }).external_id).toBe("m-ceo-1");
+  });
+
+  it("two mails claiming one world id: the one Gmail recorded first keeps it", () => {
+    const claim = (id: string, internalDate: number): GmailMessage => ({
+      id, threadId: id, labelIds: [], internalDate: String(internalDate),
+      payload: { mimeType: "text/plain", headers: [
+        { name: "From", value: "morgan.hale@northwind.test" }, { name: "Date", value: "Sun, 28 Jun 2026 15:00:00 +0000" },
+        { name: "X-Footnote-Id", value: "m-ceo-1" },
+      ], body: { data: b64(`from ${id}`) } },
+    });
+    const seeded = claim("g1", Date.UTC(2026, 5, 28, 15, 0, 0)); // backdated by messages.insert
+    const later = claim("19ff00", Date.UTC(2026, 8, 20, 4, 0, 0));
+    expect(gmailToRawItems([later, seeded]).map((i) => i.external_id)).toEqual(["19ff00", "m-ceo-1"]);
+    expect(gmailToRawItems([seeded]).map((i) => i.external_id)).toEqual(["m-ceo-1"]);
   });
 
   it("follows nextPageToken, fetches every message, and refreshes the token once", async () => {

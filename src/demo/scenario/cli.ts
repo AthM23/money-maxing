@@ -34,6 +34,8 @@ export function main(argv: string[] = process.argv.slice(2)): number {
   const mapped = applySlackIds(db);
   if (mapped > 0) out(`Slack: ${mapped} owner and approver row(s) now carry real Slack ids, so pnpm desk can reach them`);
   const n = db.prepare("SELECT COUNT(*) AS n FROM intent WHERE status = 'open'").get() as { n: number };
+  // Released so the file is not left locked for an in-process caller (a test, or a script that seeds then reads).
+  db.close();
   out(`seeded ${dbPath}: ${n.n} open intent(s)${withMainScene ? "" : " (global July only)"}`);
   out("next, for a code-only run:");
   out(`  pnpm learn ${dbPath} --replay --approve-as U_CTRL`);

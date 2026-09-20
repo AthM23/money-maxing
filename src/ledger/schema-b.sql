@@ -6,8 +6,12 @@ CREATE TABLE IF NOT EXISTS event_cursor (
   subscriber TEXT PRIMARY KEY, last_event_id INTEGER NOT NULL DEFAULT 0
 );
 -- world id -> external id per target system. Makes seeding idempotent and --reset possible.
+-- `origin` is why the row exists: 'created' means the record is ours to remove, 'adopted' means it was already in the
+-- target company and we only wrote down where it is. A reset may never touch an adopted record (see src/seed/quickbooks.ts).
+-- NULL is a row written before this column existed: also never touched, because nothing says the record is ours.
 CREATE TABLE IF NOT EXISTS seed_manifest (
   world_id TEXT NOT NULL, system TEXT NOT NULL, kind TEXT NOT NULL, external_id TEXT NOT NULL, seeded_at TEXT NOT NULL,
+  origin TEXT CHECK (origin IN ('created','adopted')),
   PRIMARY KEY (world_id, system)
 );
 -- bank lines the humans already matched in the seeded history (Q2). bank.unmatched excludes them.

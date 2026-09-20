@@ -10,6 +10,15 @@ export const DEFAULT_DB_PATH = "data/footnote.db";
 
 const SCHEMA_B_PATH = fileURLToPath(new URL("./schema-b.sql", import.meta.url));
 
+/**
+ * Columns added to a lane-B table after databases already existed. `CREATE TABLE IF NOT EXISTS` skips an existing
+ * table whole, and SQLite has no `ADD COLUMN IF NOT EXISTS`, so each one is added on open when it is missing. The
+ * column definition here must match the one in schema-b.sql, minus anything ALTER cannot add (a CHECK is fine).
+ */
+const ADDITIVE_COLUMNS: ReadonlyArray<{ table: string; column: string; ddl: string }> = [
+  { table: "seed_manifest", column: "origin", ddl: "origin TEXT CHECK (origin IN ('created','adopted'))" },
+];
+
 export function dbPath(): string {
   return process.env.FOOTNOTE_DB || DEFAULT_DB_PATH;
 }
@@ -20,6 +29,10 @@ export function openWorldDb(path = ":memory:"): Db {
   const db = openDb(path);
   db.pragma("busy_timeout = 5000"); // the console polls while the runtime writes
   db.exec(readFileSync(SCHEMA_B_PATH, "utf8"));
+  for (const { table, column, ddl } of ADDITIVE_COLUMNS) {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (columns.length > 0 && !columns.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  }
   return db;
 }
 

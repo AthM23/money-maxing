@@ -20,6 +20,8 @@ export interface DriftFinding {
   opened: boolean;
   case_file: CaseFile;
   explained_by_fact_id?: string;
+  /** The bank line or its documents moved after the case opened, so the stored brief was rewritten from the ledger. */
+  restated?: boolean;
 }
 
 const usd = (cents: number): string => `$${(Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -45,22 +47,21 @@ function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
   const shortfall = expected - received;
   const kind: DriftKind = docs.length === 0 ? "no_open_document" : shortfall === 0 ? "exact" : shortfall > 0 ? "short_pay" : "over_pay";
   const dedupeKey = `${COMPARATOR}|${txn.id}`;
-
-  const known = db.prepare("SELECT intent_id, delta_cents FROM drift_case WHERE dedupe_key = ?").get(dedupeKey) as { intent_id: string; delta_cents: number } | undefined;
-  if (known) {
-    const caseFile = CaseFile.parse(JSON.parse((db.prepare("SELECT case_json FROM intent WHERE id = ?").get(known.intent_id) as { case_json: string }).case_json));
-    db.prepare("UPDATE drift_case SET last_seen = ? WHERE dedupe_key = ?").run(clock.now(), dedupeKey);
-    return { bank_txn_id: txn.id, kind, intent_id: known.intent_id, opened: false, case_file: caseFile };
-  }
-
-  const intentId = newId("int");
-  const caseFile = CaseFile.parse({
-    intent_id: intentId, function: "ar", party_id, entry_date: txn.posted_date, bank_txn_id: txn.id,
+  const endCondition = JSON.stringify({ bank_txn_applied: txn.id, docs_settled: docs.map((d) => d.id) });
+  const caseFor = (id: string): CaseFile => CaseFile.parse({
+    intent_id: id, function: "ar", party_id, entry_date: txn.posted_date, bank_txn_id: txn.id,
     doc_ids: docs.map((d) => d.id), expected_cents: expected, received_cents: received, shortfall_cents: shortfall,
     method: methodOf(txn.method), trace_ids: [...(txn.trace_id ? [txn.trace_id] : []), ...(remittance ? [remittance.trace_id] : []), ...bankAdvice(db, txn.id)], remittance, matching_issue,
   });
+  const ask = question(kind, txn, docs, shortfall, payerLabel(db, txn, party_id), matching_issue);
+
+  const known = db.prepare("SELECT intent_id, delta_cents FROM drift_case WHERE dedupe_key = ?").get(dedupeKey) as { intent_id: string; delta_cents: number } | undefined;
+  if (known) return updateOne(db, clock, txn, kind, dedupeKey, known.intent_id, caseFor(known.intent_id), ask, endCondition);
+
+  const intentId = newId("int");
+  const caseFile = caseFor(intentId);
   db.prepare("INSERT INTO intent (id, function, question, owner, status, end_condition_json, case_json, created_at) VALUES (?, 'ar', ?, 'ar', 'open', ?, ?, ?)")
-    .run(intentId, question(kind, txn, docs, shortfall, payerLabel(db, txn, party_id), matching_issue), JSON.stringify({ bank_txn_applied: txn.id, docs_settled: docs.map((d) => d.id) }), JSON.stringify(caseFile), clock.now());
+    .run(intentId, ask, endCondition, JSON.stringify(caseFile), clock.now());
   db.prepare("INSERT INTO drift_case (dedupe_key, comparator, intent_id, delta_cents, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)")
     .run(dedupeKey, COMPARATOR, intentId, shortfall, clock.now(), clock.now());
 
@@ -75,6 +76,43 @@ function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
     payload: { side: "credit", comparator: COMPARATOR, kind, bank_txn_id: txn.id, party_id, doc_ids: caseFile.doc_ids, expected_cents: expected, received_cents: received, shortfall_cents: shortfall },
   }, clock);
   return { bank_txn_id: txn.id, kind, intent_id: intentId, opened: true, case_file: caseFile, explained_by_fact_id: factId };
+}
+
+/**
+ * A difference that already has an intent. The comparator never opens a second one, but it does re-read the ledger:
+ * a bank line can be restated after the case opened (the bank corrects the amount or the value date, and ingest
+ * re-versions the evidence), and the documents it relates to can move. Until this compared them, the stored brief —
+ * the very thing handed to an agent or a model — kept the superseded amounts. So the case is rewritten from what the
+ * ledger says now, and `drift.updated` names what changed, with any decision already taken on the old numbers.
+ */
+function updateOne(db: Db, clock: Clock, txn: UnmatchedBankTxn, kind: DriftKind, dedupeKey: string, intentId: string, fresh: CaseFile, ask: string, endCondition: string): DriftFinding {
+  const stored = CaseFile.parse(JSON.parse((db.prepare("SELECT case_json FROM intent WHERE id = ?").get(intentId) as { case_json: string }).case_json));
+  db.prepare("UPDATE drift_case SET last_seen = ? WHERE dedupe_key = ?").run(clock.now(), dedupeKey);
+  if (!restated(stored, fresh)) return { bank_txn_id: txn.id, kind, intent_id: intentId, opened: false, case_file: stored };
+
+  // Decisions taken on the superseded brief. The kernel ties cash to the bank line, so nothing posted can be wrong
+  // about the cash; what it cannot see is that the judgment beside it was sized to an amount that no longer stands.
+  const worked = (db.prepare("SELECT id FROM decision WHERE intent_id = ? ORDER BY id").all(intentId) as { id: string }[]).map((r) => r.id);
+  const note = worked.length === 0 ? "" : ` (restated after this was worked: ${usd(stored.shortfall_cents)} difference became ${usd(fresh.shortfall_cents)}; ${worked.length === 1 ? "one decision was" : `${worked.length} decisions were`} taken on the old amount)`;
+  db.prepare("UPDATE intent SET case_json = ?, question = ?, end_condition_json = ? WHERE id = ?").run(JSON.stringify(fresh), `${ask}${note}`, endCondition, intentId);
+  db.prepare("UPDATE drift_case SET delta_cents = ? WHERE dedupe_key = ?").run(fresh.shortfall_cents, dedupeKey);
+  emit(db, {
+    topic: "drift.updated", from_function: "drift", intent_id: intentId,
+    payload: {
+      comparator: COMPARATOR, bank_txn_id: txn.id, party_id: fresh.party_id, kind,
+      was: { doc_ids: stored.doc_ids, expected_cents: stored.expected_cents, received_cents: stored.received_cents, shortfall_cents: stored.shortfall_cents, entry_date: stored.entry_date },
+      now: { doc_ids: fresh.doc_ids, expected_cents: fresh.expected_cents, received_cents: fresh.received_cents, shortfall_cents: fresh.shortfall_cents, entry_date: fresh.entry_date },
+      decisions_on_superseded_case: worked,
+    },
+  }, clock);
+  return { bank_txn_id: txn.id, kind, intent_id: intentId, opened: false, case_file: fresh, restated: true };
+}
+
+/** What makes the stored brief wrong rather than merely older: anything an agent reasons with. */
+function restated(stored: CaseFile, fresh: CaseFile): boolean {
+  return stored.expected_cents !== fresh.expected_cents || stored.received_cents !== fresh.received_cents
+    || stored.shortfall_cents !== fresh.shortfall_cents || stored.entry_date !== fresh.entry_date
+    || stored.party_id !== fresh.party_id || stored.doc_ids.join(",") !== fresh.doc_ids.join(",");
 }
 
 /**

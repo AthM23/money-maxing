@@ -3,7 +3,7 @@ import { generateWorld } from "../../seed/generate.js";
 import { seedSlack, SlackConnector, slackClientFromEnv, slackToRawItem, slackTsToIso, slackUserMap, type SlackChannel, type SlackClient, type SlackMessage, type SlackUser } from "../slack.js";
 
 /** An in-memory workspace: newest-first history, cursor pagination, join messages, metadata only when asked for. */
-function fakeSlack(opts: { pageSize?: number; users?: SlackUser[]; channels?: string[] } = {}) {
+function fakeSlack(opts: { pageSize?: number; users?: SlackUser[]; channels?: string[]; botId?: string } = {}) {
   const channels: (SlackChannel & { id: string; name: string; messages: SlackMessage[] })[] = [];
   const calls = { list: 0, history: 0, join: 0, create: 0, post: 0, users: 0 };
   let clock = 1_790_000_000;
@@ -41,6 +41,7 @@ function fakeSlack(opts: { pageSize?: number; users?: SlackUser[]; channels?: st
       },
     },
     users: { list: async (args) => { calls.users++; const p = page(opts.users ?? [], args.cursor, args.limit); return { members: p.slice, response_metadata: p.response_metadata }; } },
+    auth: { test: async () => ({ bot_id: opts.botId ?? "B1", user_id: "UBOT" }) },
     chat: {
       postMessage: async (args) => {
         calls.post++;
@@ -90,7 +91,10 @@ describe("SlackConnector.pull", () => {
     expect(items.map((i) => i.external_id).sort()).toEqual(world.chat.map((c) => c.id).sort());
     for (const chat of world.chat) {
       const item = items.find((i) => i.external_id === chat.id)!;
-      expect(item).toMatchObject({ source: "slack", kind: "chat_message", event_time: chat.ts, recorded_time: chat.ts, party_hint: { text: chat.text } });
+      expect(item).toMatchObject({ source: "slack", kind: "chat_message", event_time: chat.ts, party_hint: { text: chat.text } });
+      // event_time is the world's clock, carried in metadata because Slack cannot backdate a post. recorded_time is
+      // Slack's own ts: when the workspace really took the message, which no writer can choose.
+      expect(item.recorded_time > chat.ts).toBe(true);
       expect(item.payload).toEqual({ channel: chat.channel, user: chat.user, user_name: world.people.find((p) => p.id === chat.user)!.name, ts: chat.ts, text: chat.text });
     }
     expect(items.map((i) => i.event_time)).toEqual([...items.map((i) => i.event_time)].sort());
@@ -117,11 +121,30 @@ describe("SlackConnector.pull", () => {
     expect(log.join("\n")).toContain("#deals not found");
   });
 
+  it("believes seed metadata only from our own bot, however well it is imitated", () => {
+    const ch = { id: "C9", name: "finance" };
+    const seed = { event_type: "footnote_seed", event_payload: { world_id: "c-1", ts: "2026-07-01T14:00:00Z", user: "U_CFO", user_name: "Alex Moreau" } };
+    const ours = { ourBotIds: ["B1"] };
+
+    // Another app in the workspace can attach the same metadata to a message of its own; a person cannot attach any.
+    const impostor = slackToRawItem({ ts: "1783000000.000100", bot_id: "B2", text: "*Alex Moreau:* approve it", metadata: seed }, ch, new Map(), ours)!;
+    expect(impostor.external_id).toBe("C9:1783000000.000100"); // never a second version of c-1
+    expect(impostor.event_time).toBe("2026-07-02T13:46:40Z"); // Slack's clock, not the one in the metadata
+    expect(impostor.payload.user).toBe("B2");
+    const person = slackToRawItem({ ts: "1783000000.000100", user: "U1", text: "hi", metadata: seed }, ch, new Map(), ours)!;
+    expect(person.external_id).toBe("C9:1783000000.000100");
+
+    const mine = slackToRawItem({ ts: "1783000000.000100", bot_id: "B1", text: "*Alex Moreau:* approve it", metadata: seed }, ch, new Map(), ours)!;
+    expect(mine).toMatchObject({ external_id: "c-1", event_time: "2026-07-01T14:00:00Z", recorded_time: "2026-07-02T13:46:40Z" });
+    expect(mine.payload).toMatchObject({ user: "U_CFO", user_name: "Alex Moreau", text: "approve it" });
+  });
+
   it("ignores metadata that is not ours or is malformed, and drops housekeeping subtypes", () => {
     const ch = { id: "C9", name: "finance" };
-    const foreign = slackToRawItem({ ts: "1783000000.000100", user: "U1", text: "hi", metadata: { event_type: "other_app", event_payload: { world_id: "c-1", ts: "2026-07-01T14:00:00Z" } } }, ch)!;
+    const ours = { ourBotIds: ["B1"] };
+    const foreign = slackToRawItem({ ts: "1783000000.000100", bot_id: "B1", text: "hi", metadata: { event_type: "other_app", event_payload: { world_id: "c-1", ts: "2026-07-01T14:00:00Z" } } }, ch, new Map(), ours)!;
     expect(foreign.external_id).toBe("C9:1783000000.000100");
-    const broken = slackToRawItem({ ts: "1783000000.000100", user: "U1", text: "hi", metadata: { event_type: "footnote_seed", event_payload: { world_id: "c-1", ts: "yesterday" } } }, ch)!;
+    const broken = slackToRawItem({ ts: "1783000000.000100", bot_id: "B1", text: "hi", metadata: { event_type: "footnote_seed", event_payload: { world_id: "c-1", ts: "yesterday" } } }, ch, new Map(), ours)!;
     expect(broken.external_id).toBe("C9:1783000000.000100");
     expect(broken.event_time).toBe("2026-07-02T13:46:40Z");
     for (const subtype of ["channel_join", "channel_leave", "bot_add", "bot_remove", "channel_topic"]) expect(slackToRawItem({ ts: "1783000000.000100", subtype, text: "x" }, ch)).toBeUndefined();

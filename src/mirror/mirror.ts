@@ -391,7 +391,9 @@ async function externalId(pass: Pass, worldId: string, kind: string, findSql: st
   if (!pass.client || findSql === null) return undefined;
   const found = (await pass.client.query(findSql))[0];
   if (!found || typeof found.Id !== "string" || found.Id === "") return undefined;
-  pass.db.prepare("INSERT OR IGNORE INTO seed_manifest (world_id, system, kind, external_id, seeded_at) VALUES (?, ?, ?, ?, ?)").run(worldId, QBO_SYSTEM, kind, found.Id, pass.clock.now());
+  // origin stays NULL on purpose: a lookup that finds a record cannot tell one the seeder made on an earlier run from
+  // one the company always had, and `seed --reset` removes only what it can prove it created.
+  pass.db.prepare("INSERT OR IGNORE INTO seed_manifest (world_id, system, kind, external_id, seeded_at, origin) VALUES (?, ?, ?, ?, ?, NULL)").run(worldId, QBO_SYSTEM, kind, found.Id, pass.clock.now());
   return found.Id;
 }
 

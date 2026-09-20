@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { openAccrualCases, unbilledExpenses } from "../src/agents/close/accruals.js";
 import { decideHeldAmount } from "../src/agents/decideHold.js";
 import { recordHumanAnswer } from "../src/agents/humanLoop.js";
 import { buildAuditPack } from "../src/audit/pack.js";
@@ -34,6 +35,7 @@ const Decide = z.object({
   uses: z.enum(["one_time", "standing"]), valid_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   pct_off: z.number().min(0).max(100).optional(), pct_withheld: z.number().min(0).max(100).optional(),
 });
+const Accruals = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/) });
 const FactAction = z.object({ fact_id: Id, as: Id, outcome: z.enum(["approved", "rejected"]) });
 const PolicyAction = z.object({ policy_id: Id, as: Id });
 const Run = z.object({ intent_id: Id.optional() });
@@ -56,6 +58,14 @@ export const ACTIONS: Record<string, Handler> = {
   decide: (db, body) => {
     const { decision_id, as, ...answer } = parse(Decide, body);
     return decideHeldAmount(db, decision_id, as, answer, { config: APP_CONFIG });
+  },
+  // The close's own monitor: a recurring vendor expense with nothing booked for the month becomes a case, and the code
+  // tier estimates the steady ones. Free: a moving expense is left for a model pass, which is run from the terminal.
+  accruals: async (db, body) => {
+    const { period } = parse(Accruals, body);
+    const opened = openAccrualCases(db, systemClock, period);
+    const report = await runOpenIntents(db, { investigators: [], config: APP_CONFIG, function: "close" });
+    return { opened: opened.length, prepared: report.worked.filter((w) => w.routes.includes("PROPOSE")).length, left_for_a_model: report.worked.filter((w) => w.routes.length === 0).length, unbilled: unbilledExpenses(db, period) };
   },
   fact: (db, body) => {
     const f = parse(FactAction, body);
