@@ -117,27 +117,24 @@ revenue for AI-native companies.** That is their current centre of gravity.
 - **What we mean by autonomous finance** (`/blog/what-we-mean-by-autonomous-finance`, Aug 13 2026,
   **Ramnandan Krishnamurthy, Co-founder & CEO**) — the manifesto. Automation stalled because the work "was
   never in the tools"; policy lives in controllers' heads and analysts' inboxes; ERPs record judgment's
-  output, never the judgment. Agents must execute, not recommend. Coins **"human runtime"**,
-  **"audit-ready becomes a property"**, and the line to steal: it **"remembers the answer, so it never asks
-  twice."** Also "99% that runs autonomously is table stakes."
+  output, never the judgment. Agents must execute, not recommend. Coins **"human runtime"** and
+  **"audit-ready becomes a property"**; the line to steal is that it **"remembers the answer, so it never
+  asks twice."** Also "99% that runs autonomously is table stakes."
 - **The usage-based rev rec playbook** (`/guide/usage-based-rev-rec`, Sep 15 2026, **Shruthi
-  Sathyanarayanan, CPA, ex-Big 4**, reviewed by Big 4 partners) — six ASC 606 judgment calls with
-  citations: setup/fine-tuning fees (606-10-25-19), outcome-based pricing (32-5), principal-vs-agent on
-  resold tokens (55-36), prepaid credits and breakage (55-46), **period-end unbilled usage cutoff**
-  (55-18), commissions (ASC 340-40).
+  Sathyanarayanan, CPA, ex-Big 4**, reviewed by Big 4 partners) — six ASC 606 judgment calls, cited:
+  setup/fine-tuning fees (606-10-25-19), outcome-based pricing (32-5), principal-vs-agent on resold tokens
+  (55-36), prepaid credits and breakage (55-46), **period-end unbilled usage cutoff** (55-18), commissions
+  (ASC 340-40).
 - **5 revenue checks every usage-based CFO should run** (`/blog/usage-based-revenue-checks-cfo`, Aug 21
   2026) — **the most operationally concrete page on the site.** Invoiced ≠ recognised. Billed $0.10/token in
-  January, owes a **blended $0.06** once March volume lands → true-up. Prepaid: **$900 for $1,000** of
+  January, owes a **blended $0.06** once March volume lands → true-up. Prepaid **$900 for $1,000** of
   credits. Committed **$120K/yr** floor + overage. Metering lag → accrual plus a **lookback check**; re-run
   if the gap is under **~0.5% of audit materiality**.
 - **Can your usage-based rev rec survive an audit?** (`/blog/can-your-usage-based-revenue-recognition-service-survive-audit`,
   Aug 19 2026) — auditors cannot verify logic living in "a controller's head or spreadsheet formula with no
-  trail". Names **knowledge concentration** as an audit finding. The trail must be a *byproduct* of
+  trail"; names **knowledge concentration** as an audit finding; the trail must be a *byproduct* of
   recognition, not reconstructed at PBC time. Cutoff testing, breakage redemption history, modification
   treatment across CRM/billing/ERP.
-- **The allocation problem in hybrid AI contracts** (`/blog/allocation-problem-hybrid-ai-contracts`, Sep 2
-  2026) — allocating across platform fee + credits + overage + services. SSP methods, **material rights**,
-  financing components, residual-approach misuse. No dollar examples.
 - **The tax liability accumulating while nobody is looking** (`/blog/indirect-tax-usage-based-billing`,
   Sep 7 2026) — **Texas 80% taxable / 20% exempt**; WA taxable; CA and FL not. Nexus **$100K** most states,
   **$500K** CA/TX/NY. **Withholding tax on cross-border cloud fees treated as royalties or technical
@@ -147,13 +144,16 @@ revenue for AI-native companies.** That is their current centre of gravity.
   (`/blog/revenue-forecast-breaks-customers-control-meter`, Sep 7 2026) — existing-customer usage, not
   pipeline, drives consumption revenue. Layered forecast: **committed floor / overage / breakage**. Cohort
   ramp and decay, usage velocity, dormancy thresholds, backtest accuracy.
+- **The allocation problem in hybrid AI contracts** (`/blog/allocation-problem-hybrid-ai-contracts`, Sep 2
+  2026) — allocating across platform fee + credits + overage + services. SSP methods, **material rights**,
+  financing components, residual-approach misuse. No dollar examples.
 - **Will finance reporting accuracy hold in production?** (`/blog/will-finance-reporting-accuracy-hold-in-production`,
   Dec 15 2025) — **86%** of CFOs hit inaccurate AI output (Wakefield, Oct 2025). Names the evidence set:
   **source lineage, policy reference attached to the entry, calculation log, review trail.** Multi-currency
   intercompany eliminations across 20 entities; read-only ERP until trust is established.
-- **7 moves to win your AI finance transformation** (`/infographics-jujitsu`, Sep 15 2026) — Move 1: "Kill
-  your worst spreadsheet first", with **bank recs** named as the canonical first win. Move 2: measure
-  **"error-free automations"**. Move 7: tie to a board KPI — close time, audit prep hours, **exception rates**.
+- **7 moves to win your AI finance transformation** (`/infographics-jujitsu`, Sep 15 2026) — Move 1 "Kill
+  your worst spreadsheet first" names **bank recs** as the canonical first win; Move 2 measure
+  **"error-free automations"**; Move 7 tie to a board KPI — close time, audit prep hours, **exception rates**.
 
 Five more, reference only, little demo value: **Metrics investors trust least** (Sep 2 2026 — ARR/RPO/NRR
 strain; Snowflake NRR "sat near 125%") · **Cost of revenue when inference is the product** (Sep 1 2026 —
@@ -171,24 +171,24 @@ Type II, ISO 27001, GDPR, field-level encryption, optional private VPC, immutabl
 
 **The problem.** Finance runs on "16+ disconnected tools", loses "1,500+ hours a month to reconciliations
 and validations", takes **8 to 11 days** to close (`/why`). The deeper claim is the workshop thesis in
-prose: the policy is written down nowhere and lives in heads and inboxes (autonomous-finance post).
+prose: policy is written down nowhere and lives in heads and inboxes (autonomous-finance post).
 
 **What agents should do.** "Processing, matching, reconciling, posting" — and derive policy "from how your
 team already works, apply it, and bring a human in when a case falls outside it" (`/why`). Execute
-end-to-end; never hand back "homework" (autonomous-finance post).
+end-to-end; never hand back "homework".
 
 **What they are not.** "Not a chatbot. Not a replacement ERP" (workshop slide 3). No dashboards, no
 recommendations-awaiting-action, no scripts; **"no rip-and-replace, no migration"** (`/`).
 
 **Trust / audit.** "Every entry, reconciliation and workpaper ships with its audit trail built in"; "Every
 action is logged, reviewable and reversible"; **"No customer's data is ever used to train another's
-model"** (all `/why`). Every answer "cites its source" and you can "drill from any figure to the entry
-behind it" (`/`, `/instant-answers-and-search`).
+model"** (all `/why`). Every answer "cites its source"; you "drill from any figure to the entry behind it"
+(`/`, `/instant-answers-and-search`).
 
 **Humans.** Pull the team in "only where judgment matters" (`/why`). Controller framing: **"You review.
 Maximor prepares."** and **"Rules that write themselves"** — the platform learns from approvals and
-rejections (`/controller`). Their three-phase verb set is **Map → Modernize → Memorize**, ending in
-"muscle memory" (same page).
+rejections. Their three-phase verb set is **Map → Modernize → Memorize**, ending in "muscle memory"
+(`/controller`).
 
 **Vocabulary to mirror.** *Audit-Ready Agents™* · *unified finance context layer* · *human runtime* ·
 *no rip-and-replace* · *knows when to stop and ask* · *takes responsibility for the whole workflow* ·
