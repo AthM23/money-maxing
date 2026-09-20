@@ -1027,6 +1027,49 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - Paid spend this stretch: about $0.45 of investigator cost on the scoreboard, plus four Opus reviews not metered.
 - `pnpm test` → 48 files, **474 passing**; typecheck clean.
 
+### 2026-09-19 ~23:00 ET — Storytelling research: Maximor customers, blog and 55 competitors; demo spine proposed (AthM23 + Claude Code session)
+
+- Branch `research/storytelling` (from `main`). Added [`research/storytelling/`](./research/storytelling/): `01` customer
+  stories, `02` blog and founder voice, `03` competitors (close, AI-native ERP), `04` competitors (order-to-cash, AP,
+  treasury), and `story-avenues.html`, an interactive summary. Four research agents, each claim marked VERIFIED or
+  UNVERIFIED with a URL; the load-bearing quotes were re-fetched and read back verbatim in the main session (homepage
+  mock-ups and testimonials, Kiteworks and HiBid case studies, the close assessment, the CEO's essay). Pages come
+  through a summarising fetch: check any quote at its URL before it goes on a slide.
+- **Supersedes** the 21:35 entry's "In progress: `research/customer-pain-points-and-accountingbench.md`": that file was
+  never committed. The customer half is covered here; the AccountingBench half is still open.
+- **Findings that change the picture:**
+  - Maximor's homepage mock-up is a short-pay over and under a write-off line: "SHORT-PAY-01 · short ≤ $50 → auto-close",
+    "Acme Freight #4471 −$38 posted & closed", "Byte Foods #7729 −$495 awaiting you". Their close assessment, question 5:
+    "When a customer sends one payment covering multiple invoices — or short-pays by a small amount — does someone have
+    to match it by hand?" We answer the short-pay half; **one payment for many invoices is not built**.
+  - No Maximor customer material describes a single transaction. Only Kiteworks and HiBid have case studies; Rently,
+    Invst and Dura are testimonials and LinkedIn posts. Kiteworks: 10 entities, 7 currencies, 66 accounts, 20 → 5
+    accountants, 98% straight through (it is the unnamed "global cybersecurity company"). The unnamed "PE-backed
+    roll-up" is Dura (close 12 → 7, audit findings 7 → 0). HiBid is confirmed; its case study says its CFO tried
+    "Codex and Claude Code" and "they couldn't consistently produce the controlled, accurate, and auditable data".
+    Rently's close has three published figures (11→3, 9→3, 8→4). QMCO is a logo only.
+  - **"Asks in Slack and remembers" is already Maximor's claim** (CEO essay: "remembers the answer, so it never asks
+    twice"; Aug 2026 press: "escalating judgment calls in Slack"). Not found anywhere in their material or at any of
+    ~55 competitors: scoped, expiring, approver-capped memory · a kernel that re-verifies quoted evidence · autonomy
+    earned from measured accuracy per kind of entry · a zero-model-call re-run with a backtest per policy.
+  - No longer white space: building an agent from a finished close and testing it against approved numbers (FloQast
+    Transform, announced 16 Sep 2026; Ledge). Also common: duplicate detection, Slack approve/reject, autonomy dials.
+  - Maximor's homepage revenue mock-up uses a company named "Northwind", the same as our fixture.
+  - Correction to `research/maximor-company-intel.md` §6: Basis sells agents to accounting firms; it is not an ERP
+    replacement.
+- **Proposed, not agreed:** demo spine = "Awaiting you": pick up where Maximor's homepage stops, with their assessment
+  questions 5, 7 and 10 as the three chapter cards (cash that knows when it does not know · the reason lives in
+  someone's inbox, asked once with a scope, re-run at zero model calls · an entry you can defend). This is the 21:35
+  entry's three candidates, now anchored in Maximor's own words. Proposed feature bets, in order: remittance capture
+  for one payment across many invoices (also gives the fine-tuned extractor a job inside the story) · SaaS-shaped
+  short-pay reason codes with a valid/invalid call and a "policy must not fire" counter-example · promise-to-pay as an
+  expiring fact · vendor bank-change BLOCK · an auditor's view of the audit pack.
+- Does **not** reopen "Audit or fraud detection… as the project" (Tried & rejected): the bank-change check is one
+  control inside AP, which that row allows.
+- **Blocked on humans (both builders):** choose the spine · build remittance capture or not · keep or change the
+  name Northwind · how to pitch the fine-tune (a podcast page paraphrases the CTO as saying post-training helps revenue
+  workflows more than cash; UNVERIFIED as a quote, so pitch cost and routing, backed by the benchmark).
+
 ### 2026-09-19 ~23:15 ET — Phase 2, Person B: the spine runs across AR → revenue → forecast → close on one ledger; two independent reviews, 22 findings fixed (AthM23 + Claude Code session)
 
 - **Landed (all of B's Phase 2 column).** Conventions and event payloads: [`src/engines/README.md`](../src/engines/README.md).
@@ -1201,3 +1244,43 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   The same flags on `pnpm worker <db>` (or `FOOTNOTE_READER_URL` / `FOOTNOTE_READER_MODEL` in `.env`) put the
   reader into a live run.
 - `pnpm test` → 53 files, **499 passing**; typecheck clean.
+
+### 2026-09-19 ~23:40 ET — Maximor's revenue playbook PDF read; scene shortlist with verdicts added (AthM23 + Claude Code session)
+
+- AthM23 saved a PDF from Maximor's site to `context/research/` ("The Usage-Based Revenue Recognition Playbook", 38
+  pages, by Maximor's Founding Strategist). Read in full; notes in
+  [`research/storytelling/05-maximor-usage-revenue-playbook.md`](./research/storytelling/05-maximor-usage-revenue-playbook.md).
+  The PDF itself is untracked; whether to commit a sponsor's PDF is a human call.
+- What it adds: (1) Maximor's own description of how its agents learn and escalate: "self-learning, self-improving,
+  self-escalating"; "never an invented cite"; "Override rates fall from ~30% in month one to under 5% by month six"
+  (no method given); "An escalation is a package: the provision that triggered it, the candidate conclusions, why it
+  couldn't resolve, and the relevant cites and prior memos"; ~80% handled / ~20% escalated for revenue contracts.
+  (2) Five of its six questions are ASC 606 judgment we have no engine for. The sixth in reach is section 05,
+  period-end unbilled usage: accrue the stub from the run-rate, reverse on invoice, track the variance. Maximor points
+  at accruals three times (this, the homepage's ACCRUE-01 rule, close-assessment question 8).
+- **Proposed, not agreed:** lay the Slack escalation card out in Maximor's four parts · show run 1 → 2 → 3 (12
+  approvals → 6 → 0) against their 30% → 5% yardstick · open each demo act with a controller's question in the first
+  person, which is the playbook's and the close assessment's format.
+- `story-avenues.html` now ends with a consolidated take and nine candidate scenes, each with its source, the case for
+  and against, and a verdict. Recommended core (all but one already run): the $495 "awaiting you" short-pay · one wire
+  for fourteen invoices with the remittance in another inbox (**the one new build**) · the controller unreachable for
+  July close · Wayne asked once with a scope, plus a look-alike that must not fire · the auditors arrive.
+  Kiteworks' multi-currency story: use as a stakes line; as a scene only as **one** EUR receipt short for three reasons
+  (rate movement, intermediary fee, real short-pay). That needs FX, which is outside the spec's declared scope, so it is
+  a team decision, not a tweak. Closing lines: unbilled-usage accrual, vendor bank-change. Skip: anything in revenue
+  recognition.
+- **Defect in my own earlier output, fixed:** version 1 of the published artifact (~23:00) had an unescaped apostrophe
+  that stopped its script, so the interactive sections did not render. Found by a syntax check before republishing;
+  version 2 parses clean. Still **not checked in a browser**.
+- New decisions for the team, added to the ~23:00 list: make Northwind usage-priced? · widen scope to one
+  foreign-currency receipt?
+
+### 2026-09-19 — Team direction: international investigation first; three-person roadmap recorded
+
+- Recorded the live team's direction in [TEAM_ROADMAP_2026-09-19.md](./TEAM_ROADMAP_2026-09-19.md): focus first on one realistic international payment investigation inspired by Maximor's Kiteworks case-study shape; prove the existing harness end to end with Claude while Preet fine-tunes and benchmarks independently. Reinforcement learning and voice-call approvals are not first-demo dependencies.
+- Proposed responsibilities: Person A owns harness gap assessment, investigation/tools, deterministic checks and safe posting, bounded retries, genuine blockers, scoped verified memory, model adapter and trace events; Person B owns fixtures/ground truth, consistent local/Gmail/Slack/QuickBooks sandbox representations, FX/entity support with A, reset and trace-driven UI/business impact; Preet (C) owns task definition with A, disjoint training/dev/held-out data and measured base/fine-tuned/strong-reference comparisons, then a later hybrid experiment. A/B personal names were ambiguous in this conversation and were not inferred; historical assignment entries remain intact.
+- Proposed starting fixture, not final approved ground truth: US cybersecurity entity invoices EUR 100,000; EUR 98,000 converts at USD 1.08/EUR less USD 40 fee to USD 105,800 deposit; EUR 2,000 withheld for an outage. Remittance identifies the invoice; Slack proves the outage, not authority to credit it. Treatment requires explicit applicable policy/evidence or an authorized answer. This is a simulated example, not a real Kiteworks incident; no country restrictions are asserted. Recognition rate/date and final FX/accounting treatment remain to be agreed.
+- Required variants: fully evidenced autonomous path; genuinely missing authority; a distinct in-scope invoice reusing verified standing memory; out-of-scope counterexample; identical-transaction replay proving idempotency, not learning. Wrong-entity decoy is optional after the core.
+- This supersedes the earlier demo priority for this planning direction, not the existing cross-function architecture or safety rules. New evidence for narrowing the first proof is the judges' realistic-story feedback plus this team conversation. FX is new scope relative to the 22:17 recommendation; inspect the existing harness before extending it, rather than rewriting it or assuming this scenario works already.
+- Gates: agree fixture, expected outcome and model contract; B builds while A wires Claude and C prepares training/eval; A/B prove end-to-end behavior and truthful impact; verify memory scope, recovery and idempotency; swap models and measure; finish UI/demo. No fabricated scores, no guarantee fine-tuning improves results, and no reuse of held-out benchmark answers as training data.
+- Documentation only: no code, services, existing ROADMAP.md, builds or benchmarks changed/run. Exact fixture and contract agreement remain the first implementation gate; this documentation task is complete.

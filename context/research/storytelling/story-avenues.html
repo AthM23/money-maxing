@@ -1,0 +1,757 @@
+<title>Footnote Story Avenues</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap">
+<style>
+:root{
+  --ground:#F2F5F2; --surface:#FFFFFF; --sunk:#E8EDE9; --ink:#15201B; --muted:#56635C; --rule:#D3DBD5;
+  --accent:#1B5E48; --accent-soft:#DCEBE4; --link:#2A4B9A;
+  --good:#1B6B3F; --good-soft:#DDF0E4; --warn:#8A5F00; --warn-soft:#F6EBCF; --bad:#A3301E; --bad-soft:#F7E0DB;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0F1513; --surface:#171F1C; --sunk:#1E2824; --ink:#E4EBE7; --muted:#98A69F; --rule:#2B3732;
+    --accent:#72CDA8; --accent-soft:#1D332B; --link:#93B0F6;
+    --good:#7FD6A0; --good-soft:#193226; --warn:#E2B654; --warn-soft:#35290F; --bad:#F09280; --bad-soft:#3A1D18;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0F1513; --surface:#171F1C; --sunk:#1E2824; --ink:#E4EBE7; --muted:#98A69F; --rule:#2B3732;
+  --accent:#72CDA8; --accent-soft:#1D332B; --link:#93B0F6;
+  --good:#7FD6A0; --good-soft:#193226; --warn:#E2B654; --warn-soft:#35290F; --bad:#F09280; --bad-soft:#3A1D18;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:20px;padding-block:28px 72px;display:flex;flex-direction:column;gap:44px}
+a{color:var(--link);text-underline-offset:2px}
+h1,h2,h3{font-family:var(--cond);text-wrap:balance;margin:0;letter-spacing:-.005em}
+h1{font-size:clamp(28px,4.4vw,40px);font-weight:700;line-height:1.1}
+h2{font-size:24px;font-weight:600;line-height:1.2}
+h3{font-size:17px;font-weight:600;line-height:1.25}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.lede{font-size:17px;color:var(--ink);max-width:70ch}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+section{display:flex;flex-direction:column;gap:18px;scroll-margin-top:64px}
+.sec-head{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--ink);padding-top:14px}
+
+header.top{display:flex;flex-direction:column;gap:14px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--muted)}
+.tick{font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 6px;border-radius:3px;border:1px solid var(--rule);white-space:nowrap;display:inline-block;line-height:1.5}
+.tick.v2{color:var(--good);border-color:var(--good);background:var(--good-soft)}
+.tick.v1{color:var(--accent);border-color:var(--rule);background:var(--surface)}
+.tick.u{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.tick.inf{color:var(--muted);background:var(--sunk)}
+
+nav.jump{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ground);border-bottom:1px solid var(--rule);margin-inline:-20px;padding:8px 20px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav.jump a{font-family:var(--cond);font-size:14px;font-weight:500;text-decoration:none;color:var(--muted);padding:4px 10px;border-radius:4px;white-space:nowrap}
+nav.jump a:hover,nav.jump a:focus-visible{color:var(--ink);background:var(--sunk);outline:none}
+
+/* findings */
+.findings{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.finding{background:var(--surface);padding:18px;display:flex;flex-direction:column;gap:10px}
+.finding .n{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.mock{font-family:var(--mono);font-size:12.5px;background:var(--sunk);border-left:3px solid var(--accent);padding:10px 12px;display:flex;flex-direction:column;gap:4px;overflow-x:auto}
+.mock .row{display:flex;justify-content:space-between;gap:16px;white-space:nowrap}
+.mock .await{color:var(--bad);font-weight:600}
+.mock .ok{color:var(--good)}
+
+/* checklist */
+.qlist{display:flex;flex-direction:column;border:1px solid var(--rule);background:var(--surface)}
+.q{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:start;padding:11px 14px;border-bottom:1px solid var(--rule)}
+.q:last-child{border-bottom:0}
+.q .num{font-family:var(--mono);font-size:12px;color:var(--muted);padding-top:2px}
+.q .txt{font-size:14px}
+.q .why{font-size:12.5px;color:var(--muted);margin-top:3px}
+.gaphead{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--sunk);padding:6px 14px;border-bottom:1px solid var(--rule)}
+.pill{font-family:var(--mono);font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.built{background:var(--good-soft);color:var(--good)}
+.pill.part{background:var(--warn-soft);color:var(--warn)}
+.pill.none{background:var(--sunk);color:var(--muted)}
+.pill.todo{background:var(--bad-soft);color:var(--bad)}
+@media (max-width:560px){.q{grid-template-columns:28px 1fr}.q .pill{grid-column:2;justify-self:start}}
+
+/* customers */
+.cust{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--rule);padding:16px;display:flex;flex-direction:column;gap:10px}
+.card .head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.card .ind{font-size:12.5px;color:var(--muted)}
+.nums{display:flex;flex-wrap:wrap;gap:6px}
+.num{font-family:var(--mono);font-size:12px;background:var(--sunk);padding:3px 7px;border-radius:3px}
+blockquote{margin:0;padding-left:12px;border-left:2px solid var(--accent);font-size:14px}
+blockquote cite{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:4px}
+.use{font-size:13.5px}
+.use b{font-family:var(--cond);font-weight:600}
+details>summary{cursor:pointer;font-family:var(--cond);font-weight:500;color:var(--link);font-size:14px}
+details>summary:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+details .inner{padding-top:8px;display:flex;flex-direction:column;gap:8px;font-size:13.5px}
+
+/* playbook */
+.princ{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.lab{font-family:var(--cond);font-weight:600;font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.card p{font-size:13.5px}
+
+/* verdict */
+.take{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.scen{display:flex;flex-direction:column;gap:12px}
+.sc{background:var(--surface);border:1px solid var(--rule);border-left:4px solid var(--rule);padding:16px;display:flex;flex-direction:column;gap:10px}
+.sc.lead{border-left-color:var(--good)} .sc.iftime{border-left-color:var(--warn)} .sc.line{border-left-color:var(--muted)} .sc.skip{border-left-color:var(--bad)}
+.sc .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.sc .src{font-size:12.5px;color:var(--muted)}
+.pc{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:640px){.pc{grid-template-columns:1fr}}
+.pc ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.pc .pro .lab{color:var(--good)} .pc .con .lab{color:var(--bad)}
+.sc .why{font-size:14px;border-top:1px solid var(--rule);padding-top:10px}
+.pill.lead{background:var(--good-soft);color:var(--good)}
+.pill.iftime{background:var(--warn-soft);color:var(--warn)}
+.pill.line{background:var(--sunk);color:var(--muted)}
+.pill.skip{background:var(--bad-soft);color:var(--bad)}
+
+/* avenues */
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{font-family:var(--cond);font-size:15px;font-weight:600;background:var(--surface);color:var(--ink);border:1px solid var(--rule);padding:8px 14px;cursor:pointer;border-radius:4px;text-align:left}
+.tab small{display:block;font-family:var(--sans);font-weight:400;font-size:12px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.tab[aria-selected="true"] small{color:var(--ground);opacity:.75}
+.tab:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.panel{background:var(--surface);border:1px solid var(--rule);padding:20px;display:flex;flex-direction:column;gap:18px}
+.hook{font-family:var(--cond);font-size:clamp(19px,2.6vw,24px);font-weight:500;line-height:1.3;max-width:34em}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:24px}
+@media (max-width:780px){.two{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.meters{display:flex;flex-direction:column;gap:8px}
+.meter{display:grid;grid-template-columns:118px 1fr 28px;gap:10px;align-items:center;font-size:12.5px}
+.bar{height:8px;background:var(--sunk);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.beats{display:flex;flex-direction:column}
+.beat{display:grid;grid-template-columns:52px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--rule);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;color:inherit;font:inherit;text-align:left;width:100%}
+.beat:first-child{border-top:0}
+.beat:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.beat .t{font-family:var(--mono);font-size:12px;color:var(--muted);padding-top:3px}
+.beat .ttl{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-weight:500}
+.beat .more{font-size:13.5px;color:var(--muted);margin-top:4px}
+.beat[aria-expanded="false"] .more{display:none}
+.kv{font-size:13.5px;display:flex;flex-direction:column;gap:6px}
+.kv b{font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.rec{border:2px solid var(--accent);background:var(--accent-soft);padding:18px;display:flex;flex-direction:column;gap:10px}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.act{background:var(--surface);border:1px solid var(--rule);padding:12px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+
+/* gaps */
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--cond);font-size:14px;font-weight:500;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:999px;padding:4px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--ground);border-color:var(--accent)}
+.chip:focus-visible{outline:2px solid var(--link);outline-offset:2px}
+.gaps{border:1px solid var(--rule);background:var(--surface)}
+.ghead,.grow{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1.7fr) 96px 120px 84px;gap:12px;padding:10px 14px;align-items:start}
+.ghead{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--sunk);border-bottom:1px solid var(--rule)}
+.grow{border-bottom:1px solid var(--rule);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;color:inherit;font:inherit}
+.grow:focus-visible{outline:2px solid var(--link);outline-offset:-2px}
+.grow .nm{font-weight:500}
+.grow .who{font-size:13px;color:var(--muted)}
+.gdetail{grid-column:1/-1;font-size:13.5px;color:var(--ink);background:var(--sunk);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.grow[aria-expanded="false"] .gdetail{display:none}
+@media (max-width:760px){
+  .ghead{display:none}
+  .grow{grid-template-columns:1fr 1fr;gap:6px 10px}
+  .grow .nm,.grow .who{grid-column:1/-1}
+}
+.lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.list{background:var(--surface);border:1px solid var(--rule);padding:16px;display:flex;flex-direction:column;gap:10px}
+.list ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.bets{display:flex;flex-direction:column;border:1px solid var(--rule);background:var(--surface)}
+.bet{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px;border-bottom:1px solid var(--rule)}
+.bet:last-child{border-bottom:0}
+.bet .rank{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--accent)}
+.bet .body{display:flex;flex-direction:column;gap:5px;font-size:14px}
+.vocab{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.words{display:flex;flex-wrap:wrap;gap:6px}
+.word{font-size:13px;padding:3px 9px;border-radius:3px;border:1px solid var(--rule);background:var(--surface)}
+.word.no{text-decoration:line-through;color:var(--bad);border-color:var(--bad)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;background:var(--surface)}
+.scroll{overflow-x:auto;border:1px solid var(--rule)}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--sunk);font-weight:500}
+tr:last-child td{border-bottom:0}
+.decide{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.dq{background:var(--surface);border:1px solid var(--rule);border-top:3px solid var(--bad);padding:14px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--rule);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .35s ease}}
+</style>
+
+<div class="wrap">
+<header class="top">
+  <span class="eyebrow">Storytelling research · 19 Sep 2026 · branch research/storytelling</span>
+  <h1>Which story should the Footnote demo tell?</h1>
+  <p class="lede">The judges said: don't be generic, tell a start-to-finish story about a pain Maximor's real customers have, and go deep on two or three processes. This page is what we found on Maximor's site, in its customer stories, in its 38-page revenue playbook and across about 55 competitors, and the four story avenues that come out of it.</p>
+  <div class="legend" aria-label="Sourcing tick marks">
+    <span><span class="tick v2">✓✓</span> re-fetched and read verbatim in this session</span>
+    <span><span class="tick v1">✓</span> research agent read the primary page</span>
+    <span><span class="tick u">~</span> snippet or secondary only</span>
+    <span><span class="tick inf">∴</span> our inference</span>
+  </div>
+</header>
+
+<nav class="jump" aria-label="Sections">
+  <a href="#findings">Findings</a><a href="#checklist">Their checklist</a><a href="#customers">Customers</a><a href="#playbook">Their playbook</a><a href="#avenues">Story avenues</a><a href="#gaps">Competitor gaps</a><a href="#bets">Feature bets</a><a href="#voice">Their language</a><a href="#seed">Seed realism</a><a href="#decide">Decisions</a><a href="#verdict">Verdict</a>
+</nav>
+
+<section id="findings">
+  <div class="sec-head"><span class="eyebrow">What changed our picture</span><h2>Four findings</h2></div>
+  <div class="findings">
+    <div class="finding">
+      <span class="n">01 <span class="tick v2">✓✓</span></span>
+      <h3>Maximor's own homepage demo is a short-pay, and it stops where our build starts</h3>
+      <div class="mock" aria-label="Maximor homepage mock-up, verbatim">
+        <div class="row"><span>SHORT-PAY-01 · short ≤ $50 → auto-close</span></div>
+        <div class="row"><span>Acme Freight #4471</span><span>−$38 <span class="ok">posted &amp; closed</span></span></div>
+        <div class="row"><span>Byte Foods #7729</span><span>−$495 <span class="await">awaiting you</span></span></div>
+      </div>
+      <p>The $38 clears on a configured rule. The $495 waits for a person. Footnote learns the rule from how people booked last quarter, and for the $495 it goes and finds out why. <a href="https://www.maximor.ai/">maximor.ai</a></p>
+    </div>
+    <div class="finding">
+      <span class="n">02 <span class="tick v2">✓✓</span></span>
+      <h3>Their sales checklist asks our demo as a question</h3>
+      <blockquote>"When a customer sends one payment covering multiple invoices — or short-pays by a small amount — does someone have to match it by hand?"<cite>Close readiness assessment, question 5 · <a href="https://www.maximor.ai/close-assessment">maximor.ai/close-assessment</a></cite></blockquote>
+      <p>Ten questions, three "gaps": revenue, cash, knowledge. We can answer the cash and knowledge gaps. See the checklist below.</p>
+    </div>
+    <div class="finding">
+      <span class="n">03 <span class="tick v1">✓</span></span>
+      <h3>No Maximor customer story contains a single transaction</h3>
+      <p>Only two real case studies exist (Kiteworks, HiBid). Rently, Invst and Dura are testimonials and LinkedIn posts. Everything is outcome-level: days, headcount, percentages. So the customer gives us the <em>pain and the stakes</em>; the transaction detail has to come from Maximor's own mock-ups and from how specialist vendors describe exceptions.</p>
+    </div>
+    <div class="finding">
+      <span class="n">04 <span class="tick v1">✓</span></span>
+      <h3>"Asks in Slack and remembers" is already their claim</h3>
+      <p>The CEO's August essay says the agent "remembers the answer, so it never asks twice" <span class="tick v2">✓✓</span>, and their press release lists "escalating judgment calls in Slack". Leading with ask-once is not a differentiator. What nothing of theirs mentions: an answer stored with a <strong>scope</strong>, judgment <strong>compiled into an approved policy with a backtest</strong>, a month <strong>re-run with zero model calls</strong>, and a <strong>kernel with no model in it</strong> that re-checks the evidence.</p>
+    </div>
+  </div>
+</section>
+
+<section id="checklist">
+  <div class="sec-head"><span class="eyebrow">Maximor's close readiness assessment, verbatim <span class="tick v2">✓✓</span></span><h2>Their ten questions, against what we have built</h2>
+  <p class="muted">These are the pains Maximor scores its own prospects on. Using three of them as chapter headings means the judges hear their own words.</p></div>
+  <div class="qlist" id="qlist"></div>
+</section>
+
+<section id="customers">
+  <div class="sec-head"><span class="eyebrow">Who actually uses Maximor</span><h2>Customer evidence, and what each is good for in a demo</h2>
+  <p class="muted">Our fixture company stays fictional. The customers are where the pain and the stakes come from, cited on screen.</p></div>
+  <div class="cust" id="cust"></div>
+</section>
+
+<section id="playbook">
+  <div class="sec-head"><span class="eyebrow">Maximor PDF · 38 pages · read in full <span class="tick v2">✓✓</span></span><h2>The Usage-Based Revenue Recognition Playbook</h2>
+  <p class="muted">An ASC 606 practitioner guide by Shruthi Sathyanarayanan, Founding Strategist at Maximor, written for AI-native companies that charge per token, per API call or per resolved outcome. Six controller questions, each with the accounting theory, a scenario with real numbers, a decision tree and an operational fix. The last three pages matter most to us: Maximor's own account of how its agents learn and when they escalate.</p></div>
+
+  <blockquote>"The accounting is knowable — your team can reach the right answer on any single contract. What breaks down is execution at scale… while producing the audit trail that proves your conclusions were deliberate, not accidental."<cite>Page 35, "How Maximor Closes the Execution Gap". Our thesis, in their words.</cite></blockquote>
+
+  <div class="princ">
+    <article class="card">
+      <h3>Self-learning</h3>
+      <blockquote>"Every recommendation traces to a specific authoritative paragraph or a precedent in your policy library — never an invented cite."</blockquote>
+      <span class="lab">What we have</span>
+      <p>Every judgment amount must cite an approved policy, an active fact or a quoted source filed under that party. The kernel re-reads the quote character by character before anything posts.</p>
+      <span class="lab">What we add</span>
+      <p>"Never an invented cite" is a promise. Ours is enforced by code with no model in it, and shown live by changing one character.</p>
+    </article>
+    <article class="card">
+      <h3>Self-improving</h3>
+      <blockquote>"…the platform learns the underlying pattern, not just the one-off correction. The same mistake is never made twice. Override rates fall from ~30% in month one to under 5% by month six."</blockquote>
+      <span class="lab">What we have</span>
+      <p>The same curve, measured, on one month run three times: <span class="mono">12 approvals → 6 → 0</span>, and 24 model calls → 0.</p>
+      <span class="lab">What we add</span>
+      <p>Generalising a pattern from a single override is the exact risk a scope guards against. With us a one-off answer stays one-off; a pattern needs three agreeing cases, a backtest, and a person's approval before it does anything. Say it as a complement, not a criticism.</p>
+    </article>
+    <article class="card">
+      <h3>Self-escalating</h3>
+      <blockquote>"An escalation is a package: the provision that triggered it, the candidate conclusions, why it couldn't resolve, and the relevant cites and prior memos."</blockquote>
+      <span class="lab">What we have</span>
+      <p>The Slack card lists what was checked with hit counts, and carries the old answer when one has lapsed.</p>
+      <span class="lab">What to change</span>
+      <p>Lay the card out in their four parts: trigger, candidate treatments, why it could not resolve, sources. Cheap, and the judges will recognise it. Note the honest ratio too: "~80%" handled and "~20%" escalated for revenue contracts, against 99/1 on their revenue page and 98/2 in press. Partitioning beats an auto-clear number; in our corpus ESCALATE is the largest route (39 of 115).</p>
+    </article>
+  </div>
+
+  <div class="scroll"><table>
+    <thead><tr><th>#</th><th>The controller's question</th><th>Their scenario, with their numbers</th><th>For us</th></tr></thead>
+    <tbody id="pbrows"></tbody>
+  </table></div>
+
+  <div class="list">
+    <h3>What to take from it</h3>
+    <ul>
+      <li><b>Copy the format, not the topic.</b> Every section opens with the controller's question in the first person, then a scenario with specific numbers, then a decision tree, then an operational fix. Open each act of the demo the same way. It matches their close assessment, so this is plainly how Maximor likes a story told.</li>
+      <li><b>Stay out of ASC 606.</b> Five of the six questions need a revenue engine we do not have, and the person who wrote this guide may be in the room. Only section 05 is in reach.</li>
+      <li><b>Section 05 is buildable, and triple-anchored.</b> "This is the one that lands on the close calendar every single month." Accrue delivered-but-unbilled usage from the recent daily run-rate, reverse it when the invoice generates, track estimate against actual: "a persistent bias in that variance is an audit flag". It lines up with the homepage's ACCRUE-01 rule and assessment question 8, and it is deterministic, which suits the kernel.</li>
+      <li><b>Who they are courting.</b> AI-native, usage-priced companies; seven of their thirteen blog posts say the same. A Northwind that bills usage in arrears and sells prepaid credits looks like their pipeline. It also gives act one a SaaS-shaped short-pay reason: a customer disputing metered overage. <span class="tick inf">∴</span></li>
+      <li><b>They name the enemy for us.</b> "Rules engines break when judgment is required. Spreadsheets do not learn. And generic AI hallucinates its way through the Codification."</li>
+      <li><b>A line for act three.</b> On outcome-based pricing they say you need "an auditable, immutable record… it is exactly what an auditor will vouch." That is a decision trace.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="avenues">
+  <div class="sec-head"><span class="eyebrow">Pick one spine</span><h2>Four story avenues</h2>
+  <p class="muted">Each is scored on how well it is sourced, how much of it already runs, how new it is against Maximor and its competitors, and what is left to build. Click a beat to see what is on screen.</p></div>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="panel" id="panel" role="tabpanel"></div>
+  <div class="rec">
+    <span class="eyebrow">Recommendation</span>
+    <h3>Run avenue A as the spine, borrow B's turn for act two and C's proof for the close</h3>
+    <p>That is three processes told as one month at one company, with Maximor's own questions as the chapter cards. It is also the avenue with the least left to build.</p>
+    <div class="acts">
+      <div class="act"><span class="eyebrow">Act 1 · question 5</span><b>Cash that knows when it doesn't know</b><span>Eleven receipts. Six clear with no model. A $38-style fee clears on a rule nobody wrote. The $495-style one does not get guessed.</span></div>
+      <div class="act"><span class="eyebrow">Act 2 · question 7</span><b>The reason lives in someone's inbox</b><span>The agent finds the CEO's email. For the one nothing explains, it asks once, stores the answer with a scope, and the re-run of the month costs zero model calls.</span></div>
+      <div class="act"><span class="eyebrow">Act 3 · question 10</span><b>An entry you can defend</b><span>The workpaper was never assembled; it accumulated. Change one character of the quoted email and the kernel rejects the entry. Then the benchmark number, then one line of breadth.</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="gaps">
+  <div class="sec-head"><span class="eyebrow">Competitive analysis · about 55 vendors across two slices</span><h2>What competitors ship that Maximor does not publicly have</h2>
+  <p class="muted">"Maximor" means public evidence only: their product may do more than their site says. Maximor's entire public AR/AP surface is four sentences on the homepage. Click a row for the moment it hurts.</p></div>
+  <div class="filters" id="filters"></div>
+  <div class="gaps" id="gaptable"></div>
+  <div class="lists">
+    <div class="list">
+      <span class="eyebrow">White space · no vendor found claiming it</span>
+      <h3>Where Footnote is alone</h3>
+      <ul>
+        <li>Memory that is <b>scoped, expires, and is capped at the answerer's approval limit</b>. Every learning claim we found is unscoped.</li>
+        <li>A <b>kernel that re-verifies quoted evidence</b> and rejects on a one-character change. Nearest: Rillet's frozen snapshots.</li>
+        <li><b>Autonomy earned from measured accuracy</b>, per kind of entry. Campfire's dial moves "as your comfort grows".</li>
+        <li>A stated <b>re-run with zero model calls</b> and a backtest per policy.</li>
+        <li>An <b>investigator across Gmail, Slack, contracts and CRM</b> for one short-pay. Deduction tools are built for retail evidence (proof of delivery, trade promotions); nobody does SaaS-shaped deductions such as SLA credits or seat true-downs.</li>
+        <li>An <b>auditor fenced off from preparer memory</b>, with the reviewer on a different model.</li>
+        <li>A <b>reproducible public evaluation</b> of the vendor's own agent.</li>
+      </ul>
+    </div>
+    <div class="list">
+      <span class="eyebrow">Do not pitch these as unique</span>
+      <h3>Already common</h3>
+      <ul>
+        <li>Duplicate-invoice detection (Stampli, Ramp, BILL, AppZen)</li>
+        <li>Slack approve and reject buttons (Campfire, Light)</li>
+        <li>Building an agent from a finished close and testing it against approved numbers: <b>FloQast Transform launched 16 Sep 2026</b>; Ledge compiles a working paper into code. Our difference is compiling from individual judgments, with a published backtest.</li>
+        <li>Confidence thresholds, flux narratives, bill coding</li>
+        <li>"Asks in Slack and learns" (Maximor itself)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="bets">
+  <div class="sec-head"><span class="eyebrow">If we build one more thing for the story</span><h2>Feature bets, ranked</h2>
+  <p class="muted">Ranked by pain for a $50M–$500M company, fit with what already runs, and whether it fits in about ten hours.</p></div>
+  <div class="bets" id="betlist"></div>
+</section>
+
+<section id="voice">
+  <div class="sec-head"><span class="eyebrow">From 13 blog posts, the playbook PDF, founder LinkedIn, press and one podcast page <span class="tick v1">✓</span></span><h2>Speak their language, without parroting it</h2></div>
+  <div class="vocab">
+    <div class="list">
+      <h3>Pains they talk about most</h3>
+      <ul>
+        <li><b>The policy was never written down.</b> "The answers live in a controller's head, in an analyst's inbox, in a worksheet named FINAL_v7_USE_THIS." They call it <em>human runtime</em>. <span class="tick v2">✓✓</span></li>
+        <li><b>Being right is not enough; you have to prove it.</b> Evidence assembled after the fact, at audit fieldwork.</li>
+        <li><b>Tools stop one step short</b> and a person carries the work across the gap.</li>
+        <li><b>Cash reconciled by hand</b>: short-pays, growing suspense balances, bank rec crammed into the last days.</li>
+        <li><b>AI that is a black box or needs babysitting.</b> A CFO they quote: "I can't explain to my board why the AI made that decision."</li>
+      </ul>
+    </div>
+    <div class="list">
+      <h3>Words</h3>
+      <span class="eyebrow">Theirs, safe to echo</span>
+      <div class="words"><span class="word">human runtime</span><span class="word">never asks twice</span><span class="word">decision traces</span><span class="word">inspectable by construction</span><span class="word">straight through</span><span class="word">system of action</span><span class="word">99 / 1</span><span class="word">audit-ready</span><span class="word">the policy layer builds itself</span><span class="word">the execution gap</span><span class="word">self-escalating</span><span class="word">deliberate, not accidental</span></div>
+      <span class="eyebrow">Avoid</span>
+      <div class="words"><span class="word no">copilot</span><span class="word no">rules engine</span><span class="word no">human in the loop (as a selling point)</span></div>
+      <p class="muted" style="font-size:13px">Their 2026 predictions post calls human-in-the-loop code for "We Like Being Slow"; the CTO calls most such systems "human-does-everything". Say "asks only when blocked".</p>
+      <blockquote>"If explanation is generated after the fact, it's fiction."<cite>Ajay Krishna Amudan, CTO, on LinkedIn <span class="tick v1">✓</span> · the line to set up the kernel</cite></blockquote>
+    </div>
+  </div>
+</section>
+
+<section id="seed">
+  <div class="sec-head"><span class="eyebrow">Fake data is fine. Unrealistic data is not.</span><h2>Exceptions real vendors describe, for the seeded world</h2>
+  <p class="muted">Each scenario is described in the named vendor's own content <span class="tick v1">✓</span>. The SaaS translation is ours <span class="tick inf">∴</span>.</p></div>
+  <div class="scroll"><table>
+    <thead><tr><th>Scenario</th><th>Described by</th><th>How to seed it at Northwind</th><th>In build</th></tr></thead>
+    <tbody id="seedrows"></tbody>
+  </table></div>
+</section>
+
+<section id="decide">
+  <div class="sec-head"><span class="eyebrow">Blocked on the team</span><h2>Decisions this research cannot make</h2></div>
+  <div class="decide">
+    <div class="dq"><b>Which avenue is the spine?</b><span>Recommended: A, with B's turn and C's close. Needs both builders to agree, since it re-orders the cut list.</span></div>
+    <div class="dq"><b>Build remittance capture tonight?</b><span>It closes the first half of question 5 and gives the fine-tuned extractor a job inside the story. Without it we answer only the short-pay half.</span></div>
+    <div class="dq"><b>Keep the name Northwind?</b><span>Maximor's homepage revenue mock-up uses "Northwind · ACV $120k" <span class="tick v2">✓✓</span>. It can read as a nod or as a copy. Decide on purpose.</span></div>
+    <div class="dq"><b>Make Northwind usage-priced?</b><span>Maximor's playbook and most of its blog target AI-native, usage-billed companies. Usage in arrears and prepaid credits would make the fixture look like their pipeline, at the cost of re-seeding.</span></div>
+    <div class="dq"><b>Widen scope to one foreign-currency receipt?</b><span>The non-generic way to use Kiteworks (scene 6). FX is outside the spec's declared scope today, so both builders have to agree.</span></div>
+    <div class="dq"><b>How to pitch the fine-tune?</b><span>A podcast page paraphrases the CTO saying post-training helps revenue workflows but not cash <span class="tick u">~</span>. Safer: pitch it as cost, latency and routing for extraction, backed by the benchmark number.</span></div>
+  </div>
+</section>
+
+<section id="verdict">
+  <div class="sec-head"><span class="eyebrow">Consolidated take</span><h2>What I would do, and the nine scenes worth arguing about</h2>
+  <p class="muted">Everything above, boiled down. The avenues are spines; these are the individual scenes that could go on screen, each tied to a named Maximor source, with the case for and against.</p></div>
+
+  <div class="take">
+    <div class="list">
+      <h3>The shape of the problem</h3>
+      <ul>
+        <li>The judges asked for real customers' pains, but <b>no Maximor customer story goes below outcome level</b>. So split the job three ways: customers supply the <em>stakes</em> (a named quote on a title card), Maximor's own mock-ups and assessment questions supply the <em>scenario</em>, and specialist vendors' documentation supplies the <em>realistic detail</em>.</li>
+        <li>The best single finding is also the biggest risk: their homepage and question 5 are our demo. Done lazily it reads as a copy. Done well it reads as "we took your screenshot seriously and built what comes after it".</li>
+        <li>What comes after it is four things nobody claims: an answer with a <b>scope</b>, judgment <b>compiled into a policy with a backtest</b>, a <b>zero-model-call re-run</b>, and a <b>kernel that verifies evidence</b>. Every scene should land on one of those four or it is filler.</li>
+      </ul>
+    </div>
+    <div class="list">
+      <h3>A test for "not generic"</h3>
+      <ul>
+        <li>A <b>source line on screen</b>: Maximor's own sentence or a named customer's quote, not a statistic.</li>
+        <li>A <b>specific amount, document and person</b>: INV-1042, $1,200 short, the CEO's email of 28 June, Dana the controller. Never "an invoice".</li>
+        <li>A <b>moment it hurts</b>: day three of close, the auditor's request, the customer who gets dunned for an invoice they paid.</li>
+        <li>A <b>case where the easy answer is wrong</b>. The strategic short-payer, the lapsed one-time answer, the edited email. Generic demos only show the happy path.</li>
+      </ul>
+    </div>
+    <div class="list">
+      <h3>What I would not lead with</h3>
+      <ul>
+        <li><b>"It asks in Slack and remembers."</b> Maximor says that already. Lead with the scope.</li>
+        <li><b>Breadth.</b> One closing line, as the judges said.</li>
+        <li><b>The fine-tune making cash application "smarter".</b> Pitch cost, latency and routing for extraction, with the benchmark number, including the unflattering rows.</li>
+        <li><b>Anything in ASC 606.</b> Their strategist wrote the 38-page guide.</li>
+      </ul>
+    </div>
+    <div class="list">
+      <h3>Where the hours should go</h3>
+      <ul>
+        <li><b>Rehearse the spine for real.</b> The live model run is n = 1, the Slack round trip has never been run, and the console has never been opened in a browser. These are a bigger risk than any missing feature.</li>
+        <li><b>Build remittance capture</b> if it fits before the freeze. It completes question 5 and puts the fine-tuned extractor inside the story.</li>
+        <li><b>Re-price the seed</b> so one shortfall sits under $50 and one near $495, and add the must-not-fire counter-example.</li>
+        <li><b>Re-lay the escalation card</b> in Maximor's four-part package.</li>
+        <li><b>Record a fallback take</b> of every live moment.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="filters" id="vfilters"></div>
+  <div class="scen" id="scen"></div>
+
+  <div class="rec">
+    <span class="eyebrow">Bottom line</span>
+    <h3>Five scenes, one month, one company: 1 → 2 → 3 → 4 → 5</h3>
+    <p>Scenes 1, 3, 4 and 5 already run and are the recommended core. Scene 2 is the one build worth adding. Kiteworks appears as the stakes line that opens scene 1, and, only if the team chooses to widen scope, as the single foreign-currency receipt in scene 6. Everything else is a closing line or stays out.</p>
+  </div>
+</section>
+
+<footer>
+  <span><b>Caveats.</b> Web pages were read through a summarising fetch; every quote marked ✓ should be eyeballed at its URL before it goes on a slide. Quotes marked ✓✓ were fetched a second time and returned verbatim. Rently's close numbers conflict by source (11→3 homepage, 9→3 /why, 8→4 press) so do not put one on a slide without saying which. The Forbes piece stayed blocked. All vendor match rates are self-reported. The wire-fee short-pay is practitioner knowledge; no vendor page describes it, so anchor it to Maximor's own "short ≤ $50" rule.</span>
+  <span>Full sourced notes: context/research/storytelling/01 to 05 on branch research/storytelling.</span>
+</footer>
+</div>
+
+<script>
+const T={v2:'<span class="tick v2">✓✓</span>',v1:'<span class="tick v1">✓</span>',u:'<span class="tick u">~</span>',inf:'<span class="tick inf">∴</span>'};
+const PILL={built:'<span class="pill built">built</span>',part:'<span class="pill part">partial</span>',none:'<span class="pill none">out of scope</span>',todo:'<span class="pill todo">to build</span>'};
+
+/* ---------- checklist ---------- */
+const QS=[
+ {g:'01 · Closing the revenue gap'},
+ {n:1,t:"Does your revenue team close later than the rest of the books because they're still working through contract allocations?",s:'none',w:'No ASC 606 engine. Do not pretend to it.'},
+ {n:2,t:'When a contract is modified mid-quarter, does someone manually determine the accounting treatment and rework the allocation in a spreadsheet?',s:'none',w:'Same.'},
+ {n:3,t:'If an auditor asked you to trace a signed contract to the revenue recognized on it this quarter, would that take more than fifteen minutes?',s:'none',w:'We trace an entry to its evidence, but not contract to recognised revenue.'},
+ {g:'02 · Closing the cash gap'},
+ {n:4,t:'Do your clearing or suspense account balances grow month over month, requiring manual cleanup before the close can finish?',s:'part',w:'Unexplained cash is partitioned into open intents, never parked and forgotten; intents close from the ledger. No suspense-ageing view yet.'},
+ {n:5,t:'When a customer sends one payment covering multiple invoices — or short-pays by a small amount — does someone have to match it by hand?',s:'part',w:'Short-pay half: built, end to end. One payment for many invoices: not built. This is the top feature bet.'},
+ {n:6,t:'Is bank reconciliation something that happens in the last few days of close rather than continuously through the month?',s:'part',w:'Drift monitor opens an intent per unmatched credit on every ingest. Runs from a file, not a live bank feed.'},
+ {g:'03 · Closing the knowledge gap'},
+ {n:7,t:"If your controller were unreachable for an entire close cycle, would the close suffer because the team can't hold the same standard without them?",s:'built',w:"Replay of human-closed Q2, policies compiled from what people actually booked, scoped facts from answers. Run 2 of the same month: 0 model calls, 12 of 12 settled by code."},
+ {n:8,t:'Are your accruals and prepaids run from spreadsheets that someone has to remember to reverse or amortize each period?',s:'none',w:'Accruals are not built. Closing-line material only.'},
+ {n:9,t:'When you add a new entity — through acquisition or expansion — does it increase your days-to-close for at least two quarters?',s:'none',w:'Single entity by design.'},
+ {n:10,t:'When your auditors request workpapers, does your team spend more than a day assembling them from spreadsheets, emails, and shared drives?',s:'built',w:'Every entry carries its workpaper and tick marks as it is made; audit pack samples, re-performs and runs six control tests. No auditor-facing view yet.'}
+];
+document.getElementById('qlist').innerHTML=QS.map(q=>q.g?`<div class="gaphead">${q.g}</div>`:
+ `<div class="q"><span class="num">Q${q.n}</span><div><div class="txt">${q.t}</div><div class="why">${q.w}</div></div>${PILL[q.s]}</div>`).join('');
+
+/* ---------- customers ---------- */
+const CUST=[
+ {name:'Kiteworks',ind:'Secure content and communications · NetSuite, payroll platforms, expense tools, email, spreadsheets',tick:'v2',
+  nums:['10 legal entities','7 currencies','66 accounts','20+ bank relationships','20 → 5 accountants','98% straight through','live in < 4 weeks'],
+  q:'Our treasury and cash management was managed by over 20 people working through nonstandard processes across different countries. It took significant effort to produce our cash position day-to-day.',
+  who:'Kristine Radhakrishnan, VP, Global Controller',url:'https://www.maximor.ai/case-study/kiteworks',
+  use:'<b>Use as:</b> the stakes line for cash. "At Kiteworks this was twenty people." Strongest sourcing of any customer.',
+  more:'The unnamed "global cybersecurity company" in the August press release is Kiteworks: identical numbers. Second useful quote: "By learning from our transaction history and operating within our policies, the agents automate work while maintaining the oversight and controls our team requires" — that is our replay-and-compile step in a customer\'s mouth. <b>Fit is partial:</b> we are one entity, one currency, eleven receipts. Do not claim their scale.'},
+ {name:'HiBid',ind:'Auction software · $2.5B+ GMV, 100K+ auctions a year',tick:'v2',
+  nums:['4 revenue streams','50+ sub-streams','300 MB Excel workbook','close 3 weeks → 5 days','99%+ accuracy'],
+  q:"after experimenting with generic AI tools like Codex and Claude Code, he found they couldn't consistently produce the controlled, accurate, and auditable data required for HiBid's order-to-cash workflows.",
+  who:'Case study narration, about CFO Chris Stiegal',url:'https://www.maximor.ai/case-study/hibid',
+  use:'<b>Use as:</b> the set-up for the kernel. "A CFO tried coding agents for this and gave up. Here is why ours cannot post an entry it cannot prove."',
+  more:'Also: "No solution could grasp the challenges and the exceptions that we were dealing with, until Maximor." Payments arrived by check, wire, ACH and several processors; a NetSuite–warehouse integration was abandoned after about three months. His LinkedIn says VP Finance; the case study says CFO. <b>Do not restage</b> the revenue workbook: no ASC 606 engine.'},
+ {name:'Dura Software',ind:'PE-backed software holding company · 14 business units, 30+ subsidiaries',tick:'v1',
+  nums:['close 12 → 7 days','audit findings 7 → 0 in 6 months','10–15 person process → 2','~70% spend reduction'],
+  q:"You're not buying software. You're buying back your team's judgement.",
+  who:'Sloan Session, CFO · homepage ✓✓',url:'https://www.maximor.ai/',
+  use:'<b>Use as:</b> the theme of act two (judgment is the scarce thing) and the stakes of act three (audit findings).',
+  more:'The "PE-backed roll-up" in the press release is Dura, per the CEO\'s <a href="https://www.linkedin.com/posts/ramnandan_one-of-my-favorite-parts-of-building-maximor-activity-7442586121173225473-QF6T">LinkedIn post</a>. What the seven findings were is not public, so do not say our control tests would have cleared them. Multi-entity is out of our scope.'},
+ {name:'Rently',ind:'Proptech · hardware plus SaaS',tick:'v2',
+  nums:['close 11 → 3 days (homepage)','9 → 3 (/why)','8 → 4 (press, Sept 2025)','audit issues −90%'],
+  q:'We cut our close from 11 days to 3 and automated revenue recognition across thousands of contracts, freeing eight days for strategy and cutting audit issues by over 90%.',
+  who:'Dustin Neal, CFO',url:'https://www.maximor.ai/',
+  use:'<b>Use as:</b> at most a closing-line number, and say which source. Its story is revenue recognition, which we do not do.',
+  more:'Three different close figures exist across Maximor\'s own pages and press. Probably different measurement dates; not reconciled anywhere.'},
+ {name:'Invst',ind:'Wealth management',tick:'v2',
+  nums:['4-day close','ASC 606 end to end','usage-based billing'],
+  q:'Maximor automated our ASC 606 revenue recognition end-to-end. We now close in 4 days with audit-ready schedules and usage-based billing.',
+  who:'Dipen Mehta, CFO / COO',url:'https://www.maximor.ai/',
+  use:'<b>Skip.</b> Revenue-only story; seven of Maximor\'s thirteen blog posts are about usage-based revenue, and we should not wander into it.',
+  more:'"NASDAQ: QMCO" appears as a homepage logo and nowhere else; the company is never named. Skip that too.'}
+];
+document.getElementById('cust').innerHTML=CUST.map(c=>`<article class="card">
+ <div class="head"><h3>${c.name} ${T[c.tick]}</h3></div><div class="ind">${c.ind}</div>
+ <div class="nums">${c.nums.map(n=>`<span class="num">${n}</span>`).join('')}</div>
+ <blockquote>"${c.q}"<cite>${c.who} · <a href="${c.url}">source</a></cite></blockquote>
+ <div class="use">${c.use}</div>
+ <details><summary>More, and limits</summary><div class="inner"><span>${c.more}</span></div></details></article>`).join('');
+
+/* ---------- playbook ---------- */
+const PB=[
+ ['01','"I charge a big upfront fee to fine-tune a custom model — is that its own deliverable, or do I spread it over the usage term?"','$250,000 fee plus $0.02 per 1,000 tokens over 24 months. Hosted only: ratable over the term. Weights delivered under a perpetual licence: largely point in time. The pivotal fact is who controls the weights.','none','Out of scope.'],
+ ['02','"I bill per resolved ticket / per successful action — how do I recognize revenue I only earn if the agent succeeds?"','$4 per ticket resolved without escalation. New logo, resolution anywhere from 20% to 70%. The CRO wants the full year booked at signing: rejected. "Build the outcome ledger."','none','Out of scope as a build. Borrow the "auditable, immutable record" language.'],
+ ['03','"I resell third-party model tokens and GPU compute with a markup — do I report the gross billing or just my margin?"','Cost $0.60, price $0.90 per 1,000 tokens. On $10M of billings: $10M gross or about $3.3M net. Control of the specified service makes it principal.','none','Out of scope.'],
+ ['04','"Customers buy prepaid credit packs that expire — when do I recognize the credits they never use?"','$1,000 pack, 8% historical breakage: recognise $1,000 across $920 of redemptions (factor ≈ 1.087), never in a lump at expiry. Check escheat first.','none','Out of scope. Prepaid credits are good fixture colour.'],
+ ['05','"My billing dates don\'t line up with month-end — do I recognize usage I\'ve delivered but haven\'t invoiced yet?"','Invoice covers to 20 March; usage continues 21–31 March; books close 5 April; next invoice 20 April. Accrue the stub as an unbilled receivable from the run-rate, reverse on invoice, track the variance.','todo','In reach. See feature bet 4.'],
+ ['06','"I pay sales commissions on contracts with no committed term or volume — do I capitalize them, and over what period?"','10% on first-year consumption, 2% after, month-to-month contracts, about four years of customer life: capitalise and amortise over the four years, not one month.','none','Out of scope.']
+];
+document.getElementById('pbrows').innerHTML=PB.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td class="muted">${r[2]}</td><td>${PILL[r[3]]}<div style="font-size:12.5px;margin-top:4px">${r[4]}</div></td></tr>`).join('');
+
+/* ---------- avenues ---------- */
+const AV=[
+ {id:'A',name:'"Awaiting you"',sub:'Pick up where their homepage stops',
+  hook:"Maximor's homepage shows a $495 short-pay marked \"awaiting you\". This is what happens next, when nobody has to be waited for.",
+  anchor:'Homepage mock-up ✓✓ · assessment questions 5, 7, 10 ✓✓ · Kiteworks for the stakes ✓✓',
+  m:{Sourcing:5,'Already runs':4,'New vs market':4,'Low build cost':4},
+  needs:'One payment for many invoices with an emailed remittance (first half of question 5). Re-price the seeded amounts so one shortfall sits under $50 and one near $495. A full Slack round trip has never been run live.',
+  risk:'It can look like "we rebuilt your homepage". The answer is in the beats: the rule is learned, the reason is found, the answer is scoped, the entry is proven.',
+  beats:[
+   ['0:00','Their question, on screen','built',"Assessment question 5, verbatim. \"Northwind's AR accountant answers yes, every month.\" One line on Kiteworks: there, this was twenty people."],
+   ['0:25','Morning bank feed: 11 receipts','built','Six clear at tier 0 with zero model calls, 19 of 19 kernel marks each. AR stays tied. Measured.'],
+   ['1:00','The small shortfall clears on a rule nobody wrote','built','Maximor\'s SHORT-PAY-01 is configured. Ours was compiled from six Q2 write-offs people booked, backtest 5 of 6, the outlier named, approved by a person.'],
+   ['1:40','The bigger one does not get guessed','built','Initech, $1,200 short. The investigator searches mail, Slack, contracts, CRM, finds the CEO\'s email. Four proposals rejected by the kernel before one passes. 82 s, $0.085, measured once.'],
+   ['2:20','The reviewer disagrees','built','Controller agent on a different model: wrong treatment, should be a credit memo against deferred revenue, and the email says finance was not told. Nothing posts. This really happened in our first live run.'],
+   ['2:50','Nothing explains Wayne\'s $3,300','part','Asks the account owner once, on a judge\'s phone in Slack. Answer stored with party, treatment, expiry and the answerer\'s approval limit. Transport written; live round trip untested.'],
+   ['3:30','Same month again','built','Same customer: no question. A different customer with the same shortfall: it asks, because the scope says so. Run 2: 0 model calls, $0, 12 of 12 settled by code. Maximor\'s playbook says override rates fall from ~30% to under 5% over six months; this is that curve in three runs, with counts: 12 approvals, 6, 0.'],
+   ['4:10','Change one character','built','Edit the quoted email after posting. Kernel rejects; audit pack raises evidence_invalidated. "Question ten: ours was never assembled. It accumulated."'],
+   ['4:40','The number, then breadth','part','Benchmark: fine-tuned extractor against base open-weight models. One closing line for AP match, duplicates, audit pack.']
+  ]},
+ {id:'B',name:'"Human runtime"',sub:'The controller is unreachable',
+  hook:"Dana, the controller, is out for the whole of July close. Every policy Northwind has lives in her head, her inbox and a sheet called FINAL_v7_USE_THIS.",
+  anchor:"CEO essay ✓✓ · assessment question 7 ✓✓ · Dura: \"buying back your team's judgement\" ✓✓ · Kiteworks: \"learning from our transaction history\" ✓✓",
+  m:{Sourcing:5,'Already runs':4,'New vs market':3,'Low build cost':5},
+  needs:'Almost nothing new. A screen that shows a compiled policy with its backtest and outlier, readable by a non-engineer.',
+  risk:'Abstract: policies and backtests are less visual than money moving. FloQast Transform (16 Sep 2026) and Ledge sit close to "build the agent from the finished close", so this alone is no longer white space.',
+  beats:[
+   ['0:00','Question 7, on screen','built','"If your controller were unreachable for an entire close cycle…" Northwind answers yes.'],
+   ['0:30','Hide the answer, re-run Q2','built','Replay each human decision as of its date, never post, score against what people booked. This is the CTO\'s own workshop mechanism.'],
+   ['1:20','The policy layer builds itself','built','Compiler drafts "write off to 6150 up to $45 for wires", backtest 5 of 6, names the one a human booked to the wrong account. Drafts do nothing until approved.'],
+   ['2:10','July without Dana','built','Cash auto-posts. Write-offs earn review only, because agreement came from free inference. Autonomy is earned per kind of entry, from counts.'],
+   ['3:00','The one thing not in history','part','Asked once, scoped, capped at the answerer\'s limit, expires.'],
+   ['3:40','August costs nothing','built','Run 3: 12 of 12 auto, zero approvals, AR tied at zero.'],
+   ['4:20','Proof and benchmark','part','Kernel mutation test, benchmark number.']
+  ]},
+ {id:'C',name:'"After the fact is fiction"',sub:'The auditors arrive',
+  hook:"Their CTO wrote that an explanation generated after the fact is fiction. So we never generate one.",
+  anchor:"CTO on LinkedIn ✓ · HiBid: Codex and Claude Code \"couldn't consistently produce… auditable data\" ✓✓ · Dura 7 → 0 findings ✓ · question 10 ✓✓",
+  m:{Sourcing:4,'Already runs':4,'New vs market':5,'Low build cost':3},
+  needs:'An auditor-facing view: request list, sample, re-performance result per entry. The console has never been checked in a browser.',
+  risk:'Audit is a dry opener and the judges have to care about an entry before they care that it is defensible. Best as the last act of another avenue.',
+  beats:[
+   ['0:00','A CFO tried coding agents and gave up','built','HiBid quote on screen. "Here is why ours cannot post an entry it cannot prove."'],
+   ['0:40','One entry, opened up','built','Workpaper with four classes of tick mark; every quoted span hashed.'],
+   ['1:30','Fieldwork: the auditor asks for a sample','part','Seeded, reproducible, risk-weighted: material entries, judgment marks, agent-approved, model-tier auto-posts. No auditor screen yet.'],
+   ['2:20','Re-performance','built','Each sampled entry re-run through the kernel as of its posting date; ledger tie-out; approval on file.'],
+   ['3:00','Tamper','built','Change one character of a quoted email. evidence_invalidated.'],
+   ['3:40','The auditor cannot see preparer memory','built','Independence fence in the tool layer; six control tests including self-approval and just-under-the-line splits.'],
+   ['4:20','We broke it ourselves first','built','An independent reviewer found two false auto-post paths in an hour. Both closed, with regression tests. Say the count.']
+  ]},
+ {id:'D',name:'"The Kiteworks morning"',sub:'Cash operations at volume',
+  hook:"Twenty people, sixty-six accounts, seven currencies, and it still took significant effort to say how much cash the company had this morning.",
+  anchor:'Kiteworks case study ✓✓ · assessment questions 4 and 6 ✓✓',
+  m:{Sourcing:5,'Already runs':2,'New vs market':2,'Low build cost':1},
+  needs:'Multi-entity, multi-currency, hundreds of receipts, a cash-position view, a live bank feed. None exists.',
+  risk:'Best-sourced customer, worst fit. This is Maximor\'s strongest shipped module, so we would be re-demoing their product with a thinner build. Use Kiteworks as one line in avenue A.',
+  beats:[
+   ['0:00','The controller\'s quote','built','Verbatim, on screen.'],
+   ['0:30','Cash position across banks','todo','Not built. Maximor ships this.'],
+   ['1:30','Volume matching','todo','We have 11 receipts. Would need a generator and a throughput number.'],
+   ['2:30','Entity-specific rules','todo','Single entity by design; multi-entity is outside the declared scope of the spec.'],
+   ['3:30','Exceptions to a manager','part','This part we have, and it is avenue A.']
+  ]}
+];
+const tabs=document.getElementById('tabs'),panel=document.getElementById('panel');
+function drawAv(i){
+ const a=AV[i];
+ [...tabs.children].forEach((b,j)=>b.setAttribute('aria-selected',j===i));
+ try{localStorage.setItem('fn-av',i)}catch(e){}
+ panel.innerHTML=`<p class="hook">${a.hook}</p>
+ <div class="two"><div class="col"><span class="eyebrow">Five-minute beat sheet · click a beat</span><div class="beats">${a.beats.map(b=>
+  `<button class="beat" aria-expanded="false"><span class="t">${b[0]}</span><span><span class="ttl">${b[1]} ${PILL[b[2]]}</span><div class="more">${b[3]}</div></span></button>`).join('')}</div></div>
+ <div class="col"><div class="meters">${Object.entries(a.m).map(([k,v])=>`<div class="meter"><span>${k}</span><div class="bar"><i style="width:${v*20}%"></i></div><span class="mono">${v}/5</span></div>`).join('')}</div>
+ <div class="kv"><b>Anchored in</b><span>${a.anchor}</span></div>
+ <div class="kv"><b>Still to build</b><span>${a.needs}</span></div>
+ <div class="kv"><b>Risk</b><span>${a.risk}</span></div></div></div>`;
+ panel.querySelectorAll('.beat').forEach(b=>b.addEventListener('click',()=>b.setAttribute('aria-expanded',b.getAttribute('aria-expanded')!=='true')));
+ const first=panel.querySelector('.beat'); if(first) first.setAttribute('aria-expanded','true');
+}
+AV.forEach((a,i)=>{const b=document.createElement('button');b.className='tab';b.id='tab-'+a.id;b.setAttribute('role','tab');
+ b.innerHTML=`${a.id} · ${a.name}<small>${a.sub}</small>`;b.addEventListener('click',()=>drawAv(i));tabs.appendChild(b);});
+let startAv=0;try{const s=+localStorage.getItem('fn-av');if(s>=0&&s<AV.length)startAv=s}catch(e){}
+drawAv(startAv);
+
+/* ---------- gaps ---------- */
+const GAPS=[
+ {n:'Remittance capture: one payment, many invoices, remittance sent separately',who:'HighRadius, Tesorio, Upflow, Billtrust',mx:'none',us:'todo',eff:'low–med',
+  d:'An ACH lands with a 16-character memo and covers fourteen invoices; the remittance PDF went to a shared AR inbox two days earlier. Billtrust: remittance "is often sent separately in an email, phone call, fax or buyer\'s portal". Until someone finds it, cash is unapplied and collections chases invoices that are paid. This is the first half of Maximor\'s own question 5.',src:'https://www.billtrust.com/resources/blog/what-is-cash-application'},
+ {n:'Short-pay reason coding with evidence and a validity call',who:'HighRadius, Tesorio, Versapay',mx:'none',us:'part',eff:'low',
+  d:'Customer pays $47,500 on $50,000, no note. SLA credit the CSM promised? Unearned 2% discount? A test of whether you will write it off? Our investigator already finds the evidence; it lacks reason codes and an explicit valid / invalid call. Incumbent tools are built for retail evidence, not SaaS.',src:'https://www.versapay.com/resources/short-paid-invoice-how-to-handle'},
+ {n:'Collections agent that reads the reply: promise-to-pay',who:'Tesorio, Upflow, Paraglide',mx:'part',us:'todo',eff:'low–med',
+  d:'Tesorio shows "Promise to Pay · Confidence 92% · Source: Email reply". Maximor shows only a homepage chip, "promised Fri". A promise-to-pay is exactly a scoped, expiring fact: it drops into our fact store unchanged, suppresses dunning until the date, escalates on breach.',src:'https://www.tesorio.com/'},
+ {n:'Vendor bank-change and impersonation detection',who:'Ramp, Stampli, Tipalti, Vic.ai, Kyriba',mx:'none',us:'todo',eff:'low',
+  d:'"We switched banks — use the new account effective immediately", from a domain one character off, with a mismatched reply-to (Stampli). Mostly deterministic checks; route is BLOCK plus out-of-band verification. A single control inside AP, not the rejected "fraud detection as the project".',src:'https://www.stampli.com/resources/vendor-impersonation-bec-red-flags/'},
+ {n:'Duplicate detection that survives re-numbering (INV-1024A)',who:'Stampli, Ramp, BILL, AppZen',mx:'none',us:'built',eff:'built',
+  d:'Vendor resends an unpaid invoice with a tweaked number; the same bill arrives by email and by mail. Ramp describes a $12,000 duplicate wire found at month-end. Our kernel mark P7 keys on the obligation (vendor, service period, amount, PO). Cheap pitch point; not unique.',src:'https://ramp.com/blog/accounts-payable/duplicate-invoices'},
+ {n:'External-auditor access and document-request handling',who:'Zuora, Trullion, Basis; FloQast and Numeric (unverified)',mx:'none',us:'part',eff:'medium',
+  d:'Auditors log in, request samples, get support without an email chain. Maximor\'s "audit-ready" evidence is an internal output with no auditor-side surface. We have the audit pack and the independence fence, but no screen for the auditor.',src:'https://www.maximor.ai/close-assessment'},
+ {n:'Reviewer on entries before posting, with a risk call and a suggested fix',who:'FloQast AI Assistant (Sept 2026), Light',mx:'none',us:'built',eff:'built',
+  d:'Our controller agent runs on a different model, reviews the packet, and in the first live run caught a wrong treatment. It has no numeric risk score.',src:''},
+ {n:'Automated control testing',who:'FloQast, Trullion, Basis',mx:'none',us:'built',eff:'built',
+  d:'Six control tests in the audit pack: duplicate vendors, round-number payments, entries after lock, self-approval, just-under-the-line and split adjustments, agent-approved share.',src:''},
+ {n:'Approve or reject in Slack',who:'Campfire, Light',mx:'part',us:'part',eff:'low',
+  d:'Maximor\'s press says agents escalate in Slack. Our Block Kit cards and Socket Mode transport are written and the connection is verified, but a full approval round trip has not been run. Not unique either way.',src:''},
+ {n:'Agent built from a finished close, tested against approved numbers',who:'FloQast Transform (16 Sep 2026), Ledge',mx:'none',us:'built',eff:'built',
+  d:'Our replay and compile does this from individual judgments, refuses a draft on one prior mis-clear, and publishes the backtest. No longer white space since FloQast\'s launch three days ago.',src:''},
+ {n:'User-visible autonomy dial',who:'Campfire',mx:'part',us:'built',eff:'built',
+  d:'Campfire: "Move the threshold as your comfort grows." Ours moves on counts: auto at 95% over at least five covered decisions, per kind of entry.',src:''},
+ {n:'Processor payout reconciliation, gross to net',who:'Ledge, Simetrik, Kosh',mx:'none',us:'todo',eff:'low–med',
+  d:'Stripe deposits a net amount; the ledger has the gross charges; the difference is fees, refunds and a chargeback across four accounts. Deterministic, so a clean zero-model-call policy example. Already in the corpus minimum fixture (A-07 / H-2).',src:'https://www.ledge.co/solutions/payment-reconciliation'},
+ {n:'Published benchmark, or an own model',who:'DualEntry (foundation models only), Campfire, Digits',mx:'none',us:'part',eff:'in progress',
+  d:'Maximor says "99%+" with no method; Campfire ">95%", Maxima "100.00%", likewise. Nobody publishes a reproducible evaluation of their own agent. Lane C has a harness and a first baseline row.',src:''},
+ {n:'Plain-language rule authoring by accountants',who:'FloQast, Rillet, Ledge, Puzzle',mx:'none',us:'todo',eff:'medium',
+  d:'Moderate fit: offer it as a way to edit a compiled policy, never as the way policies are born. Otherwise we become the "rules engine" Maximor tells people to avoid.',src:''},
+ {n:'Customer AP-portal agent (Coupa, Ariba): submit, track, catch rejections',who:'Monto, Tesorio, HighRadius, Billtrust',mx:'none',us:'todo',eff:'high',
+  d:'"You find out an invoice was rejected days or weeks after it happened." Too hard against real portals. Use it as seeded realism: an overdue invoice whose true reason is "rejected: PO missing" is a great thing for the investigator to find.',src:'https://montopay.com/how-you-get-paid-has-changed-your-ar-workflow-hasnt/'},
+ {n:'Per-invoice payment-date prediction feeding the forecast',who:'HighRadius, Tesorio, Chaser; Trovata, Kyriba on variance',mx:'part',us:'todo',eff:'medium',
+  d:'Only worth doing as a consumer of promise-to-pay facts.',src:''}
+];
+const MX={none:'<span class="pill none">no public evidence</span>',part:'<span class="pill part">partial</span>'};
+const FIL=[['all','All 16'],['built','We already have it'],['quick','Not built, low effort'],['mxnone','Maximor: nothing public']];
+let fil='all';
+function drawGaps(){
+ const rows=GAPS.filter(g=>fil==='all'||(fil==='built'&&g.us==='built')||(fil==='quick'&&g.us!=='built'&&g.eff.startsWith('low'))||(fil==='mxnone'&&g.mx==='none'));
+ document.getElementById('gaptable').innerHTML=`<div class="ghead"><span>Capability</span><span>Who ships it</span><span>Maximor</span><span>Footnote</span><span>Effort</span></div>`+
+ rows.map(g=>`<div class="grow" role="button" tabindex="0" aria-expanded="false"><span class="nm">${g.n}</span><span class="who">${g.who}</span><span>${MX[g.mx]}</span><span>${PILL[g.us]}</span><span class="mono" style="font-size:12px">${g.eff}</span>
+ <span class="gdetail"><span>${g.d}</span>${g.src?`<span><a href="${g.src}">source</a></span>`:''}</span></div>`).join('');
+ document.querySelectorAll('.grow').forEach(r=>{const tog=()=>r.setAttribute('aria-expanded',r.getAttribute('aria-expanded')!=='true');
+  r.addEventListener('click',e=>{if(e.target.tagName!=='A')tog()});
+  r.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target===r){e.preventDefault();tog()}})});
+}
+const fbox=document.getElementById('filters');
+FIL.forEach(([k,l])=>{const c=document.createElement('button');c.className='chip';c.id='fil-'+k;c.textContent=l;c.setAttribute('aria-pressed',k===fil);
+ c.addEventListener('click',()=>{fil=k;[...fbox.children].forEach(x=>x.setAttribute('aria-pressed',x===c));drawGaps()});fbox.appendChild(c)});
+drawGaps();
+
+/* ---------- bets ---------- */
+const BETS=[
+ ['Remittance inbox → one payment applied across many invoices','Closes the first half of Maximor\'s question 5, which we cannot answer today. Seed one ACH covering about fourteen invoices with an XLSX remittance emailed two days earlier and one line short. It also gives the fine-tuned extraction model a job <em>inside</em> the story, so the benchmark stops being a side quest. Low to medium effort against the seeded Gmail.'],
+ ['SaaS-shaped short-pay reason codes, with a valid / invalid call','Turn the investigator\'s finding into a coded reason: SLA credit promised in Slack, unearned early-pay discount (2/10 net 30 paid on day 24, provable from dates), tax-exempt certificate in email. Add Billtrust\'s counter-example: a customer who underpays the same amount as a wire fee hoping it gets written off. The learned policy must <em>not</em> fire. That one case shows why scope matters better than any slide.'],
+ ['Promise-to-pay as an expiring fact','A customer replies "approved, going out in Friday\'s run". Store it with expiry on Friday, suppress dunning, escalate on breach. Maximor shows a chip; Tesorio shows the mechanism. It costs little because our fact store already has valid-time and expiry.'],
+ ['Unbilled-usage accrual with automatic reversal and a true-up variance','Maximor points at this three times: the homepage rule "ACCRUE-01 · no invoice by Day 2 → accrue", assessment question 8 (accruals someone "has to remember to reverse"), and playbook section 05 ("lands on the close calendar every single month"). Invoice through the 20th, usage to the 31st, accrue the stub from the daily run-rate, reverse when the invoice generates, flag a persistent estimate-to-actual bias. Deterministic, so it suits the kernel and costs no model calls. Worth it only if close earns screen time; needs seeded metering data and a reversal mode.'],
+ ['Vendor bank-change → BLOCK','Deterministic: edit distance on the sender domain against the vendor master, reply-to mismatch, urgency language. One real change and one spoof, so the agent has to tell them apart. Only if AP earns screen time; otherwise a closing line.'],
+ ['An auditor\'s view of the audit pack','Request list, the risk-weighted sample, re-performance result per entry. The strongest gap in the close slice, and the natural last screen of act three. Medium effort, and the console has not yet been checked in a browser.']
+];
+document.getElementById('betlist').innerHTML=BETS.map((b,i)=>`<div class="bet"><span class="rank">${i+1}</span><div class="body"><h3>${b[0]}</h3><span>${b[1]}</span></div></div>`).join('');
+
+/* ---------- seed ---------- */
+const SEED=[
+ ['One ACH, many invoices, remittance emailed separately, one line short','Billtrust, HighRadius, Upflow','ACH for ~14 invoices; XLSX remittance to ar@ two days earlier','todo'],
+ ['Payer name differs from billed entity (parent pays for subsidiary)','Fazeshift, Tesorio','Globex parent pays a subsidiary invoice','built'],
+ ['Unearned early-pay discount','Billtrust, HighRadius','2/10 net 30, paid day 24 less 2%; invalid from dates alone','todo'],
+ ['Dispute short-pay: service not delivered as agreed','Versapay, Billtrust','SLA credit the CSM promised in #cs-escalations','part'],
+ ['Strategic short-payer hoping for a write-off','Billtrust','Same amount as a wire fee, different history; policy must not fire','todo'],
+ ['Promise-to-pay in an email reply, later broken','Tesorio, Upflow, Fazeshift','"Going out in Friday\'s run"; expiring fact','todo'],
+ ['Invoice rejected in the customer\'s portal, unseen for weeks','Monto, Monk','Overdue invoice whose reason is "rejected: PO missing"','todo'],
+ ['Vendor emails new bank details from a look-alike domain','Stampli, Ramp, Vic.ai','One genuine change, one spoof','todo'],
+ ['Re-numbered duplicate bill','Ramp, Stampli','INV-1024 resent as INV-1024A','built'],
+ ['Usage billed in arrears mid-month; stub period unbilled at close','Maximor playbook, section 05','Invoice through the 20th; usage 21st–31st accrued from run-rate, reversed on invoice','todo'],
+ ['Processor payout net of fees, refunds, chargeback','Ledge','One Stripe payout a week in the bank file','todo']
+];
+document.getElementById('seedrows').innerHTML=SEED.map(s=>`<tr><td>${s[0]}</td><td class="muted">${s[1]}</td><td>${s[2]}</td><td>${PILL[s[3]]}</td></tr>`).join('');
+
+/* ---------- verdict scenarios ---------- */
+const VP={lead:'<span class="pill lead">recommended</span>',iftime:'<span class="pill iftime">if time / team call</span>',line:'<span class="pill line">closing line</span>',skip:'<span class="pill skip">skip</span>'};
+const SC=[
+ {n:1,v:'lead',t:'The $495 that is "awaiting you"',src:'Maximor homepage mock-up ✓✓ · assessment question 5 ✓✓ · Kiteworks quote as the stakes ✓✓',
+  what:'Initech pays INV-1042 short by $1,200. The investigator searches mail, Slack, contracts and CRM, finds the CEO\'s email of 28 June, proposes a credit memo. The reviewer on a different model disagrees with the treatment. A person approves the corrected entry.',
+  pro:['It is their own screenshot, continued. Nothing could be less generic to this audience.','Runs end to end today; measured once with real models (25 turns, 82 s, $0.085).','The reviewer disagreement really happened and is the best dramatic beat we have.'],
+  con:['Can read as "you rebuilt our homepage" unless the beats land on what they do not claim.','One live run is not a rate. Rehearse it, and keep a recording.','The wire-fee variant has no vendor source; anchor it to their "short ≤ $50" rule instead.'],
+  why:'Open with it. Best ratio of sourcing to build cost of anything on this page.'},
+ {n:2,v:'lead',t:'One wire, fourteen invoices, and the remittance is in somebody else\'s inbox',src:'Assessment question 5, first half ✓✓ · HiBid: payments by "check, wire, ACH and several processors" ✓✓ · Billtrust, HighRadius, Upflow ✓',
+  what:'An ACH lands with a 16-character memo. The remittance spreadsheet went to ar@ two days earlier. The fine-tuned extractor reads it, cash is applied across the invoices, and the one short line drops into scene 1\'s flow.',
+  pro:['Completes the half of question 5 we cannot answer today.','Gives the fine-tuned model and its benchmark a job inside the story, which the judges asked for.','Every specialist ships it; Maximor documents none of it. A clean "this would make you better".'],
+  con:['Not built. Low to medium effort, but it competes with rehearsal time.','Extraction live on stage can fail; needs a fallback.','Not white space: it is table stakes elsewhere, so pitch it as a gap closed, not an invention.'],
+  why:'The one new build I would fund. Cut it without regret if it is not working by the freeze.'},
+ {n:3,v:'lead',t:'The controller is unreachable for July close',src:'Assessment question 7 ✓✓ · CEO essay: "human runtime", FINAL_v7_USE_THIS ✓✓ · Dura: "buying back your team\'s judgement" ✓✓ · playbook: override rates ~30% → under 5% ✓✓',
+  what:'Replay Q2 with the answers hidden; compile "write off wire shortfalls to 6150 up to $45" from what people actually booked, backtest 5 of 6, the outlier named; a person approves; July runs. Then the same month again: 12 approvals, then 6, then 0.',
+  pro:['Built and measured. Zero model calls on the re-run is a number nobody else states.','Four separate Maximor sources point at this pain.','Their playbook gives us the yardstick, and we can show the same curve with counts.'],
+  con:['Abstract. Policies and backtests need a good screen or they are just words.','FloQast Transform (16 Sep) and Ledge are adjacent; do not call it unique.','The $45 ceiling and six cases are small; say it is a slice.'],
+  why:'This is act two. It is where "autonomous" stops being a claim.'},
+ {n:4,v:'lead',t:'Nothing explains Wayne\'s $3,300, and the look-alike that must not fire',src:'CEO essay: "never asks twice" ✓✓ · press: "escalating judgment calls in Slack" ✓ · Billtrust: customers who underpay hoping for a write-off ✓ · playbook: escalation as a four-part package ✓✓',
+  what:'The agent asks the account owner once, on a judge\'s phone. The answer is stored with party, treatment, expiry and the answerer\'s limit. Next month: no question for Wayne. A different customer short by the same amount: it asks, because the scope says so.',
+  pro:['The only scene that proves scope, which is our sharpest difference from Maximor\'s own claim.','Judge-interactive, which the winner-patterns research says matters.','The counter-example is the "easy answer is wrong" moment.'],
+  con:['The Slack round trip has never been run live. Highest demo risk on the list.','The counter-example customer is not seeded yet.','Asking in Slack is, by itself, their feature. The scope must be visible on screen.'],
+  why:'Keep it, inside act two, with a recorded fallback. Without it we are demoing their press release.'},
+ {n:5,v:'lead',t:'The auditors arrive',src:'Assessment question 10 ✓✓ · HiBid: Codex and Claude Code "couldn\'t consistently produce… auditable data" ✓✓ · Dura: findings 7 → 0 ✓ · CTO: "after the fact, it\'s fiction" ✓ · playbook: "deliberate, not accidental" ✓✓',
+  what:'Open one entry: workpaper, tick marks, hashed quotes. Draw the risk-weighted sample. Re-perform it. Then edit one character of the CEO\'s email and watch the kernel reject it.',
+  pro:['Strongest white space: nobody ships an evidence verifier.','Built, with 31 tests. The tamper moment is memorable and takes ten seconds.','Answers Maximor\'s own survey: only 14% of CFOs fully trust AI accounting data.'],
+  con:['Dry if it runs long. Ninety seconds, not three minutes.','No auditor-facing screen exists yet.','We do not know what Dura\'s seven findings were. Do not imply we would have cleared them.'],
+  why:'Close with it. Proof is the last thing they should see before the benchmark number.'},
+ {n:6,v:'iftime',t:'Kiteworks: seven currencies, and one receipt that is short for three different reasons',src:'Kiteworks case study: 10 entities, 7 currencies, 66 accounts, 20+ banks ✓✓ · the transaction below is our construction ∴',
+  what:'The non-generic way to use the global story is one transaction, not a dashboard. A German customer pays a EUR invoice; the USD that lands is short. Part is the rate moving between invoice and settlement, part is an intermediary bank\'s fee, and part may be a real short-pay. The agent has to split the three, book realised FX loss and bank fee by rule, and investigate only the remainder.',
+  pro:['Kiteworks is the best-sourced customer and the judges know it.','A three-way split is a great "the easy answer is wrong" case: the write-off policy must not swallow an FX difference.','Gives the small-shortfall scene a named customer anchor it otherwise lacks.'],
+  con:['FX and multi-entity are outside the spec\'s declared scope, so this is a scope decision, not a tweak: rate table, FX gain/loss account, new kernel arithmetic, re-seed.','Cash across entities and banks is Maximor\'s strongest shipped module. A thin version invites comparison we lose.','The case study says nothing about how FX was handled; the transaction is our inference.','The full "global cash position" version is days of work. Do not attempt it.'],
+  why:'Use Kiteworks as the stakes line in scene 1 regardless. Add the single EUR receipt only if scenes 1–5 are rehearsed and someone has three spare hours. Never the spine.'},
+ {n:7,v:'line',t:'The month-end stub: usage delivered, not yet invoiced',src:'Playbook section 05 ✓✓ · homepage "ACCRUE-01 · no invoice by Day 2 → accrue" ✓✓ · assessment question 8 ✓✓',
+  what:'Invoice covers to the 20th, usage runs to the 31st, books close on the 5th. Accrue from the run-rate, reverse on invoice, flag a persistent estimate-to-actual bias.',
+  pro:['Maximor points at accruals three separate times.','Deterministic, so it suits the kernel and costs no model calls.','Fits a usage-priced Northwind.'],
+  con:['Not built; needs seeded metering data and a reversal mode.','A fourth process dilutes "two or three done well".','Low drama.'],
+  why:'Promote to a scene only if the close lane lands it anyway. Otherwise one sentence.'},
+ {n:8,v:'line',t:'"We switched banks, use the new account effective immediately"',src:'Stampli, Ramp, Tipalti, Vic.ai ✓ · no Maximor customer anchor',
+  what:'A vendor email from a domain one character off. Route is BLOCK plus out-of-band verification.',
+  pro:['Everyone in the room understands it instantly.','Cheap and deterministic.','Maximor documents nothing here.'],
+  con:['No Maximor customer has this pain on record, which is the judges\' main criterion.','It is AP, a different process; it breaks the single-story arc.'],
+  why:'A closing line, alongside the re-numbered duplicate we already catch.'},
+ {n:9,v:'skip',t:'HiBid\'s 300 MB revenue workbook, Rently\'s thousands of contracts, Invst\'s ASC 606',src:'Case study and homepage testimonials ✓✓',
+  what:'The headline pains of three of Maximor\'s five named customers are revenue recognition.',
+  pro:['Real, named, well sourced.','It is what Maximor markets hardest.'],
+  con:['Needs an ASC 606 engine we do not have and cannot fake.','Their strategist wrote a 38-page guide on it; any error is visible from the front row.'],
+  why:'Quote HiBid for the Codex line only. Stay out of revenue.'}
+];
+let vfil='all';
+function drawSc(){
+ document.getElementById('scen').innerHTML=SC.filter(x=>vfil==='all'||x.v===vfil).map(x=>`<article class="sc ${x.v}">
+  <div class="top"><h3><span class="mono">${x.n}</span> · ${x.t}</h3>${VP[x.v]}</div>
+  <div class="src">${x.src}</div><p>${x.what}</p>
+  <div class="pc"><div class="pro"><span class="lab">For</span><ul>${x.pro.map(i=>`<li>${i}</li>`).join('')}</ul></div>
+  <div class="con"><span class="lab">Against</span><ul>${x.con.map(i=>`<li>${i}</li>`).join('')}</ul></div></div>
+  <div class="why"><b>Verdict.</b> ${x.why}</div></article>`).join('');
+}
+const vbox=document.getElementById('vfilters');
+[['all','All nine'],['lead','Recommended'],['iftime','If time'],['line','Closing line'],['skip','Skip']].forEach(([k,l])=>{
+ const c=document.createElement('button');c.className='chip';c.id='vfil-'+k;c.textContent=l;c.setAttribute('aria-pressed',k===vfil);
+ c.addEventListener('click',()=>{vfil=k;[...vbox.children].forEach(y=>y.setAttribute('aria-pressed',y===c));drawSc()});vbox.appendChild(c)});
+drawSc();
+</script>
