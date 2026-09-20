@@ -1,6 +1,9 @@
 # International payment fixture — lane B's proposal for Gate 1
 
-Status: **proposed by lane B (AthM23 + Claude Code session), 2026-09-20 ~00:30 ET. Not agreed.** This is the input to
+Status: **superseded 2026-09-20.** Lane A answered it in [`GATE1_ANSWERS_A.md`](./GATE1_ANSWERS_A.md) and built the right path
+(account 7100, kind `fx_realized`, kernel check F9); the scene is now Vossberg Logistik in [`SCENARIO.md`](./SCENARIO.md), and what
+lane B seeded is in [`SEED_GLOBAL_JULY.md`](./SEED_GLOBAL_JULY.md). Kept for the reasoning. Originally: proposed by lane B
+(AthM23 + Claude Code session), 2026-09-20 ~00:30 ET. This is the input to
 milestone 1 of [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md) ("A/B/C agree the contract"). It turns that
 file's starting fixture into exact numbers, entries and documents, and says what the existing harness does with the
 case today. The harness facts below come from a read-only assessment of `main` at `d08879d`; the two that everything

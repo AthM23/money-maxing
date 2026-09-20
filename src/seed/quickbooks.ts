@@ -89,7 +89,8 @@ export async function seedQuickBooks(db: Db, world: World, client: QboClient, op
   }
 
   // ---- invoices, oldest first so QBO's own lists read in order
-  const invoices = world.invoices.filter((i) => periods.some((per) => i.issue_date.startsWith(per))).sort((a, b) => a.issue_date.localeCompare(b.issue_date) || a.id.localeCompare(b.id));
+  // an invoice issued in advance belongs with the period it bills (INV-3201: issued 15 June for the third quarter)
+  const invoices = world.invoices.filter((i) => periods.some((per) => (i.service_from ?? i.issue_date).startsWith(per))).sort((a, b) => a.issue_date.localeCompare(b.issue_date) || a.id.localeCompare(b.id));
   let itemId: string | undefined;
   for (const inv of invoices) {
     if (inv.id.length > 21) throw new Error(`invoice id ${inv.id} is longer than QBO's 21-character DocNumber`);

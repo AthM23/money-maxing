@@ -43,7 +43,7 @@ export const WorldContract = z.object({
   value_cents: NonNegCents,
   /** `monthly_cents` and `value_cents` are USD. A contract priced in another currency says so here and in its text. */
   terms: z.object({
-    monthly_cents: NonNegCents, billing: z.literal("monthly"), payment_terms_days: z.number().int(), method: z.enum(["ach", "wire"]),
+    monthly_cents: NonNegCents, billing: z.enum(["monthly", "quarterly"]), payment_terms_days: z.number().int(), method: z.enum(["ach", "wire"]),
     currency: z.string().length(3).optional(), foreign_monthly_cents: NonNegCents.optional(),
   }),
   text: z.string().min(1),
@@ -59,6 +59,8 @@ export const WorldInvoice = z.object({
   issue_date: IsoDate, due_date: IsoDate, total_cents: NonNegCents,
   /** Billed in a foreign currency. `total_cents` stays USD at the booked rate, so the AR control account still ties. */
   fx: z.object({ currency: z.string().length(3), foreign_total_cents: NonNegCents, booked_rate_ppm: RatePpm }).optional(),
+  /** First month of the service it bills, when that is not the month it is issued in (invoiced in advance). `YYYY-MM`. */
+  service_from: z.string().regex(/^\d{4}-\d{2}$/).optional(),
 });
 export type WorldInvoice = z.infer<typeof WorldInvoice>;
 
@@ -75,6 +77,8 @@ export const HistorySettlement = z.object({
   applied_cents: NonNegCents,
   /** A judgment the humans made on the residual, e.g. a wire fee written off. Becomes a decision_point. */
   write_off: z.object({ account: z.string(), amount_cents: NonNegCents, decided_at: IsoTs }).optional(),
+  /** A foreign-currency receipt the humans settled: what the rate moving cost (positive) or gave (negative), to 7100. */
+  fx_loss_cents: Cents.optional(),
 });
 export type HistorySettlement = z.infer<typeof HistorySettlement>;
 
@@ -87,8 +91,8 @@ export const WorldBankTxn = z.object({
   /** A receipt the bank converted. `amount_cents` is the USD that landed: foreign x rate, less the fee. */
   fx: z.object({
     currency: z.string().length(3), foreign_amount_cents: NonNegCents, rate_ppm: RatePpm, fee_cents: NonNegCents,
-    /** `World.mail` id of the bank's credit advice, which states the foreign amount, the rate and the fee. */
-    advice_mail_id: z.string().min(1),
+    /** `World.mail` id of the bank's credit advice, which states the foreign amount, the rate and the fee. Closed months keep none. */
+    advice_mail_id: z.string().min(1).optional(),
   }).optional(),
 });
 export type WorldBankTxn = z.infer<typeof WorldBankTxn>;
@@ -134,6 +138,11 @@ export const World = z.object({
   chat: z.array(WorldChat),
   crm: z.object({ deals: z.array(WorldDeal), notes: z.array(WorldCrmNote) }),
   files: z.array(WorldFile),
+  /** Entries the humans posted by journal in the seeded history, such as a month-end remeasurement and its reversal. */
+  journals: z.array(z.object({
+    id: z.string().min(1), date: IsoDate, memo: z.string().min(1), party_id: z.string().optional(),
+    lines: z.array(z.object({ account: z.string().min(1), debit_cents: NonNegCents, credit_cents: NonNegCents })).min(2),
+  })).optional(),
 });
 export type World = z.infer<typeof World>;
 

@@ -57,7 +57,8 @@ export function seedLocal(db: Db, world: World): SeedLocalResult {
           .run(inv.id, inv.fx.currency, inv.fx.foreign_total_cents, inv.fx.booked_rate_ppm);
       }
       post(`inv_${inv.id}`, inv.issue_date, `Invoice ${inv.id}`, inv.party_id, [[ACCOUNTS.ar, inv.total_cents, 0], [ACCOUNTS.deferred_revenue, 0, inv.total_cents]]);
-      if (world.meta.history_periods.includes(inv.issue_date.slice(0, 7))) {
+      // Seeded history recognises a closed month's invoice in that month. One invoiced in advance for a later period stays deferred.
+      if (world.meta.history_periods.includes(inv.service_from ?? inv.issue_date.slice(0, 7))) {
         post(`rev_${inv.id}`, monthEnd(inv.issue_date), `Revenue recognised ${inv.id}`, inv.party_id, [[ACCOUNTS.deferred_revenue, inv.total_cents, 0], [ACCOUNTS.subscription_revenue, 0, inv.total_cents]]);
       }
       note("invoice", inv.id);
@@ -77,6 +78,7 @@ export function seedLocal(db: Db, world: World): SeedLocalResult {
       db.prepare("INSERT INTO bank_match_seed (bank_txn_id, entry_id) VALUES (?, ?)").run(t.id, entryId);
       if (t.history.write_off) { seedDecisionPoint(db, world, t); result.decision_points++; }
     }
+    for (const j of world.journals ?? []) post(`jnl_${j.id}`, j.date, j.memo, j.party_id ?? null, j.lines.map((l): Line => [l.account, l.debit_cents, l.credit_cents]));
     result.gl_entries = (db.prepare("SELECT COUNT(*) AS n FROM gl_entry").get() as { n: number }).n;
   })();
   return result;
@@ -123,7 +125,7 @@ function settlements(world: World): Map<string, number> {
   for (const t of world.bank.txns) {
     const h = t.history;
     if (!h?.doc_id) continue;
-    out.set(h.doc_id, (out.get(h.doc_id) ?? 0) + h.applied_cents + (h.write_off?.amount_cents ?? 0));
+    out.set(h.doc_id, (out.get(h.doc_id) ?? 0) + h.applied_cents + (h.write_off?.amount_cents ?? 0) + (h.fx_loss_cents ?? 0));
   }
   return out;
 }
@@ -154,7 +156,9 @@ function postSettlement(world: World, t: WorldBankTxn, post: ReturnType<typeof e
   const inv = invoiceOf(world, h.doc_id);
   const lines: Line[] = [[ACCOUNTS.cash, h.applied_cents, 0]];
   if (h.write_off) lines.push([h.write_off.account, h.write_off.amount_cents, 0]);
-  lines.push([ACCOUNTS.ar, 0, h.applied_cents + (h.write_off?.amount_cents ?? 0)]);
+  const fx = h.fx_loss_cents ?? 0; // a loss is a debit to 7100, a gain a credit; either way the invoice is relieved in full
+  if (fx !== 0) lines.push([ACCOUNTS.fx_gain_loss, Math.max(fx, 0), Math.max(-fx, 0)]);
+  lines.push([ACCOUNTS.ar, 0, h.applied_cents + (h.write_off?.amount_cents ?? 0) + fx]);
   return post(`bank_${t.id}`, t.posted_date, `Cash application ${inv.id}`, inv.party_id, lines);
 }
 
@@ -232,7 +236,7 @@ function writeAccountFiles(world: World, dir: string): void {
     let balance = account.opening_balance_cents;
     const rows = world.bank.txns.filter((t) => t.account === account.id).map((t) => {
       balance += t.amount_cents;
-      const fx = t.fx ? [t.fx.currency, decimal(t.fx.foreign_amount_cents), rate(t.fx.rate_ppm), decimal(t.fx.fee_cents), t.fx.advice_mail_id] : ["USD", "", "", "", ""];
+      const fx = t.fx ? [t.fx.currency, decimal(t.fx.foreign_amount_cents), rate(t.fx.rate_ppm), decimal(t.fx.fee_cents), t.fx.advice_mail_id ?? ""] : ["USD", "", "", "", ""];
       return [t.id, t.posted_date, decimal(t.amount_cents), csvField(t.descriptor), t.method, t.recorded_time, decimal(balance), account.id, account.entity, ...fx].join(",");
     });
     writeFileSync(join(dir, "bank", `${account.id}.csv`), [BANK_HEADER_WIDE, ...rows].join("\n") + "\n");

@@ -8,6 +8,7 @@ export const SEED_ACCOUNTS = {
   professional_fees: "6200",
   marketing: "6300",
   office: "6400",
+  unrealized_fx: "7150",
 } as const;
 
 const SEED_ACCOUNT_NAMES: Readonly<Record<string, string>> = {
@@ -17,6 +18,7 @@ const SEED_ACCOUNT_NAMES: Readonly<Record<string, string>> = {
   "6200": "Professional fees",
   "6300": "Marketing",
   "6400": "Office and facilities",
+  "7150": "Unrealized FX gain/loss",
 };
 
 export function accountName(code: string): string {

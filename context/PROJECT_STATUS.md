@@ -9,9 +9,9 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-20 ~00:35 ET |
+| **Last updated** | 2026-09-20 ~00:45 ET |
 | **Phase** | Phases 1 and 2 of lanes A and B and lane C's reader are merged on `main`. **Team direction (09-19 ~23:35): one international payment investigation first**, see [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md). Next gate: A/B/C agree the fixture and contract |
-| **Repo state** | `main` = lanes A, B (incl. Phase 2) and C; `atharv-branch` = `main`. `pnpm test` → 68 files, 651 passing; `pnpm typecheck` clean (measured 09-20 ~00:00 on `d08879d`; later commits are docs and Python only) |
+| **Repo state** | `main` = lanes A, B and C; `atharv-branch` = `main`. `pnpm test` → 72 files, 678 passing; `pnpm typecheck` clean (measured 09-20 ~00:40, lane B's global July merged with lane A's main scene) |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
 | **Judge feedback v2** | [`judge-feedback-v2-2026-09-19.md`](./judge-feedback-v2-2026-09-19.md): do not be generic; 2-3 processes as one customer story; own benchmark + fine-tune comparison |
@@ -19,7 +19,8 @@ notable. See [`README.md`](./README.md) for the rules.
 | **Agent onboarding** | [`../AGENTS.md`](../AGENTS.md) |
 | **Proposed spec** | [`PROJECT_SPEC.md`](./PROJECT_SPEC.md) |
 | **Team roadmap (three builders, current)** | [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md) — direction from the live team conversation; fixture and owners proposed |
-| **Fixture proposal for Gate 1** | [`FIXTURE_INTL_PROPOSAL.md`](./FIXTURE_INTL_PROPOSAL.md) — lane B's numbers, entries, harness gaps and decisions; proposed |
+| **Seeded demo world** | [`SEED_GLOBAL_JULY.md`](./SEED_GLOBAL_JULY.md) — the global July and the main scene through the real seeder and connectors, local and live; what was measured |
+| **Fixture proposal for Gate 1 (superseded)** | [`FIXTURE_INTL_PROPOSAL.md`](./FIXTURE_INTL_PROPOSAL.md) — lane B's numbers, entries, harness gaps and decisions; proposed |
 | **Roadmap (two builders)** | [`ROADMAP.md`](./ROADMAP.md) — lanes and directory ownership still apply; its demo priority is narrowed by the team roadmap |
 | **Architecture board** | [`diagrams/architecture/`](./diagrams/architecture/README.md) — 20 sheets, target architecture, nothing built |
 | **Research** | [`research/`](./research/README.md) |
@@ -92,6 +93,8 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
 | 09-19 | Learning the route (AUTO / PROPOSE / ESCALATE / REFUSE / BLOCK) with a fine-tuned classifier | The 115 corpus cases are a test set, not training data; ESCALATE is about information that is missing, which case text does not carry; a wrong AUTO has asymmetric cost. Routes stay rules plus a calibrated threshold. |
 | 09-19 | `@excalidraw/mermaid-to-excalidraw` for the editable whiteboard export | Drops classDef colours, keeps `<br>` as literal text so boxes come out thousands of pixels wide, and fails on open links. Replaced by `diagrams/architecture/tools/svg2exc.mjs`, which reads Mermaid's own rendered layout. |
 | 09-19 | Carrying the seeded world id in the Gmail `Message-ID` header | Verified live: `messages.insert` replaces it with Gmail's own id, which broke idempotent seeding (16 duplicates inserted). The id now travels in `X-Footnote-Id`. |
+| 09-20 | Realised FX booked as a `write_off` to 6990 Misc expense (the "cheap path" of `FIXTURE_INTL_PROPOSAL.md`) | Never built. Lane A chose the right path at Gate 1: FX in misc expense is wrong in front of finance judges, and as a write-off it is a judgment amount over $500 that parks for a click, which breaks "only the EUR 2,000 needed a person". Built instead: account 7100, kind `fx_realized`, kernel check F9. |
+| 09-20 | A lane-B fixture for the euro scene with its own customer and ids ("Aldenhoven", `INV-3211`, `BTX-311`) | Lane A had already landed the scene on `main` (Vossberg, `INV-3201`, `BTX-320`) with its harness and tests. Two fixtures for one scene would split the demo; lane B re-based onto lane A's facts and kept only the realistic documents and history around them. Lesson: merge `main` before seeding live systems. |
 | 09-19 | A second Phase 0 contract, written on `atharv-branch` | Person A's contract on `main` already had the kernel, runtime, agents and eval built on it. `main` was merged and theirs taken; B's extra tables live in `src/ledger/schema-b.sql`. |
 
 ---
@@ -1377,3 +1380,57 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   Northwind entity, month-end remeasurement as an agent function, VAT reverse-charge short-pays, real base and
   fine-tuned Qwen rows through `pnpm bench:reader` (queued on lane C's GPU).
 - `pnpm test` with all lanes merged → 70 files, **655 passing**; typecheck clean.
+
+### 2026-09-20 ~00:45 ET — Lane B: the global July and the main scene seeded through the real seeder and connectors, local and live (AthM23 + Claude Code session)
+
+- **Landed.** A second world, `world/global-july.json` (`src/seed/globalJuly.ts`), in the same `World` shape as the
+  Northwind world, so the seeder targets and connectors are the same code for both: `pnpm seed --world=global-july`
+  (or `FOOTNOTE_WORLD`), with `FOOTNOTE_DB` and the new `FOOTNOTE_STORES` keeping it apart from the Northwind world on one
+  machine. It holds lane A's ten receipts and its main scene (Vossberg Logistik: `INV-3201/3202`, `BTX-320/321`),
+  **imported from `src/demo/scenario/`, not retyped**. What was built, why each document looks the way it does, how to
+  run it and what was measured: [`SEED_GLOBAL_JULY.md`](./SEED_GLOBAL_JULY.md). `src/contract/` and lane A's directories
+  were not edited.
+- **Supersedes** [`FIXTURE_INTL_PROPOSAL.md`](./FIXTURE_INTL_PROPOSAL.md) (lane B's Gate 1 proposal, 00:35 entry): lane A
+  answered it, chose the right path and built it (7100, `fx_realized`, F9). The proposal's cheap path (FX to 6990 as a
+  write-off) was never built; see Tried & rejected.
+- **Seeder and ingestion:** entity, bank account and country labels (`schema-b.sql`: `entity`, `bank_account`,
+  `party_profile`, `bank_txn_label`); one **wide bank file per account**, each with its own running balance, plus a
+  conversion control total (foreign × rate − fee = amount to the cent, or the whole file is refused); ingestion writes
+  `bank_txn_fx` and the labels from the file's own columns; the seeder writes `invoice_fx`; drift puts the bank's advice
+  on the case file's `trace_ids`. The narrow file the Northwind world writes still parses. `HistorySettlement` can carry
+  realised FX, the world can carry journals, an invoice can name the period it bills (`service_from`), and seeded
+  periods lock on the 6th of the next month instead of the 28th of their own.
+- **Realism added around lane A's facts** (a judge who closes books will ask): `INV-3201` crosses a month end, so June's
+  close remeasures it at 1.0900 (Dr 7150 1,000.00) and reverses on 1 July (lane A's optional item 6, now seeded); it
+  bills Q3 in advance, so nothing of it is recognised in June; Vossberg's Q2 is three real euro invoices at three
+  booked rates, with a gain, a loss and no movement, each with the fee write-off lane A asked for; the bank advice is
+  laid out as an incoming-wire advice and states every number `ADVICE_320` states; the remittance is a *Zahlungsavis*;
+  the order form has lane A's fee clause and section 7 word for word inside payment-without-deduction and reverse-charge
+  clauses; an email thread and a Slack thread show the request and that nobody with authority agreed.
+- **Measured, no model key:** typecheck clean; `pnpm test` → 72 files, **678 passing**. Drift produces lane A's `CASES`
+  and `MAIN_CASES` field for field (test). Through lane A's harness on the seeded world: `SHORT-PAY-01 v1 ≤ $45.00`
+  from 9 decisions (8 exact, 1 other account, leave-one-out 6 of 8); worker 12 cases, 15 decisions by code, 11 posted
+  with no person, 4 parked, 0 model calls, 322 of 322 tick marks; on `BTX-320` cash 105,800.00 and **realised FX
+  1,960.00 posted AUTO with F9 re-performed against the seeded advice**, the 40.00 fee proposed under the rule and
+  parked, EUR 2,000 left for judgment; AR tied; audit pack 11 of 11 clean. Lane B's spine runs on it with AR tied (the
+  forecast names the quarterly contract as a gap it does not project). Console checked in headless Chrome: cash strip
+  by entity, bank account and country, and the euro side of the case.
+- **Live, verified:** Gmail 19 of 19 and Slack 5 of 5 read back identical to the local stores (ids, parties, hashes,
+  world timestamps), same 12 cases with the same evidence ids, a second pull commits nothing, and the learn and worker
+  result above repeats on the live-ingested database. QuickBooks sandbox: 13 customers and 13 invoices, `INV-3201` at
+  USD 110,000.00 with the euro side in the memo (single-currency company, Gate 1 decision 5); a re-run creates nothing.
+  `QboClient.remove` and `deactivate`, marked UNVERIFIED in the code, both worked live.
+- **Found:** (1) the demo mailbox and workspace are shared by both worlds, and the Northwind CEO's "Initech gets 10%
+  off" arrived in the global July as unfiled mail, which E5 accepts as a source. Live pulls are now filtered to the
+  seeded world (`src/connectors/index.ts`, `world.json` in the stores); the Northwind world's live ingest is unchanged
+  (16 mail, 5 chat, 11 cases). (2) Lane A's Halvorsen CEO email had the same sender, second and subject as the
+  Northwind one, so the Gmail seeder skipped it as a copy; it is sent four minutes later in this world. (3) A drift
+  question said "no open invoice" when the truth was "no unique allocation"; it now says which.
+- **My own mistake, cleaned up:** a first draft of the euro fixture (customer "Aldenhoven", my own ids) was seeded into
+  the live systems before I merged `main` and found lane A's scene already there. Its Slack messages and QuickBooks
+  records are removed. **Nine of its emails are still in the demo Gmail mailbox** (the token cannot trash mail);
+  ingestion ignores them; delete by hand before showing the inbox (`SEED_GLOBAL_JULY.md`, last section).
+- **Not run:** any model tier on this world, the desk's Slack round trip on it, the mirror live, the document reader.
+- **Blocked on humans:** delete the nine stale emails · whether the demo runs on `global-july` (then set
+  `FOOTNOTE_WORLD`, `FOOTNOTE_DB`, `FOOTNOTE_STORES` in each `.env`) · the first paid run of the main scene's judgment
+  leg on this database (Karan's key).

@@ -6,6 +6,7 @@ import { BANK_HEADER_WIDE, convert, localConnectors, parseBankCsv } from "../../
 import { ACCOUNTS } from "../../contract/accounts.js";
 import { CaseFile } from "../../contract/types.js";
 import { Q2_WIRE_FEES } from "../../demo/scenario/documents.js";
+import { ADVICE_320, MAIN_CASES } from "../../demo/scenario/mainScene.js";
 import { CASES } from "../../demo/scenario/plants.js";
 import { runInvoiceVsCash } from "../../drift/invoiceVsCash.js";
 import { traceId } from "../../ingest/ids.js";
@@ -13,7 +14,7 @@ import { ingestAll } from "../../ingest/ingest.js";
 import { openWorldDb, type Db } from "../../ledger/db.js";
 import { trialBalance } from "../../ledger/read.js";
 import { readControlTotals } from "../../runtime/kernelContext.js";
-import { generateGlobalJuly } from "../globalJuly.js";
+import { generateGlobalJuly, VOSSBERG_OUTAGE_SLACK, VOSSBERG_SECTION_7 } from "../globalJuly.js";
 import { seedLocal, writeStores } from "../local.js";
 import { World } from "../world.js";
 
@@ -35,13 +36,14 @@ describe("the global July world", () => {
   });
 
   it("has the Gate 1 numbers: EUR 100,000 booked at 1.1000, EUR 98,000 received at 1.0800 less USD 40.00", () => {
-    const inv = world.invoices.find((i) => i.id === "INV-3211")!;
-    expect(inv).toMatchObject({ party_id: "aldenhoven", issue_date: "2026-07-01", total_cents: 11_000_000, fx: { currency: "EUR", foreign_total_cents: 10_000_000, booked_rate_ppm: 1_100_000 } });
-    const txn = world.bank.txns.find((t) => t.id === "BTX-311")!;
+    const inv = world.invoices.find((i) => i.id === "INV-3201")!;
+    expect(inv).toMatchObject({ party_id: "vossberg", issue_date: "2026-06-15", due_date: "2026-07-15", total_cents: 11_000_000, service_from: "2026-07", fx: { currency: "EUR", foreign_total_cents: 10_000_000, booked_rate_ppm: 1_100_000 } });
+    const txn = world.bank.txns.find((t) => t.id === "BTX-320")!;
     expect(txn).toMatchObject({ amount_cents: 10_580_000, fx: { currency: "EUR", foreign_amount_cents: 9_800_000, rate_ppm: 1_080_000, fee_cents: 4_000 } });
-    const key = answerKey.find((k) => k.bank_txn_id === "BTX-311")!;
+    const key = answerKey.find((k) => k.bank_txn_id === "BTX-320")!;
     expect(key.shortfall_cents).toBe(420_000);
     expect(key.causes).toEqual({ fx_loss_cents: 196_000, bank_fee_cents: 4_000, withheld_cents: 220_000 });
+    expect(answerKey.find((k) => k.bank_txn_id === "BTX-321")).toMatchObject({ shortfall_cents: 82_000, causes: { fx_loss_cents: 24_500, bank_fee_cents: 2_500, withheld_cents: 55_000 } });
   });
 
   it("every multi-cause shortfall in the answer key is the sum of its causes", () => {
@@ -50,22 +52,22 @@ describe("the global July world", () => {
     }
   });
 
-  it("the bank's advice states the foreign amount, the rate and the fee in its own words, as the kernel will check them", () => {
-    const advice = world.mail.find((m) => m.id === "gj-m-advice-BTX-311")!.body;
-    for (const words of ["98,000.00", "1.0800", "40.00", "105,800.00"]) expect(advice).toContain(words);
-    const avis = world.mail.find((m) => m.id === "gj-m-avis-BTX-311")!.body;
-    for (const words of ["INV-3211", "100,000.00", "2,000.00", "98,000.00"]) expect(avis).toContain(words);
+  it("the bank's advice states every number lane A's advice states, in the words the kernel and the router quote", () => {
+    const advice = world.mail.find((m) => m.id === "gj-m-advice-BTX-320")!.body;
+    const numbers = ADVICE_320.match(/\d[\d,]*\.\d{2,4}/g)!;
+    expect(numbers).toEqual(expect.arrayContaining(["98,000.00", "1.0800", "105,840.00", "40.00", "105,800.00"]));
+    for (const n of numbers) expect(advice, n).toContain(n);
+    const avis = world.mail.find((m) => m.id === "gj-m-avis-BTX-320")!.body;
+    for (const words of ["INV-3201", "100,000.00", "2,000.00", "98,000.00", "NW-48213"]) expect(avis).toContain(words);
   });
 
-  it("the evidence proves the outage and the claim, and that nobody with authority agreed", () => {
-    const text = [...world.mail.map((m) => m.body), ...world.chat.map((c) => c.text)].join("\n");
-    expect(text).toContain("6 hours 40 minutes");
-    expect(text).toContain("Nothing is approved for Aldenhoven yet");
-    expect(world.contracts.find((c) => c.id === "CTR-aldenhoven-2026")!.text).toContain("Customer may not deduct a claimed credit from a payment");
-    // 6h40m of a 31-day month is 99.10% available: under 99.9%, not under 99.0%, so the contract's 2% tier is the one claimed
-    const availability = 1 - (6 * 60 + 40) / (31 * 24 * 60);
-    expect(availability).toBeLessThan(0.999);
-    expect(availability).toBeGreaterThan(0.99);
+  it("the evidence proves the outage and the request, and that nobody with authority agreed", () => {
+    expect(world.chat.map((c) => c.text)).toContain(VOSSBERG_OUTAGE_SLACK);
+    expect(world.chat.map((c) => c.text).join("\n")).toContain("Nothing is approved for Vossberg yet");
+    expect(world.mail.find((m) => m.id === "gj-m-vossberg-2")!.body).toContain("I cannot confirm a credit myself");
+    const orderForm = world.contracts.find((c) => c.id === "CTR-vossberg-2025")!.text;
+    expect(orderForm).toContain(VOSSBERG_SECTION_7);
+    expect(orderForm).toContain("payable in full without set-off or deduction");
   });
 
   it("lane A's policy memo survives word for word inside the sections", () => {
@@ -93,17 +95,39 @@ describe("seeded books", () => {
     expect(tb.find((r) => r.account === ACCOUNTS.cash)!.balance_cents).toBe(matched.n);
   });
 
-  it("writes the FX contract rows lane A's kernel will read, with the advice trace already ingested", () => {
-    expect(db.prepare("SELECT * FROM invoice_fx ORDER BY invoice_id").all()).toEqual([
-      { invoice_id: "INV-3211", currency: "EUR", foreign_total_cents: 10_000_000, booked_rate_ppm: 1_100_000 },
-      { invoice_id: "INV-3212", currency: "EUR", foreign_total_cents: 1_500_000, booked_rate_ppm: 1_100_000 },
+  it("writes the FX contract rows lane A's kernel reads, with the advice trace already ingested", () => {
+    expect(db.prepare("SELECT * FROM invoice_fx WHERE invoice_id LIKE 'INV-32%' ORDER BY invoice_id").all()).toEqual([
+      { invoice_id: "INV-3201", currency: "EUR", foreign_total_cents: 10_000_000, booked_rate_ppm: 1_100_000 },
+      { invoice_id: "INV-3202", currency: "EUR", foreign_total_cents: 2_500_000, booked_rate_ppm: 1_100_000 },
     ]);
-    const fx = db.prepare("SELECT * FROM bank_txn_fx WHERE bank_txn_id = 'BTX-311'").get() as { advice_trace_id: string };
-    expect(fx).toEqual({ bank_txn_id: "BTX-311", currency: "EUR", foreign_amount_cents: 9_800_000, rate_ppm: 1_080_000, fee_cents: 4_000, advice_trace_id: traceId("gmail", "gj-m-advice-BTX-311") });
+    const fx = db.prepare("SELECT * FROM bank_txn_fx WHERE bank_txn_id = 'BTX-320'").get() as { advice_trace_id: string };
+    expect(fx).toEqual({ bank_txn_id: "BTX-320", currency: "EUR", foreign_amount_cents: 9_800_000, rate_ppm: 1_080_000, fee_cents: 4_000, advice_trace_id: traceId("gmail", "gj-m-advice-BTX-320") });
     const advice = db.prepare("SELECT party_id, payload_json FROM trace WHERE id = ?").get(fx.advice_trace_id) as { party_id: string; payload_json: string };
     // The bank wrote it, to treasury: it is company mail, filed under no customer. The bank line points at it instead.
     expect(advice.party_id).toBeNull();
     expect(advice.payload_json).toContain("1.0800");
+  });
+
+  it("books the closed months' euro receipts as the team did: cash, the bank's fee, and the rate going either way", () => {
+    const lines = (posted: string): unknown[] => db.prepare(
+      "SELECT l.account, l.debit_cents, l.credit_cents FROM gl_line l JOIN bank_match_seed s ON s.entry_id = l.entry_id JOIN bank_txn b ON b.id = s.bank_txn_id JOIN bank_txn_fx f ON f.bank_txn_id = b.id WHERE b.posted_date = ? ORDER BY l.line_no",
+    ).all(posted);
+    // April: EUR 25,000 booked at 1.0800 (27,000.00), paid at 1.0840 less 40.00: a gain of 100.00
+    expect(lines("2026-04-16")).toEqual([
+      { account: "1000", debit_cents: 2_706_000, credit_cents: 0 }, { account: "6150", debit_cents: 4_000, credit_cents: 0 },
+      { account: "7100", debit_cents: 0, credit_cents: 10_000 }, { account: "1200", debit_cents: 0, credit_cents: 2_700_000 },
+    ]);
+    // May: booked at 1.0900 (27,250.00), paid at 1.0860 less 40.00: a loss of 100.00
+    expect(lines("2026-05-18")).toContainEqual({ account: "7100", debit_cents: 10_000, credit_cents: 0 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM invoice WHERE party_id = 'vossberg' AND open_cents = 0").get()).toEqual({ n: 3 });
+  });
+
+  it("remeasures the open euro invoice at 30 June and reverses it on 1 July, so July starts from the booked rate", () => {
+    const unrealized = (asOf: string): number => trialBalance(db, asOf).find((r) => r.account === "7150")?.balance_cents ?? 0;
+    expect(unrealized("2026-06-30")).toBe(100_000);
+    expect(unrealized("2026-07-01")).toBe(0);
+    // invoiced on 15 June for the third quarter: nothing of it was recognised in June
+    expect(db.prepare("SELECT COUNT(*) AS n FROM gl_entry WHERE id = 'je_seed_rev_INV-3201'").get()).toEqual({ n: 0 });
   });
 
   it("labels every bank line with its account and entity, and resolves every payer from the descriptor alone", () => {
@@ -115,35 +139,33 @@ describe("seeded books", () => {
 
   it("files mail and chat under the right customer, so an agent's search by party finds them", () => {
     const party = (id: string): string | null => (db.prepare("SELECT party_id FROM trace WHERE id = ?").get(id) as { party_id: string | null }).party_id;
-    expect(party(traceId("gmail", "gj-m-avis-BTX-311"))).toBe("aldenhoven");
-    expect(party(traceId("gmail", "gj-m-aldenhoven-2"))).toBe("aldenhoven");
-    expect(party(traceId("slack", "gj-c-4"))).toBe("aldenhoven");
+    expect(party(traceId("gmail", "gj-m-avis-BTX-320"))).toBe("vossberg");
+    expect(party(traceId("gmail", "gj-m-vossberg-2"))).toBe("vossberg");
+    expect(party(traceId("slack", "gj-c-11"))).toBe("vossberg");
     expect(party(traceId("gmail", "gj-m-halvorsen-2"))).toBe("halvorsen");
   });
 
-  it("the Q2 decision points are lane A's six plus Aldenhoven's three, all inside the wire-fee rule's range", () => {
+  it("the Q2 decision points are lane A's six plus Vossberg's three incoming-wire fees, all inside the wire-fee rule's range", () => {
     const points = db.prepare("SELECT case_json, human_outcome_json FROM decision_point").all() as Array<{ case_json: string; human_outcome_json: string }>;
     const got = points.map((p) => ({ party_id: CaseFile.parse(JSON.parse(p.case_json)).party_id, ...(JSON.parse(p.human_outcome_json) as { account: string; amount_cents: number }) }));
     for (const f of Q2_WIRE_FEES) expect(got).toContainEqual(expect.objectContaining({ party_id: f.party_id, amount_cents: f.cents, account: f.account }));
-    const aldenhoven = got.filter((g) => g.party_id === "aldenhoven");
-    expect(aldenhoven.map((g) => g.amount_cents).sort()).toEqual([2500, 3500, 4000]);
-    expect(aldenhoven.every((g) => g.account === ACCOUNTS.bank_charges)).toBe(true);
+    const vossberg = got.filter((g) => g.party_id === "vossberg");
+    expect(vossberg.map((g) => g.amount_cents).sort()).toEqual([3500, 4000, 4000]);
+    expect(vossberg.every((g) => g.account === ACCOUNTS.bank_charges)).toBe(true);
     expect(points).toHaveLength(9);
   });
 
-  it("the drift monitor opens lane A's ten cases by its own rules, and the two euro receipts as plain short-pays", () => {
+  it("the drift monitor opens lane A's ten cases and its two main-scene cases, field for field, by its own rules", () => {
     const findings = runInvoiceVsCash(db);
     expect(findings).toHaveLength(12);
     const byTxn = new Map(findings.map((f) => [f.bank_txn_id, f.case_file]));
-    for (const want of CASES) {
+    for (const want of [...CASES, ...MAIN_CASES]) {
       const got = byTxn.get(want.bank_txn_id!)!;
       expect({ ...got, intent_id: "", trace_ids: [] }, want.bank_txn_id).toEqual({ ...want, intent_id: "", trace_ids: [] });
     }
     // Case 9 must stay undecided, or the document reader's beat disappears.
     expect(byTxn.get("BTX-309")!.doc_ids).toEqual([]);
-    expect(byTxn.get("BTX-311")!.trace_ids).toEqual([traceId("bank", "BTX-311"), traceId("gmail", "gj-m-advice-BTX-311")]);
-    expect(byTxn.get("BTX-311")).toMatchObject({ party_id: "aldenhoven", doc_ids: ["INV-3211"], expected_cents: 11_000_000, received_cents: 10_580_000, shortfall_cents: 420_000, method: "wire" });
-    expect(byTxn.get("BTX-312")).toMatchObject({ doc_ids: ["INV-3212"], expected_cents: 1_650_000, received_cents: 1_591_450, shortfall_cents: 58_550 });
+    expect(byTxn.get("BTX-320")!.trace_ids).toEqual([traceId("bank", "BTX-320"), traceId("gmail", "gj-m-advice-BTX-320")]);
     expect(runInvoiceVsCash(db).filter((f) => f.opened)).toHaveLength(0);
   });
 

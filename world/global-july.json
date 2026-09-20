@@ -249,17 +249,17 @@
       "billed_by": "inc"
     },
     {
-      "id": "aldenhoven",
+      "id": "vossberg",
       "kind": "customer",
-      "name": "Aldenhoven Logistik GmbH",
+      "name": "Vossberg Logistik GmbH",
       "owner": "U_SAM",
       "aliases": [
-        "ALDENHOVEN LOGISTIK GMBH",
-        "Aldenhoven Logistik GmbH",
-        "aldenhoven-logistik.test",
-        "Aldenhoven"
+        "VOSSBERG LOGISTIK GMBH",
+        "Vossberg Logistik GmbH",
+        "vossberg-logistik.test",
+        "Vossberg"
       ],
-      "email_domain": "aldenhoven-logistik.test",
+      "email_domain": "vossberg-logistik.test",
       "country": "DE",
       "billed_by": "inc"
     },
@@ -437,53 +437,37 @@
       "recorded_time": "2025-12-16T16:00:00Z"
     },
     {
-      "id": "CTR-aldenhoven-2024",
-      "party_id": "aldenhoven",
-      "start_date": "2024-01-01",
-      "end_date": "2026-06-30",
-      "value_cents": 330000000,
+      "id": "CTR-vossberg-2025",
+      "party_id": "vossberg",
+      "start_date": "2025-10-01",
+      "end_date": "2027-09-30",
+      "value_cents": 88000000,
       "terms": {
-        "monthly_cents": 11000000,
-        "billing": "monthly",
+        "monthly_cents": 3666667,
+        "billing": "quarterly",
         "payment_terms_days": 30,
-        "method": "wire"
+        "method": "wire",
+        "currency": "EUR"
       },
-      "text": "# Order form NW-ALD-2024, as amended by Amendment No. 2 - Aldenhoven Logistik GmbH\n\nBetween Northwind Systems, Inc. (Delaware) and Aldenhoven Logistik GmbH, Duesseldorf, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nUntil 30 June 2026: platform subscription USD 110,000.00 per month. Amendment No. 2, effective 1 July 2026, at Customer's request: fees are denominated and invoiced in euro. Platform subscription EUR 100,000.00 per month; EU data residency add-on EUR 15,000.00 per month (order form NW-ALD-2026-DR). Invoiced monthly in advance on the first day of each month.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction. All bank charges and currency conversion costs on the Customer's side are for the Customer's account.\n\n## 3. Taxes\nFees are exclusive of VAT. The services are supplied to a business established in Germany and the reverse charge applies (Article 196 of Directive 2006/112/EC); Customer accounts for VAT. No tax is to be withheld from payments.\n\n## 4. Service levels (Exhibit B)\nMonthly availability commitment: 99.9%. If availability of a service in a calendar month is below 99.9%, Customer may claim a service credit of 2% of that month's fees for the affected service; below 99.0%, 5%. A claim must be made in writing within 30 days after the end of the month. Northwind validates each claim against its own availability records. A service credit is effective only when confirmed in writing by an officer of Northwind and is issued as a credit note against a later invoice. Customer may not deduct a claimed credit from a payment. Service credits are Customer's sole remedy for unavailability.\n\n## 5. Term\n1 January 2024 to 31 December 2026, renewing for successive twelve-month terms unless either party gives ninety days notice.",
-      "recorded_time": "2023-12-12T16:00:00Z"
+      "text": "# Order form NW-VOS-2025 - Vossberg Logistik GmbH\n\nBetween Northwind Systems, Inc. (Delaware) and Vossberg Logistik GmbH, Hamburg, under the Northwind Master Subscription Agreement.\n\n## Fees\nFees EUR 100,000 per quarter for the platform, invoiced quarterly in advance, payable in euro, net 30. Add-on modules invoiced separately.\n\n## Payment\nBy wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction. Bank charges and currency conversion costs on the Customer's side are for the Customer's account.\n\n## Taxes\nFees are exclusive of VAT. The services are supplied to a business established in Germany and the reverse charge applies (Article 196 of Directive 2006/112/EC); Customer accounts for VAT. No tax is to be withheld from payments.\n\n## Service credits\nSection 7: service credits of up to 2% of the fees for the affected period may be granted at Northwind's discretion and are effective only when confirmed in writing by an officer of Northwind. A credit so confirmed is issued as a credit note against a later invoice.\n\n## Term\n1 October 2025 to 30 September 2027, renewing for successive twelve-month terms unless either party gives ninety days notice.",
+      "recorded_time": "2025-10-01T00:00:00Z"
     },
     {
-      "id": "CTR-aldenhoven-2026",
-      "party_id": "aldenhoven",
-      "start_date": "2026-07-01",
-      "end_date": "2026-12-31",
-      "value_cents": 66000000,
+      "id": "CTR-vossberg-addon-2026",
+      "party_id": "vossberg",
+      "start_date": "2026-04-01",
+      "end_date": "2027-09-30",
+      "value_cents": 49500000,
       "terms": {
-        "monthly_cents": 11000000,
+        "monthly_cents": 2750000,
         "billing": "monthly",
         "payment_terms_days": 30,
         "method": "wire",
         "currency": "EUR",
-        "foreign_monthly_cents": 10000000
+        "foreign_monthly_cents": 2500000
       },
-      "text": "# Order form NW-ALD-2024, as amended by Amendment No. 2 - Aldenhoven Logistik GmbH\n\nBetween Northwind Systems, Inc. (Delaware) and Aldenhoven Logistik GmbH, Duesseldorf, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nUntil 30 June 2026: platform subscription USD 110,000.00 per month. Amendment No. 2, effective 1 July 2026, at Customer's request: fees are denominated and invoiced in euro. Platform subscription EUR 100,000.00 per month; EU data residency add-on EUR 15,000.00 per month (order form NW-ALD-2026-DR). Invoiced monthly in advance on the first day of each month.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction. All bank charges and currency conversion costs on the Customer's side are for the Customer's account.\n\n## 3. Taxes\nFees are exclusive of VAT. The services are supplied to a business established in Germany and the reverse charge applies (Article 196 of Directive 2006/112/EC); Customer accounts for VAT. No tax is to be withheld from payments.\n\n## 4. Service levels (Exhibit B)\nMonthly availability commitment: 99.9%. If availability of a service in a calendar month is below 99.9%, Customer may claim a service credit of 2% of that month's fees for the affected service; below 99.0%, 5%. A claim must be made in writing within 30 days after the end of the month. Northwind validates each claim against its own availability records. A service credit is effective only when confirmed in writing by an officer of Northwind and is issued as a credit note against a later invoice. Customer may not deduct a claimed credit from a payment. Service credits are Customer's sole remedy for unavailability.\n\n## 5. Term\n1 January 2024 to 31 December 2026, renewing for successive twelve-month terms unless either party gives ninety days notice.",
-      "recorded_time": "2026-06-12T16:00:00Z"
-    },
-    {
-      "id": "CTR-aldenhoven-addon-2026",
-      "party_id": "aldenhoven",
-      "start_date": "2026-07-01",
-      "end_date": "2026-12-31",
-      "value_cents": 9900000,
-      "terms": {
-        "monthly_cents": 1650000,
-        "billing": "monthly",
-        "payment_terms_days": 30,
-        "method": "wire",
-        "currency": "EUR",
-        "foreign_monthly_cents": 1500000
-      },
-      "text": "# Order form NW-ALD-2026-DR - EU data residency add-on - Aldenhoven Logistik GmbH\n\nAn additional order form under order form NW-ALD-2024 as amended. All of its terms apply, including section 2 (payment without deduction) and section 4 (service levels, Exhibit B).\n\n## 1. Fees\nEU data residency add-on EUR 15,000.00 per month, invoiced monthly in advance in euro, from 1 July 2026.\n\n## 2. Term\n1 July 2026 to 31 December 2026, co-terminous with order form NW-ALD-2024.",
-      "recorded_time": "2026-06-12T16:05:00Z"
+      "text": "# Order form NW-VOS-2026-DR - EU data residency add-on - Vossberg Logistik GmbH\n\nAn add-on module under order form NW-VOS-2025. All of its terms apply, including payment without deduction and section 7 (service credits).\n\n## Fees\nEU data residency add-on EUR 25,000 per month, invoiced monthly in advance on the first day of each month, payable in euro, net 30, from 1 April 2026.\n\n## Term\n1 April 2026 to 30 September 2027, co-terminous with order form NW-VOS-2025.",
+      "recorded_time": "2026-03-20T16:00:00Z"
     }
   ],
   "invoices": [
@@ -512,14 +496,6 @@
       "total_cents": 2000000
     },
     {
-      "id": "INV-2404",
-      "party_id": "aldenhoven",
-      "contract_id": "CTR-aldenhoven-2024",
-      "issue_date": "2026-04-01",
-      "due_date": "2026-05-01",
-      "total_cents": 11000000
-    },
-    {
       "id": "INV-2501",
       "party_id": "ostrander",
       "contract_id": "CTR-ostrander-2026",
@@ -542,14 +518,6 @@
       "issue_date": "2026-05-01",
       "due_date": "2026-05-31",
       "total_cents": 2000000
-    },
-    {
-      "id": "INV-2504",
-      "party_id": "aldenhoven",
-      "contract_id": "CTR-aldenhoven-2024",
-      "issue_date": "2026-05-01",
-      "due_date": "2026-05-31",
-      "total_cents": 11000000
     },
     {
       "id": "INV-2601",
@@ -576,12 +544,43 @@
       "total_cents": 2000000
     },
     {
+      "id": "INV-2404",
+      "party_id": "vossberg",
+      "contract_id": "CTR-vossberg-addon-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 2700000,
+      "fx": {
+        "currency": "EUR",
+        "foreign_total_cents": 2500000,
+        "booked_rate_ppm": 1080000
+      }
+    },
+    {
+      "id": "INV-2504",
+      "party_id": "vossberg",
+      "contract_id": "CTR-vossberg-addon-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 2725000,
+      "fx": {
+        "currency": "EUR",
+        "foreign_total_cents": 2500000,
+        "booked_rate_ppm": 1090000
+      }
+    },
+    {
       "id": "INV-2604",
-      "party_id": "aldenhoven",
-      "contract_id": "CTR-aldenhoven-2024",
+      "party_id": "vossberg",
+      "contract_id": "CTR-vossberg-addon-2026",
       "issue_date": "2026-06-01",
       "due_date": "2026-07-01",
-      "total_cents": 11000000
+      "total_cents": 2737500,
+      "fx": {
+        "currency": "EUR",
+        "foreign_total_cents": 2500000,
+        "booked_rate_ppm": 1095000
+      }
     },
     {
       "id": "INV-3101",
@@ -704,7 +703,7 @@
       "total_cents": 620000
     },
     {
-      "id": "INV-3201",
+      "id": "INV-3221",
       "party_id": "fernhill",
       "contract_id": "CTR-fernhill-2026",
       "issue_date": "2026-07-01",
@@ -712,28 +711,29 @@
       "total_cents": 2000000
     },
     {
-      "id": "INV-3211",
-      "party_id": "aldenhoven",
-      "contract_id": "CTR-aldenhoven-2026",
-      "issue_date": "2026-07-01",
-      "due_date": "2026-07-31",
+      "id": "INV-3201",
+      "party_id": "vossberg",
+      "contract_id": "CTR-vossberg-2025",
+      "issue_date": "2026-06-15",
+      "due_date": "2026-07-15",
       "total_cents": 11000000,
       "fx": {
         "currency": "EUR",
         "foreign_total_cents": 10000000,
         "booked_rate_ppm": 1100000
-      }
+      },
+      "service_from": "2026-07"
     },
     {
-      "id": "INV-3212",
-      "party_id": "aldenhoven",
-      "contract_id": "CTR-aldenhoven-addon-2026",
+      "id": "INV-3202",
+      "party_id": "vossberg",
+      "contract_id": "CTR-vossberg-addon-2026",
       "issue_date": "2026-07-01",
       "due_date": "2026-07-31",
-      "total_cents": 1650000,
+      "total_cents": 2750000,
       "fx": {
         "currency": "EUR",
-        "foreign_total_cents": 1500000,
+        "foreign_total_cents": 2500000,
         "booked_rate_ppm": 1100000
       }
     }
@@ -819,23 +819,30 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-204",
+        "id": "BTX-210",
         "posted_date": "2026-04-16",
-        "amount_cents": 10997500,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026041600623395 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OBI:INV-2404 CHGS:SHA INTERMEDIARY DED USD 25.00",
+        "amount_cents": 2706000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026041600670909 ORG:VOSSBERG LOGISTIK GMBH HAMBURG OBI:INV-2404",
         "method": "wire",
         "recorded_time": "2026-04-16T10:00:00Z",
         "history": {
           "doc_kind": "invoice",
           "doc_id": "INV-2404",
-          "applied_cents": 10997500,
+          "applied_cents": 2706000,
           "write_off": {
             "account": "6150",
-            "amount_cents": 2500,
+            "amount_cents": 4000,
             "decided_at": "2026-04-16T15:00:00Z"
-          }
+          },
+          "fx_loss_cents": -10000
         },
-        "account": "jpm_operating"
+        "account": "jpm_operating",
+        "fx": {
+          "currency": "EUR",
+          "foreign_amount_cents": 2500000,
+          "rate_ppm": 1084000,
+          "fee_cents": 4000
+        }
       },
       {
         "id": "BTX-203",
@@ -871,10 +878,10 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-205",
+        "id": "BTX-204",
         "posted_date": "2026-05-15",
         "amount_cents": 726500,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026051500631314 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2501 CHGS:SHA INTERMEDIARY DED USD 35.00",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051500623395 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2501 CHGS:SHA INTERMEDIARY DED USD 35.00",
         "method": "wire",
         "recorded_time": "2026-05-15T10:00:00Z",
         "history": {
@@ -890,10 +897,10 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-206",
+        "id": "BTX-205",
         "posted_date": "2026-05-17",
         "amount_cents": 2500000,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026051700639233 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2502 CHGS:OUR",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051700631314 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2502 CHGS:OUR",
         "method": "wire",
         "recorded_time": "2026-05-17T10:00:00Z",
         "history": {
@@ -904,29 +911,36 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-208",
+        "id": "BTX-211",
         "posted_date": "2026-05-18",
-        "amount_cents": 10996000,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026051800655071 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OBI:INV-2504 CHGS:SHA INTERMEDIARY DED USD 40.00",
+        "amount_cents": 2711000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051800678828 ORG:VOSSBERG LOGISTIK GMBH HAMBURG OBI:INV-2504",
         "method": "wire",
         "recorded_time": "2026-05-18T10:00:00Z",
         "history": {
           "doc_kind": "invoice",
           "doc_id": "INV-2504",
-          "applied_cents": 10996000,
+          "applied_cents": 2711000,
           "write_off": {
             "account": "6150",
             "amount_cents": 4000,
             "decided_at": "2026-05-18T15:00:00Z"
-          }
+          },
+          "fx_loss_cents": 10000
         },
-        "account": "jpm_operating"
+        "account": "jpm_operating",
+        "fx": {
+          "currency": "EUR",
+          "foreign_amount_cents": 2500000,
+          "rate_ppm": 1086000,
+          "fee_cents": 4000
+        }
       },
       {
-        "id": "BTX-207",
+        "id": "BTX-206",
         "posted_date": "2026-05-19",
         "amount_cents": 1998000,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026051900647152 ORG:FERNHILL FOODS LTD CORK OBI:INV-2503 CHGS:SHA INTERMEDIARY DED USD 20.00",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051900639233 ORG:FERNHILL FOODS LTD CORK OBI:INV-2503 CHGS:SHA INTERMEDIARY DED USD 20.00",
         "method": "wire",
         "recorded_time": "2026-05-19T10:00:00Z",
         "history": {
@@ -942,10 +956,10 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-210",
+        "id": "BTX-208",
         "posted_date": "2026-06-16",
         "amount_cents": 2495500,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026061600670909 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2602 CHGS:SHA INTERMEDIARY DED USD 45.00",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061600655071 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2602 CHGS:SHA INTERMEDIARY DED USD 45.00",
         "method": "wire",
         "recorded_time": "2026-06-16T10:00:00Z",
         "history": {
@@ -961,10 +975,10 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-209",
+        "id": "BTX-207",
         "posted_date": "2026-06-17",
         "amount_cents": 730000,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026061700662990 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2601 CHGS:OUR",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061700647152 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2601 CHGS:OUR",
         "method": "wire",
         "recorded_time": "2026-06-17T10:00:00Z",
         "history": {
@@ -977,27 +991,34 @@
       {
         "id": "BTX-212",
         "posted_date": "2026-06-17",
-        "amount_cents": 10996500,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026061700686747 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OBI:INV-2604 CHGS:SHA INTERMEDIARY DED USD 35.00",
+        "amount_cents": 2734000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061700686747 ORG:VOSSBERG LOGISTIK GMBH HAMBURG OBI:INV-2604",
         "method": "wire",
         "recorded_time": "2026-06-17T10:00:00Z",
         "history": {
           "doc_kind": "invoice",
           "doc_id": "INV-2604",
-          "applied_cents": 10996500,
+          "applied_cents": 2734000,
           "write_off": {
             "account": "6150",
             "amount_cents": 3500,
             "decided_at": "2026-06-17T15:00:00Z"
-          }
+          },
+          "fx_loss_cents": 0
         },
-        "account": "jpm_operating"
+        "account": "jpm_operating",
+        "fx": {
+          "currency": "EUR",
+          "foreign_amount_cents": 2500000,
+          "rate_ppm": 1095000,
+          "fee_cents": 3500
+        }
       },
       {
-        "id": "BTX-211",
+        "id": "BTX-209",
         "posted_date": "2026-06-18",
         "amount_cents": 1999000,
-        "descriptor": "WIRE TYPE:INTL IN TRN:2026061800678828 ORG:FERNHILL FOODS LTD CORK OBI:INV-2603 CHGS:SHA INTERMEDIARY DED USD 10.00",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061800662990 ORG:FERNHILL FOODS LTD CORK OBI:INV-2603 CHGS:SHA INTERMEDIARY DED USD 10.00",
         "method": "wire",
         "recorded_time": "2026-06-18T10:00:00Z",
         "history": {
@@ -1063,10 +1084,10 @@
         "account": "hsbc_uk"
       },
       {
-        "id": "BTX-311",
+        "id": "BTX-320",
         "posted_date": "2026-07-15",
         "amount_cents": 10580000,
-        "descriptor": "WIRE TYPE:FX IN TRN:2026071500482913 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OGB:COMMERZBANK AG OBI:INV-3211 ZAHLUNGSAVIS 1500048117 ORIG AMT EUR 98,000.00 RATE 1.0800 CHGS USD 40.00",
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026071500881203 ORG:VOSSBERG LOGISTIK GMBH HAMBURG OBI:INV-3201",
         "method": "wire",
         "recorded_time": "2026-07-15T10:00:00Z",
         "account": "jpm_operating",
@@ -1075,7 +1096,7 @@
           "foreign_amount_cents": 9800000,
           "rate_ppm": 1080000,
           "fee_cents": 4000,
-          "advice_mail_id": "gj-m-advice-BTX-311"
+          "advice_mail_id": "gj-m-advice-BTX-320"
         }
       },
       {
@@ -1133,24 +1154,52 @@
         "account": "jpm_operating"
       },
       {
-        "id": "BTX-312",
+        "id": "BTX-321",
         "posted_date": "2026-07-22",
-        "amount_cents": 1591450,
-        "descriptor": "WIRE TYPE:FX IN TRN:2026072200517740 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OGB:COMMERZBANK AG OBI:INV-3212 ZAHLUNGSAVIS 1500048562 ORIG AMT EUR 14,700.00 RATE 1.0850 CHGS USD 35.00",
+        "amount_cents": 2668000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026072200413377 ORG:VOSSBERG LOGISTIK GMBH HAMBURG OBI:INV-3202",
         "method": "wire",
         "recorded_time": "2026-07-22T10:00:00Z",
         "account": "jpm_operating",
         "fx": {
           "currency": "EUR",
-          "foreign_amount_cents": 1470000,
-          "rate_ppm": 1085000,
-          "fee_cents": 3500,
-          "advice_mail_id": "gj-m-advice-BTX-312"
+          "foreign_amount_cents": 2450000,
+          "rate_ppm": 1090000,
+          "fee_cents": 2500,
+          "advice_mail_id": "gj-m-advice-BTX-321"
         }
       }
     ]
   },
   "mail": [
+    {
+      "id": "gj-m-vossberg-1",
+      "thread_id": "gj-t-vossberg-credit",
+      "date": "2026-06-18T13:10:00Z",
+      "from": "j.brandt@vossberg-logistik.test",
+      "to": [
+        "sam.okafor@northwind.test"
+      ],
+      "cc": [
+        "kreditoren@vossberg-logistik.test"
+      ],
+      "subject": "Service credit - outage 17/18 June (NW-48213)",
+      "body": "Hello Sam,\n\nLast night's outage of the tracking API (your ticket NW-48213) ran for about nine hours. Our night hub in Hamburg and the early shift in Bremerhaven worked from paper, and two customers of ours have already asked for an explanation.\n\nPlease treat this email as our request for the 2% service credit under section 7 of the order form. Until it is settled our accounts payable team will hold back 2% on the invoices they pay.\n\nRegards,\nJonas Brandt\nDirector Operations, Vossberg Logistik GmbH",
+      "party_id": "vossberg"
+    },
+    {
+      "id": "gj-m-vossberg-2",
+      "thread_id": "gj-t-vossberg-credit",
+      "date": "2026-06-18T16:45:00Z",
+      "from": "sam.okafor@northwind.test",
+      "to": [
+        "j.brandt@vossberg-logistik.test"
+      ],
+      "cc": [],
+      "subject": "Re: Service credit - outage 17/18 June (NW-48213)",
+      "body": "Hi Jonas,\n\nUnderstood, and sorry again for last night. I have logged your request and passed it to our finance team. I cannot confirm a credit myself: under section 7 a service credit is at Northwind's discretion and only takes effect when one of our officers confirms it in writing, and it is then issued as a credit note rather than held back from a payment. I will come back to you as soon as I have an answer.\n\nSam Okafor\nNorthwind Systems",
+      "party_id": "vossberg"
+    },
     {
       "id": "gj-m-halvorsen-1",
       "thread_id": "gj-t-halvorsen-pricing",
@@ -1191,10 +1240,10 @@
       "party_id": "kestrel-analytics"
     },
     {
-      "id": "gj-m-noise-3",
-      "thread_id": "gj-t-noise-3",
+      "id": "gj-m-noise-8",
+      "thread_id": "gj-t-noise-8",
       "date": "2026-07-01T07:30:00Z",
-      "from": "statements@jpmorgan-access.test",
+      "from": "statements@jpm-treasury.test",
       "to": [
         "ar@northwind.test"
       ],
@@ -1240,32 +1289,17 @@
       "body": "Get 20% off your conference pass through Friday."
     },
     {
-      "id": "gj-m-aldenhoven-1",
-      "thread_id": "gj-t-aldenhoven-sla",
-      "date": "2026-07-09T08:20:00Z",
-      "from": "j.brandt@aldenhoven-logistik.test",
+      "id": "gj-m-noise-9",
+      "thread_id": "gj-t-noise-9",
+      "date": "2026-07-06T11:10:00Z",
+      "from": "kreditoren@vossberg-logistik.test",
       "to": [
-        "sam.okafor@northwind.test"
-      ],
-      "cc": [
-        "kreditoren@aldenhoven-logistik.test"
-      ],
-      "subject": "SLA claim - outage 8 July",
-      "body": "Hello Sam,\n\nYesterday's outage took our dispatch boards down for the whole early shift in Duisburg and Venlo, 06:12 to 12:52 UTC by your own status page. That is 6 hours 40 minutes, which puts July below 99.9% whatever happens for the rest of the month.\n\nPlease treat this email as our written claim under Exhibit B for the 2% service credit on the July fees. Our accounts payable team will take the 2% off the July invoices when they pay them.\n\nRegards,\nJonas Brandt\nHead of IT Operations, Aldenhoven Logistik GmbH",
-      "party_id": "aldenhoven"
-    },
-    {
-      "id": "gj-m-aldenhoven-2",
-      "thread_id": "gj-t-aldenhoven-sla",
-      "date": "2026-07-09T15:45:00Z",
-      "from": "sam.okafor@northwind.test",
-      "to": [
-        "j.brandt@aldenhoven-logistik.test"
+        "ar@northwind.test"
       ],
       "cc": [],
-      "subject": "Re: SLA claim - outage 8 July",
-      "body": "Hi Jonas,\n\nUnderstood, and sorry again for yesterday. I have logged your claim and passed it to our finance team. I cannot confirm a credit myself: under Exhibit B a credit has to be validated against the month's availability and confirmed by one of our officers, and it is then issued as a credit note rather than deducted from a payment. I will come back to you as soon as I have an answer.\n\nSam Okafor\nNorthwind Systems",
-      "party_id": "aldenhoven"
+      "subject": "Invoices INV-3201 and INV-3202 received",
+      "body": "We confirm receipt of invoices INV-3201 dated 15 June 2026 and INV-3202 dated 1 July 2026. They are scheduled in our payment runs of 14 and 21 July.",
+      "party_id": "vossberg"
     },
     {
       "id": "gj-m-noise-5",
@@ -1281,45 +1315,31 @@
       "party_id": "pallister"
     },
     {
-      "id": "gj-m-noise-6",
-      "thread_id": "gj-t-noise-6",
-      "date": "2026-07-13T11:10:00Z",
-      "from": "kreditoren@aldenhoven-logistik.test",
+      "id": "gj-m-avis-BTX-320",
+      "thread_id": "gj-t-avis-BTX-320",
+      "date": "2026-07-14T14:30:00Z",
+      "from": "kreditoren@vossberg-logistik.test",
       "to": [
         "ar@northwind.test"
       ],
       "cc": [],
-      "subject": "Invoice INV-3211 and INV-3212 received",
-      "body": "We confirm receipt of invoices INV-3211 and INV-3212 dated 1 July 2026. Both are scheduled in our payment runs of 14 and 21 July.",
-      "party_id": "aldenhoven"
+      "subject": "Zahlungsavis / remittance advice INV-3201",
+      "body": "Vossberg Logistik GmbH - Kreditorenbuchhaltung / Accounts Payable\nZahlungsavis / payment advice no. 1500048117\nPayment date: 2026-07-14   Value date: 2026-07-15   Payment method: foreign wire, EUR   Our vendor no.: 300417\n\nInvoice      Invoice date   Gross EUR      Deduction EUR   Net EUR\nINV-3201     2026-06-15     100,000.00      2,000.00        98,000.00\n\nInvoice INV-3201, invoice amount EUR 100,000.00. Less EUR 2,000.00 withheld re the service outage of 17 to 18 June (your ticket NW-48213), 2% service credit requested on 18 June. Payment EUR 98,000.00, value 2026-07-15.\n\nQueries: kreditoren@vossberg-logistik.test. This advice was generated automatically.",
+      "party_id": "vossberg"
     },
     {
-      "id": "gj-m-avis-BTX-311",
-      "thread_id": "gj-t-avis-BTX-311",
-      "date": "2026-07-14T14:40:00Z",
-      "from": "kreditoren@aldenhoven-logistik.test",
-      "to": [
-        "ar@northwind.test"
-      ],
-      "cc": [],
-      "subject": "Zahlungsavis / Payment advice 1500048117 - Aldenhoven Logistik GmbH",
-      "body": "Aldenhoven Logistik GmbH - Kreditorenbuchhaltung / Accounts Payable\nZahlungsavis / Payment advice no. 1500048117\nPayment date: 2026-07-14   Value date: 2026-07-15   Payment method: SEPA/foreign wire, EUR   Our vendor no.: 300417\n\nInvoice      Invoice date   Gross EUR      Deduction EUR   Net EUR\nINV-3211     2026-07-01     100,000.00      2,000.00        98,000.00\n\nDeduction: EUR 2,000.00, reason: service credit 2% under Exhibit B (SLA), platform outage 8 July 2026, our claim of 9 July 2026.\nTotal paid: EUR 98,000.00\n\nQueries: kreditoren@aldenhoven-logistik.test. This advice was generated automatically.",
-      "party_id": "aldenhoven"
-    },
-    {
-      "id": "gj-m-advice-BTX-311",
-      "thread_id": "gj-t-advice-BTX-311",
-      "date": "2026-07-15T09:05:00Z",
-      "from": "wire.advices@jpmorgan-access.test",
+      "id": "gj-m-advice-BTX-320",
+      "thread_id": "gj-t-advice-BTX-320",
+      "date": "2026-07-15T10:05:00Z",
+      "from": "wire.advices@jpm-treasury.test",
       "to": [
         "treasury@northwind.test"
       ],
       "cc": [
         "ar@northwind.test"
       ],
-      "subject": "Incoming wire credit advice - TRN 2026071500482913 - USD 105,800.00",
-      "body": "INCOMING FUNDS TRANSFER - CREDIT ADVICE\n\nBeneficiary: NORTHWIND SYSTEMS INC\nAccount credited: USD operating account ending 4417\nValue date: 2026-07-15\nTransaction reference (TRN): 2026071500482913\n\nOrdering customer: ALDENHOVEN LOGISTIK GMBH, DUESSELDORF, DE\nOrdering institution: COMMERZBANK AG, DUESSELDORF (COBADEFFXXX)\nRemittance information: INV-3211 ZAHLUNGSAVIS 1500048117\nDetails of charges: SHA\n\nInstructed amount: EUR 98,000.00\nExchange rate applied: 1.0800 USD per EUR\nUSD equivalent: USD 105,840.00\nCharges deducted (incoming international wire and currency conversion): USD 40.00\nNet amount credited: USD 105,800.00\n\nThe payment was received in a currency other than that of the beneficiary account and was converted at the bank's rate on the value date.\nThis advice is for information. It is not a statement of account.",
-      "party_id": "aldenhoven"
+      "subject": "Credit advice: incoming wire 2026071500881203",
+      "body": "INCOMING INTERNATIONAL WIRE - CREDIT ADVICE\n\nBeneficiary: NORTHWIND SYSTEMS INC\nAccount credited: USD operating account ending 4417\nValue date: 2026-07-15\nTransaction reference (TRN): 2026071500881203\n\nOriginator: VOSSBERG LOGISTIK GMBH, Hamburg, DE\nOriginator's bank: HAMBURGER HANDELSBANK AG, Hamburg\nRemittance information: INV-3201\nDetails of charges: SHA\n\nAmount received: EUR 98,000.00\nExchange rate applied: 1.0800 USD per EUR\nUSD equivalent: 105,840.00\nIncoming wire fee: USD 40.00\nNet credit: USD 105,800.00\n\nThe payment was received in a currency other than that of the beneficiary account and was converted at the bank's rate on the value date.\nThis advice is for information. It is not a statement of account."
     },
     {
       "id": "gj-m-brightwater-1",
@@ -1361,45 +1381,44 @@
       "party_id": "castellan"
     },
     {
-      "id": "gj-m-noise-7",
-      "thread_id": "gj-t-noise-7",
+      "id": "gj-m-noise-10",
+      "thread_id": "gj-t-noise-10",
       "date": "2026-07-20T16:05:00Z",
       "from": "ap@fernhillfoods.test",
       "to": [
         "ar@northwind.test"
       ],
       "cc": [],
-      "subject": "July invoice INV-3201",
-      "body": "INV-3201 is approved and will be paid in our month-end run on 31 July. Fernhill Foods Accounts Payable",
+      "subject": "July invoice INV-3221",
+      "body": "INV-3221 is approved and will be paid in our month-end run on 31 July. Fernhill Foods Accounts Payable",
       "party_id": "fernhill"
     },
     {
-      "id": "gj-m-avis-BTX-312",
-      "thread_id": "gj-t-avis-BTX-312",
-      "date": "2026-07-21T14:40:00Z",
-      "from": "kreditoren@aldenhoven-logistik.test",
+      "id": "gj-m-avis-BTX-321",
+      "thread_id": "gj-t-avis-BTX-321",
+      "date": "2026-07-21T14:30:00Z",
+      "from": "kreditoren@vossberg-logistik.test",
       "to": [
         "ar@northwind.test"
       ],
       "cc": [],
-      "subject": "Zahlungsavis / Payment advice 1500048562 - Aldenhoven Logistik GmbH",
-      "body": "Aldenhoven Logistik GmbH - Kreditorenbuchhaltung / Accounts Payable\nZahlungsavis / Payment advice no. 1500048562\nPayment date: 2026-07-21   Value date: 2026-07-22   Payment method: SEPA/foreign wire, EUR   Our vendor no.: 300417\n\nInvoice      Invoice date   Gross EUR      Deduction EUR   Net EUR\nINV-3212     2026-07-01      15,000.00        300.00        14,700.00\n\nDeduction: EUR 300.00, reason: service credit 2% under Exhibit B (SLA), platform outage 8 July 2026, our claim of 9 July 2026.\nTotal paid: EUR 14,700.00\n\nQueries: kreditoren@aldenhoven-logistik.test. This advice was generated automatically.",
-      "party_id": "aldenhoven"
+      "subject": "Zahlungsavis / remittance advice INV-3202",
+      "body": "Vossberg Logistik GmbH - Kreditorenbuchhaltung / Accounts Payable\nZahlungsavis / payment advice no. 1500048562\nPayment date: 2026-07-21   Value date: 2026-07-22   Payment method: foreign wire, EUR   Our vendor no.: 300417\n\nInvoice      Invoice date   Gross EUR      Deduction EUR   Net EUR\nINV-3202     2026-07-01      25,000.00        500.00        24,500.00\n\nInvoice INV-3202, invoice amount EUR 25,000.00. Less EUR 500.00 withheld re the service outage of 17 to 18 June (your ticket NW-48213), 2% service credit requested on 18 June. Payment EUR 24,500.00, value 2026-07-22.\n\nQueries: kreditoren@vossberg-logistik.test. This advice was generated automatically.",
+      "party_id": "vossberg"
     },
     {
-      "id": "gj-m-advice-BTX-312",
-      "thread_id": "gj-t-advice-BTX-312",
-      "date": "2026-07-22T09:05:00Z",
-      "from": "wire.advices@jpmorgan-access.test",
+      "id": "gj-m-advice-BTX-321",
+      "thread_id": "gj-t-advice-BTX-321",
+      "date": "2026-07-22T10:05:00Z",
+      "from": "wire.advices@jpm-treasury.test",
       "to": [
         "treasury@northwind.test"
       ],
       "cc": [
         "ar@northwind.test"
       ],
-      "subject": "Incoming wire credit advice - TRN 2026072200517740 - USD 15,914.50",
-      "body": "INCOMING FUNDS TRANSFER - CREDIT ADVICE\n\nBeneficiary: NORTHWIND SYSTEMS INC\nAccount credited: USD operating account ending 4417\nValue date: 2026-07-22\nTransaction reference (TRN): 2026072200517740\n\nOrdering customer: ALDENHOVEN LOGISTIK GMBH, DUESSELDORF, DE\nOrdering institution: COMMERZBANK AG, DUESSELDORF (COBADEFFXXX)\nRemittance information: INV-3212 ZAHLUNGSAVIS 1500048562\nDetails of charges: SHA\n\nInstructed amount: EUR 14,700.00\nExchange rate applied: 1.0850 USD per EUR\nUSD equivalent: USD 15,949.50\nCharges deducted (incoming international wire and currency conversion): USD 35.00\nNet amount credited: USD 15,914.50\n\nThe payment was received in a currency other than that of the beneficiary account and was converted at the bank's rate on the value date.\nThis advice is for information. It is not a statement of account.",
-      "party_id": "aldenhoven"
+      "subject": "Credit advice: incoming wire 2026072200413377",
+      "body": "INCOMING INTERNATIONAL WIRE - CREDIT ADVICE\n\nBeneficiary: NORTHWIND SYSTEMS INC\nAccount credited: USD operating account ending 4417\nValue date: 2026-07-22\nTransaction reference (TRN): 2026072200413377\n\nOriginator: VOSSBERG LOGISTIK GMBH, Hamburg, DE\nOriginator's bank: HAMBURGER HANDELSBANK AG, Hamburg\nRemittance information: INV-3202\nDetails of charges: SHA\n\nAmount received: EUR 24,500.00\nExchange rate applied: 1.0900 USD per EUR\nUSD equivalent: 26,705.00\nIncoming wire fee: USD 25.00\nNet credit: USD 26,680.00\n\nThe payment was received in a currency other than that of the beneficiary account and was converted at the bank's rate on the value date.\nThis advice is for information. It is not a statement of account."
     }
   ],
   "chat": [
@@ -1412,43 +1431,36 @@
       "party_id": "brightwater"
     },
     {
-      "id": "gj-c-1",
+      "id": "gj-c-11",
       "channel": "cs-escalations",
       "user": "U_SAM",
-      "ts": "2026-07-08T06:31:00Z",
-      "text": "INC-2291: EU-central ingestion is down since 06:12 UTC. Aldenhoven's dispatch boards are blank and their early shift is on paper. Engineering is on it.",
-      "party_id": "aldenhoven"
+      "ts": "2026-06-18T08:40:00Z",
+      "text": "Vossberg's tracking API was down for about nine hours overnight (NW-48213). Their ops director wants to talk about a credit. I have not promised anything.",
+      "party_id": "vossberg"
     },
     {
-      "id": "gj-c-2",
+      "id": "gj-c-12",
       "channel": "cs-escalations",
       "user": "U_SAM",
-      "ts": "2026-07-08T13:05:00Z",
-      "text": "INC-2291 resolved at 12:52 UTC. 6 hours 40 minutes in total for EU-central. Status page updated, postmortem by Friday.",
-      "party_id": "aldenhoven"
+      "ts": "2026-06-18T16:50:00Z",
+      "text": "Vossberg have now asked in writing for the 2% under section 7 and say their AP will hold it back on what they pay until it is settled. I told Jonas Brandt I cannot confirm a credit. Who signs these off?",
+      "party_id": "vossberg"
     },
     {
-      "id": "gj-c-3",
-      "channel": "cs-escalations",
-      "user": "U_SAM",
-      "ts": "2026-07-09T15:50:00Z",
-      "text": "Aldenhoven have filed an SLA claim for the 2% and say their AP will just deduct it from the July invoices. I told Jonas I cannot confirm a credit. Who signs these off?",
-      "party_id": "aldenhoven"
-    },
-    {
-      "id": "gj-c-4",
+      "id": "gj-c-13",
       "channel": "cs-escalations",
       "user": "U_CTRL",
-      "ts": "2026-07-09T16:20:00Z",
-      "text": "Exhibit B credits need an officer, so Alex. Nothing is approved for Aldenhoven yet. If they short-pay before it is, AR holds the difference as disputed and we do not write it off.",
-      "party_id": "aldenhoven"
+      "ts": "2026-06-18T17:20:00Z",
+      "text": "Section 7 credits are discretionary and need an officer in writing, so Alex. Nothing is approved for Vossberg yet. If they short-pay before it is, AR holds the difference as disputed and we do not write it off.",
+      "party_id": "vossberg"
     },
     {
-      "id": "gj-c-5",
+      "id": "gj-c-14",
       "channel": "finance",
       "user": "U_CTRL",
       "ts": "2026-07-01T14:00:00Z",
-      "text": "July invoices are out, including the first two in euro for Aldenhoven, booked at 1.1000. We still have no EUR account, so their wires will be converted by JPMorgan on the way in."
+      "text": "June is closed. Vossberg's EUR 100,000 for Q3 was open at month end, so it was remeasured at 1.0900 and that reversed this morning. We still have no EUR account, so their wires get converted by JPMorgan on the way in, at JPMorgan's rate.",
+      "party_id": "vossberg"
     }
   ],
   "crm": {
@@ -1564,50 +1576,40 @@
         "recorded_time": "2025-12-16T16:00:00Z"
       },
       {
-        "id": "DEAL-CTR-aldenhoven-2024",
-        "party_id": "aldenhoven",
-        "name": "Aldenhoven Logistik GmbH 2024 subscription",
-        "amount_cents": 330000000,
-        "close_date": "2023-12-12",
+        "id": "DEAL-CTR-vossberg-2025",
+        "party_id": "vossberg",
+        "name": "Vossberg Logistik GmbH 2025 subscription",
+        "amount_cents": 88000000,
+        "close_date": "2025-10-01",
         "owner": "U_SAM",
         "stage": "closedwon",
-        "recorded_time": "2023-12-12T16:00:00Z"
+        "recorded_time": "2025-10-01T00:00:00Z"
       },
       {
-        "id": "DEAL-CTR-aldenhoven-2026",
-        "party_id": "aldenhoven",
-        "name": "Aldenhoven Logistik GmbH 2026 subscription",
-        "amount_cents": 66000000,
-        "close_date": "2026-06-12",
+        "id": "DEAL-CTR-vossberg-addon-2026",
+        "party_id": "vossberg",
+        "name": "Vossberg Logistik GmbH 2026 subscription",
+        "amount_cents": 49500000,
+        "close_date": "2026-03-20",
         "owner": "U_SAM",
         "stage": "closedwon",
-        "recorded_time": "2026-06-12T16:00:00Z"
-      },
-      {
-        "id": "DEAL-CTR-aldenhoven-addon-2026",
-        "party_id": "aldenhoven",
-        "name": "Aldenhoven Logistik GmbH 2026 subscription",
-        "amount_cents": 9900000,
-        "close_date": "2026-06-12",
-        "owner": "U_SAM",
-        "stage": "closedwon",
-        "recorded_time": "2026-06-12T16:05:00Z"
+        "recorded_time": "2026-03-20T16:00:00Z"
       }
     ],
     "notes": [
       {
         "id": "GJ-N-1",
-        "party_id": "aldenhoven",
-        "ts": "2026-06-12T16:30:00Z",
+        "party_id": "vossberg",
+        "ts": "2026-03-20T16:30:00Z",
         "author": "U_SAM",
-        "text": "Amendment No. 2 signed. Aldenhoven moves to euro pricing from 1 July: EUR 100,000 platform (was USD 110,000) plus the EUR 15,000 data residency add-on. Their treasury will pay by euro wire."
+        "text": "Vossberg signed the EU data residency add-on: EUR 25,000 a month from 1 April, on top of the EUR 100,000 quarterly platform fee. Their treasury pays everything by euro wire from Hamburg."
       },
       {
         "id": "GJ-N-2",
-        "party_id": "aldenhoven",
-        "ts": "2026-07-09T16:00:00Z",
+        "party_id": "vossberg",
+        "ts": "2026-06-18T17:00:00Z",
         "author": "U_SAM",
-        "text": "Jonas Brandt filed an Exhibit B claim for the 8 July outage (INC-2291). Not confirmed by us. Passed to finance."
+        "text": "Jonas Brandt asked in writing for the 2% service credit after the 17/18 June outage (NW-48213). Not confirmed by us. Passed to finance."
       },
       {
         "id": "GJ-N-3",
@@ -1653,12 +1655,50 @@
         {
           "slug": "foreign-currency",
           "heading": "6. Foreign-currency receivables",
-          "text": "An invoice in a foreign currency is recorded in US dollars at the exchange rate on the invoice date. When it is paid, the difference between that rate and the rate the bank applied to the receipt is a realised exchange gain or loss (7100). It is arithmetic on the bank's own advice, not a concession, and it is never netted against a customer's deduction. Foreign-currency receivables still open at month end are remeasured at the closing rate."
+          "text": "An invoice in a foreign currency is recorded in US dollars at the exchange rate on the invoice date. When it is paid, the difference between that rate and the rate the bank applied to the receipt is a realised exchange gain or loss (7100). It is arithmetic on the bank's own advice, not a concession, and it is never netted against a customer's deduction. Foreign-currency receivables still open at month end are remeasured at the closing rate (7150) and the remeasurement is reversed on the first day of the next month."
         },
         {
           "slug": "customer-deductions",
           "heading": "7. Customer deductions and service credits",
-          "text": "A deduction is not accepted because a customer took it. A service credit is due only under the customer's service level exhibit: claimed in writing, validated against our availability records, confirmed in writing by an officer, and issued as a credit note. Until then the unpaid amount stays open on the invoice as disputed. It is not written off and it is not booked as a discount."
+          "text": "A deduction is not accepted because a customer took it. A service credit is due only as the customer's order form provides and only once an officer has confirmed it in writing; it is then issued as a credit note. Until then the unpaid amount stays open on the invoice as disputed. It is not written off and it is not booked as a discount."
+        }
+      ]
+    }
+  ],
+  "journals": [
+    {
+      "id": "reval-2026-06",
+      "date": "2026-06-30",
+      "memo": "Month-end revaluation: INV-3201 EUR 100,000.00 remeasured from 1.1000 to the 30 June closing rate 1.0900",
+      "party_id": "vossberg",
+      "lines": [
+        {
+          "account": "7150",
+          "debit_cents": 100000,
+          "credit_cents": 0
+        },
+        {
+          "account": "1200",
+          "debit_cents": 0,
+          "credit_cents": 100000
+        }
+      ]
+    },
+    {
+      "id": "reval-2026-06-rev",
+      "date": "2026-07-01",
+      "memo": "Reversal of month-end revaluation: INV-3201 EUR 100,000.00 remeasured from 1.1000 to the 30 June closing rate 1.0900",
+      "party_id": "vossberg",
+      "lines": [
+        {
+          "account": "1200",
+          "debit_cents": 100000,
+          "credit_cents": 0
+        },
+        {
+          "account": "7150",
+          "debit_cents": 0,
+          "credit_cents": 100000
         }
       ]
     }
