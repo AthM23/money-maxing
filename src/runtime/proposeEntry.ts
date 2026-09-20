@@ -1,6 +1,6 @@
 import { Proposal, type BlockRule, type KernelResult, type Mark } from "../contract/types.js";
 import { runKernel } from "../kernel/index.js";
-import type { ExtraCheck } from "../kernel/types.js";
+import type { DocLite, ExtraCheck } from "../kernel/types.js";
 import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "./config.js";
 import type { Db } from "./db.js";
 import { buildKernelContext, type ContextMeta } from "./kernelContext.js";
@@ -13,6 +13,7 @@ export interface ProposeMeta extends DecisionMeta {
   as_of?: string;
   features?: Record<string, string | number | boolean>;
   extra_checks?: ExtraCheck[];
+  replay_docs?: DocLite[];
 }
 
 export interface RuntimeDeps {
@@ -48,6 +49,7 @@ export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: Ru
   const ctxMeta: ContextMeta = {
     mode: meta.mode, as_of: meta.as_of, preparer: meta.actor, autonomy_level: meta.autonomy_level,
     approval: null, intent_id: proposal.intent_id, features: meta.features, extra_checks: meta.extra_checks,
+    replay_docs: meta.replay_docs,
   };
   const first = runKernel(proposal, buildKernelContext(db, proposal, ctxMeta, config), "proposal");
   insertWorkpaper(db, clock, decisionId, first);

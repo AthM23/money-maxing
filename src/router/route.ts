@@ -34,7 +34,8 @@ export function routeTier0(db: Db, input: unknown, meta: RouteMeta, deps: Runtim
   const results: ProposeResult[] = [];
   for (const proposal of plan.proposals) {
     const r = proposeEntry(db, proposal,
-      { actor: "router:tier0", mode: meta.mode, autonomy_level: meta.autonomy_level, tier: 0, as_of: meta.as_of, features: caseFeatures(c) }, deps);
+      { actor: "router:tier0", mode: meta.mode, autonomy_level: meta.autonomy_level, tier: 0, as_of: meta.as_of, features: caseFeatures(c),
+        replay_docs: c.docs_snapshot }, deps);
     results.push(r);
     if (r.status === "rejected" || r.status === "invalid" || r.status === "blocked") break;
   }

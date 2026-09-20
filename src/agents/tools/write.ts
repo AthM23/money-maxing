@@ -31,7 +31,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
     description: "Propose an accounting entry with evidence. A deterministic kernel re-checks it. On reject you get the failed marks; fix the cause, never the symptom.",
     run: (input, env) => compactResult(proposeEntry(env.db, input, {
       actor: env.actor, mode: env.mode, autonomy_level: env.autonomy_level, tier: env.tier, as_of: env.as_of,
-      decision_id: env.decision_id, features: env.features,
+      decision_id: env.decision_id, features: env.features, replay_docs: env.replay_docs,
     }, { clock: env.clock, config: env.config })),
   },
   {

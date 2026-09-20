@@ -31,8 +31,7 @@ function cashApplication(db: Db, c: CaseFile): Proposal {
   const applications: Proposal["applications"] = [];
   for (const docId of c.doc_ids) {
     if (left <= 0) break;
-    const doc = db.prepare("SELECT open_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number } | undefined;
-    const amount = Math.min(left, doc?.open_cents ?? 0);
+    const amount = Math.min(left, openBalance(db, c, docId));
     if (amount > 0) applications.push({ doc_id: docId, amount_cents: amount });
     left -= amount;
   }
@@ -43,6 +42,14 @@ function cashApplication(db: Db, c: CaseFile): Proposal {
     { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: applied, memo },
     ...(c.received_cents > applied ? [{ account: ACCOUNTS.customer_credits, debit_cents: 0, credit_cents: c.received_cents - applied, memo: `${memo}: unapplied` }] : []),
   ]);
+}
+
+/** In replay the balance comes from the case snapshot: today's ledger already shows the invoice settled. */
+function openBalance(db: Db, c: CaseFile, docId: string): number {
+  const snap = c.docs_snapshot?.find((d) => d.id === docId);
+  if (snap) return snap.open_cents;
+  const doc = db.prepare("SELECT open_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number } | undefined;
+  return doc?.open_cents ?? 0;
 }
 
 function fromFact(db: Db, c: CaseFile, notes: string[], asOf?: string): Proposal | null {

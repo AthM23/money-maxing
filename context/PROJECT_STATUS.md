@@ -349,3 +349,27 @@ _Heading time corrected from "~20:20": commit `805e468` is stamped 19:59._
 - Measured: `pnpm test` → 17 files, **235 tests passing**; `pnpm typecheck` clean. Nothing has called a model.
 - For Atharv: the investigator reads `trace` rows by `source` (`gmail`, `slack`, `contract`, `crm`, `file`, `workbook`)
   and needs `party.owner_user` for escalation. Ingest with a real `recorded_time`, or replay sees everything at once.
+
+### 2026-09-19 ~20:16 ET — Replay, compile and the autonomy ladder landed (Person A)
+
+- `src/learn/replay.ts`: for each `decision_point` in time order, hide the humans' entry, run the case as of
+  `decided_at` (trace reads are as-of in SQL; document balances come from the case snapshot, because today's ledger
+  already shows Q2 invoices settled), never post, and score in code against `human_outcome_json`. A miss where the
+  agent sided with the humans' own majority is triaged `human_inconsistent` and not held against the agent.
+- `src/learn/compile.ts`: deterministic policy induction. Groups the humans' judgments by treatment, account and
+  method; needs three agreeing cases; the ceiling is the largest amount the humans actually did (never wider);
+  backtests on every closed decision point; **one prior mis-clear refuses the draft**; same-treatment different-account
+  cases are listed for the approver as outliers. Drafts are `proposed` and do nothing until `approvePolicy`, where the
+  policy inherits its approver's ceiling. `src/learn/autonomy.ts`: auto at 95% with n of 5 or more and coverage by a
+  cited policy or fact; review at 80%; otherwise shadow. Counts stored, not just rates.
+- Measured on a seeded mini-Q2 (six wire shortfalls, one booked by a human to the wrong account): the compiler drafts
+  "write off to 6150 up to 4,500 cents for wires" with backtest 5 of 6 and the outlier named; with the policy approved,
+  replay through tier 0 reproduces 5 of 6 and triages the sixth as `human_inconsistent`; the ladder moves that kind to
+  auto (6 of 6, covered); the next July wire shortfall clears with zero model calls. With no policy, replay proposes
+  nothing on all six rather than guessing. `pnpm test` → 18 files, **242 passing**. Still no model call anywhere.
+- Eval grader tightened: a false auto-post is always graded incorrect, even when the route label matches.
+- **Contract additions by Person A alone, for Atharv (seeder) to review:** `decision_point.case_json` (a `CaseFile` with
+  `docs_snapshot`: balances as the humans saw them), `HumanOutcome` type for `human_outcome_json` (kind, account,
+  amount, docs, who was asked), and an `autonomy` table. The Q2 seed needs both JSON columns per decision point.
+- Lane C (Preet, fine-tune on the GX10): fine by Person A's code, which already writes `decision_step` rows for export.
+  Sign-off is Karan's to give.

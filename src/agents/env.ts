@@ -1,5 +1,6 @@
 import type { AutonomyLevel } from "../contract/types.js";
 import type { Clock, RuntimeConfig } from "../runtime/config.js";
+import type { DocLite } from "../kernel/types.js";
 import type { Db } from "../runtime/db.js";
 
 /** What every tool call can see. `as_of` is the replay guard: nothing recorded after it exists for the agent. */
@@ -16,4 +17,6 @@ export interface ToolEnv {
   /** The decision opened at intake. Steps are metered against it. */
   decision_id: string;
   features?: Record<string, string | number | boolean>;
+  /** Replay only: document balances as they stood at the decision. */
+  replay_docs?: DocLite[];
 }

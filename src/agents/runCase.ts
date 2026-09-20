@@ -61,6 +61,7 @@ async function runTier(
   const env: ToolEnv = {
     db, clock: deps.clock, config: deps.config, mode: opts.mode, as_of: opts.as_of, actor: `agent:${c.function}:${investigator.name}`,
     tier, autonomy_level: opts.autonomy_level, intent_id: c.intent_id, decision_id: decisionId, features: caseFeatures(c),
+    replay_docs: c.docs_snapshot,
   };
   const seen: ToolCallResult[] = [];
   const call = (tool: string, toolInput: unknown): ToolCallResult => {

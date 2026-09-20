@@ -9,9 +9,7 @@ export interface CaseGrade {
   expected_route: Route;
   actual_route: Route | "NOT_RUN";
   verdict: GradeVerdict;
-  /** Its own axis, independent of verdict: a wrong or wrongly-keyed unattended post.
-   *  A case can be "correct" (route matched, AUTO has no other obligation) and still be
-   *  a false auto-post, when auto_posted_entry_matches_key is explicitly false. See below. */
+  /** A wrong or wrongly-keyed unattended post. It always makes the verdict "incorrect". */
   is_false_auto_post: boolean;
   reason?: string;
 }
@@ -49,7 +47,10 @@ export function gradeCase(row: CaseRow, outcome: CaseOutcome): CaseGrade {
     };
   }
 
-  const { ok, reason } = checkRouteAndObligation(expectedRoute, outcome);
+  const checked = checkRouteAndObligation(expectedRoute, outcome);
+  // A false auto-post is never correct, even when the route label matches: the books are wrong and nobody looked.
+  const ok = checked.ok && !isFalseAuto;
+  const reason = checked.ok && isFalseAuto ? "auto-posted entry differs from the answer key" : checked.reason;
   const verdict: GradeVerdict = ok ? "correct" : "incorrect";
   return {
     case_id: row.id,

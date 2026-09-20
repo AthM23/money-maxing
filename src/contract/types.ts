@@ -82,8 +82,30 @@ export const CaseFile = z.object({
   shortfall_cents: Cents,
   method: z.enum(["ach", "wire", "check", "card", "other"]).optional(),
   trace_ids: z.array(z.string().min(1)),
+  /** Replay only: document balances as they stood at the decision, because today's ledger already shows them paid. */
+  docs_snapshot: z
+    .array(z.object({
+      id: z.string().min(1), kind: z.enum(["invoice", "bill"]), party_id: z.string().min(1),
+      total_cents: Cents, open_cents: Cents, date: IsoDate,
+    }))
+    .optional(),
 });
 export type CaseFile = z.infer<typeof CaseFile>;
+
+/**
+ * DRAFT (added by Person A): what the humans actually booked at a Q2 decision point
+ * (`decision_point.human_outcome_json`). Written by the seeder, scored in code, never visible to an agent.
+ */
+export const HumanOutcome = z.object({
+  kind: ProposalKind,
+  /** The account the judgment amount went to, e.g. 6150 for a bank fee. Absent for a plain cash application. */
+  account: z.string().optional(),
+  amount_cents: Cents,
+  doc_ids: z.array(z.string().min(1)),
+  asked_user: z.string().nullable().optional(),
+  note: z.string().optional(),
+});
+export type HumanOutcome = z.infer<typeof HumanOutcome>;
 
 export const MARK_CLASSES = ["F", "E", "P", "J"] as const;
 export type MarkClass = (typeof MARK_CLASSES)[number];

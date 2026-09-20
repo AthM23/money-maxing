@@ -36,6 +36,16 @@ describe("gradeCase: route matching", () => {
   });
 });
 
+describe("gradeCase: a false auto-post is never correct", () => {
+  it("grades a matching AUTO as incorrect when the posted entry differs from the key", () => {
+    const row = makeRow({ id: "X-9", expected_route: "AUTO" });
+    const grade = gradeCase(row, { case_id: "X-9", route: "AUTO", auto_posted_entry_matches_key: false });
+    expect(grade.verdict).toBe("incorrect");
+    expect(grade.is_false_auto_post).toBe(true);
+    expect(grade.reason).toContain("differs from the answer key");
+  });
+});
+
 describe("gradeCase: route obligations", () => {
   it("BLOCK requires a non-empty block_rule", () => {
     const row = makeRow({ id: "X-4", expected_route: "BLOCK" });

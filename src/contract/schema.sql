@@ -79,7 +79,14 @@ CREATE TABLE IF NOT EXISTS trace (
 CREATE TABLE IF NOT EXISTS decision_point (
   id TEXT PRIMARY KEY, function TEXT NOT NULL, period TEXT NOT NULL, kind TEXT NOT NULL,
   trace_ids_json TEXT NOT NULL, decided_at TEXT NOT NULL,
-  human_outcome_json TEXT NOT NULL          -- never reachable from any agent tool
+  case_json TEXT NOT NULL,                  -- ADDED: CaseFile with docs_snapshot, as the humans saw it at decided_at
+  human_outcome_json TEXT NOT NULL          -- HumanOutcome; never reachable from any agent tool
+);
+CREATE TABLE IF NOT EXISTS autonomy (       -- ADDED: the earned autonomy ladder, per decision kind
+  function TEXT NOT NULL, kind TEXT NOT NULL,
+  agree INTEGER NOT NULL, n INTEGER NOT NULL, covered INTEGER NOT NULL CHECK (covered IN (0,1)),
+  level TEXT NOT NULL CHECK (level IN ('auto','review','shadow')), updated_at TEXT NOT NULL,
+  PRIMARY KEY (function, kind)
 );
 CREATE TABLE IF NOT EXISTS intent (
   id TEXT PRIMARY KEY, parent_id TEXT REFERENCES intent(id), function TEXT NOT NULL, question TEXT NOT NULL,

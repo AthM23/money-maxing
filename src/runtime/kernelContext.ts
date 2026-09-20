@@ -1,6 +1,6 @@
 import { ACCOUNTS } from "../contract/accounts.js";
 import type { AutonomyLevel, Proposal } from "../contract/types.js";
-import type { ApprovalLite, ControlTotals, ExtraCheck, KernelContext } from "../kernel/types.js";
+import type { ApprovalLite, ControlTotals, DocLite, ExtraCheck, KernelContext } from "../kernel/types.js";
 import type { RuntimeConfig } from "./config.js";
 import type { Db } from "./db.js";
 import { getApprover, getBankTxn, getDoc, getFact, getPolicy, getTrace, safeJson } from "./lookups.js";
@@ -14,6 +14,8 @@ export interface ContextMeta {
   intent_id: string;
   features?: Record<string, string | number | boolean>;
   extra_checks?: ExtraCheck[];
+  /** Replay only: documents as they stood at the decision. Today's ledger already shows them settled. */
+  replay_docs?: DocLite[];
 }
 
 /** Assemble everything the kernel may look at from the database. The kernel itself never touches SQLite. */
@@ -28,11 +30,11 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     approval: meta.approval ?? null,
     materiality_cents: config.materiality_cents,
     open_escalations: countOpenEscalations(db, meta.intent_id),
-    control: readControlTotals(db),
+    control: meta.mode === "replay" && meta.replay_docs ? replayControl(meta.replay_docs) : readControlTotals(db),
     standardAccounts: (kind) => config.standard_accounts[kind] ?? [],
     features: { kind: proposal.kind, function: proposal.function, party_id: proposal.party_id, ...(meta.features ?? {}) },
     getTrace: (id) => getTrace(db, id),
-    getDoc: (id) => getDoc(db, id),
+    getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),
     getBankTxn: (id) => getBankTxn(db, id),
     getFact: (id) => getFact(db, id),
     getPolicy: (id) => getPolicy(db, id),
@@ -58,6 +60,15 @@ function countOpenEscalations(db: Db, intentId: string): number {
     )
     .get(intentId) as { n: number };
   return row.n;
+}
+
+/** In replay the as-of ledger is not rebuilt, so the control accounts are taken as tied to the snapshot. */
+function replayControl(docs: DocLite[]): ControlTotals {
+  const sum = (kind: DocLite["kind"]): number => docs.filter((d) => d.kind === kind).reduce((n, d) => n + d.open_cents, 0);
+  return {
+    ar_account: ACCOUNTS.ar, ap_account: ACCOUNTS.ap, cash_account: ACCOUNTS.cash,
+    ar_gl_cents: sum("invoice"), ar_subledger_cents: sum("invoice"), ap_gl_cents: sum("bill"), ap_subledger_cents: sum("bill"),
+  };
 }
 
 export function readControlTotals(db: Db): ControlTotals {
