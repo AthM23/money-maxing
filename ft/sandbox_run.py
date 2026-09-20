@@ -20,15 +20,20 @@ a = ap.parse_args()
 sb = Path(a.sandbox); out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
 
 def model_extract(text):
-    body = json.dumps({"messages": [{"role": "user", "content":
+    body = json.dumps({"max_tokens": 1200, "messages": [{"role": "user", "content":
         "Extract every field from this finance document as JSON. Amounts are integer cents. Respond with JSON only.\n\n" + text[:3500]}]}).encode()
     req = urllib.request.Request(a.endpoint + "/v1/chat/completions", data=body, headers={"Content-Type": "application/json"})
-    j = json.loads(urllib.request.urlopen(req, timeout=180).read())
+    try:
+        j = json.loads(urllib.request.urlopen(req, timeout=240).read())
+    except Exception:
+        return None, None
     raw = j["choices"][0]["message"]["content"] or ""
     raw = raw.strip().removeprefix("```json").removesuffix("```").strip()
-    if "{" in raw: raw = raw[raw.index("{"): raw.rindex("}") + 1]
-    try: return json.loads(raw), j["usage"].get("latency_ms")
-    except Exception: return None, j["usage"].get("latency_ms")
+    try:
+        if "{" in raw and "}" in raw: raw = raw[raw.index("{"): raw.rindex("}") + 1]
+        return json.loads(raw), j["usage"].get("latency_ms")
+    except Exception:
+        return None, j["usage"].get("latency_ms")
 
 docs = []
 pdfs = sorted((sb / "gold_master/invoices").glob("*.pdf"))
