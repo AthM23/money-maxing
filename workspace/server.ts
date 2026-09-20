@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { flagInt, flagString, parseArgs, warn } from "../src/cli/flags.js";
 import { openDb } from "../src/runtime/db.js";
 import { BRAND, handle, marketingUrl } from "./app.js";
+import { gate } from "./gate.js";
 import { listening } from "./publicMode.js";
 import { storesFor } from "./ripple.js";
 
@@ -24,8 +25,12 @@ function main(): void {
   if (process.env.MARKETING_URL && !marketingUrl()) warn("MARKETING_URL is not an http(s) address; the logo will open the local marketing page instead");
   const stores = storesFor(dbPath, flagString(args, "stores"));
   const { host, readOnly } = listening();
-  createServer((req, res) => void handle(db, stores, readOnly, req, res)).listen(port, host, () => {
-    process.stdout.write(`${BRAND}: http://localhost:${port}/dashboard  (marketing page at /; db ${dbPath}; other books ${stores ? `refresh from ${stores}` : "not refreshed: no stores folder"}${readOnly ? `; PUBLIC and read-only on ${host}` : ""})\n`);
+  const password = process.env.DASHBOARD_PASSWORD;
+  createServer(async (req, res) => {
+    if (password && await gate(password, req, res)) return;
+    void handle(db, stores, readOnly, req, res);
+  }).listen(port, host, () => {
+    process.stdout.write(`${BRAND}: http://localhost:${port}/dashboard  (marketing page at /; db ${dbPath}; other books ${stores ? `refresh from ${stores}` : "not refreshed: no stores folder"}${readOnly ? `; PUBLIC and read-only on ${host}` : ""}${password ? "; behind DASHBOARD_PASSWORD" : ""})\n`);
   });
 }
 

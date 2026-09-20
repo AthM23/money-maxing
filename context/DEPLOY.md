@@ -9,8 +9,14 @@ Free, TLS, one address: `/` is the marketing page, `/dashboard` the workspace. V
 AthM23's account (`a1ms-projects`). It is the same read-only copy described below, as one function:
 
 - `workspace/vercel.ts` calls the same handler as `pnpm workspace` (`workspace/app.ts`) with read-only **hard-coded**,
-  not read from `WORKSPACE_PUBLIC`: no setting on the host can make it a workspace that writes or spends. No
-  environment variable is set on the project and none is needed.
+  not read from `WORKSPACE_PUBLIC`: no setting on the host can make it a workspace that writes or spends.
+- **The dashboard asks for a password** (`workspace/gate.ts`, since ~04:50): the marketing page is open; `/dashboard`, its
+  files and every `/api/` address answer 401 until the password is entered at the form, and the browser is then
+  remembered for thirty days (an HttpOnly cookie holding a keyed hash, not the password). The password is the Vercel
+  project's one environment variable, `DASHBOARD_PASSWORD` (Production and Preview); ask AthM23 for it, it is not in
+  the repo. Unset, the hosted copy serves the marketing page and nothing else. To change it:
+  `npx vercel env rm DASHBOARD_PASSWORD production`, `env add`, redeploy; everyone is signed out. The same variable
+  gates `pnpm workspace` on a laptop if set; unset, the laptop has no gate.
 - `scripts/vercel-build.mjs` (the build command in `vercel.json`) builds the month on Vercel's machine with
   `scripts/demo-build.sh` — no model call, about 20 seconds — so **no database is committed or uploaded**: the copy is
   `prepared.db` from the code as deployed. Vercel has no `sqlite3` command; `scripts/vercel/bin/sqlite3` stands in for

@@ -1757,3 +1757,18 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   would publish the repo's files as a static site over the working copy. After the `vercel-setup` branch is merged:
   `npx vercel git connect`. The marketing page still carries the seven lines `DEMO_PATH.md` lists as not backed by
   code, and it is now public.
+
+### 2026-09-20 ~04:50 ET — The hosted dashboard asks for a password (AthM23 + Claude Code session)
+
+- Asked for by AthM23. `workspace/gate.ts`: on https://money-maxing-mu.vercel.app the marketing page stays open;
+  `/dashboard`, its scripts and every `/api/` address answer 401 until the password is entered once, and the browser is
+  remembered for thirty days. The cookie is an HMAC keyed by the password (HttpOnly, SameSite=Lax, Secure over TLS), so
+  it cannot be read back and changing the password signs everyone out. It keeps a link from being wandered into; it is
+  not an account system and there is no attempt limit.
+- **Supersedes "No environment variable is set on the project"** (04:40 entry): there is now one, `DASHBOARD_PASSWORD`,
+  on Production and Preview. The password is not in the repo; ask AthM23. With it unset the hosted copy fails closed
+  (marketing page only). On a laptop `pnpm workspace` is gated only if the variable is set, so the demo is unchanged.
+- Measured on the public address: `/` 200; `/dashboard`, `/app.js`, `/api/overview` 401 before signing in; a wrong
+  password 401 and no cookie; the right one 303 to `/dashboard`, after which all three are 200. Four tests in
+  `workspace/__tests__/gate.test.ts`; `pnpm typecheck` clean. `main` (through `bddb030`, 5 commits) merged into
+  `vercel-setup` first; the one conflict was this file, resolved as a union.
