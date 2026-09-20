@@ -22,6 +22,9 @@ export interface Scoreboard {
   repeat_questions: number;
   human_approvals: number;
   controller_approvals: number;
+  /** Independent reviews run, and what they cost in tokens. Not in cost_micros: the reviewer reports tokens, not dollars. */
+  controller_reviews: number;
+  controller_tokens: number;
   blocked: number;
   /** Tick marks the kernel could re-perform in code, over all tick marks, on first proposal. */
   checkable_num: number;
@@ -55,6 +58,8 @@ export function scoreboard(db: Db, fn?: string): Scoreboard {
     repeat_questions: one(`SELECT COUNT(*) - COUNT(DISTINCT e.dedupe_key) AS n FROM escalation e JOIN decision d ON d.id = e.decision_id WHERE ${LIVE}`),
     human_approvals: approvals(db, "human", f),
     controller_approvals: approvals(db, "controller_agent", f),
+    controller_reviews: one(`SELECT COUNT(*) AS n FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE ${LIVE} AND s.tool LIKE 'controller:%'`),
+    controller_tokens: one(`SELECT SUM(COALESCE(s.tokens_in, 0) + COALESCE(s.tokens_out, 0)) AS n FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE ${LIVE} AND s.tool LIKE 'controller:%'`),
     blocked: one(`SELECT COUNT(*) AS n FROM blocked_attempt b JOIN decision d ON d.id = b.decision_id WHERE ${LIVE}`),
     ...checkable(db, f),
   };

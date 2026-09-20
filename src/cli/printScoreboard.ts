@@ -10,7 +10,7 @@ export function printScoreboard(title: string, s: Scoreboard): void {
   out(`  decisions ${s.decisions} · reached by code ${s.decided_by_code} · by a model ${s.decided_by_model} · posted with no person ${s.auto_posted} · parked ${s.parked} · blocked ${s.blocked}`);
   out(`  routes ${Object.entries(s.by_route).map(([r, n]) => `${r} ${n}`).join(" · ")}`);
   out(`  model calls ${s.model_calls} · cost ${dollars(s.cost_micros)} · questions ${s.questions} (repeat ${s.repeat_questions})`);
-  out(`  approvals: people ${s.human_approvals} · controller agent ${s.controller_approvals}`);
+  out(`  approvals: people ${s.human_approvals} · controller agent ${s.controller_approvals} · independent reviews ${s.controller_reviews} (${s.controller_tokens} tokens, not in the cost above)`);
   out(`  tick marks re-performed in code ${s.checkable_num} / ${s.checkable_den} (${pct(s.checkable_num, s.checkable_den)})`);
 }
 
