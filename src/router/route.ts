@@ -43,9 +43,19 @@ export function routeTier0(db: Db, input: unknown, meta: RouteMeta, deps: Runtim
         replay_docs: c.docs_snapshot }, deps);
     results.push(r);
     if (r.status === "rejected" || r.status === "invalid" || r.status === "blocked") break;
+    if (r.status === "pending_approval") {
+      // What follows was planned on the assumption that this entry lands. Until a person approves it, nothing is
+      // adjusted on top of it; the case comes round again afterwards and is planned from the ledger as it then stands.
+      return { status: "done", results, routes: routesOf(results), unexplained_cents: 0, model_calls: 0,
+        notes: [...plan.notes, `${proposal.kind} is waiting for approval; the rest of the plan waits for it`] };
+    }
   }
   const rejected = results.some((r) => r.status === "rejected" || r.status === "invalid");
-  const routes = results.flatMap((r) => ("route" in r ? [r.route] : r.status === "blocked" ? ["BLOCK" as const] : []));
+  const routes = routesOf(results);
   const needsAgent = rejected || plan.unexplained_cents > 0;
   return { status: needsAgent ? "needs_agent" : "done", results, routes, unexplained_cents: plan.unexplained_cents, model_calls: 0, notes: plan.notes };
+}
+
+function routesOf(results: ProposeResult[]): Route[] {
+  return results.flatMap((r) => ("route" in r ? [r.route] : r.status === "blocked" ? ["BLOCK" as const] : []));
 }

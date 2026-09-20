@@ -22,14 +22,29 @@ const count = (db: Db, sql: string, ...args: unknown[]): number => (db.prepare(s
 const intentStatus = (db: Db, id: string): string => (db.prepare("SELECT status FROM intent WHERE id = ?").get(id) as { status: string }).status;
 
 describe("worker: open intents run at the autonomy each kind of entry has earned", () => {
-  it("cold start: no track record, so everything parks for a person and nothing posts", async () => {
+  it("cold start: cash that matches posts from code on day one; everything that carries judgment parks for a person", async () => {
     const db = world();
     const report = await runOpenIntents(db, { investigators: [], clock: fixedClock });
     expect(report.worked.map((w) => w.intent_id)).toEqual(["int_initech", "int_umbrella", "int_wayne"]);
-    expect(report.worked.find((w) => w.intent_id === "int_umbrella")).toMatchObject({ routes: ["PROPOSE", "PROPOSE"], tier_used: 0, status: "waiting_on_human" });
-    expect(report.worked.every((w) => w.status === "waiting_on_human")).toBe(true);
-    expect(count(db, "SELECT COUNT(*) AS n FROM gl_entry")).toBe(1);
-    expect(count(db, "SELECT COUNT(*) AS n FROM decision WHERE mode = 'live' AND autonomy_level != 'shadow' AND id != 'dec_open'")).toBe(0);
+    // Umbrella: the wire is applied by code; the rule-driven write-off is a kind with no track record, so it parks.
+    expect(report.worked.find((w) => w.intent_id === "int_umbrella")).toMatchObject({ routes: ["AUTO", "PROPOSE"], tier_used: 0, status: "waiting_on_human" });
+    expect(count(db, "SELECT COUNT(*) AS n FROM gl_entry")).toBe(4);
+    expect(count(db, "SELECT COUNT(*) AS n FROM decision WHERE mode = 'live' AND posted_at IS NOT NULL AND kind != 'apply_payment' AND id != 'dec_open'")).toBe(0);
+    const t = readControlTotals(db);
+    expect(t.ar_gl_cents).toBe(t.ar_subledger_cents);
+  });
+
+  it("a cash application that touches anything but control accounts is judged like everything else", async () => {
+    const db = world();
+    // Umbrella overpays by $50: the excess would sit in customer credits, which is a judgment, so the entry parks.
+    db.prepare("UPDATE bank_txn SET amount_cents = 2005000 WHERE id = 'BTX-2'").run();
+    db.prepare("UPDATE intent SET case_json = ? WHERE id = 'int_umbrella'").run(JSON.stringify({
+      intent_id: "int_umbrella", function: "ar", party_id: "umbrella", entry_date: "2026-07-15", bank_txn_id: "BTX-2", doc_ids: ["INV-1060"],
+      expected_cents: 2000000, received_cents: 2005000, shortfall_cents: -5000, method: "wire", trace_ids: ["tr_bank_2"] }));
+    const report = await runOpenIntents(db, { investigators: [], function: "ar", clock: fixedClock });
+    const umbrella = report.worked.find((w) => w.intent_id === "int_umbrella")!;
+    expect(umbrella.routes.includes("AUTO")).toBe(false);
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1060'").get()).toEqual({ open_cents: 2000000 });
   });
 
   it("a second pass finds nothing to do and records nothing twice", async () => {
@@ -80,12 +95,14 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     expect(again.worked.map((w) => [w.intent_id, w.tier_used, w.status])).toEqual([["int_initech", 1, "waiting_on_human"], ["int_wayne", 1, "waiting_on_human"]]);
   });
 
-  it("approving the parked cash application does not resolve a case whose shortfall nobody explained", async () => {
+  it("an intent closes on its end condition in the ledger, not because an entry posted", async () => {
     const db = world();
-    await runOpenIntents(db, { investigators: [], clock: fixedClock });
-    const cash = db.prepare("SELECT id FROM decision WHERE intent_id = 'int_initech' AND kind = 'apply_payment'").get() as { id: string };
-    expect(approveDecision(db, cash.id, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
-    expect(intentStatus(db, "int_initech")).toBe("open");
+    db.prepare("UPDATE policy SET status = 'retired' WHERE id = 'pol_wire_fee'").run();
+    db.prepare("UPDATE intent SET end_condition_json = ? WHERE id = 'int_umbrella'").run(JSON.stringify({ bank_txn_applied: "BTX-2", docs_settled: ["INV-1060"] }));
+    await runOpenIntents(db, { investigators: [], function: "ar", clock: fixedClock });
+    // The wire is applied and posted, but $20 is still owed on the invoice.
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1060'").get()).toEqual({ open_cents: 2000 });
+    expect(intentStatus(db, "int_umbrella")).toBe("open");
   });
 
   it("keeps the document balances as they stood before anything posted", async () => {
@@ -103,8 +120,8 @@ describe("worker: who may approve what parked", () => {
     const db = world();
     await runOpenIntents(db, { investigators: [], function: "ar", limit: 3, clock: fixedClock });
     const parked = db.prepare("SELECT id, kind FROM decision WHERE intent_id = 'int_umbrella' AND route = 'PROPOSE' ORDER BY rowid").all() as { id: string; kind: string }[];
-    expect(parked.map((p) => p.kind)).toEqual(["apply_payment", "write_off"]);
-    const byAgent = approveDecision(db, parked[1]!.id, { approver_id: "controller:claude", approver_kind: "controller_agent", outcome: "approved" }, { clock: fixedClock });
+    expect(parked.map((p) => p.kind)).toEqual(["write_off"]);
+    const byAgent = approveDecision(db, parked[0]!.id, { approver_id: "controller:claude", approver_kind: "controller_agent", outcome: "approved" }, { clock: fixedClock });
     expect(byAgent.status).toBe("rejected");
     expect(byAgent.status === "rejected" && byAgent.failed.map((m) => m.detail).join(" ")).toContain("still in shadow");
     for (const p of parked) {
