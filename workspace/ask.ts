@@ -16,7 +16,8 @@ export type AskModel = (typeof ASK_MODELS)[number];
 export interface AskAnswer {
   model: AskModel;
   text: string;
-  used: { tool: string; title: string; input: unknown; result: ToolResult }[];
+  /** Every tool that actually ran, in order, with how long it took and how many rows it returned: the page shows these as receipts. */
+  used: { tool: string; title: string; input: unknown; result: ToolResult; ms: number; rows: number }[];
   usage: { input_tokens: number; output_tokens: number; turns: number } | null;
   elapsed_ms: number;
 }
@@ -55,8 +56,14 @@ function askInCode(db: Db, question: string, period: string): Omit<AskAnswer, "e
   if (!name) return { model: "code", text: `I can build these from the books: ${TOOLS.map((t) => t.title.toLowerCase()).join(", ")}.`, used: [], usage: null };
   // The one tool that takes an argument gets the question's own words to search with.
   const input = name === "explain_receipt" ? { customer: subjectOf(question) } : {};
-  const result = runTool(db, name, input, period);
-  return { model: "code", text: result.summary, used: [{ tool: name, title: toolByName(name)!.title, input, result }], usage: null };
+  const used = timed(name, toolByName(name)!.title, input, () => runTool(db, name, input, period));
+  return { model: "code", text: used.result.summary, used: [used], usage: null };
+}
+
+function timed(tool: string, title: string, input: unknown, run: () => ToolResult): AskAnswer["used"][number] {
+  const started = performance.now();
+  const result = run();
+  return { tool, title, input, result, ms: Math.round((performance.now() - started) * 10) / 10, rows: result.table?.rows.length ?? 0 };
 }
 
 function subjectOf(question: string): string {
@@ -70,7 +77,7 @@ function subjectOf(question: string): string {
  * A tool's table as the model reads it: one object per row, money written out by code ("USD 105,800.00"). The model
  * is never handed cents to convert: on the first real run it turned 10,580,000 cents into "USD 10,580.00".
  */
-function forReading(result: ToolResult): Record<string, string | number | null>[] {
+export function forReading(result: ToolResult): Record<string, string | number | null>[] {
   const t = result.table;
   if (!t) return [];
   const money = (v: string | number | null): string | null => (typeof v === "number" ? `USD ${(v / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : v);
@@ -83,8 +90,9 @@ async function askAgent(db: Db, question: string, period: string, model: Exclude
   const tools = (TOOLS as readonly BookTool[]).map((t) => betaZodTool({
     name: t.name, description: t.description, inputSchema: t.input,
     run: (input) => {
-      const result = t.run({ db, period }, input);
-      used.push({ tool: t.name, title: t.title, input, result });
+      const call = timed(t.name, t.title, input, () => t.run({ db, period }, input));
+      used.push(call);
+      const result = call.result;
       return JSON.stringify({ title: result.title, summary: result.summary, rows: forReading(result), source_tables: result.source });
     },
   }));

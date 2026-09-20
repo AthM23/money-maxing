@@ -28,38 +28,38 @@ const usd = (cents: number): string => (cents / 100).toLocaleString("en-US", { s
 function tool<S extends z.ZodType>(t: BookTool<S>): BookTool<S> { return t; }
 
 export const TOOLS = [
-  tool({ name: "ar_ageing", title: "AR ageing", icon: "chart", example: "Who owes us money, and how late is it?", input: None,
+  tool({ name: "ar_ageing", title: "AR ageing", icon: "t_ageing", example: "Who owes us money, and how late is it?", input: None,
     description: "What each customer owes and how overdue it is, as of the end of the month being closed.",
     run: ({ db, period }) => {
       const table = arAgeing(db, lastDay(period));
       return { title: "AR ageing by customer", summary: `${table.rows.length - 1} customers owe ${usd(Number(table.rows[0]?.[5] ?? 0))} as of ${lastDay(period)}.`, table, source: "invoice" };
     } }),
-  tool({ name: "trial_balance", title: "Trial balance", icon: "list", example: "Show me the trial balance", input: None,
+  tool({ name: "trial_balance", title: "Trial balance", icon: "t_balance", example: "Show me the trial balance", input: None,
     description: "Debit and credit balance of every ledger account through the month being closed. The totals must be equal.",
     run: ({ db, period }) => ({ title: `Trial balance through ${period}`, summary: "Debits and credits by account; the last row has to foot.", table: trialBalance(db, period), source: "gl_entry, gl_line" }) }),
-  tool({ name: "cash_received", title: "Cash received", icon: "cash", example: "How much cash came in this month?", input: None,
+  tool({ name: "cash_received", title: "Cash received", icon: "t_cashin", example: "How much cash came in this month?", input: None,
     description: "Cash that landed in the bank accounts during the month, by week.",
     run: ({ db, period }) => {
       const weeks = cashByWeek(db, period);
       return { title: `Cash received by week, ${period}`, summary: `${usd(weeks.reduce((n, w) => n + w.cents, 0))} landed across ${weeks.length} weeks.`, table: { columns: ["Week starting", "Cash received"], money_columns: [1], rows: weeks.map((w) => [w.week, w.cents]) }, source: "bank_txn" };
     } }),
-  tool({ name: "waiting_on_people", title: "Waiting on you", icon: "inbox", example: "What needs me?", input: None,
+  tool({ name: "waiting_on_people", title: "Waiting on you", icon: "t_waiting", example: "What needs me?", input: None,
     description: "Every case that is not settled: open, or waiting for a person's answer or approval, with the question.",
     run: ({ db }) => {
       const rows = db.prepare("SELECT json_extract(case_json, '$.party_id') AS party, status, question FROM intent WHERE status != 'resolved' AND case_json IS NOT NULL ORDER BY created_at").all() as { party: string; status: string; question: string }[];
       return { title: "What is not settled yet", summary: `${rows.length} case(s) are open or waiting for a person.`, table: { columns: ["Customer", "Status", "Question"], money_columns: [], rows: rows.map((r) => [r.party, r.status.replaceAll("_", " "), r.question]) }, source: "intent" };
     } }),
-  tool({ name: "explain_receipt", title: "Explain a receipt", icon: "search", example: "Why is Vossberg short?", input: z.object({ customer: z.string().min(2).max(80).describe("Customer name or id, or an invoice number") }),
+  tool({ name: "explain_receipt", title: "Explain a receipt", icon: "t_receipt", example: "Why is Vossberg short?", input: z.object({ customer: z.string().min(2).max(80).describe("Customer name or id, or an invoice number") }),
     description: "How one customer's receipt was explained: the bank line, each book line with its account and who or what settled it, and what is still open.",
     run: ({ db }, { customer }) => explainReceipt(db, customer) }),
-  tool({ name: "agent_activity", title: "What the agents did", icon: "flow", example: "What did the agents do, and what did it cost?", input: None,
+  tool({ name: "agent_activity", title: "What the agents did", icon: "t_agents", example: "What did the agents do, and what did it cost?", input: None,
     description: "What each kind of worker (code, each model tier, people) did this month: entries posted alone, parked, questions, drafts the kernel refused, model calls and cost.",
     run: ({ db }) => {
       const f = buildFleet(db);
       return { title: "Who did what", summary: `${f.totals.model_calls} model calls costing ${usd(Math.round(f.totals.cost_micros / 10_000))}; the kernel refused ${f.totals.kernel_refusals} draft(s).`, source: "decision, decision_step, approval",
         table: { columns: ["Worker", "Turns", "Posted alone", "Parked", "Asked", "Refused by kernel", "Model calls", "Cost"], money_columns: [7], rows: f.workers.map((w) => [w.worker, w.turns, w.posted_alone, w.parked, w.asked, w.kernel_refusals, w.model_calls, Math.round(w.cost_micros / 10_000)]) } };
     } }),
-  tool({ name: "cash_forecast", title: "Cash forecast", icon: "trend", example: "What does cash look like over the next weeks?", input: None,
+  tool({ name: "cash_forecast", title: "Cash forecast", icon: "t_forecast", example: "What does cash look like over the next weeks?", input: None,
     description: "The 13-week cash forecast as last rebuilt: expected receipts and the running balance by week, and what it says it does not model.",
     run: ({ db }) => {
       const f = forecastView(db);
@@ -67,14 +67,14 @@ export const TOOLS = [
       return { title: `Cash forecast as of ${f.as_of}`, summary: f.not_modelled?.filter(Boolean).length ? `Not modelled, and said so: ${f.not_modelled.filter(Boolean).join("; ")}.` : "Everything on file is modelled.", source: "forecast_line",
         table: { columns: ["Week", "Expected receipts", "Balance"], money_columns: [1, 2], rows: (f.weeks ?? []).map((w) => [w.week, w.inflow_cents, w.balance_cents]) } };
     } }),
-  tool({ name: "close_status", title: "Close status", icon: "check", example: "Can we close the month?", input: None,
+  tool({ name: "close_status", title: "Close status", icon: "t_close", example: "Can we close the month?", input: None,
     description: "The close checklist: each item is a test on the ledger, with its status and what a blocked item is waiting on.",
     run: ({ db }) => {
       const c = closeView(db);
       if (!c.available) return { title: "Close status", summary: "This database has no close checklist. It is built by pnpm spine.", table: null, source: "checklist_item" };
       return { title: `Close run ${c.period}`, summary: `${c.done} of ${c.items?.length ?? 0} items hold in the ledger today.`, source: "checklist_item", table: { columns: ["Task", "Status", "Waiting on"], money_columns: [], rows: (c.items ?? []).map((i) => [i.name, i.status.replaceAll("_", " "), i.reason]) } };
     } }),
-  tool({ name: "revenue_schedules", title: "Revenue schedules", icon: "trend", example: "What revenue is scheduled by customer?", input: None,
+  tool({ name: "revenue_schedules", title: "Revenue schedules", icon: "t_revenue", example: "What revenue is scheduled by customer?", input: None,
     description: "Every contract with its value and the revenue schedule built from it.",
     run: ({ db }) => {
       const r = revenueView(db);
@@ -82,7 +82,7 @@ export const TOOLS = [
       const rows = (r.contracts ?? []) as { party: string; id: string; value_cents: number; scheduled_cents: number | null; version: number | null }[];
       return { title: "Contracts and schedules", summary: `${rows.length} contracts on file.`, source: "contract, rev_schedule", table: { columns: ["Customer", "Contract", "Value", "Scheduled", "Version"], money_columns: [2, 3], rows: rows.map((c) => [c.party, c.id, c.value_cents, c.scheduled_cents, c.version === null ? "none" : `v${c.version}`]) } };
     } }),
-  tool({ name: "policies_and_memory", title: "Policies and memory", icon: "book", example: "What rules has it learned?", input: None,
+  tool({ name: "policies_and_memory", title: "Policies and memory", icon: "t_policies", example: "What rules has it learned?", input: None,
     description: "Rules derived from what the team booked (with status and version) and facts people told it (with scope and end date).",
     run: ({ db }) => {
       const rules = db.prepare("SELECT COALESCE(code, id) AS code, version, status, name FROM policy ORDER BY code, version").all() as { code: string; version: number; status: string; name: string }[];

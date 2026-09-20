@@ -24,10 +24,12 @@ export const app = {
     return (dates.at(-1) ?? new Date().toISOString()).slice(0, 7);
   },
   go(view, id = null) {
+    const moved = this.route.view !== view || this.route.id !== id;
     this.route = { view, id };
     history.replaceState(null, "", id ? `#${view}/${id}` : `#${view}`);
     closeDrawer();
-    window.scrollTo({ top: 0 });
+    // Only a change of page starts from the top. Redrawing the page you are on leaves you where you were.
+    if (moved) window.scrollTo({ top: 0 });
     render();
   },
   /** Re-reads the books. The page is only redrawn when something in them changed, so an open trace stays open. */

@@ -40,28 +40,62 @@ export function renderAsk(app, o) {
 
 async function run(app, question) {
   if (busy || !question.trim()) return;
-  busy = true; app.go("ask");
+  busy = true;
+  // A card goes up at once, so there is never a moment when nothing seems to be happening.
+  const pendingCard = { question, pending: true, model };
+  history.unshift(pendingCard);
+  app.go("ask");
+  reveal();
   try {
     const a = await act("ask", { question, period: app.period, model });
-    history.unshift({ question, ...a });
-  } catch (err) { toast(err.message, "bad"); }
-  busy = false; app.go("ask");
+    history[history.indexOf(pendingCard)] = { question, ...a };
+  } catch (err) {
+    history[history.indexOf(pendingCard)] = { question, failed: err.message, model, used: [] };
+  }
+  busy = false;
+  app.go("ask");
+  reveal();
 }
 
 async function runTile(app, tool) {
+  const pendingCard = { question: tool.example, pending: true, model: "code" };
+  history.unshift(pendingCard);
+  app.go("ask");
+  reveal();
   try {
+    const started = performance.now();
     const result = await act("tool", { name: tool.name, input: {}, period: app.period });
-    history.unshift({ question: tool.example, model: "code", text: result.summary, used: [{ tool: tool.name, title: tool.title, input: {}, result }], usage: null, elapsed_ms: null });
-    app.go("ask");
-  } catch (err) { toast(err.message, "bad"); }
+    history[history.indexOf(pendingCard)] = { question: tool.example, model: "code", text: result.summary, usage: null, elapsed_ms: Math.round(performance.now() - started),
+      used: [{ tool: tool.name, title: tool.title, input: {}, result, ms: null, rows: result.table?.rows.length ?? 0 }] };
+  } catch (err) {
+    history[history.indexOf(pendingCard)] = { question: tool.example, failed: err.message, model: "code", used: [] };
+  }
+  app.go("ask");
+  reveal();
+}
+
+/** Bring the newest answer into view: it lands below the composer, where it is easy to miss. */
+function reveal() {
+  // A timer, not an animation frame: browsers pause animation frames in a tab that is not in front.
+  setTimeout(() => document.querySelector(".answers .answer")?.scrollIntoView({ behavior: document.hidden ? "auto" : "smooth", block: "start" }), 60);
 }
 
 function answerCard(a) {
+  if (a.pending) return h("div", { class: "panel answer working" }, h("p", { class: "asked" }, a.question),
+    h("p", { class: "lead" }, h("span", { class: "pulse" }), a.model === "code" ? "Running the report…" : `Asking ${a.model}: it reads the question, picks tools, and code runs them…`));
+  if (a.failed) return h("div", { class: "panel answer failed" }, h("p", { class: "asked" }, a.question), h("p", { class: "lead error" }, a.failed));
   const meta = [a.model === "code" ? "code only" : a.model, a.elapsed_ms !== null && a.elapsed_ms !== undefined ? `${(a.elapsed_ms / 1000).toFixed(1)} s` : null, a.usage ? `${a.usage.input_tokens + a.usage.output_tokens} tokens · ${a.usage.turns} turns` : "no model call"].filter(Boolean).join(" · ");
   return h("div", { class: "panel answer" },
     h("p", { class: "asked" }, a.question),
     h("p", { class: "lead" }, a.text),
-    a.used.length ? h("div", { class: "bubbles" }, a.used.map((u) => h("span", { class: "bubble" }, u.tool))) : null,
+    a.used.length ? h("div", { class: "receipts" }, h("span", { class: "kick" }, a.used.length === 1 ? "Tool that ran" : `${a.used.length} tools ran`), a.used.map(receipt)) : h("p", { class: "muted small" }, "No tool ran for this one."),
     a.used.map((u) => u.result.table ? h("div", { class: "subpanel" }, h("h3", {}, u.result.title), dataTable(u.result.table, { totalFirst: u.tool === "ar_ageing", totalLast: u.tool === "trial_balance" }), h("p", { class: "muted small" }, `Computed by code from: ${u.result.source}`)) : null),
     h("p", { class: "nodefoot mono" }, meta));
+}
+
+/** One line per tool that actually ran: proof that the answer came from the books and not from the model's head. */
+function receipt(u) {
+  const input = u.input && Object.keys(u.input).length ? Object.entries(u.input).map(([k, v]) => `${k}: ${v}`).join(", ") : null;
+  return h("div", { class: "receipt" }, h("span", { class: "ok" }, icon("check", 14)), h("b", { class: "mono" }, u.tool), input ? h("span", { class: "muted" }, `(${input})`) : null,
+    h("span", { class: "muted" }, `${u.rows} row${u.rows === 1 ? "" : "s"}${u.ms !== null && u.ms !== undefined ? ` · ${u.ms} ms` : ""} · read-only`));
 }
