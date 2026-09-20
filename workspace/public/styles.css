@@ -218,3 +218,6 @@ form.answer .actions.wide { grid-column: 1 / -1; display: flex; justify-content:
 .tbl.runs tr.on td { background: #f7fbdf; } .tbl.runs tr.on td:first-child { box-shadow: inset 3px 0 0 var(--ink); }
 .workers { display: flex; gap: 4px; flex-wrap: wrap; } .wk { font-size: 11.5px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--green-bg); color: var(--green-ink); } .wk.model { background: var(--violet-bg); color: var(--violet); } .wk.person { background: var(--coral-bg); color: var(--coral-ink); } .wk.reader { background: var(--blue-bg); color: var(--blue); } .wk.controller { background: var(--amber-bg); color: var(--amber); }
 #runtrace { scroll-margin-top: 16px; }
+
+/* Ask: a button the agent can put under its answer. It never writes; the person clicks. */
+.handoffs { display: grid; gap: 8px; margin: 10px 0 12px; } .handoff { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13.5px; } .handoff .btn { padding: 9px 16px; font-size: 13.5px; display: inline-flex; align-items: center; gap: 8px; }

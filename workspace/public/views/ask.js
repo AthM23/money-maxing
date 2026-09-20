@@ -35,7 +35,7 @@ export function renderAsk(app, o) {
           h("button", { class: `send ${busy ? "busy" : ""}`, disabled: busy, "aria-label": "Ask", on: { click: () => submit(input.value) } }, icon("send", 18)))),
       h("div", { class: "tray" }, h("span", { class: "kick" }, "Or run a tool directly"),
         h("div", { class: "tiles6" }, tools.map((t) => h("button", { class: "tooltile", title: t.description, on: { click: () => (t.needs_input ? (input.value = t.example, input.focus()) : runTile(app, t)) } }, h("span", { class: "tileicon" }, icon(t.icon, 22)), h("b", {}, t.title), h("small", {}, t.example)))))),
-    history.length ? h("div", { class: "answers" }, history.map(answerCard)) : h("p", { class: "fineprint" }, "Every tool is read-only. Approvals and answers are given under Input needed, as the person signed in."));
+    history.length ? h("div", { class: "answers" }, history.map((a) => answerCard(app, a))) : h("p", { class: "fineprint" }, "Every tool is read-only. Approvals and answers are given under Input needed, as the person signed in."));
 }
 
 async function run(app, question) {
@@ -47,7 +47,9 @@ async function run(app, question) {
   app.go("ask");
   reveal();
   try {
-    const a = await act("ask", { question, period: app.period, model });
+    // What was said before goes along, newest last, so a follow-up ("yes, that customer") means something. Text only.
+    const said = history.filter((x) => !x.pending && !x.failed && x.text).slice(0, 6).reverse().map((x) => ({ question: x.question.slice(0, 300), answer: x.text.slice(0, 2000) }));
+    const a = await act("ask", { question, period: app.period, model, history: said });
     history[history.indexOf(pendingCard)] = { question, ...a };
   } catch (err) {
     history[history.indexOf(pendingCard)] = { question, failed: err.message, model, used: [] };
@@ -80,7 +82,7 @@ function reveal() {
   setTimeout(() => document.querySelector(".answers .answer")?.scrollIntoView({ behavior: document.hidden ? "auto" : "smooth", block: "start" }), 60);
 }
 
-function answerCard(a) {
+function answerCard(app, a) {
   if (a.pending) return h("div", { class: "panel answer working" }, h("p", { class: "asked" }, a.question),
     h("p", { class: "lead" }, h("span", { class: "pulse" }), a.model === "code" ? "Running the report…" : `Asking ${a.model}: it reads the question, picks tools, and code runs them…`));
   if (a.failed) return h("div", { class: "panel answer failed" }, h("p", { class: "asked" }, a.question), h("p", { class: "lead error" }, a.failed));
@@ -88,7 +90,8 @@ function answerCard(a) {
   return h("div", { class: "panel answer" },
     h("p", { class: "asked" }, a.question),
     h("p", { class: "lead" }, a.text),
-    a.used.length ? h("div", { class: "receipts" }, h("span", { class: "kick" }, a.used.length === 1 ? "Tool that ran" : `${a.used.length} tools ran`), a.used.map(receipt)) : h("p", { class: "muted small" }, "No tool ran for this one."),
+    a.handoffs?.length ? h("div", { class: "handoffs" }, a.handoffs.map((x) => handoff(app, x))) : null,
+    a.used.length ? h("div", { class: "receipts" }, h("span", { class: "kick" }, a.used.length === 1 ? "Tool that ran" : `${a.used.length} tools ran`), a.used.map(receipt)) : a.handoffs?.length ? null : h("p", { class: "muted small" }, "No tool ran for this one."),
     a.used.map((u) => u.result.table ? h("div", { class: "subpanel" }, h("h3", {}, u.result.title), dataTable(u.result.table, { totalFirst: u.tool === "ar_ageing", totalLast: u.tool === "trial_balance" }), h("p", { class: "muted small" }, `Computed by code from: ${u.result.source}`)) : null),
     h("p", { class: "nodefoot mono" }, meta));
 }
@@ -98,4 +101,25 @@ function receipt(u) {
   const input = u.input && Object.keys(u.input).length ? Object.entries(u.input).map(([k, v]) => `${k}: ${v}`).join(", ") : null;
   return h("div", { class: "receipt" }, h("span", { class: "ok" }, icon("check", 14)), h("b", { class: "mono" }, u.tool), input ? h("span", { class: "muted" }, `(${input})`) : null,
     h("span", { class: "muted" }, `${u.rows} row${u.rows === 1 ? "" : "s"}${u.ms !== null && u.ms !== undefined ? ` · ${u.ms} ms` : ""} · read-only`));
+}
+
+const PLACES = { input_needed: ["queue", "Open Input needed", "inbox"], cash: ["run", "Open Cash", "cash"], close: ["close", "Open Close", "list"], policies: ["policies", "Open Policies", "book"], agents: ["fleet", "Open Agents", "flow"] };
+
+/**
+ * The agent cannot change the books. What it can do is put the place where a person does that one click away, or
+ * offer the one action that is free and safe to offer: a pass of the code tier, which the person still has to click.
+ */
+function handoff(app, x) {
+  if (x.to === "run_code_tier") {
+    return h("div", { class: "handoff" }, h("button", { class: "btn ink", on: { click: async (e) => {
+      e.target.disabled = true;
+      try {
+        const r = await act("run", {});
+        toast(`Code tier ran over ${r.worked.length} open case(s): no model, no cost. ${r.worked.filter((w) => w.status === "resolved").length} settled.`);
+        await app.refresh();
+      } catch (err) { toast(err.message, "bad"); e.target.disabled = false; }
+    } } }, icon("play", 14), "Run the code tier"), h("span", { class: "muted" }, x.why));
+  }
+  const [view, label, iconName] = PLACES[x.to] ?? PLACES.input_needed;
+  return h("div", { class: "handoff" }, h("button", { class: "btn white", on: { click: () => app.go(view) } }, icon(iconName, 14), label), h("span", { class: "muted" }, x.why));
 }

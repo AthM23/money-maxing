@@ -15,7 +15,7 @@ import { systemClock } from "../src/runtime/config.js";
 import { openDb, type Db } from "../src/runtime/db.js";
 import { runOpenIntents } from "../src/worker/runOpenIntents.js";
 import { HttpError } from "./http.js";
-import { ask, ASK_MODELS, runTool } from "./ask.js";
+import { ask, AskHistory, ASK_MODELS, runTool } from "./ask.js";
 
 /**
  * Everything the workspace can change, and each of them goes through the same functions the command line and Slack
@@ -38,7 +38,7 @@ const FactAction = z.object({ fact_id: Id, as: Id, outcome: z.enum(["approved", 
 const PolicyAction = z.object({ policy_id: Id, as: Id });
 const Run = z.object({ intent_id: Id.optional() });
 const Audit = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/), tamper: z.boolean().optional() });
-const Ask = z.object({ question: z.string().min(2).max(300), period: z.string().regex(/^\d{4}-\d{2}$/), model: z.enum(ASK_MODELS).default("code") });
+const Ask = z.object({ question: z.string().min(2).max(300), period: z.string().regex(/^\d{4}-\d{2}$/), model: z.enum(ASK_MODELS).default("code"), history: AskHistory });
 const Tool = z.object({ name: Id, input: z.unknown().optional(), period: z.string().regex(/^\d{4}-\d{2}$/) });
 
 type Handler = (db: Db, body: unknown) => Promise<unknown> | unknown;
@@ -83,7 +83,7 @@ export const ACTIONS: Record<string, Handler> = {
   // Reads only. It is a POST because it carries a question, and it changes nothing.
   ask: (db, body) => {
     const a = parse(Ask, body);
-    return ask(db, a.question, a.period, a.model);
+    return ask(db, a.question, a.period, a.model, a.history);
   },
   // One tool, run directly: a tile on the Ask page, or any client that speaks the same registry.
   tool: (db, body) => {
