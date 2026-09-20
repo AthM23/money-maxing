@@ -98,7 +98,14 @@ if a.local or a.adapter:
             ids = tok(prompt, return_tensors="pt", truncation=True, max_length=6144).to(model.device)
             with torch.no_grad():
                 o = model.generate(**ids, max_new_tokens=512, do_sample=False)
-            return tok.decode(o[0][ids.input_ids.shape[1]:], skip_special_tokens=True), int(o.shape[1])
+            text = tok.decode(o[0][ids.input_ids.shape[1]:], skip_special_tokens=True)
+            # gpt-oss wraps the answer in harmony channels; keep only the final message.
+            if "<|message|>" in text: text = text.split("<|message|>")[-1]
+            text = text.replace("<|return|>", "").strip()
+            # with special tokens stripped, the channel name itself can remain glued to the JSON: final{...}
+            i = text.rfind("final{")
+            if i != -1: text = text[i + len("final"):]
+            return text, int(o.shape[1])
         return go
     for spec in a.local:
         name, hf_id = spec.split("=", 1)
