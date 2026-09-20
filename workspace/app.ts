@@ -93,12 +93,16 @@ export function marketingUrl(): string | null {
 }
 
 /** Every bill that is not yet paid, each with who accepted or rejected it. Uploads land here the moment they are filed. */
-function billsOnFile(db: Db): { columns: string[]; rows: (string | number | null)[][]; money_columns: number[] } {
+function billsOnFile(db: Db): { columns: string[]; rows: (string | number | null)[][]; money_columns: number[]; summary: string } {
   const rows = db.prepare(`SELECT p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents, b.status,
-        (SELECT r.outcome || ' by ' || r.approver_id FROM bill_review r WHERE r.bill_id = b.id) AS review
+        (SELECT r.outcome || ' by ' || COALESCE(a.name, r.approver_id) FROM bill_review r LEFT JOIN approver a ON a.id = r.approver_id WHERE r.bill_id = b.id) AS review
       FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status NOT IN ('paid') ORDER BY b.bill_date DESC LIMIT 50`)
     .all() as { vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number; status: string; review: string | null }[];
+  const usd = (c: number): string => (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+  const accepted = rows.filter((r) => r.review?.startsWith("accepted")).reduce((n, r) => n + r.total_cents, 0);
+  const waiting = rows.filter((r) => !r.review).reduce((n, r) => n + r.total_cents, 0);
   return { columns: ["Vendor", "Ref", "Bill date", "Period", "Amount", "Status", "Reviewed"], money_columns: [4],
+    summary: `${usd(accepted)} accepted and queued for the payment run; ${usd(waiting)} still waiting for a person. Money leaves cash at the payment run, through the kernel.`,
     rows: rows.map((r) => [r.vendor, r.ref, r.bill_date, r.service_period, r.total_cents, r.status, r.review ?? "waiting"]) };
 }
 
