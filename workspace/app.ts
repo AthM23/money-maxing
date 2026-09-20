@@ -56,7 +56,8 @@ function get(db: Db, url: URL, res: ServerResponse): void {
   if (url.pathname === "/api/case") return found(res, caseView(db, url.searchParams.get("intent") ?? ""));
   if (url.pathname === "/api/workpaper") return found(res, workpaperView(db, url.searchParams.get("decision") ?? ""));
   // One address for both: the marketing page at the root, the workspace at /dashboard. Its scripts and styles keep their root paths.
-  if (url.pathname === "/" || url.pathname === "/site") return site(res);
+  // `/index.html` too: the pages of `frontend/` link to each other by file name, as they do when opened from the folder.
+  if (url.pathname === "/" || url.pathname === "/site" || url.pathname === "/index.html") return site(res);
   const page = PAGES[url.pathname];
   if (page) return existsSync(join(FRONTEND, page)) ? sendPage(res, join(FRONTEND, page)) : found(res, null);
   if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") return sendStatic(res, PUBLIC, "/index.html");

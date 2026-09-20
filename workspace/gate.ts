@@ -13,7 +13,7 @@ const COOKIE = "mm_dashboard";
 const THIRTY_DAYS_S = 30 * 24 * 60 * 60;
 const MAX_FORM_BYTES = 4 * 1024;
 // The marketing page, the logo it shows, and the other self-contained pages of `frontend/` (`PAGES` in app.ts).
-const OPEN: ReadonlySet<string> = new Set(["/", "/site", "/logo.svg", "/flow", "/flow.html"]);
+const OPEN: ReadonlySet<string> = new Set(["/", "/site", "/index.html", "/logo.svg", "/flow", "/flow.html"]);
 const PAGE_CSP = "default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; form-action 'self'; frame-ancestors 'none'";
 
 function pass(password: string): string {

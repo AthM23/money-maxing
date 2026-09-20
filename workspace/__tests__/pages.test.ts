@@ -30,6 +30,13 @@ describe("the self-contained pages beside the marketing page", () => {
     }
   });
 
+  it("answers the file names those pages use to link to each other: index.html is the marketing page, not the workspace", async () => {
+    const home = await (await fetch(`${base}/`)).text();
+    const byName = await fetch(`${base}/index.html`);
+    expect([byName.status, await byName.text()]).toEqual([200, home]);
+    expect(home).not.toContain("/app.js"); // the workspace's own index.html loads it; the marketing page does not
+  });
+
   it("opens nothing else by it: a neighbouring address still asks for the password", async () => {
     for (const path of ["/flow/", "/flow.htm", "/flowx", "/frontend/flow.html", "/flow/../app.js"]) expect([path, (await fetch(`${base}${path}`)).status]).toEqual([path, 401]);
   });
