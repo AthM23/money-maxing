@@ -13,7 +13,7 @@ TLS. The live demo, where decisions are made, stays on the laptop.
   (if that changes: add the new address to security group `money-maxer-demo-sg`, port 22).
 - **Atharv, for Vercel:** the marketing page's "Open the dashboard" button points at `/dashboard`, which exists only
   on this box. On Vercel it has to be `http://32.198.75.6/dashboard`.
-  *(AthM23, 05:25: not needed. The Vercel copy serves its own `/dashboard`, behind a password; see the next section.)*
+  *(AthM23, 05:05: not needed. The Vercel copy serves its own `/dashboard`, behind a password; see the next section.)*
 - **Take it down** when judging is over (it costs about 50 cents a day):
   `aws ec2 terminate-instances --region us-east-1 --instance-ids i-0b4b617b2060e0d33`, then
   `aws ec2 delete-security-group --region us-east-1 --group-id sg-02170e069ce23e142` and
