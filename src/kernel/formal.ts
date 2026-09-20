@@ -70,6 +70,8 @@ function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
   const txn = ctx.getBankTxn(proposal.bank_txn_id);
   if (!txn) return [`bank transaction ${proposal.bank_txn_id} not found`];
   const problems: string[] = [];
+  // Realized FX moves no cash but belongs to one receipt: it names the bank line for its rate, and spends none of it.
+  if (proposal.kind === "fx_realized") return problems;
   if (NO_CASH_KINDS.has(proposal.kind)) problems.push(`kind ${proposal.kind} moves no cash and must not cite bank line ${txn.id}`);
   if (INBOUND_KINDS.has(proposal.kind) && txn.amount_cents <= 0) problems.push(`kind ${proposal.kind} needs money in, but bank line ${txn.id} is ${txn.amount_cents}`);
   if (proposal.kind === "schedule_payment" && txn.amount_cents >= 0) problems.push(`a payment out needs a debit, but bank line ${txn.id} is ${txn.amount_cents}`);

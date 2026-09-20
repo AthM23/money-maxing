@@ -6,10 +6,16 @@ import { applicableFacts } from "../memory/applicability.js";
 import type { Db } from "../runtime/db.js";
 import { bankTxnAppliedCents } from "../runtime/kernelContext.js";
 import { safeJson } from "../runtime/lookups.js";
+import { foreignParts, type ForeignParts } from "./foreign.js";
 
 /** Tier 0 builds proposals in code from an exact match, an active fact or an approved policy. No model call. */
 export interface Tier0Plan {
   proposals: Proposal[];
+  /**
+   * Case facts for one proposal, by its index, when they differ from the case as a whole: a rule that covers bank
+   * fees is tested on the fee, not on the whole shortfall the fee is a part of.
+   */
+  features_by_index?: Record<number, Record<string, string | number | boolean>>;
   /** Cents of the shortfall that nothing on file explains. Above zero means an agent has to look. */
   unexplained_cents: number;
   notes: string[];
@@ -29,6 +35,8 @@ export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
   if (c.remittance && c.remittance.applications.filter(a => (replaying ? snapshotBalance(db, c, a.doc_id) : liveOpenBalance(db, a.doc_id)) > a.amount_cents).length > 1) {
     return { proposals, unexplained_cents: stillOpen, notes: ["Multiple remittance lines are short; investigate each allocation before adjusting."] };
   }
+  const foreign = replaying ? null : foreignParts(db, c, notes);
+  if (foreign) return planForeign(db, c, foreign, stillOpen, proposals, notes);
   if (stillOpen !== c.shortfall_cents) {
     notes.push(`${stillOpen} cents are still open on ${c.doc_ids.join(", ")}, the case file says ${c.shortfall_cents}: something else has adjusted these documents`);
     return { proposals, unexplained_cents: stillOpen, notes };
@@ -36,6 +44,50 @@ export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
   const adjustment = fromFact(db, c, notes, asOf) ?? fromPolicy(db, c, notes);
   if (adjustment) proposals.push(adjustment);
   return { proposals, unexplained_cents: adjustment ? 0 : c.shortfall_cents, notes };
+}
+
+/**
+ * Each cause on its own terms. The bank's fee goes under an approved rule tested on the fee alone. The rate effect
+ * is arithmetic the kernel re-performs (F9). What the customer held back is the only judgment: a remembered answer
+ * or a rule may cover it, otherwise it is what the judgment tiers are handed, with the rest already explained.
+ */
+function planForeign(db: Db, c: CaseFile, f: ForeignParts, stillOpen: number, proposals: Proposal[], notes: string[]): Tier0Plan {
+  const features: NonNullable<Tier0Plan["features_by_index"]> = {};
+  const feeDue = f.fee_booked ? 0 : f.fee_cents;
+  const fxDue = f.fx_booked ? 0 : f.fx_loss_cents;
+  const heldBack = stillOpen - feeDue - fxDue;
+  if (heldBack !== 0 && heldBack !== f.residual_cents) {
+    notes.push(`${stillOpen} cents are still open on ${c.doc_ids.join(", ")} but the split expects ${feeDue + fxDue + f.residual_cents}: something else has adjusted this document`);
+    return { proposals, unexplained_cents: stillOpen, notes };
+  }
+  const evidence = f.advice_trace_id ? [{ claim: "the bank's credit advice for this receipt", trace_id: f.advice_trace_id }] : [];
+  let unexplained = 0;
+  if (feeDue > 0) {
+    const fee = fromPolicy(db, { ...c, shortfall_cents: feeDue }, notes, evidence);
+    if (fee) { features[proposals.length] = caseFeatures({ ...c, shortfall_cents: feeDue }); proposals.push(fee); } else unexplained += feeDue;
+  }
+  if (fxDue > 0) proposals.push(realizedFx(c, f, fxDue, evidence));
+  if (heldBack > 0) {
+    const residualCase = { ...c, shortfall_cents: heldBack };
+    const adjustment = fromFact(db, residualCase, notes) ?? fromPolicy(db, residualCase, notes);
+    if (adjustment) { features[proposals.length] = caseFeatures(residualCase); proposals.push(adjustment); } else unexplained += heldBack;
+  }
+  return { proposals, unexplained_cents: unexplained, notes, features_by_index: features };
+}
+
+function realizedFx(c: CaseFile, f: ForeignParts, cents: number, evidence: Proposal["evidence"]): Proposal {
+  const memo = `Realized FX loss: ${f.currency} receipt settled at ${(f.rate_ppm / 1_000_000).toFixed(4)}, booked at ${(f.booked_rate_ppm / 1_000_000).toFixed(4)}`;
+  const p = base(c, "fx_realized", [{ doc_id: c.doc_ids[0] ?? "", amount_cents: cents }], [
+    { account: ACCOUNTS.fx_gain_loss, debit_cents: cents, credit_cents: 0, memo },
+    { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: cents, memo },
+  ]);
+  p.bank_txn_id = c.bank_txn_id;
+  // The two numbers the arithmetic rests on, quoted as the bank printed them, so a reviewer sees them in the advice.
+  const amount = (f.foreign_amount_cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  p.evidence = evidence.flatMap((e) => [
+    { ...e, claim: `the bank received ${f.currency} ${amount}`, quote: amount },
+    { ...e, claim: "the rate the bank applied", quote: (f.rate_ppm / 1_000_000).toFixed(4) }]);
+  return p;
 }
 
 /**
@@ -163,7 +215,7 @@ function fromFact(db: Db, c: CaseFile, notes: string[], asOf?: string): Proposal
 
 interface PolicyRow { id: string; condition_json: string; action_json: string }
 
-function fromPolicy(db: Db, c: CaseFile, notes: string[]): Proposal | null {
+function fromPolicy(db: Db, c: CaseFile, notes: string[], evidence?: Proposal["evidence"]): Proposal | null {
   const rows = db.prepare("SELECT id, condition_json, action_json FROM policy WHERE function = ? AND status = 'approved'")
     .all(c.function) as PolicyRow[];
   for (const row of rows) {
@@ -180,7 +232,7 @@ function fromPolicy(db: Db, c: CaseFile, notes: string[]): Proposal | null {
       { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: c.shortfall_cents, memo },
     ]);
     p.policy_refs = [row.id];
-    p.evidence = c.trace_ids.map((trace_id) => ({ claim: "bank line showing the shortfall", trace_id }));
+    p.evidence = evidence?.length ? evidence : c.trace_ids.map((trace_id) => ({ claim: "bank line showing the shortfall", trace_id }));
     return p;
   }
   return null;

@@ -62,6 +62,10 @@ export function buildRerunContext(db: Db, subject: RerunSubject, config: Runtime
     bankTxnAppliedCents: (id) => appliedByOthers(db, subject, id, neutralised),
     getFact: (id) => asOfFact(db, subject, base, id, neutralised),
     getPolicy: (id) => asOfPolicy(db, subject, base, id, neutralised),
+    // The entry under test is itself the realized FX on its receipt; only FX booked by OTHER entries counts against it.
+    fxRealizedCents: (id) => (subject.proposal.kind === "fx_realized" && subject.proposal.bank_txn_id === id
+      ? Math.max(0, (base.fxRealizedCents?.(id) ?? 0) - subject.proposal.applications.reduce((n, a) => n + a.amount_cents, 0))
+      : base.fxRealizedCents?.(id) ?? 0),
     findPaidDuplicate: (party, amount, exclude) =>
       base.findPaidDuplicate?.(party, amount, [...exclude, ...paidLater(db, subject)]),
     remitChangedUnverified: (party) => remitChangedAsOf(db, subject, party),

@@ -12,6 +12,7 @@ export const ACCOUNTS = {
   concessions: "4900",
   bank_charges: "6150",
   misc_expense: "6990",
+  fx_gain_loss: "7100",
 } as const;
 
 export const ACCOUNT_NAMES: Readonly<Record<string, string>> = {
@@ -27,4 +28,5 @@ export const ACCOUNT_NAMES: Readonly<Record<string, string>> = {
   "4900": "Discounts and concessions",
   "6150": "Bank charges",
   "6990": "Misc expense",
+  "7100": "Realized FX gain/loss",
 };

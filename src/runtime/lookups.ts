@@ -1,6 +1,6 @@
 import type { ProposalKind } from "../contract/types.js";
 import type {
-  ApproverLite, BankTxnLite, Condition, DocLite, FactLite, PolicyLite, TraceLite,
+  ApproverLite, BankFxLite, BankTxnLite, Condition, DocFxLite, DocLite, FactLite, PolicyLite, TraceLite,
 } from "../kernel/types.js";
 import type { Db } from "./db.js";
 import { payloadText } from "./payloadText.js";
@@ -79,6 +79,28 @@ export function getPolicy(db: Db, id: string): PolicyLite | undefined {
   const raw = safeJson(row.action_json) as { kind?: unknown; account?: unknown } | null;
   const action = typeof raw?.kind === "string" && typeof raw.account === "string" ? { kind: raw.kind, account: raw.account } : null;
   return { id: row.id, function: row.function, status: row.status, condition, action, max_amount_cents: row.max_amount_cents, approved_by: row.approved_by };
+}
+
+/** Foreign-currency facts about an invoice and a receipt, for the kernel's realized-FX check. */
+export function getDocFx(db: Db, docId: string): DocFxLite | undefined {
+  return db.prepare("SELECT currency, foreign_total_cents, booked_rate_ppm FROM invoice_fx WHERE invoice_id = ?").get(docId) as DocFxLite | undefined;
+}
+
+export function getBankFx(db: Db, bankTxnId: string): BankFxLite | undefined {
+  return db.prepare("SELECT currency, foreign_amount_cents, rate_ppm, fee_cents, advice_trace_id FROM bank_txn_fx WHERE bank_txn_id = ?")
+    .get(bankTxnId) as BankFxLite | undefined;
+}
+
+/** Realized FX already in the books for a receipt: posted live entries of that kind naming the bank line. */
+export function fxRealizedCents(db: Db, bankTxnId: string): number {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.kind = 'fx_realized' AND json_extract(d.proposal_json, '$.bank_txn_id') = ?`,
+    )
+    .get(bankTxnId) as { n: number };
+  return row.n;
 }
 
 export function getApprover(db: Db, id: string): ApproverLite | undefined {

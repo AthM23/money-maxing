@@ -42,6 +42,17 @@ CREATE TABLE IF NOT EXISTS bank_txn (
   id TEXT PRIMARY KEY, posted_date TEXT NOT NULL, amount_cents INTEGER NOT NULL,   -- signed: credits positive
   descriptor TEXT NOT NULL, method TEXT, party_id TEXT REFERENCES party(id), trace_id TEXT
 );
+-- ADDED: foreign-currency facts about an invoice and a receipt. The ledger stays in USD; these carry what the kernel
+-- needs to re-perform realized FX. Rates are USD per one unit of the currency, times 1,000,000 (1.0800 -> 1080000).
+CREATE TABLE IF NOT EXISTS invoice_fx (
+  invoice_id TEXT PRIMARY KEY REFERENCES invoice(id), currency TEXT NOT NULL,
+  foreign_total_cents INTEGER NOT NULL, booked_rate_ppm INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS bank_txn_fx (
+  bank_txn_id TEXT PRIMARY KEY REFERENCES bank_txn(id), currency TEXT NOT NULL,
+  foreign_amount_cents INTEGER NOT NULL, rate_ppm INTEGER NOT NULL, fee_cents INTEGER NOT NULL DEFAULT 0,
+  advice_trace_id TEXT                      -- the bank's credit advice: it must state the foreign amount, the rate and the fee
+);
 CREATE TABLE IF NOT EXISTS payroll_run (id TEXT PRIMARY KEY, pay_date TEXT NOT NULL, period_start TEXT NOT NULL, period_end TEXT NOT NULL, gross_cents INTEGER NOT NULL, register_json TEXT NOT NULL);
 
 CREATE TABLE IF NOT EXISTS period (

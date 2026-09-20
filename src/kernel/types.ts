@@ -75,6 +75,10 @@ export interface ApproverLite {
   limit_cents: number;
 }
 
+/** Foreign-currency facts the kernel re-performs realized FX from. Rates are USD per unit, times 1,000,000. */
+export interface DocFxLite { currency: string; foreign_total_cents: number; booked_rate_ppm: number }
+export interface BankFxLite { currency: string; foreign_amount_cents: number; rate_ppm: number; fee_cents: number; advice_trace_id: string | null }
+
 export interface ApprovalLite {
   approver_id: string;
   approver_kind: "human" | "controller_agent";
@@ -124,6 +128,10 @@ export interface KernelContext {
   getApprover(id: string): ApproverLite | undefined;
   /** Cents of this bank line already applied by posted decisions. A bank line cannot be spent twice. */
   bankTxnAppliedCents?(bank_txn_id: string): number;
+  getDocFx?(doc_id: string): DocFxLite | undefined;
+  getBankFx?(bank_txn_id: string): BankFxLite | undefined;
+  /** Cents of realized FX already posted against this receipt. FX on one receipt is realized once. */
+  fxRealizedCents?(bank_txn_id: string): number;
   /** DUPLICATE_PAYMENT: a different paid document for the same vendor and amount. */
   findPaidDuplicate?(party_id: string, amount_cents: number, exclude_doc_ids: string[]): { doc_id: string } | undefined;
   /** BANK_DETAILS_CHANGED: remit-to differs from the details last paid, with no out-of-band confirmation on record. */

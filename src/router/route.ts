@@ -37,14 +37,14 @@ export function routeTier0(db: Db, input: unknown, meta: RouteMeta, deps: Runtim
   }
   const plan = pack.planTier0(db, c, meta.as_of);
   const results: ProposeResult[] = [];
-  for (const proposal of plan.proposals) {
+  for (const [i, proposal] of plan.proposals.entries()) {
     const r = proposeEntry(db, proposal,
-      { actor: "router:tier0", mode: meta.mode, autonomy_level: meta.autonomy_level, tier: 0, as_of: meta.as_of, features: pack.features(c),
+      { actor: "router:tier0", mode: meta.mode, autonomy_level: meta.autonomy_level, tier: 0, as_of: meta.as_of, features: plan.features_by_index?.[i] ?? pack.features(c),
         replay_docs: c.docs_snapshot }, deps);
     results.push(r);
     if (r.status === "rejected" || r.status === "invalid" || r.status === "blocked") break;
-    if (r.status === "pending_approval") {
-      // What follows was planned on the assumption that this entry lands. Until a person approves it, nothing is
+    if (r.status === "pending_approval" && proposal.kind === "apply_payment") {
+      // What follows was planned on the assumption that this cash lands (a parked fee or credit blocks nothing else). Until a person approves it, nothing is
       // adjusted on top of it; the case comes round again afterwards and is planned from the ledger as it then stands.
       return { status: "done", results, routes: routesOf(results), unexplained_cents: 0, model_calls: 0,
         notes: [...plan.notes, `${proposal.kind} is waiting for approval; the rest of the plan waits for it`] };

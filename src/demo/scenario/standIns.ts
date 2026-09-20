@@ -60,6 +60,15 @@ const PLAYS: Record<string, Play> = {
       uses: "standing", valid_from: "2026-07-01", valid_to: "2027-06-30", source_trace_ids: ["tr_mail_kestrel_1"], stated_by: "ap@kestrelanalytics.test" });
     return { outcome: "refused", summary: "the parent paid; the customer's own email says so, but nobody here has confirmed the payer yet", places_looked: ["mail_search"] };
   },
+  vossberg: (c, call) => {
+    const looked = ["mail_search", "chat_search", "contracts_find_clause"].map((tool) => ({ source: tool, query: "Vossberg outage credit", hits: (call(tool, { query: "Vossberg outage credit", party_id: c.party_id }).output as unknown[]).length }));
+    const owner = call("crm_owner", { party_id: c.party_id }).output as { owner_user: string };
+    call("escalate", { asked_user: owner.owner_user, party_id: c.party_id, predicate: "shortfall_reason", decision_kind: "credit_memo",
+      what_happened: "Vossberg withheld part of an invoice for the June outage. The bank fee and the rate difference on the receipt are already booked; what they held back is still open.",
+      what_was_checked: looked, what_is_unknown: "Whether an officer has agreed a service credit for the June outage in writing, as section 7 of the order form requires, and whether it stands for later invoices.",
+      treatments: [{ id: "credit_memo", label: "Yes, an agreed SLA credit" }, { id: "dispute_hold", label: "Hold it as disputed" }, { id: "chase", label: "No, collect it" }] });
+    return { outcome: "escalated", summary: "the outage happened; nobody with authority has agreed a credit", places_looked: looked.map((l) => l.source) };
+  },
   ardent: (c, call) => {
     call("bank_get_transaction", { bank_txn_id: c.bank_txn_id });
     call("propose_entry", settle(c, "write_off", ACCOUNTS.bank_charges, "Correspondent bank charge deducted in transit", [

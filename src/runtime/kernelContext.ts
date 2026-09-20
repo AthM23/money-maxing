@@ -5,7 +5,7 @@ import type { AutonomyLevel, Proposal } from "../contract/types.js";
 import type { ApprovalLite, ControlTotals, DocLite, ExtraCheck, KernelContext } from "../kernel/types.js";
 import type { RuntimeConfig } from "./config.js";
 import type { Db } from "./db.js";
-import { getApprover, getBankTxn, getDoc, getFact, getPolicy, getTrace, safeJson } from "./lookups.js";
+import { getApprover, getBankTxn, getDoc, getFact, getPolicy, getTrace, safeJson, fxRealizedCents, getBankFx, getDocFx } from "./lookups.js";
 
 export interface ContextMeta {
   mode: "live" | "replay";
@@ -45,6 +45,9 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     getBankTxn: (id) => visibleBankTxn(db, id, meta),
     bankTxnAppliedCents: (id) => meta.mode === "replay" ? 0 : bankTxnAppliedCents(db, id),
     getFact: (id) => getFact(db, id),
+    getDocFx: (id) => getDocFx(db, id),
+    getBankFx: (id) => getBankFx(db, id),
+    fxRealizedCents: (id) => fxRealizedCents(db, id),
     getPolicy: (id) => getPolicy(db, id),
     getApprover: (id) => getApprover(db, id),
     findPaidDuplicate: (party, _amount, exclude) => findPaidDuplicate(db, party, proposal.applications.map(a => a.doc_id), exclude),

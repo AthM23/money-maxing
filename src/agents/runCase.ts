@@ -76,7 +76,7 @@ async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<Case
     return { status: "done", routes: t0.routes, final_route: t0.routes.at(-1) ?? null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
   }
   let last: CaseResult | null = null;
-  const notes = [...t0.notes, ...priorReviewNotes(db, c.intent_id), ...(opts.extra_notes ?? [])];
+  const notes = [...unexplainedNote(c, t0.unexplained_cents), ...t0.notes, ...priorReviewNotes(db, c.intent_id), ...(opts.extra_notes ?? [])];
   const pack = packFor(c.function);
   // No pack, no agent: a case is never worked on another function's instructions.
   const investigators = pack ? opts.investigators : [];
@@ -87,6 +87,12 @@ async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<Case
     if (last.report) notes.push(`tier ${i + 1} (${investigator.name}) stopped: ${last.report.outcome}. ${last.report.summary}`);
   }
   return last ?? { status: "done", routes: t0.routes, final_route: null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
+}
+
+/** When code has already explained part of the difference, the judgment tier is told how much is actually left to explain. */
+function unexplainedNote(c: CaseFile, unexplainedCents: number): string[] {
+  if (unexplainedCents <= 0 || unexplainedCents === c.shortfall_cents) return [];
+  return [`Only ${unexplainedCents} cents of the ${c.shortfall_cents} cent difference are unexplained; the rest is already booked or explained in the notes below. Resolve ${unexplainedCents} cents, no more.`];
 }
 
 /**
