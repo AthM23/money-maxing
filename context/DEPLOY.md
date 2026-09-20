@@ -45,8 +45,9 @@ npx vercel deploy          # a preview, behind Vercel's login; check it with: np
 npx vercel deploy --prod   # the public address above
 ```
 
-**Not connected to GitHub, on purpose, until this is on `main`**: a push to a `main` without `vercel.json` would publish
-the repo's files as a static site over the working copy. After the merge: `npx vercel git connect`.
+**On `main` since 20 Sep 2026, 05:12 EDT (`06411a9`), and still a hand deploy.** `npx vercel git connect` was refused at
+05:13: the repository is private and Vercel's GitHub app has not been given access to it. Until it is connected, the
+copy is as old as the last `npx vercel deploy --prod` (run from any checkout of `main`, signed in to the project).
 
 `.vercelignore` replaces `.gitignore` for the CLI, so `.env` is named in it; keep it named.
 

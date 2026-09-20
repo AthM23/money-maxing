@@ -1890,3 +1890,18 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   copy serves its own `/dashboard`.
 - **Still a hand deploy.** `vercel-setup` is not on `main` and the project is not connected to GitHub, so the copy falls
   behind with every push until someone redeploys.
+
+### 2026-09-20 ~05:15 ET — The Vercel setup is on `main`; connecting it to GitHub was refused (AthM23 + Claude Code session)
+
+- **Supersedes "`vercel-setup` is not on `main`"** (the entry above). With AthM23's go-ahead `vercel-setup` was
+  fast-forwarded onto `main` as `06411a9` after merging `main` a third time (`pnpm test` → 91 files, **769 passing**;
+  typecheck clean). `main` now carries `vercel.json`, `scripts/vercel-build.mjs`, `workspace/app.ts` (the request
+  handler, moved unchanged out of `server.ts`), `workspace/vercel.ts` and `workspace/gate.ts`. The gate does nothing
+  unless `DASHBOARD_PASSWORD` is set, so the laptop demo and the AWS copy are unchanged.
+- **Blocked on a person:** `npx vercel git connect` → "Failed to connect AthM23/money-maxing". The repository is
+  private and Vercel's GitHub app has no access to it; granting that is a browser step on AthM23's GitHub account.
+  Until then the hosted copy is a hand deploy and is current only through `b7ce94e`.
+- UNVERIFIED, from Vercel's published limits and not tried here: on a Hobby account a private repository's commits
+  deploy only when their author is the account's owner, so Karan's and Preet's pushes may not deploy even once
+  connected. Proposed instead, not yet on `main`: a GitHub Actions job that runs `vercel deploy --prod` with a token
+  on every push to `main`, which deploys whoever wrote the commit.
