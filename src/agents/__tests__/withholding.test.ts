@@ -89,6 +89,10 @@ describe("asked once: the rate is remembered with its scope, and next month book
     const parked = answered.status === "answered" && answered.proposal?.status === "pending_approval" ? answered.proposal.decision_id : "";
     expect(approveDecision(db, parked, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
     expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1071'").get()).toEqual({ open_cents: 0 });
+    // Booking the receivable does not pretend the evidence is complete: the certificate is open work for the account owner.
+    const followUp = db.prepare("SELECT owner, status, question FROM intent WHERE parent_id = 'int_meridian'").get() as { owner: string; status: string; question: string };
+    expect(followUp).toMatchObject({ owner: "U_SAM", status: "waiting_on_human" });
+    expect(followUp.question).toContain("1800.00 was deducted at source");
     expect(db.prepare("SELECT status FROM intent WHERE id = 'int_meridian'").get()).toEqual({ status: "resolved" });
 
     // August: a bigger invoice, the same 10%. A person approved this kind once; here the level is set to auto to show the code path.
