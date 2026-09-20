@@ -1628,3 +1628,42 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   the same with three policies or three hundred; revenue scheduled by month as a chart; buttons on close items that
   can be moved; explaining a receipt prefers the customer's unsettled case over their oldest.
 - `pnpm test` → 78 files, **716 passing**; typecheck clean. Pushed as `1e56484` and `0095bb5`.
+
+### 2026-09-20 03:31 ET — The whole demo path run once on real models; what it found; workspace rail, Model page, ripple (Person A)
+
+- **The main scene was run on real models twice more tonight, each on a database built from scratch.**
+  **02:52: $1.38, 98 model calls, 11 min 30 s, nothing settled, nothing posted.** All three tiers read the policy memo
+  and the controller's Slack note correctly (an unapproved section 7 credit is held as disputed until an officer
+  decides) and drafted a dispute hold. Lane A's prompt said every kind of entry credits AR; the kernel is right that
+  a hold posts no entry and refused every draft on F3. **Cause: our prompt, not the models.** Fixed: the prompt says a
+  hold posts no entry and that a decision the documents give to a named person is asked, not parked; kernel check F8
+  refuses a hold with ledger lines in words that say what to send.
+  **03:05, same case, same world: Haiku alone, 24 calls, $0.10, 98 s.** First draft refused (E_REMIT), second accepted:
+  a $2,200.00 dispute hold on six quotes, parked for a person. The aborted-turn cost fix from earlier held: every
+  tier's cost was recorded on the failed run ($0.135, $0.269, $0.978).
+- **`pnpm spine` works the open cases too**, which is what made the first attempt at 02:45 do nothing in half a second:
+  without a key it sends lane B's scripted tier 1 over every open case, each is then "a model tried, waiting on a
+  person", and a real model pass finds none open; **with a key it is a paid pass over all of them.** New
+  `pnpm downstream <db> --stores <dir>` (`src/demo/downstream.ts`) runs the same engines with the code tier only.
+  `scripts/demo-build.sh` builds `runs/demo/fresh.db` and `prepared.db` with no model call;
+  `scripts/demo-serve.sh` serves resettable copies (:4320 prepared, :4321 from nothing).
+- **A held amount is a person's to decide** (`src/agents/decideHold.ts`, action `decide`): recorded as the question
+  the evidence raises and their answer, the hold set aside, the answer remembered as a fact, the entry it calls for
+  parked, all in one transaction that rolls back whole. **Verified in the browser:** decide a standing 2% credit to
+  30 Sep → approve → posted; **Run the code tier → the add-on invoice's $550 credit prepared from memory with 0
+  model calls**; audit 15 of 15 clean, 5 findings with one character changed in one bank advice.
+- **Workspace:** a left rail in two groups (ten sections no longer fit a pill row) and a logo mark; `/` is the
+  marketing page and `/dashboard` the app, on one server (one link added to `frontend/index.html`'s nav, nothing
+  else touched there); a **Model** page that reads lane C's strict-v2 result files and the harness reader bench and
+  shows every figure with its n; the case page shows **what the posted entry touched in the other books** (lane B's
+  `ripple` table), and lane B's engines now run, code only, after any action that moves the ledger; approval cards
+  show the preparer's reasoning and quotes; page grids give way earlier so nothing overflows beside the rail.
+- **From nothing, in the workspace, free:** Learn (9 closed decisions replayed, 0 agree, rule drafted) → approve the
+  rule (8 of 9 agree) → Run the code tier (14 entries posted, 342 of 342 tick marks, forecast, close and revenue
+  rebuilt in the same click). Run through the API on a copy at 03:27.
+- README renamed to Money Maxer and brought up to the real runs; the stale "no real model has been run through
+  `bench:reader`" is replaced by the measured rows. **`context/DEMO_PATH.md` is the beat-by-beat demo**, with a "do
+  not say" list and seven lines on the marketing page that the code does not back (for Preet).
+- **Not done:** the Slack question form has still not been answered live; the fine-tuned reader is not on the demo
+  path; nothing is deployed; lane B's `console/` still says Footnote (three strings, left to lane B).
+- `pnpm test` → 83 files, **731 passing**; typecheck clean. Pushed as `3ebf835`, `148f366` and this commit.

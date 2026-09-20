@@ -1,5 +1,9 @@
 # Demo runbook: the 10:30 run of show
 
+> **20 Sep 03:30 EDT: the demo now runs in the workspace, not the console.** The beat-by-beat path, the reset
+> command and the from-nothing fallback are in [`DEMO_PATH.md`](DEMO_PATH.md). Sections 1 and 2 below drive the old
+> console on :4317 and a database built before tonight's kernel changes; keep them only for the Slack and QuickBooks beats.
+
 Written 20 Sep 2026, 00:32 EDT. Every code-only command below was run between 00:24 and 00:31 EDT with the keys
 blanked, on databases under `runs/demo-runbook/`. Nothing live or paid was run for this document. Northwind and
 Vossberg are fictional and the July is simulated: say so in the first ten seconds.
