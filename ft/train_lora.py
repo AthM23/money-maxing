@@ -7,13 +7,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import LoraConfig
 from trl import SFTConfig, SFTTrainer
 
-MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 ap = argparse.ArgumentParser()
+ap.add_argument("--base", default="Qwen/Qwen3-4B-Instruct-2507")
 ap.add_argument("--data", default="/ws/data")
 ap.add_argument("--out", default="/ws/out/run1")
 ap.add_argument("--epochs", type=float, default=3)
 ap.add_argument("--lr", type=float, default=1e-4)
 a = ap.parse_args()
+MODEL = a.base
 
 def load(split):
     rows = [json.loads(l) for l in Path(f"{a.data}/sft.{split}.jsonl").read_text().splitlines() if l.strip()]

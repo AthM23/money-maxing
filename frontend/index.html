@@ -151,6 +151,15 @@
   .tbl .num{font-variant-numeric:tabular-nums}
   .foot-note{font-size:13px;color:#8a8a85;margin-top:14px;line-height:1.55}
 
+  /* chart slide */
+  .chartwrap{background:#fff;border-radius:24px;padding:34px 38px;box-shadow:0 20px 50px rgba(0,0,0,.08)}
+  .legend{display:flex;gap:22px;margin:6px 0 18px;flex-wrap:wrap}
+  .legend span{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;color:#444}
+  .legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .cbar{cursor:default}
+  .cbar:hover rect{filter:brightness(1.12)}
+  .ctip{position:fixed;background:#101012;color:#fff;font-size:12.5px;padding:8px 12px;border-radius:10px;pointer-events:none;opacity:0;transition:opacity .15s;z-index:200;max-width:260px}
+
   /* live slide */
   .live{display:grid;grid-template-columns:.9fr 1.1fr;gap:40px;align-items:center;flex:1}
   @media(max-width:900px){.live{grid-template-columns:1fr}}
@@ -334,7 +343,23 @@
   </div>
 </section>
 
-<!-- SLIDE 6 · LIVE -->
+<!-- SLIDE 6 · CHART -->
+<section class="slide s-white" id="chart">
+  <div class="kick rv">05 · one picture</div>
+  <h2 class="rv">Every model, one exam</h2>
+  <p class="sub rv d1">Accuracy on the same 120 documents, same grading script. Colors: what kind of help each model had.</p>
+  <div class="chartwrap rv d1">
+    <div class="legend">
+      <span><i style="background:#6f8a00"></i>fine-tuned by us</span>
+      <span><i style="background:#4a55b8"></i>told the answer format each call</span>
+      <span><i style="background:#b06f2e"></i>no help, as-is</span>
+    </div>
+    <svg id="cmpChart" width="100%" height="360" viewBox="0 0 980 360" preserveAspectRatio="none" role="img" aria-label="Accuracy by model"></svg>
+  </div>
+  <div class="ctip" id="ctip"></div>
+</section>
+
+<!-- SLIDE 7 · LIVE -->
 <section class="slide s-paper" id="live">
   <div class="live">
     <div>
@@ -392,6 +417,33 @@ if(stage && matchMedia('(pointer:fine)').matches){
   });
 }
 
+/* comparison chart: rendered from the same merged rows as the table */
+function groupOf(k){ if(k==='ours'||k.startsWith('tuned')) return 0; if(/-hinted$/.test(k)) return 1; return 2; }
+const GCOL=['#6f8a00','#4a55b8','#b06f2e'];
+function renderChart(rows){
+  const svg=document.getElementById('cmpChart'); if(!svg) return;
+  const items=Object.entries(rows).filter(([k])=>!/ep\d|epoch/.test(k))
+    .map(([k,r])=>({k,name:(NAMES[k]||k),f1:r.f1,g:groupOf(k)}))
+    .sort((a,b)=>b.f1-a.f1);
+  const H=items.length*44+20, W=980, LX=330, BW=W-LX-90;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`); svg.setAttribute('height',Math.min(H,420));
+  let out=`<line x1="${LX}" y1="4" x2="${LX}" y2="${H-8}" stroke="#e3e3de" stroke-width="1.5"/>`;
+  items.forEach((it,i)=>{
+    const y=14+i*44, w=Math.max(3,it.f1*BW);
+    out+=`<g class="cbar" data-name="${it.name}" data-f1="${it.f1.toFixed(3)}">
+      <text x="${LX-12}" y="${y+15}" text-anchor="end" font-size="14" fill="#444">${it.name}</text>
+      <rect x="${LX}" y="${y}" width="${w}" height="22" rx="4" fill="${GCOL[it.g]}"/>
+      <text x="${LX+w+10}" y="${y+16}" font-size="13.5" font-weight="600" fill="#101012">${it.f1.toFixed(3)}</text>
+    </g>`;
+  });
+  svg.innerHTML=out;
+  const tip=document.getElementById('ctip');
+  svg.querySelectorAll('.cbar').forEach(g=>{
+    g.addEventListener('mousemove',e=>{tip.style.opacity=1;tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-10)+'px';
+      tip.textContent=`${g.dataset.name}: ${g.dataset.f1} accuracy (F1), n=120, same grader`;});
+    g.addEventListener('mouseleave',()=>tip.style.opacity=0);
+  });
+}
 /* deck effect: as the next slide rises, the covered slide sinks back and dims (PowerPoint push) */
 const slides=[...document.querySelectorAll('.slide')];
 function deck(){
@@ -440,6 +492,7 @@ function renderBench(rows, note){
     });
   document.getElementById('benchNote').textContent = note;
   document.getElementById('progNote').textContent = PROG;
+  renderChart(rows);
 }
 renderBench(fallback, "120 test documents per model, same exam for everyone. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
 (async()=>{
