@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Maxer: the whole run, end to end</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22%23101012%22%2F%3E%3Cpath%20d%3D%22M8%2023.5V11.5l7%207.5%208.6-10.4%22%20fill%3D%22none%22%20stroke%3D%22%23d9f24f%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%228.2%22%20r%3D%222.7%22%20fill%3D%22%23d9f24f%22%2F%3E%3C%2Fsvg%3E">
+<style>
+  :root{--lime:#d9f24f;--ink:#101012;--paper:#f4f4f1;--mut:#5b5b57;--coral:#f0645c;--green:#3fae52;--indigo:#4a55b8}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
+  header{display:flex;align-items:center;justify-content:space-between;padding:22px 44px}
+  .logo{font-weight:800;font-size:19px;letter-spacing:-.03em;display:flex;align-items:center;gap:10px}
+  .logo svg{border-radius:8px}
+  h1{font-size:clamp(26px,3.2vw,40px);letter-spacing:-.02em;line-height:1.05}
+  .sub{color:var(--mut);font-size:15px;margin-top:6px;max-width:760px;line-height:1.55}
+  .btn{border:0;cursor:pointer;font-size:15px;font-weight:700;border-radius:999px;padding:13px 26px;background:var(--ink);color:#fff;transition:transform .15s}
+  .btn:hover{transform:translateY(-2px)}
+  .btn.lime{background:var(--lime);color:var(--ink)}
+  main{padding:6px 44px 40px;max-width:1500px;margin:0 auto}
+
+  /* the board: four columns joined by connector rails */
+  .board{display:grid;grid-template-columns:230px 1fr 330px;gap:26px;margin-top:18px}
+  @media(max-width:1100px){.board{grid-template-columns:1fr}}
+  .col h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:#8a8a85;margin-bottom:12px}
+
+  .card{background:#fff;border-radius:18px;padding:14px 16px;margin-bottom:12px;box-shadow:0 6px 24px rgba(0,0,0,.06);
+        opacity:.38;transform:translateY(6px);transition:opacity .5s,transform .5s,box-shadow .5s;position:relative}
+  .card.on{opacity:1;transform:none}
+  .card.hot{box-shadow:0 0 0 2.5px var(--lime),0 10px 30px rgba(0,0,0,.10)}
+  .card b{font-size:14.5px;display:flex;align-items:center;gap:8px}
+  .card small{display:block;color:var(--mut);font-size:12.5px;margin-top:4px;line-height:1.45}
+  .chip{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;border-radius:999px;padding:4px 10px;margin-top:8px;
+        background:#eee;color:#666;text-transform:uppercase;transition:background .4s,color .4s}
+  .chip.live{background:var(--lime);color:var(--ink)}
+  .chip.wait{background:#ffe3e0;color:#b03a33}
+  .chip.done{background:#dff2e2;color:#1e7a34}
+  .chip.ink{background:var(--ink);color:#fff}
+
+  /* the agent lane */
+  .lane{background:#fff;border-radius:22px;padding:22px 26px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
+  .agents{display:flex;justify-content:space-between;align-items:flex-start;position:relative;padding:6px 6px 2px}
+  .agents::before{content:"";position:absolute;left:52px;right:52px;top:27px;height:2.5px;background:#e6e6e1;border-radius:2px}
+  .agents .wire{position:absolute;left:52px;top:27px;height:2.5px;width:0;background:var(--ink);border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+  .agent{position:relative;z-index:1;text-align:center;width:120px}
+  .agent .dot{width:44px;height:44px;border-radius:50%;background:var(--paper);border:2.5px solid #e2e2dd;display:flex;align-items:center;justify-content:center;font-size:19px;margin:0 auto 8px;transition:all .35s}
+  .agent.on .dot{border-color:var(--ink);background:#fff}
+  .agent.hot .dot{background:var(--lime);border-color:var(--ink);transform:scale(1.16)}
+  .agent b{font-size:13.5px}
+  .agent small{display:block;font-size:11px;color:#8a8a85;line-height:1.35;margin-top:3px}
+  .msgs{margin-top:20px;background:var(--paper);border-radius:16px;padding:14px 16px;height:330px;overflow-y:auto}
+  .msg{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s;font-size:13.5px;line-height:1.5}
+  .msg.on{opacity:1;transform:none}
+  .msg .who{flex:0 0 92px;font-weight:700;font-size:12px;padding-top:2px}
+  .msg .txt{background:#fff;border-radius:12px;padding:9px 13px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+  .msg.human .txt{background:var(--ink);color:#fff}
+  .msg.reject .txt{border:1.5px solid var(--coral)}
+  .msg .txt .amt{font-weight:700;font-variant-numeric:tabular-nums}
+
+  /* ledger column */
+  .entry{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid #efefeb;opacity:0;transition:opacity .45s}
+  .entry.on{opacity:1}
+  .entry .num{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+  .foot{margin-top:26px;background:var(--ink);color:#fff;border-radius:20px;padding:20px 26px;display:flex;gap:34px;flex-wrap:wrap;align-items:center}
+  .foot .stat b{font-size:22px;display:block;color:var(--lime)}
+  .foot .stat small{font-size:12px;color:#b7b7bd}
+  .foot .note{font-size:12.5px;color:#b7b7bd;max-width:420px;line-height:1.5}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><svg width="30" height="30" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>Money Maxer</div>
+  <button class="btn lime" id="replay" onclick="play()">Run July again</button>
+</header>
+<main>
+  <h1>One click. The agents do the month.</h1>
+  <p class="sub">This is the real July from our demo company, replayed: every number below was measured on our own run,
+  nothing is invented. Sources feed the Reader, the Reader feeds code, code posts what it can prove, one question goes
+  to a person, the answer becomes a rule, and the auditor re-performs everything.</p>
+
+  <div class="board">
+    <div class="col" id="srcCol">
+      <h3>Connected sources</h3>
+      <div class="card" id="s-bank"><b>🏦 Bank feeds</b><small>3 banks, 4 accounts, 6 countries. 12 customer payments in July.</small><span class="chip">idle</span></div>
+      <div class="card" id="s-mail"><b>✉️ Gmail</b><small>Remittance emails and the customer's note about the June outage.</small><span class="chip">idle</span></div>
+      <div class="card" id="s-slack"><b>💬 Slack</b><small>The thread that proves the outage, and where the CFO answers.</small><span class="chip">idle</span></div>
+      <div class="card" id="s-docs"><b>📄 Contracts</b><small>The Vossberg contract: a credit needs an officer in writing.</small><span class="chip">idle</span></div>
+    </div>
+
+    <div class="lane">
+      <div class="agents">
+        <div class="wire" id="wire"></div>
+        <div class="agent" id="a-reader"><div class="dot">📖</div><b>Reader</b><small>our fine-tuned Qwen on the GX10</small></div>
+        <div class="agent" id="a-prep"><div class="dot">🧮</div><b>Preparer</b><small>the code tier</small></div>
+        <div class="agent" id="a-check"><div class="dot">🛡️</div><b>Checker</b><small>the kernel</small></div>
+        <div class="agent" id="a-human"><div class="dot">🧑‍💼</div><b>Human</b><small>asked once, remembered</small></div>
+        <div class="agent" id="a-audit"><div class="dot">🔍</div><b>Auditor</b><small>re-performs, trusts nobody</small></div>
+      </div>
+      <div class="msgs" id="msgs"></div>
+    </div>
+
+    <div class="col">
+      <h3>The books, live</h3>
+      <div class="card" id="l-code"><b>Posted by code alone</b>
+        <div class="entry" id="e1"><span>14 ledger entries, 12 receipts</span><span class="num">$0.00 model cost</span></div>
+        <div class="entry" id="e2"><span>Receivables tied to open invoices</span><span class="num">to the cent</span></div>
+        <span class="chip" id="c-code">waiting</span></div>
+      <div class="card" id="l-voss"><b>Vossberg wire, $4,200 short</b>
+        <div class="entry" id="e3"><span>Bank fee, learned rule</span><span class="num">$40.00</span></div>
+        <div class="entry" id="e4"><span>Rate movement, recomputed</span><span class="num">$1,960.00</span></div>
+        <div class="entry" id="e5"><span>Held back by the customer</span><span class="num">$2,200.00</span></div>
+        <span class="chip" id="c-voss">waiting</span></div>
+      <div class="card" id="l-learn"><b>What it learned</b>
+        <div class="entry" id="e6"><span>SHORT-PAY-01: small wire shortfalls</span><span class="num">approved</span></div>
+        <div class="entry" id="e7"><span>Standing 2% credit, to Sep 30</span><span class="num">said once</span></div>
+        <div class="entry" id="e8"><span>Next invoice: $550 credit prepared</span><span class="num">0 questions</span></div>
+        <span class="chip" id="c-learn">waiting</span></div>
+      <div class="card" id="l-audit"><b>Audit pack</b>
+        <div class="entry" id="e9"><span>Entries re-performed independently</span><span class="num">15/15 clean</span></div>
+        <div class="entry" id="e10"><span>One digit tampered in one advice</span><span class="num">5 findings</span></div>
+        <span class="chip" id="c-audit">waiting</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="stat"><b>97.2%</b><small>our Reader's field accuracy, measured</small></div>
+    <div class="stat"><b>1.2 s</b><small>per document, batched on the GX10</small></div>
+    <div class="stat"><b>$0.40</b><small>per million tokens, all-in on our hardware</small></div>
+    <div class="stat"><b>15 min</b><small>to retrain on new corrections</small></div>
+    <div class="note">How we know: we built our own benchmark. 3,000 generated finance documents, 18 customers, 5 vendors
+    and 2 whole document styles locked out of training, one strict grading script for every model including Claude.
+    Our 0.6B and 4B lead every Claude tier on it, and the grader and answers are in the repo for anyone to re-run.</div>
+  </div>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let runId=0;
+
+function msg(who,txt,cls){
+  const d=document.createElement('div');d.className='msg'+(cls?' '+cls:'');
+  d.innerHTML=`<span class="who">${who}</span><span class="txt">${txt}</span>`;
+  $('msgs').appendChild(d);requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('on')));
+  $('msgs').scrollTop=$('msgs').scrollHeight;
+}
+function chip(id,text,cls){const c=$(id).querySelector('.chip')||$(id);c.textContent=text;c.className='chip '+cls;}
+function hot(id,on){$(id).classList.toggle('hot',on);$(id).classList.add('on');}
+function agent(id,state){const a=$(id);a.classList.add('on');a.classList.toggle('hot',state==='hot');}
+
+async function play(){
+  const my=++runId;
+  const guard=()=>my!==runId;
+  document.querySelectorAll('.card,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
+  document.querySelectorAll('.chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
+  $('msgs').innerHTML='';$('wire').style.width='0';
+  await sleep(400);if(guard())return;
+
+  // 1. sources light up
+  for(const s of ['s-bank','s-mail','s-slack','s-docs']){hot(s,true);chip(s,'connected','live');await sleep(260);if(guard())return;hot(s,false);}
+  msg('Sources','July arrives: 12 bank receipts, the remittance emails, the Slack thread, the contract.');
+  await sleep(900);if(guard())return;
+
+  // 2. reader
+  agent('a-reader','hot');$('wire').style.width='12%';
+  msg('Reader','Reading every document into the ledger schema. Our own model, trained on this company\'s paper: measured 97.2% field accuracy, 1.2 s per document, on the $3,000 box under the desk.');
+  await sleep(2400);if(guard())return;agent('a-reader','on');
+
+  // 3. preparer, code tier
+  agent('a-prep','hot');$('wire').style.width='36%';
+  msg('Preparer','Code matches receipts to invoices and drafts entries. No model needed for the routine ones.');
+  await sleep(1600);if(guard())return;
+  hot('l-code',true);$('e1').classList.add('on');$('e2').classList.add('on');chip('l-code','posted','done');
+  msg('Preparer','14 entries posted across 12 receipts. Model calls: 0. Cost: $0.');
+  await sleep(2000);if(guard())return;hot('l-code',false);agent('a-prep','on');
+
+  // 4. the hard case
+  agent('a-check','hot');$('wire').style.width='58%';
+  hot('l-voss',true);
+  msg('Checker','Vossberg wired EUR 98,000 at 1.08 less a $40 fee: $105,800 against a $110,000 invoice. $4,200 is unexplained.');
+  await sleep(2200);if(guard())return;
+  $('e3').classList.add('on');
+  msg('Preparer','$40 is the bank\'s fee. The write-off rule for small wire shortfalls was learned from last quarter\'s bookings and approved by the controller like a pull request.');
+  await sleep(2200);if(guard())return;
+  $('e4').classList.add('on');
+  msg('Preparer','$1,960 is the exchange rate moving between invoice and payment. The kernel recomputes it from the two rates and the bank\'s advice. Believed from nobody, recomputed.');
+  await sleep(2400);if(guard())return;
+  $('e5').classList.add('on');chip('l-voss','2,200 open','wait');
+  msg('Checker','$2,200 left. A model reads the policy memo, the contract, Slack and the email: the customer held back 2% over the June outage.',null);
+  await sleep(2200);if(guard())return;
+  msg('Checker','First draft REFUSED: a quote did not match its source character for character. Second draft rests on six verified quotes.','reject');
+  await sleep(2200);if(guard())return;
+
+  // 5. human
+  agent('a-check','on');agent('a-human','hot');$('wire').style.width='78%';
+  msg('Checker','The contract says a credit needs an officer in writing. Nobody gave it. One question goes to the CFO, with everything that was checked attached.');
+  await sleep(2000);if(guard())return;
+  msg('CFO','Agreed with their ops director: a standing 2% SLA credit for the June outage, valid to Sep 30.','human');
+  await sleep(1800);if(guard())return;
+  hot('l-learn',true);$('e6').classList.add('on');$('e7').classList.add('on');chip('l-learn','remembered','live');
+  msg('System','Answer recorded with scope and an end date. INV-3201 closes to $0.00.');
+  await sleep(1800);if(guard())return;
+  $('e8').classList.add('on');
+  msg('Preparer','A week later the add-on invoice arrives short the same 2%. The $550 credit is prepared from the remembered answer. Nobody is asked. It waits for one click only because credit memos have not yet earned the right to post alone.');
+  await sleep(2600);if(guard())return;hot('l-learn',false);agent('a-human','on');
+
+  // 6. auditor
+  agent('a-audit','hot');$('wire').style.width='100%';
+  hot('l-audit',true);$('e9').classList.add('on');
+  msg('Auditor','Re-performing every sampled entry with fresh eyes: 15 of 15 clean.');
+  await sleep(2000);if(guard())return;
+  $('e10').classList.add('on');chip('c-audit','tamper caught','done');chip('l-audit','tamper caught','done');
+  msg('Auditor','Change one digit in one bank advice and 5 findings fire: the evidence no longer hashes and the kernel disagrees. Nothing posts on trust.');
+  await sleep(2200);if(guard())return;hot('l-audit',false);agent('a-audit','on');
+
+  msg('System','Month done. The answer given once is a rule now. Corrections become training data; the Reader retrains in 15 minutes. Next month asks less.');
+}
+play();
+</script>
+</body>
+</html>
