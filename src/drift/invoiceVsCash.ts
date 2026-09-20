@@ -1,0 +1,150 @@
+import { emit } from "../bus/bus.js";
+import { CaseFile } from "../contract/types.js";
+import type { Db } from "../ledger/db.js";
+import { bankUnmatched, openInvoices, type InvoiceRow, type UnmatchedBankTxn } from "../ledger/read.js";
+import { applicableFacts } from "../memory/applicability.js";
+import { systemClock, type Clock } from "../runtime/config.js";
+import { newId } from "../runtime/ids.js";
+
+export const COMPARATOR = "C2_invoice_vs_cash";
+const UNIDENTIFIED = "unidentified";
+
+export type DriftKind = "exact" | "short_pay" | "over_pay" | "no_open_document";
+
+export interface DriftFinding {
+  bank_txn_id: string;
+  kind: DriftKind;
+  intent_id: string;
+  /** False when this difference already had an intent: the monitor updates, it never opens a second one. */
+  opened: boolean;
+  case_file: CaseFile;
+  explained_by_fact_id?: string;
+}
+
+const usd = (cents: number): string => `$${(Math.abs(cents) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/**
+ * Comparator C2 (sheet 03): cash received vs what the customer owes. Pure code. Each unmatched credit on the bank
+ * becomes one intent carrying a CaseFile, the hand-off to the router; whether the difference is acceptable is not
+ * decided here. Runs on every sync and is idempotent: one bank line, one intent, however often it runs.
+ */
+export function runInvoiceVsCash(db: Db, clock: Clock = systemClock): DriftFinding[] {
+  const findings: DriftFinding[] = [];
+  const run = db.transaction(() => {
+    for (const txn of bankUnmatched(db, { side: "credit" })) findings.push(compareOne(db, clock, txn));
+  });
+  run();
+  return findings;
+}
+
+function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
+  const { party_id, docs } = candidateDocs(db, txn);
+  const expected = docs.reduce((n, d) => n + d.open_cents, 0);
+  const received = txn.unapplied_cents;
+  const shortfall = expected - received;
+  const kind: DriftKind = docs.length === 0 ? "no_open_document" : shortfall === 0 ? "exact" : shortfall > 0 ? "short_pay" : "over_pay";
+  const dedupeKey = `${COMPARATOR}|${txn.id}`;
+
+  const known = db.prepare("SELECT intent_id, delta_cents FROM drift_case WHERE dedupe_key = ?").get(dedupeKey) as { intent_id: string; delta_cents: number } | undefined;
+  if (known) {
+    const caseFile = CaseFile.parse(JSON.parse((db.prepare("SELECT case_json FROM intent WHERE id = ?").get(known.intent_id) as { case_json: string }).case_json));
+    db.prepare("UPDATE drift_case SET last_seen = ? WHERE dedupe_key = ?").run(clock.now(), dedupeKey);
+    return { bank_txn_id: txn.id, kind, intent_id: known.intent_id, opened: false, case_file: caseFile };
+  }
+
+  const intentId = newId("int");
+  const caseFile = CaseFile.parse({
+    intent_id: intentId, function: "ar", party_id, entry_date: txn.posted_date, bank_txn_id: txn.id,
+    doc_ids: docs.map((d) => d.id), expected_cents: expected, received_cents: received, shortfall_cents: shortfall,
+    method: methodOf(txn.method), trace_ids: txn.trace_id ? [txn.trace_id] : [],
+  });
+  db.prepare("INSERT INTO intent (id, function, question, owner, status, end_condition_json, case_json, created_at) VALUES (?, 'ar', ?, 'ar', 'open', ?, ?, ?)")
+    .run(intentId, question(kind, txn, docs, shortfall, payerLabel(db, txn, party_id)), JSON.stringify({ bank_txn_applied: txn.id, docs_settled: docs.map((d) => d.id) }), JSON.stringify(caseFile), clock.now());
+  db.prepare("INSERT INTO drift_case (dedupe_key, comparator, intent_id, delta_cents, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(dedupeKey, COMPARATOR, intentId, shortfall, clock.now(), clock.now());
+
+  const factId = shortfall > 0 ? explainingFact(db, caseFile) : undefined;
+  if (factId) {
+    // A known fact explains the difference. The cash and the credit still have to be booked, so the intent stays;
+    // what changes is that nobody is asked and no model is called (router tier 0 reads the same fact).
+    emit(db, { topic: "drift.explained", from_function: "drift", intent_id: intentId, payload: { comparator: COMPARATOR, bank_txn_id: txn.id, party_id, delta_cents: shortfall, explained_by: factId } }, clock);
+  }
+  emit(db, {
+    topic: "bankrec.unmatched", from_function: "drift", intent_id: intentId,
+    payload: { side: "credit", comparator: COMPARATOR, kind, bank_txn_id: txn.id, party_id, doc_ids: caseFile.doc_ids, expected_cents: expected, received_cents: received, shortfall_cents: shortfall },
+  }, clock);
+  return { bank_txn_id: txn.id, kind, intent_id: intentId, opened: true, case_file: caseFile, explained_by_fact_id: factId };
+}
+
+/**
+ * Which documents the money relates to. Join order (sheet 03, C2): invoice numbers in the remittance text, else
+ * amount against the payer's open invoices. A payer with nothing open is checked against its subsidiaries for an
+ * exact amount only; the case then names the subsidiary, and the kernel's party tie decides whether that stands.
+ */
+function candidateDocs(db: Db, txn: UnmatchedBankTxn): { party_id: string; docs: InvoiceRow[] } {
+  const payer = txn.party_id ?? UNIDENTIFIED;
+  const refs = [...new Set(txn.descriptor.match(/INV-\d+/g) ?? [])];
+  if (refs.length > 0) {
+    const all = openInvoices(db);
+    const named = refs.map((r) => all.find((i) => i.id === r)).filter((i): i is InvoiceRow => i !== undefined);
+    const owner = named[0]?.party_id;
+    if (owner && named.every((i) => i.party_id === owner) && (txn.party_id === null || txn.party_id === owner)) return { party_id: owner, docs: named };
+  }
+  const own = openInvoices(db, payer);
+  if (own.length > 0) return { party_id: payer, docs: covering(own, txn.unapplied_cents) };
+
+  const subsidiaries = db.prepare("SELECT id FROM party WHERE parent_id = ?").all(payer) as { id: string }[];
+  for (const s of subsidiaries) {
+    const exact = openInvoices(db, s.id).find((i) => i.open_cents === txn.unapplied_cents);
+    if (exact) return { party_id: s.id, docs: [exact] };
+  }
+  return { party_id: payer, docs: [] };
+}
+
+/** One invoice for the exact amount if there is one; else oldest first until the cash is covered. */
+function covering(open: InvoiceRow[], cents: number): InvoiceRow[] {
+  const exact = open.find((i) => i.open_cents === cents);
+  if (exact) return [exact];
+  const out: InvoiceRow[] = [];
+  let sum = 0;
+  for (const inv of open) {
+    if (sum >= cents) break;
+    out.push(inv);
+    sum += inv.open_cents;
+  }
+  return out;
+}
+
+function explainingFact(db: Db, c: CaseFile): string | undefined {
+  const { applicable } = applicableFacts(db, { party_id: c.party_id, kind: "credit_memo", entry_date: c.entry_date, amount_cents: c.shortfall_cents });
+  for (const f of applicable) {
+    const pct = typeof f.value.pct_off === "number" ? Math.round((c.expected_cents * f.value.pct_off) / 100) : null;
+    const flat = typeof f.value.amount_cents === "number" ? f.value.amount_cents : null;
+    if ((pct ?? flat) === c.shortfall_cents) return f.fact_id;
+  }
+  return undefined;
+}
+
+function question(kind: DriftKind, txn: UnmatchedBankTxn, docs: InvoiceRow[], shortfall: number, party: string): string {
+  const ids = docs.map((d) => d.id).join(", ");
+  switch (kind) {
+    case "exact": return `Apply ${usd(txn.unapplied_cents)} from ${party} to ${ids}`;
+    case "short_pay": return `Resolve the ${usd(shortfall)} shortfall on ${ids}`;
+    case "over_pay": return `${party} paid ${usd(shortfall)} more than ${ids}: apply and explain the excess`;
+    case "no_open_document": return `Identify the ${usd(txn.unapplied_cents)} deposit "${txn.descriptor}": no open invoice for ${party}`;
+  }
+}
+
+/** Names the payer, and the customer too when they differ (a parent paying for a subsidiary). */
+function payerLabel(db: Db, txn: UnmatchedBankTxn, casePartyId: string): string {
+  if (!txn.party_id || txn.party_id === casePartyId) return partyName(db, casePartyId);
+  return `${partyName(db, txn.party_id)} (for ${partyName(db, casePartyId)})`;
+}
+
+function partyName(db: Db, id: string): string {
+  return (db.prepare("SELECT name FROM party WHERE id = ?").get(id) as { name: string } | undefined)?.name ?? id;
+}
+
+function methodOf(m: string | null): CaseFile["method"] {
+  return m === "ach" || m === "wire" || m === "check" || m === "card" ? m : "other";
+}

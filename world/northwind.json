@@ -1,0 +1,2817 @@
+{
+  "meta": {
+    "seed": 20260719,
+    "company": "Northwind Systems",
+    "version": 0,
+    "live_period": "2026-07",
+    "history_periods": [
+      "2026-04",
+      "2026-05",
+      "2026-06"
+    ]
+  },
+  "periods": [
+    {
+      "id": "2026-04",
+      "status": "locked"
+    },
+    {
+      "id": "2026-05",
+      "status": "locked"
+    },
+    {
+      "id": "2026-06",
+      "status": "locked"
+    },
+    {
+      "id": "2026-07",
+      "status": "open"
+    },
+    {
+      "id": "2026-08",
+      "status": "open"
+    }
+  ],
+  "people": [
+    {
+      "id": "U_CEO",
+      "name": "Morgan Hale",
+      "role": "ceo",
+      "email": "morgan.hale@northwind.test"
+    },
+    {
+      "id": "U_CFO",
+      "name": "Alex Moreau",
+      "role": "cfo",
+      "email": "alex.moreau@northwind.test",
+      "limit_cents": 10000000
+    },
+    {
+      "id": "U_CTRL",
+      "name": "Priya Raman",
+      "role": "controller",
+      "email": "priya.raman@northwind.test",
+      "limit_cents": 1000000
+    },
+    {
+      "id": "U_AP",
+      "name": "Lee Tanaka",
+      "role": "ap_clerk",
+      "email": "lee.tanaka@northwind.test",
+      "limit_cents": 10000
+    },
+    {
+      "id": "U_DANA",
+      "name": "Dana Reyes",
+      "role": "account_owner",
+      "email": "dana.reyes@northwind.test"
+    },
+    {
+      "id": "U_SAM",
+      "name": "Sam Okafor",
+      "role": "account_owner",
+      "email": "sam.okafor@northwind.test"
+    },
+    {
+      "id": "U_JORDAN",
+      "name": "Jordan Pike",
+      "role": "account_owner",
+      "email": "jordan.pike@northwind.test"
+    }
+  ],
+  "parties": [
+    {
+      "id": "acme",
+      "kind": "customer",
+      "name": "Acme Corp",
+      "owner": "U_SAM",
+      "aliases": [
+        "ACME CORP",
+        "Acme Corp",
+        "acme.test"
+      ],
+      "email_domain": "acme.test"
+    },
+    {
+      "id": "globex-labs",
+      "kind": "customer",
+      "name": "Globex Labs",
+      "parent_id": "globex-holdings",
+      "owner": "U_DANA",
+      "aliases": [
+        "GLOBEX LABS INC",
+        "Globex Labs",
+        "globexlabs.test"
+      ],
+      "email_domain": "globexlabs.test"
+    },
+    {
+      "id": "globex-holdings",
+      "kind": "customer",
+      "name": "Globex Holdings Ltd",
+      "owner": "U_DANA",
+      "aliases": [
+        "GLOBEX HOLDINGS LTD",
+        "Globex Holdings Ltd"
+      ]
+    },
+    {
+      "id": "soylent",
+      "kind": "customer",
+      "name": "Soylent Foods",
+      "owner": "U_JORDAN",
+      "aliases": [
+        "SOYLENT FOODS CO",
+        "Soylent Foods",
+        "soylent.test"
+      ],
+      "email_domain": "soylent.test"
+    },
+    {
+      "id": "umbrella",
+      "kind": "customer",
+      "name": "Umbrella Health",
+      "owner": "U_SAM",
+      "aliases": [
+        "UMBRELLA HEALTH",
+        "Umbrella Health",
+        "umbrellahealth.test"
+      ],
+      "email_domain": "umbrellahealth.test"
+    },
+    {
+      "id": "stark",
+      "kind": "customer",
+      "name": "Stark Industries",
+      "owner": "U_JORDAN",
+      "aliases": [
+        "STARK INDUSTRIES",
+        "Stark Industries",
+        "stark.test"
+      ],
+      "email_domain": "stark.test"
+    },
+    {
+      "id": "initech",
+      "kind": "customer",
+      "name": "Initech",
+      "owner": "U_DANA",
+      "aliases": [
+        "INITECH LLC",
+        "Initech",
+        "initech.test"
+      ],
+      "email_domain": "initech.test"
+    },
+    {
+      "id": "hooli",
+      "kind": "customer",
+      "name": "Hooli",
+      "owner": "U_JORDAN",
+      "aliases": [
+        "HOOLI INC",
+        "Hooli",
+        "hooli.test"
+      ],
+      "email_domain": "hooli.test"
+    },
+    {
+      "id": "pied-piper",
+      "kind": "customer",
+      "name": "Pied Piper",
+      "owner": "U_DANA",
+      "aliases": [
+        "PIED PIPER INC",
+        "Pied Piper",
+        "piedpiper.test"
+      ],
+      "email_domain": "piedpiper.test"
+    },
+    {
+      "id": "vandelay",
+      "kind": "customer",
+      "name": "Vandelay Imports",
+      "owner": "U_SAM",
+      "aliases": [
+        "VANDELAY IMPORTS",
+        "Vandelay Imports",
+        "vandelay.test"
+      ],
+      "email_domain": "vandelay.test"
+    },
+    {
+      "id": "cyberdyne",
+      "kind": "customer",
+      "name": "Cyberdyne Systems",
+      "owner": "U_JORDAN",
+      "aliases": [
+        "CYBERDYNE SYSTEMS",
+        "Cyberdyne Systems",
+        "cyberdyne.test"
+      ],
+      "email_domain": "cyberdyne.test"
+    },
+    {
+      "id": "tyrell",
+      "kind": "customer",
+      "name": "Tyrell Corp",
+      "owner": "U_DANA",
+      "aliases": [
+        "TYRELL CORP",
+        "Tyrell Corp",
+        "tyrell.test"
+      ],
+      "email_domain": "tyrell.test"
+    },
+    {
+      "id": "wayne",
+      "kind": "customer",
+      "name": "Wayne Enterprises",
+      "owner": "U_SAM",
+      "aliases": [
+        "WAYNE ENTERPRISES",
+        "Wayne Enterprises",
+        "wayne.test"
+      ],
+      "email_domain": "wayne.test"
+    },
+    {
+      "id": "nimbus-cloud",
+      "kind": "vendor",
+      "name": "Nimbus Cloud",
+      "aliases": [
+        "NIMBUS CLOUD INC",
+        "Nimbus Cloud"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000010",
+        "account_last4": "4100"
+      },
+      "default_expense_account": "5000"
+    },
+    {
+      "id": "observa",
+      "kind": "vendor",
+      "name": "Observa Monitoring",
+      "aliases": [
+        "OBSERVA INC",
+        "Observa Monitoring"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000011",
+        "account_last4": "4137"
+      },
+      "default_expense_account": "6100"
+    },
+    {
+      "id": "slate-crm",
+      "kind": "vendor",
+      "name": "Slate CRM",
+      "aliases": [
+        "SLATE CRM",
+        "Slate CRM"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000012",
+        "account_last4": "4174"
+      },
+      "default_expense_account": "6100"
+    },
+    {
+      "id": "brightline-legal",
+      "kind": "vendor",
+      "name": "Brightline Legal LLP",
+      "aliases": [
+        "BRIGHTLINE LEGAL",
+        "Brightline Legal LLP"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000013",
+        "account_last4": "4211"
+      },
+      "default_expense_account": "6200"
+    },
+    {
+      "id": "kessler-roe",
+      "kind": "vendor",
+      "name": "Kessler & Roe CPA",
+      "aliases": [
+        "KESSLER ROE CPA",
+        "Kessler & Roe CPA"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000014",
+        "account_last4": "4248"
+      },
+      "default_expense_account": "6200"
+    },
+    {
+      "id": "meridian-reit",
+      "kind": "vendor",
+      "name": "Meridian Office REIT",
+      "aliases": [
+        "MERIDIAN OFFICE REIT",
+        "Meridian Office REIT"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000015",
+        "account_last4": "4285"
+      },
+      "default_expense_account": "6400"
+    },
+    {
+      "id": "pixel-pine",
+      "kind": "vendor",
+      "name": "Pixel & Pine Marketing",
+      "aliases": [
+        "PIXEL AND PINE",
+        "Pixel & Pine Marketing"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000016",
+        "account_last4": "4322"
+      },
+      "default_expense_account": "6300"
+    },
+    {
+      "id": "cobalt-telecom",
+      "kind": "vendor",
+      "name": "Cobalt Telecom",
+      "aliases": [
+        "COBALT TELECOM",
+        "Cobalt Telecom"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000017",
+        "account_last4": "4359"
+      },
+      "default_expense_account": "6400"
+    },
+    {
+      "id": "harbor-insurance",
+      "kind": "vendor",
+      "name": "Harbor Insurance",
+      "aliases": [
+        "HARBOR INS CO",
+        "Harbor Insurance"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000018",
+        "account_last4": "4396"
+      },
+      "default_expense_account": "6400"
+    },
+    {
+      "id": "quill-supplies",
+      "kind": "vendor",
+      "name": "Quill Supplies",
+      "aliases": [
+        "QUILL SUPPLIES",
+        "Quill Supplies"
+      ],
+      "remit_to": {
+        "bank": "First Harbor Bank",
+        "routing": "021000019",
+        "account_last4": "4433"
+      },
+      "default_expense_account": "6400"
+    },
+    {
+      "id": "unidentified",
+      "kind": "other",
+      "name": "Unidentified payer",
+      "aliases": []
+    }
+  ],
+  "contracts": [
+    {
+      "id": "CTR-acme-2026",
+      "party_id": "acme",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 10200000,
+      "terms": {
+        "monthly_cents": 850000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Acme Corp\n\nContract CTR-acme-2026 between Northwind Systems, Inc. and Acme Corp.\n\n## 1. Fees\nThe platform fee is $8,500.00 per month, $102,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-globex-labs-2026",
+      "party_id": "globex-labs",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 18000000,
+      "terms": {
+        "monthly_cents": 1500000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Globex Labs\n\nContract CTR-globex-labs-2026 between Northwind Systems, Inc. and Globex Labs.\n\n## 1. Fees\nThe platform fee is $15,000.00 per month, $180,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-soylent-2026",
+      "party_id": "soylent",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 7440000,
+      "terms": {
+        "monthly_cents": 620000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Soylent Foods\n\nContract CTR-soylent-2026 between Northwind Systems, Inc. and Soylent Foods.\n\n## 1. Fees\nThe platform fee is $6,200.00 per month, $74,400.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-umbrella-2026",
+      "party_id": "umbrella",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 11880000,
+      "terms": {
+        "monthly_cents": 990000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Umbrella Health\n\nContract CTR-umbrella-2026 between Northwind Systems, Inc. and Umbrella Health.\n\n## 1. Fees\nThe platform fee is $9,900.00 per month, $118,800.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-stark-2026",
+      "party_id": "stark",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 30000000,
+      "terms": {
+        "monthly_cents": 2500000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Master Subscription Agreement - Stark Industries\n\nContract CTR-stark-2026 between Northwind Systems, Inc. and Stark Industries.\n\n## 1. Fees\nThe platform fee is $25,000.00 per month, $300,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by wire transfer. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-initech-2025",
+      "party_id": "initech",
+      "start_date": "2025-07-01",
+      "end_date": "2026-06-30",
+      "value_cents": 14400000,
+      "terms": {
+        "monthly_cents": 1200000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Initech\n\nContract CTR-initech-2025 between Northwind Systems, Inc. and Initech.\n\n## 1. Fees\nThe platform fee is $12,000.00 per month, $144,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2025-07-01 to 2026-06-30 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-06-20T16:00:00Z"
+    },
+    {
+      "id": "CTR-initech-2026",
+      "party_id": "initech",
+      "start_date": "2026-07-01",
+      "end_date": "2027-06-30",
+      "value_cents": 14400000,
+      "terms": {
+        "monthly_cents": 1200000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Initech\n\nContract CTR-initech-2026 between Northwind Systems, Inc. and Initech.\n\n## 1. Fees\nThe platform fee is $12,000.00 per month, $144,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-07-01 to 2027-06-30 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2026-06-24T16:00:00Z"
+    },
+    {
+      "id": "CTR-hooli-2026",
+      "party_id": "hooli",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 21600000,
+      "terms": {
+        "monthly_cents": 1800000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Hooli\n\nContract CTR-hooli-2026 between Northwind Systems, Inc. and Hooli.\n\n## 1. Fees\nThe platform fee is $18,000.00 per month, $216,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-pied-piper-2026",
+      "party_id": "pied-piper",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 5760000,
+      "terms": {
+        "monthly_cents": 480000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Pied Piper\n\nContract CTR-pied-piper-2026 between Northwind Systems, Inc. and Pied Piper.\n\n## 1. Fees\nThe platform fee is $4,800.00 per month, $57,600.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-vandelay-2026",
+      "party_id": "vandelay",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 8760000,
+      "terms": {
+        "monthly_cents": 730000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Master Subscription Agreement - Vandelay Imports\n\nContract CTR-vandelay-2026 between Northwind Systems, Inc. and Vandelay Imports.\n\n## 1. Fees\nThe platform fee is $7,300.00 per month, $87,600.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by wire transfer. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-cyberdyne-2026",
+      "party_id": "cyberdyne",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 25200000,
+      "terms": {
+        "monthly_cents": 2100000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Cyberdyne Systems\n\nContract CTR-cyberdyne-2026 between Northwind Systems, Inc. and Cyberdyne Systems.\n\n## 1. Fees\nThe platform fee is $21,000.00 per month, $252,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-tyrell-2026",
+      "party_id": "tyrell",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 13680000,
+      "terms": {
+        "monthly_cents": 1140000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Tyrell Corp\n\nContract CTR-tyrell-2026 between Northwind Systems, Inc. and Tyrell Corp.\n\n## 1. Fees\nThe platform fee is $11,400.00 per month, $136,800.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    },
+    {
+      "id": "CTR-wayne-2026",
+      "party_id": "wayne",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 39600000,
+      "terms": {
+        "monthly_cents": 3300000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Master Subscription Agreement - Wayne Enterprises\n\nContract CTR-wayne-2026 between Northwind Systems, Inc. and Wayne Enterprises.\n\n## 1. Fees\nThe platform fee is $33,000.00 per month, $396,000.00 for the term, invoiced monthly in advance on the first day of each month.\n\n## 2. Payment terms\nInvoices are due net 30 days from the invoice date, payable by ACH. Bank charges are for the account of the payer.\n\n## 3. Term and renewal\nThe term runs from 2026-01-01 to 2026-12-31 and renews for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Changes to fees\nAny change to the fees, including a discount or credit, is effective only if agreed in writing by an officer of Northwind Systems.",
+      "recorded_time": "2025-12-15T16:00:00Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "INV-1001",
+      "party_id": "acme",
+      "contract_id": "CTR-acme-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 850000
+    },
+    {
+      "id": "INV-1002",
+      "party_id": "globex-labs",
+      "contract_id": "CTR-globex-labs-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 1500000
+    },
+    {
+      "id": "INV-1003",
+      "party_id": "soylent",
+      "contract_id": "CTR-soylent-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 620000
+    },
+    {
+      "id": "INV-1004",
+      "party_id": "umbrella",
+      "contract_id": "CTR-umbrella-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 990000
+    },
+    {
+      "id": "INV-1005",
+      "party_id": "stark",
+      "contract_id": "CTR-stark-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-1006",
+      "party_id": "initech",
+      "contract_id": "CTR-initech-2025",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 1200000
+    },
+    {
+      "id": "INV-1007",
+      "party_id": "hooli",
+      "contract_id": "CTR-hooli-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 1800000
+    },
+    {
+      "id": "INV-1008",
+      "party_id": "pied-piper",
+      "contract_id": "CTR-pied-piper-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 480000
+    },
+    {
+      "id": "INV-1009",
+      "party_id": "vandelay",
+      "contract_id": "CTR-vandelay-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-1010",
+      "party_id": "cyberdyne",
+      "contract_id": "CTR-cyberdyne-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 2100000
+    },
+    {
+      "id": "INV-1011",
+      "party_id": "tyrell",
+      "contract_id": "CTR-tyrell-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 1140000
+    },
+    {
+      "id": "INV-1012",
+      "party_id": "wayne",
+      "contract_id": "CTR-wayne-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 3300000
+    },
+    {
+      "id": "INV-1013",
+      "party_id": "acme",
+      "contract_id": "CTR-acme-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 850000
+    },
+    {
+      "id": "INV-1014",
+      "party_id": "globex-labs",
+      "contract_id": "CTR-globex-labs-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 1500000
+    },
+    {
+      "id": "INV-1015",
+      "party_id": "soylent",
+      "contract_id": "CTR-soylent-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 620000
+    },
+    {
+      "id": "INV-1016",
+      "party_id": "umbrella",
+      "contract_id": "CTR-umbrella-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 990000
+    },
+    {
+      "id": "INV-1017",
+      "party_id": "stark",
+      "contract_id": "CTR-stark-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-1018",
+      "party_id": "initech",
+      "contract_id": "CTR-initech-2025",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 1200000
+    },
+    {
+      "id": "INV-1019",
+      "party_id": "hooli",
+      "contract_id": "CTR-hooli-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 1800000
+    },
+    {
+      "id": "INV-1020",
+      "party_id": "pied-piper",
+      "contract_id": "CTR-pied-piper-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 480000
+    },
+    {
+      "id": "INV-1021",
+      "party_id": "vandelay",
+      "contract_id": "CTR-vandelay-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-1022",
+      "party_id": "cyberdyne",
+      "contract_id": "CTR-cyberdyne-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 2100000
+    },
+    {
+      "id": "INV-1023",
+      "party_id": "tyrell",
+      "contract_id": "CTR-tyrell-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 1140000
+    },
+    {
+      "id": "INV-1024",
+      "party_id": "wayne",
+      "contract_id": "CTR-wayne-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 3300000
+    },
+    {
+      "id": "INV-1025",
+      "party_id": "acme",
+      "contract_id": "CTR-acme-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 850000
+    },
+    {
+      "id": "INV-1026",
+      "party_id": "globex-labs",
+      "contract_id": "CTR-globex-labs-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 1500000
+    },
+    {
+      "id": "INV-1027",
+      "party_id": "soylent",
+      "contract_id": "CTR-soylent-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 620000
+    },
+    {
+      "id": "INV-1028",
+      "party_id": "umbrella",
+      "contract_id": "CTR-umbrella-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 990000
+    },
+    {
+      "id": "INV-1029",
+      "party_id": "stark",
+      "contract_id": "CTR-stark-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-1030",
+      "party_id": "initech",
+      "contract_id": "CTR-initech-2025",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 1200000
+    },
+    {
+      "id": "INV-1031",
+      "party_id": "hooli",
+      "contract_id": "CTR-hooli-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 1800000
+    },
+    {
+      "id": "INV-1032",
+      "party_id": "pied-piper",
+      "contract_id": "CTR-pied-piper-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 480000
+    },
+    {
+      "id": "INV-1033",
+      "party_id": "vandelay",
+      "contract_id": "CTR-vandelay-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-1034",
+      "party_id": "cyberdyne",
+      "contract_id": "CTR-cyberdyne-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 2100000
+    },
+    {
+      "id": "INV-1035",
+      "party_id": "tyrell",
+      "contract_id": "CTR-tyrell-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 1140000
+    },
+    {
+      "id": "INV-1036",
+      "party_id": "wayne",
+      "contract_id": "CTR-wayne-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 3300000
+    },
+    {
+      "id": "INV-1037",
+      "party_id": "acme",
+      "contract_id": "CTR-acme-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 850000
+    },
+    {
+      "id": "INV-1038",
+      "party_id": "globex-labs",
+      "contract_id": "CTR-globex-labs-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1500000
+    },
+    {
+      "id": "INV-1039",
+      "party_id": "soylent",
+      "contract_id": "CTR-soylent-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 620000
+    },
+    {
+      "id": "INV-1040",
+      "party_id": "umbrella",
+      "contract_id": "CTR-umbrella-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 990000
+    },
+    {
+      "id": "INV-1041",
+      "party_id": "stark",
+      "contract_id": "CTR-stark-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-1042",
+      "party_id": "initech",
+      "contract_id": "CTR-initech-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1200000
+    },
+    {
+      "id": "INV-1043",
+      "party_id": "hooli",
+      "contract_id": "CTR-hooli-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1800000
+    },
+    {
+      "id": "INV-1044",
+      "party_id": "pied-piper",
+      "contract_id": "CTR-pied-piper-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 480000
+    },
+    {
+      "id": "INV-1045",
+      "party_id": "vandelay",
+      "contract_id": "CTR-vandelay-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-1046",
+      "party_id": "cyberdyne",
+      "contract_id": "CTR-cyberdyne-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 2100000
+    },
+    {
+      "id": "INV-1047",
+      "party_id": "tyrell",
+      "contract_id": "CTR-tyrell-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1140000
+    },
+    {
+      "id": "INV-1048",
+      "party_id": "wayne",
+      "contract_id": "CTR-wayne-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 3300000
+    }
+  ],
+  "bills": [
+    {
+      "id": "BILL-04-nimbus-cloud",
+      "party_id": "nimbus-cloud",
+      "vendor_invoice_no": "NIMBUS-202604-669",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 1840000,
+      "expense_account": "5000"
+    },
+    {
+      "id": "BILL-04-observa",
+      "party_id": "observa",
+      "vendor_invoice_no": "OBSERVA-202604-816",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 320000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-04-slate-crm",
+      "party_id": "slate-crm",
+      "vendor_invoice_no": "SLATE-202604-459",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 275000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-04-brightline-legal",
+      "party_id": "brightline-legal",
+      "vendor_invoice_no": "BRIGHTLINE-202604-339",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 600000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-04-kessler-roe",
+      "party_id": "kessler-roe",
+      "vendor_invoice_no": "KESSLER-202604-186",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 450000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-04-meridian-reit",
+      "party_id": "meridian-reit",
+      "vendor_invoice_no": "MERIDIAN-202604-748",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 1400000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-04-pixel-pine",
+      "party_id": "pixel-pine",
+      "vendor_invoice_no": "PIXEL-202604-375",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 800000,
+      "expense_account": "6300"
+    },
+    {
+      "id": "BILL-04-cobalt-telecom",
+      "party_id": "cobalt-telecom",
+      "vendor_invoice_no": "COBALT-202604-354",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 115000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-04-harbor-insurance",
+      "party_id": "harbor-insurance",
+      "vendor_invoice_no": "HARBOR-202604-778",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 230000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-04-quill-supplies",
+      "party_id": "quill-supplies",
+      "vendor_invoice_no": "QUILL-202604-156",
+      "bill_date": "2026-04-05",
+      "due_date": "2026-05-05",
+      "service_period": "2026-04",
+      "total_cents": 64000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-05-nimbus-cloud",
+      "party_id": "nimbus-cloud",
+      "vendor_invoice_no": "NIMBUS-202605-521",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 1840000,
+      "expense_account": "5000"
+    },
+    {
+      "id": "BILL-05-observa",
+      "party_id": "observa",
+      "vendor_invoice_no": "OBSERVA-202605-127",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 320000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-05-slate-crm",
+      "party_id": "slate-crm",
+      "vendor_invoice_no": "SLATE-202605-621",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 275000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-05-brightline-legal",
+      "party_id": "brightline-legal",
+      "vendor_invoice_no": "BRIGHTLINE-202605-137",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 600000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-05-kessler-roe",
+      "party_id": "kessler-roe",
+      "vendor_invoice_no": "KESSLER-202605-722",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 450000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-05-meridian-reit",
+      "party_id": "meridian-reit",
+      "vendor_invoice_no": "MERIDIAN-202605-295",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 1400000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-05-pixel-pine",
+      "party_id": "pixel-pine",
+      "vendor_invoice_no": "PIXEL-202605-777",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 800000,
+      "expense_account": "6300"
+    },
+    {
+      "id": "BILL-05-cobalt-telecom",
+      "party_id": "cobalt-telecom",
+      "vendor_invoice_no": "COBALT-202605-175",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 115000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-05-harbor-insurance",
+      "party_id": "harbor-insurance",
+      "vendor_invoice_no": "HARBOR-202605-780",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 230000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-05-quill-supplies",
+      "party_id": "quill-supplies",
+      "vendor_invoice_no": "QUILL-202605-756",
+      "bill_date": "2026-05-05",
+      "due_date": "2026-06-04",
+      "service_period": "2026-05",
+      "total_cents": 64000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-06-nimbus-cloud",
+      "party_id": "nimbus-cloud",
+      "vendor_invoice_no": "NIMBUS-202606-158",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 1840000,
+      "expense_account": "5000"
+    },
+    {
+      "id": "BILL-06-observa",
+      "party_id": "observa",
+      "vendor_invoice_no": "OBSERVA-202606-502",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 320000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-06-slate-crm",
+      "party_id": "slate-crm",
+      "vendor_invoice_no": "SLATE-202606-135",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 275000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-06-brightline-legal",
+      "party_id": "brightline-legal",
+      "vendor_invoice_no": "BRIGHTLINE-202606-508",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 600000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-06-kessler-roe",
+      "party_id": "kessler-roe",
+      "vendor_invoice_no": "KESSLER-202606-622",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 450000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-06-meridian-reit",
+      "party_id": "meridian-reit",
+      "vendor_invoice_no": "MERIDIAN-202606-278",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 1400000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-06-pixel-pine",
+      "party_id": "pixel-pine",
+      "vendor_invoice_no": "PIXEL-202606-517",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 800000,
+      "expense_account": "6300"
+    },
+    {
+      "id": "BILL-06-cobalt-telecom",
+      "party_id": "cobalt-telecom",
+      "vendor_invoice_no": "COBALT-202606-605",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 115000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-06-harbor-insurance",
+      "party_id": "harbor-insurance",
+      "vendor_invoice_no": "HARBOR-202606-859",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 230000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-06-quill-supplies",
+      "party_id": "quill-supplies",
+      "vendor_invoice_no": "QUILL-202606-628",
+      "bill_date": "2026-06-05",
+      "due_date": "2026-07-05",
+      "service_period": "2026-06",
+      "total_cents": 64000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-07-nimbus-cloud",
+      "party_id": "nimbus-cloud",
+      "vendor_invoice_no": "NIMBUS-202607-930",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 1840000,
+      "expense_account": "5000"
+    },
+    {
+      "id": "BILL-07-observa",
+      "party_id": "observa",
+      "vendor_invoice_no": "OBSERVA-202607-702",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 320000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-07-slate-crm",
+      "party_id": "slate-crm",
+      "vendor_invoice_no": "SLATE-202607-725",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 275000,
+      "expense_account": "6100"
+    },
+    {
+      "id": "BILL-07-brightline-legal",
+      "party_id": "brightline-legal",
+      "vendor_invoice_no": "BRIGHTLINE-202607-694",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 600000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-07-kessler-roe",
+      "party_id": "kessler-roe",
+      "vendor_invoice_no": "KESSLER-202607-187",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 450000,
+      "expense_account": "6200"
+    },
+    {
+      "id": "BILL-07-meridian-reit",
+      "party_id": "meridian-reit",
+      "vendor_invoice_no": "MERIDIAN-202607-822",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 1400000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-07-pixel-pine",
+      "party_id": "pixel-pine",
+      "vendor_invoice_no": "PIXEL-202607-758",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 800000,
+      "expense_account": "6300"
+    },
+    {
+      "id": "BILL-07-cobalt-telecom",
+      "party_id": "cobalt-telecom",
+      "vendor_invoice_no": "COBALT-202607-140",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 115000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-07-harbor-insurance",
+      "party_id": "harbor-insurance",
+      "vendor_invoice_no": "HARBOR-202607-575",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 230000,
+      "expense_account": "6400"
+    },
+    {
+      "id": "BILL-07-quill-supplies",
+      "party_id": "quill-supplies",
+      "vendor_invoice_no": "QUILL-202607-680",
+      "bill_date": "2026-07-05",
+      "due_date": "2026-08-04",
+      "service_period": "2026-07",
+      "total_cents": 64000,
+      "expense_account": "6400"
+    }
+  ],
+  "bank": {
+    "account": "operating",
+    "opening_balance_cents": 0,
+    "txns": [
+      {
+        "id": "BTX-0001",
+        "posted_date": "2026-04-01",
+        "amount_cents": 500000000,
+        "descriptor": "WIRE IN NORTHWIND SYSTEMS FUNDING TRANSFER",
+        "method": "wire",
+        "recorded_time": "2026-04-01T13:00:00Z",
+        "history": {
+          "doc_kind": "equity",
+          "applied_cents": 500000000
+        }
+      },
+      {
+        "id": "BTX-0002",
+        "posted_date": "2026-04-12",
+        "amount_cents": 1140000,
+        "descriptor": "ACH CREDIT TYRELL CORP INV-1011",
+        "method": "ach",
+        "recorded_time": "2026-04-12T18:39:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1011",
+          "applied_cents": 1140000
+        }
+      },
+      {
+        "id": "BTX-0003",
+        "posted_date": "2026-04-13",
+        "amount_cents": 620000,
+        "descriptor": "ACH CREDIT SOYLENT FOODS CO INV-1003",
+        "method": "ach",
+        "recorded_time": "2026-04-13T17:16:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1003",
+          "applied_cents": 620000
+        }
+      },
+      {
+        "id": "BTX-0004",
+        "posted_date": "2026-04-14",
+        "amount_cents": 1200000,
+        "descriptor": "ACH CREDIT INITECH LLC INV-1006",
+        "method": "ach",
+        "recorded_time": "2026-04-14T21:03:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1006",
+          "applied_cents": 1200000
+        }
+      },
+      {
+        "id": "BTX-0005",
+        "posted_date": "2026-04-18",
+        "amount_cents": 850000,
+        "descriptor": "ACH CREDIT ACME CORP INV-1001",
+        "method": "ach",
+        "recorded_time": "2026-04-18T15:11:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1001",
+          "applied_cents": 850000
+        }
+      },
+      {
+        "id": "BTX-0006",
+        "posted_date": "2026-04-18",
+        "amount_cents": 2100000,
+        "descriptor": "ACH CREDIT CYBERDYNE SYSTEMS INV-1010",
+        "method": "ach",
+        "recorded_time": "2026-04-18T16:12:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1010",
+          "applied_cents": 2100000
+        }
+      },
+      {
+        "id": "BTX-0007",
+        "posted_date": "2026-04-18",
+        "amount_cents": 1800000,
+        "descriptor": "ACH CREDIT HOOLI INC INV-1007",
+        "method": "ach",
+        "recorded_time": "2026-04-18T16:28:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1007",
+          "applied_cents": 1800000
+        }
+      },
+      {
+        "id": "BTX-0008",
+        "posted_date": "2026-04-18",
+        "amount_cents": 480000,
+        "descriptor": "ACH CREDIT PIED PIPER INC INV-1008",
+        "method": "ach",
+        "recorded_time": "2026-04-18T20:21:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1008",
+          "applied_cents": 480000
+        }
+      },
+      {
+        "id": "BTX-0009",
+        "posted_date": "2026-04-19",
+        "amount_cents": 2498500,
+        "descriptor": "WIRE IN STARK INDUSTRIES REF INV-1005",
+        "method": "wire",
+        "recorded_time": "2026-04-19T17:55:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1005",
+          "applied_cents": 2498500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 1500,
+            "decided_at": "2026-04-20T15:00:00Z"
+          }
+        }
+      },
+      {
+        "id": "BTX-0010",
+        "posted_date": "2026-04-22",
+        "amount_cents": 1500000,
+        "descriptor": "ACH CREDIT GLOBEX LABS INC INV-1002",
+        "method": "ach",
+        "recorded_time": "2026-04-22T20:02:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1002",
+          "applied_cents": 1500000
+        }
+      },
+      {
+        "id": "BTX-0011",
+        "posted_date": "2026-04-23",
+        "amount_cents": 990000,
+        "descriptor": "ACH CREDIT UMBRELLA HEALTH INV-1004",
+        "method": "ach",
+        "recorded_time": "2026-04-23T17:17:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1004",
+          "applied_cents": 990000
+        }
+      },
+      {
+        "id": "BTX-0012",
+        "posted_date": "2026-04-24",
+        "amount_cents": 727500,
+        "descriptor": "WIRE IN VANDELAY IMPORTS REF INV-1009",
+        "method": "wire",
+        "recorded_time": "2026-04-24T16:40:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1009",
+          "applied_cents": 727500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 2500,
+            "decided_at": "2026-04-25T15:00:00Z"
+          }
+        }
+      },
+      {
+        "id": "BTX-0013",
+        "posted_date": "2026-04-24",
+        "amount_cents": -230000,
+        "descriptor": "ACH DEBIT HARBOR INS CO",
+        "method": "ach",
+        "recorded_time": "2026-04-24T17:36:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-harbor-insurance",
+          "applied_cents": 230000
+        }
+      },
+      {
+        "id": "BTX-0014",
+        "posted_date": "2026-04-24",
+        "amount_cents": -450000,
+        "descriptor": "ACH DEBIT KESSLER ROE CPA",
+        "method": "ach",
+        "recorded_time": "2026-04-24T17:37:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-kessler-roe",
+          "applied_cents": 450000
+        }
+      },
+      {
+        "id": "BTX-0015",
+        "posted_date": "2026-04-24",
+        "amount_cents": 3300000,
+        "descriptor": "ACH CREDIT WAYNE ENTERPRISES INV-1012",
+        "method": "ach",
+        "recorded_time": "2026-04-24T19:20:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1012",
+          "applied_cents": 3300000
+        }
+      },
+      {
+        "id": "BTX-0016",
+        "posted_date": "2026-04-24",
+        "amount_cents": -275000,
+        "descriptor": "ACH DEBIT SLATE CRM",
+        "method": "ach",
+        "recorded_time": "2026-04-24T20:07:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-slate-crm",
+          "applied_cents": 275000
+        }
+      },
+      {
+        "id": "BTX-0017",
+        "posted_date": "2026-04-24",
+        "amount_cents": -64000,
+        "descriptor": "ACH DEBIT QUILL SUPPLIES",
+        "method": "ach",
+        "recorded_time": "2026-04-24T20:30:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-quill-supplies",
+          "applied_cents": 64000
+        }
+      },
+      {
+        "id": "BTX-0018",
+        "posted_date": "2026-04-24",
+        "amount_cents": -320000,
+        "descriptor": "ACH DEBIT OBSERVA INC",
+        "method": "ach",
+        "recorded_time": "2026-04-24T21:54:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-observa",
+          "applied_cents": 320000
+        }
+      },
+      {
+        "id": "BTX-0019",
+        "posted_date": "2026-04-25",
+        "amount_cents": -800000,
+        "descriptor": "ACH DEBIT PIXEL AND PINE",
+        "method": "ach",
+        "recorded_time": "2026-04-25T13:04:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-pixel-pine",
+          "applied_cents": 800000
+        }
+      },
+      {
+        "id": "BTX-0020",
+        "posted_date": "2026-04-25",
+        "amount_cents": -600000,
+        "descriptor": "ACH DEBIT BRIGHTLINE LEGAL",
+        "method": "ach",
+        "recorded_time": "2026-04-25T21:39:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-brightline-legal",
+          "applied_cents": 600000
+        }
+      },
+      {
+        "id": "BTX-0021",
+        "posted_date": "2026-04-26",
+        "amount_cents": -1400000,
+        "descriptor": "ACH DEBIT MERIDIAN OFFICE REIT",
+        "method": "ach",
+        "recorded_time": "2026-04-26T21:46:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-meridian-reit",
+          "applied_cents": 1400000
+        }
+      },
+      {
+        "id": "BTX-0022",
+        "posted_date": "2026-04-27",
+        "amount_cents": -1840000,
+        "descriptor": "ACH DEBIT NIMBUS CLOUD INC",
+        "method": "ach",
+        "recorded_time": "2026-04-27T14:14:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-nimbus-cloud",
+          "applied_cents": 1840000
+        }
+      },
+      {
+        "id": "BTX-0023",
+        "posted_date": "2026-04-28",
+        "amount_cents": -115000,
+        "descriptor": "ACH DEBIT COBALT TELECOM",
+        "method": "ach",
+        "recorded_time": "2026-04-28T21:22:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-04-cobalt-telecom",
+          "applied_cents": 115000
+        }
+      },
+      {
+        "id": "BTX-0024",
+        "posted_date": "2026-05-13",
+        "amount_cents": 1140000,
+        "descriptor": "ACH CREDIT TYRELL CORP INV-1023",
+        "method": "ach",
+        "recorded_time": "2026-05-13T14:40:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1023",
+          "applied_cents": 1140000
+        }
+      },
+      {
+        "id": "BTX-0025",
+        "posted_date": "2026-05-13",
+        "amount_cents": 620000,
+        "descriptor": "ACH CREDIT SOYLENT FOODS CO INV-1015",
+        "method": "ach",
+        "recorded_time": "2026-05-13T15:57:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1015",
+          "applied_cents": 620000
+        }
+      },
+      {
+        "id": "BTX-0026",
+        "posted_date": "2026-05-14",
+        "amount_cents": 728000,
+        "descriptor": "WIRE IN VANDELAY IMPORTS REF INV-1021",
+        "method": "wire",
+        "recorded_time": "2026-05-14T16:38:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1021",
+          "applied_cents": 728000,
+          "write_off": {
+            "account": "6990",
+            "amount_cents": 2000,
+            "decided_at": "2026-05-15T15:00:00Z"
+          }
+        }
+      },
+      {
+        "id": "BTX-0027",
+        "posted_date": "2026-05-15",
+        "amount_cents": 2100000,
+        "descriptor": "ACH CREDIT CYBERDYNE SYSTEMS INV-1022",
+        "method": "ach",
+        "recorded_time": "2026-05-15T13:04:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1022",
+          "applied_cents": 2100000
+        }
+      },
+      {
+        "id": "BTX-0028",
+        "posted_date": "2026-05-16",
+        "amount_cents": 1200000,
+        "descriptor": "ACH CREDIT INITECH LLC INV-1018",
+        "method": "ach",
+        "recorded_time": "2026-05-16T13:17:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1018",
+          "applied_cents": 1200000
+        }
+      },
+      {
+        "id": "BTX-0029",
+        "posted_date": "2026-05-16",
+        "amount_cents": 850000,
+        "descriptor": "ACH CREDIT ACME CORP INV-1013",
+        "method": "ach",
+        "recorded_time": "2026-05-16T14:50:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1013",
+          "applied_cents": 850000
+        }
+      },
+      {
+        "id": "BTX-0030",
+        "posted_date": "2026-05-16",
+        "amount_cents": 480000,
+        "descriptor": "ACH CREDIT PIED PIPER INC INV-1020",
+        "method": "ach",
+        "recorded_time": "2026-05-16T15:36:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1020",
+          "applied_cents": 480000
+        }
+      },
+      {
+        "id": "BTX-0031",
+        "posted_date": "2026-05-16",
+        "amount_cents": 990000,
+        "descriptor": "ACH CREDIT UMBRELLA HEALTH INV-1016",
+        "method": "ach",
+        "recorded_time": "2026-05-16T18:48:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1016",
+          "applied_cents": 990000
+        }
+      },
+      {
+        "id": "BTX-0032",
+        "posted_date": "2026-05-18",
+        "amount_cents": 1800000,
+        "descriptor": "ACH CREDIT HOOLI INC INV-1019",
+        "method": "ach",
+        "recorded_time": "2026-05-18T18:57:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1019",
+          "applied_cents": 1800000
+        }
+      },
+      {
+        "id": "BTX-0033",
+        "posted_date": "2026-05-18",
+        "amount_cents": 3300000,
+        "descriptor": "ACH CREDIT WAYNE ENTERPRISES INV-1024",
+        "method": "ach",
+        "recorded_time": "2026-05-18T20:56:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1024",
+          "applied_cents": 3300000
+        }
+      },
+      {
+        "id": "BTX-0034",
+        "posted_date": "2026-05-22",
+        "amount_cents": 1500000,
+        "descriptor": "ACH CREDIT GLOBEX LABS INC INV-1014",
+        "method": "ach",
+        "recorded_time": "2026-05-22T14:03:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1014",
+          "applied_cents": 1500000
+        }
+      },
+      {
+        "id": "BTX-0035",
+        "posted_date": "2026-05-23",
+        "amount_cents": 2496500,
+        "descriptor": "WIRE IN STARK INDUSTRIES REF INV-1017",
+        "method": "wire",
+        "recorded_time": "2026-05-23T14:23:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1017",
+          "applied_cents": 2496500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 3500,
+            "decided_at": "2026-05-24T15:00:00Z"
+          }
+        }
+      },
+      {
+        "id": "BTX-0036",
+        "posted_date": "2026-05-24",
+        "amount_cents": -230000,
+        "descriptor": "ACH DEBIT HARBOR INS CO",
+        "method": "ach",
+        "recorded_time": "2026-05-24T21:19:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-harbor-insurance",
+          "applied_cents": 230000
+        }
+      },
+      {
+        "id": "BTX-0037",
+        "posted_date": "2026-05-24",
+        "amount_cents": -320000,
+        "descriptor": "ACH DEBIT OBSERVA INC",
+        "method": "ach",
+        "recorded_time": "2026-05-24T21:38:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-observa",
+          "applied_cents": 320000
+        }
+      },
+      {
+        "id": "BTX-0038",
+        "posted_date": "2026-05-25",
+        "amount_cents": -450000,
+        "descriptor": "ACH DEBIT KESSLER ROE CPA",
+        "method": "ach",
+        "recorded_time": "2026-05-25T17:53:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-kessler-roe",
+          "applied_cents": 450000
+        }
+      },
+      {
+        "id": "BTX-0039",
+        "posted_date": "2026-05-26",
+        "amount_cents": -115000,
+        "descriptor": "ACH DEBIT COBALT TELECOM",
+        "method": "ach",
+        "recorded_time": "2026-05-26T15:28:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-cobalt-telecom",
+          "applied_cents": 115000
+        }
+      },
+      {
+        "id": "BTX-0040",
+        "posted_date": "2026-05-27",
+        "amount_cents": -275000,
+        "descriptor": "ACH DEBIT SLATE CRM",
+        "method": "ach",
+        "recorded_time": "2026-05-27T15:16:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-slate-crm",
+          "applied_cents": 275000
+        }
+      },
+      {
+        "id": "BTX-0041",
+        "posted_date": "2026-05-27",
+        "amount_cents": -800000,
+        "descriptor": "ACH DEBIT PIXEL AND PINE",
+        "method": "ach",
+        "recorded_time": "2026-05-27T15:33:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-pixel-pine",
+          "applied_cents": 800000
+        }
+      },
+      {
+        "id": "BTX-0042",
+        "posted_date": "2026-05-27",
+        "amount_cents": -1840000,
+        "descriptor": "ACH DEBIT NIMBUS CLOUD INC",
+        "method": "ach",
+        "recorded_time": "2026-05-27T18:16:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-nimbus-cloud",
+          "applied_cents": 1840000
+        }
+      },
+      {
+        "id": "BTX-0043",
+        "posted_date": "2026-05-28",
+        "amount_cents": -1400000,
+        "descriptor": "ACH DEBIT MERIDIAN OFFICE REIT",
+        "method": "ach",
+        "recorded_time": "2026-05-28T13:17:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-meridian-reit",
+          "applied_cents": 1400000
+        }
+      },
+      {
+        "id": "BTX-0044",
+        "posted_date": "2026-05-28",
+        "amount_cents": -64000,
+        "descriptor": "ACH DEBIT QUILL SUPPLIES",
+        "method": "ach",
+        "recorded_time": "2026-05-28T14:30:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-quill-supplies",
+          "applied_cents": 64000
+        }
+      },
+      {
+        "id": "BTX-0045",
+        "posted_date": "2026-05-28",
+        "amount_cents": -600000,
+        "descriptor": "ACH DEBIT BRIGHTLINE LEGAL",
+        "method": "ach",
+        "recorded_time": "2026-05-28T19:53:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-05-brightline-legal",
+          "applied_cents": 600000
+        }
+      },
+      {
+        "id": "BTX-0046",
+        "posted_date": "2026-06-13",
+        "amount_cents": 990000,
+        "descriptor": "ACH CREDIT UMBRELLA HEALTH INV-1028",
+        "method": "ach",
+        "recorded_time": "2026-06-13T20:59:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1028",
+          "applied_cents": 990000
+        }
+      },
+      {
+        "id": "BTX-0047",
+        "posted_date": "2026-06-14",
+        "amount_cents": 480000,
+        "descriptor": "ACH CREDIT PIED PIPER INC INV-1032",
+        "method": "ach",
+        "recorded_time": "2026-06-14T17:30:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1032",
+          "applied_cents": 480000
+        }
+      },
+      {
+        "id": "BTX-0048",
+        "posted_date": "2026-06-15",
+        "amount_cents": 3300000,
+        "descriptor": "ACH CREDIT WAYNE ENTERPRISES INV-1036",
+        "method": "ach",
+        "recorded_time": "2026-06-15T15:03:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1036",
+          "applied_cents": 3300000
+        }
+      },
+      {
+        "id": "BTX-0049",
+        "posted_date": "2026-06-16",
+        "amount_cents": 850000,
+        "descriptor": "ACH CREDIT ACME CORP INV-1025",
+        "method": "ach",
+        "recorded_time": "2026-06-16T19:57:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1025",
+          "applied_cents": 850000
+        }
+      },
+      {
+        "id": "BTX-0050",
+        "posted_date": "2026-06-17",
+        "amount_cents": 2495500,
+        "descriptor": "WIRE IN STARK INDUSTRIES REF INV-1029",
+        "method": "wire",
+        "recorded_time": "2026-06-17T17:15:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1029",
+          "applied_cents": 2495500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 4500,
+            "decided_at": "2026-06-18T15:00:00Z"
+          }
+        }
+      },
+      {
+        "id": "BTX-0051",
+        "posted_date": "2026-06-18",
+        "amount_cents": 1140000,
+        "descriptor": "ACH CREDIT TYRELL CORP INV-1035",
+        "method": "ach",
+        "recorded_time": "2026-06-18T13:12:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1035",
+          "applied_cents": 1140000
+        }
+      },
+      {
+        "id": "BTX-0052",
+        "posted_date": "2026-06-18",
+        "amount_cents": 2100000,
+        "descriptor": "ACH CREDIT CYBERDYNE SYSTEMS INV-1034",
+        "method": "ach",
+        "recorded_time": "2026-06-18T15:08:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1034",
+          "applied_cents": 2100000
+        }
+      },
+      {
+        "id": "BTX-0053",
+        "posted_date": "2026-06-18",
+        "amount_cents": 1800000,
+        "descriptor": "ACH CREDIT HOOLI INC INV-1031",
+        "method": "ach",
+        "recorded_time": "2026-06-18T15:15:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1031",
+          "applied_cents": 1800000
+        }
+      },
+      {
+        "id": "BTX-0054",
+        "posted_date": "2026-06-20",
+        "amount_cents": 729000,
+        "descriptor": "WIRE IN VANDELAY IMPORTS REF INV-1033",
+        "method": "wire",
+        "recorded_time": "2026-06-20T14:51:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1033",
+          "applied_cents": 729000,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 1000,
+            "decided_at": "2026-06-21T15:00:00Z"
+          }
+        }
+      },
+      {
+        "id": "BTX-0055",
+        "posted_date": "2026-06-20",
+        "amount_cents": 1200000,
+        "descriptor": "ACH CREDIT INITECH LLC INV-1030",
+        "method": "ach",
+        "recorded_time": "2026-06-20T21:18:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1030",
+          "applied_cents": 1200000
+        }
+      },
+      {
+        "id": "BTX-0056",
+        "posted_date": "2026-06-23",
+        "amount_cents": 620000,
+        "descriptor": "ACH CREDIT SOYLENT FOODS CO INV-1027",
+        "method": "ach",
+        "recorded_time": "2026-06-23T15:17:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1027",
+          "applied_cents": 620000
+        }
+      },
+      {
+        "id": "BTX-0057",
+        "posted_date": "2026-06-24",
+        "amount_cents": -450000,
+        "descriptor": "ACH DEBIT KESSLER ROE CPA",
+        "method": "ach",
+        "recorded_time": "2026-06-24T13:05:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-kessler-roe",
+          "applied_cents": 450000
+        }
+      },
+      {
+        "id": "BTX-0058",
+        "posted_date": "2026-06-24",
+        "amount_cents": -600000,
+        "descriptor": "ACH DEBIT BRIGHTLINE LEGAL",
+        "method": "ach",
+        "recorded_time": "2026-06-24T21:12:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-brightline-legal",
+          "applied_cents": 600000
+        }
+      },
+      {
+        "id": "BTX-0059",
+        "posted_date": "2026-06-25",
+        "amount_cents": 1500000,
+        "descriptor": "ACH CREDIT GLOBEX LABS INC INV-1026",
+        "method": "ach",
+        "recorded_time": "2026-06-25T13:27:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-1026",
+          "applied_cents": 1500000
+        }
+      },
+      {
+        "id": "BTX-0060",
+        "posted_date": "2026-06-26",
+        "amount_cents": -275000,
+        "descriptor": "ACH DEBIT SLATE CRM",
+        "method": "ach",
+        "recorded_time": "2026-06-26T14:49:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-slate-crm",
+          "applied_cents": 275000
+        }
+      },
+      {
+        "id": "BTX-0061",
+        "posted_date": "2026-06-26",
+        "amount_cents": -1400000,
+        "descriptor": "ACH DEBIT MERIDIAN OFFICE REIT",
+        "method": "ach",
+        "recorded_time": "2026-06-26T15:03:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-meridian-reit",
+          "applied_cents": 1400000
+        }
+      },
+      {
+        "id": "BTX-0062",
+        "posted_date": "2026-06-26",
+        "amount_cents": -230000,
+        "descriptor": "ACH DEBIT HARBOR INS CO",
+        "method": "ach",
+        "recorded_time": "2026-06-26T16:12:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-harbor-insurance",
+          "applied_cents": 230000
+        }
+      },
+      {
+        "id": "BTX-0063",
+        "posted_date": "2026-06-26",
+        "amount_cents": -64000,
+        "descriptor": "ACH DEBIT QUILL SUPPLIES",
+        "method": "ach",
+        "recorded_time": "2026-06-26T16:30:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-quill-supplies",
+          "applied_cents": 64000
+        }
+      },
+      {
+        "id": "BTX-0064",
+        "posted_date": "2026-06-26",
+        "amount_cents": -115000,
+        "descriptor": "ACH DEBIT COBALT TELECOM",
+        "method": "ach",
+        "recorded_time": "2026-06-26T18:32:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-cobalt-telecom",
+          "applied_cents": 115000
+        }
+      },
+      {
+        "id": "BTX-0065",
+        "posted_date": "2026-06-27",
+        "amount_cents": -1840000,
+        "descriptor": "ACH DEBIT NIMBUS CLOUD INC",
+        "method": "ach",
+        "recorded_time": "2026-06-27T13:31:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-nimbus-cloud",
+          "applied_cents": 1840000
+        }
+      },
+      {
+        "id": "BTX-0066",
+        "posted_date": "2026-06-27",
+        "amount_cents": -320000,
+        "descriptor": "ACH DEBIT OBSERVA INC",
+        "method": "ach",
+        "recorded_time": "2026-06-27T15:47:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-observa",
+          "applied_cents": 320000
+        }
+      },
+      {
+        "id": "BTX-0067",
+        "posted_date": "2026-06-27",
+        "amount_cents": -800000,
+        "descriptor": "ACH DEBIT PIXEL AND PINE",
+        "method": "ach",
+        "recorded_time": "2026-06-27T19:08:00Z",
+        "history": {
+          "doc_kind": "bill",
+          "doc_id": "BILL-06-pixel-pine",
+          "applied_cents": 800000
+        }
+      },
+      {
+        "id": "BTX-0068",
+        "posted_date": "2026-07-09",
+        "amount_cents": 2100000,
+        "descriptor": "ACH CREDIT CYBERDYNE SYSTEMS INV-1046",
+        "method": "ach",
+        "recorded_time": "2026-07-09T13:52:00Z"
+      },
+      {
+        "id": "BTX-0069",
+        "posted_date": "2026-07-11",
+        "amount_cents": 480000,
+        "descriptor": "ACH CREDIT PIED PIPER INC INV-1044",
+        "method": "ach",
+        "recorded_time": "2026-07-11T16:54:00Z"
+      },
+      {
+        "id": "BTX-0070",
+        "posted_date": "2026-07-12",
+        "amount_cents": 1080000,
+        "descriptor": "ACH CREDIT INITECH LLC INV-1042",
+        "method": "ach",
+        "recorded_time": "2026-07-12T13:07:00Z"
+      },
+      {
+        "id": "BTX-0071",
+        "posted_date": "2026-07-14",
+        "amount_cents": 726500,
+        "descriptor": "WIRE IN VANDELAY IMPORTS REF INV-1045",
+        "method": "wire",
+        "recorded_time": "2026-07-14T16:07:00Z"
+      },
+      {
+        "id": "BTX-0072",
+        "posted_date": "2026-07-15",
+        "amount_cents": 1500000,
+        "descriptor": "ACH CREDIT GLOBEX HOLDINGS LTD",
+        "method": "ach",
+        "recorded_time": "2026-07-15T13:10:00Z"
+      },
+      {
+        "id": "BTX-0073",
+        "posted_date": "2026-07-15",
+        "amount_cents": 2970000,
+        "descriptor": "ACH CREDIT WAYNE ENTERPRISES",
+        "method": "ach",
+        "recorded_time": "2026-07-15T19:51:00Z"
+      },
+      {
+        "id": "BTX-0074",
+        "posted_date": "2026-07-16",
+        "amount_cents": 1800000,
+        "descriptor": "ACH CREDIT HOOLI INC PAYMENT",
+        "method": "ach",
+        "recorded_time": "2026-07-16T13:13:00Z"
+      },
+      {
+        "id": "BTX-0075",
+        "posted_date": "2026-07-17",
+        "amount_cents": 1140000,
+        "descriptor": "ACH CREDIT TYRELL CORP INV-1047",
+        "method": "ach",
+        "recorded_time": "2026-07-17T20:54:00Z"
+      },
+      {
+        "id": "BTX-0076",
+        "posted_date": "2026-07-20",
+        "amount_cents": 2497500,
+        "descriptor": "WIRE IN STARK INDUSTRIES REF INV-1041",
+        "method": "wire",
+        "recorded_time": "2026-07-20T17:43:00Z"
+      },
+      {
+        "id": "BTX-0077",
+        "posted_date": "2026-07-21",
+        "amount_cents": 620000,
+        "descriptor": "ACH CREDIT SOYLENT FOODS CO INV-1039",
+        "method": "ach",
+        "recorded_time": "2026-07-21T18:08:00Z"
+      },
+      {
+        "id": "BTX-0078",
+        "posted_date": "2026-07-23",
+        "amount_cents": 850000,
+        "descriptor": "ACH CREDIT ACME CORP INV-1037",
+        "method": "ach",
+        "recorded_time": "2026-07-23T19:34:00Z"
+      }
+    ]
+  },
+  "mail": [
+    {
+      "id": "m-initech-1",
+      "thread_id": "t-initech-pricing",
+      "date": "2026-06-26T14:12:00Z",
+      "from": "pat.lindqvist@initech.test",
+      "to": [
+        "morgan.hale@northwind.test"
+      ],
+      "cc": [
+        "dana.reyes@northwind.test"
+      ],
+      "subject": "Renewal pricing",
+      "body": "Morgan,\n\nGood to talk today. As discussed, the May outage cost us two days of reporting and my board wants to see that reflected before we sign the renewal. Can you confirm the discount in writing so I can get the order form through?\n\nPat Lindqvist\nCFO, Initech",
+      "party_id": "initech"
+    },
+    {
+      "id": "m-initech-2",
+      "thread_id": "t-initech-pricing",
+      "date": "2026-06-28T15:00:00Z",
+      "from": "morgan.hale@northwind.test",
+      "to": [
+        "pat.lindqvist@initech.test"
+      ],
+      "cc": [
+        "dana.reyes@northwind.test"
+      ],
+      "subject": "Re: Renewal pricing",
+      "body": "Hi Pat, Dana,\n\nConfirming what we discussed: Initech gets 10% off the platform fee through renewal on 2027-06-30. Billing will not catch up for a cycle or two, so invoices may still show the list price. Pay the net amount and we will true it up on our side.\n\nThanks,\nMorgan Hale\nCEO, Northwind Systems",
+      "party_id": "initech"
+    },
+    {
+      "id": "m-globex-1",
+      "thread_id": "t-globex-treasury",
+      "date": "2026-06-30T09:40:00Z",
+      "from": "ap@globexlabs.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Change of paying entity from July",
+      "body": "Hello,\n\nFollowing our treasury centralisation, invoices addressed to Globex Labs will be paid by our parent company, Globex Holdings Ltd, starting with the July invoice. Payments will show GLOBEX HOLDINGS LTD as the originator. Invoice addressing does not change.\n\nGlobex Labs Accounts Payable",
+      "party_id": "globex-labs"
+    },
+    {
+      "id": "m-noise-1",
+      "thread_id": "t-noise-1",
+      "date": "2026-07-08T13:31:00Z",
+      "from": "statements@firstharbor.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Your July statement is ready",
+      "body": "Your operating account statement for the period is available in online banking."
+    },
+    {
+      "id": "m-remit-INV-1046",
+      "thread_id": "t-remit-INV-1046",
+      "date": "2026-07-09T11:30:00Z",
+      "from": "ap@cyberdyne.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice - Cyberdyne Systems",
+      "body": "Remittance advice from Cyberdyne Systems accounts payable.\n\nPayment of $21,000.00 sent today covers invoice INV-1046 in full.\n\nThis mailbox is not monitored.",
+      "party_id": "cyberdyne"
+    },
+    {
+      "id": "m-wayne-1",
+      "thread_id": "t-wayne-qbr",
+      "date": "2026-07-09T18:20:00Z",
+      "from": "sam.okafor@northwind.test",
+      "to": [
+        "lucius.f@wayne.test"
+      ],
+      "cc": [],
+      "subject": "QBR follow-up",
+      "body": "Lucius,\n\nThanks for the time today. Slides attached. I will send the usage export your analysts asked for by Friday.\n\nSam",
+      "party_id": "wayne"
+    },
+    {
+      "id": "m-remit-INV-1044",
+      "thread_id": "t-remit-INV-1044",
+      "date": "2026-07-11T11:30:00Z",
+      "from": "ap@piedpiper.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice - Pied Piper",
+      "body": "Remittance advice from Pied Piper accounts payable.\n\nPayment of $4,800.00 sent today covers invoice INV-1044 in full.\n\nThis mailbox is not monitored.",
+      "party_id": "pied-piper"
+    },
+    {
+      "id": "m-remit-INV-1043",
+      "thread_id": "t-remit-INV-1043",
+      "date": "2026-07-16T11:30:00Z",
+      "from": "ap@hooli.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice - Hooli",
+      "body": "Remittance advice from Hooli accounts payable.\n\nPayment of $18,000.00 sent today covers invoice INV-1043 in full.\n\nThis mailbox is not monitored.",
+      "party_id": "hooli"
+    },
+    {
+      "id": "m-noise-4",
+      "thread_id": "t-noise-4",
+      "date": "2026-07-17T18:02:00Z",
+      "from": "priya.raman@northwind.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Invitation: July close kickoff",
+      "body": "Agenda: checklist owners, accrual cut-off, open reconciling items. Thirty minutes."
+    },
+    {
+      "id": "m-umbrella-1",
+      "thread_id": "t-umbrella-delay",
+      "date": "2026-07-20T16:05:00Z",
+      "from": "ap@umbrellahealth.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [
+        "sam.okafor@northwind.test"
+      ],
+      "subject": "July payment timing",
+      "body": "Hi,\n\nWe are migrating ERP systems and our July payment run is delayed. Expect payment of the July invoice in full in the first week of August. Apologies for the inconvenience.\n\nUmbrella Health AP",
+      "party_id": "umbrella"
+    },
+    {
+      "id": "m-remit-INV-1039",
+      "thread_id": "t-remit-INV-1039",
+      "date": "2026-07-21T11:30:00Z",
+      "from": "ap@soylent.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice - Soylent Foods",
+      "body": "Remittance advice from Soylent Foods accounts payable.\n\nPayment of $6,200.00 sent today covers invoice INV-1039 in full.\n\nThis mailbox is not monitored.",
+      "party_id": "soylent"
+    },
+    {
+      "id": "m-noise-3",
+      "thread_id": "t-noise-3",
+      "date": "2026-07-21T14:19:00Z",
+      "from": "facilities@meridianreit.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Office closure notice",
+      "body": "The lobby will be closed for maintenance on Saturday. Badge access is unaffected."
+    },
+    {
+      "id": "m-noise-2",
+      "thread_id": "t-noise-2",
+      "date": "2026-07-21T17:31:00Z",
+      "from": "newsletter@saasfinanceweekly.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "SaaS Finance Weekly: five close metrics that matter",
+      "body": "This week: days to close, the cost of a reopened period, and why accruals go stale."
+    },
+    {
+      "id": "m-remit-INV-1037",
+      "thread_id": "t-remit-INV-1037",
+      "date": "2026-07-23T11:30:00Z",
+      "from": "ap@acme.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice - Acme Corp",
+      "body": "Remittance advice from Acme Corp accounts payable.\n\nPayment of $8,500.00 sent today covers invoice INV-1037 in full.\n\nThis mailbox is not monitored.",
+      "party_id": "acme"
+    },
+    {
+      "id": "m-noise-6",
+      "thread_id": "t-noise-6",
+      "date": "2026-07-23T21:23:00Z",
+      "from": "lucius.f@wayne.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Re: dashboard export",
+      "body": "Got the export, thanks Sam. The analysts are happy with it.",
+      "party_id": "wayne"
+    },
+    {
+      "id": "m-noise-5",
+      "thread_id": "t-noise-5",
+      "date": "2026-07-24T16:53:00Z",
+      "from": "ap@quillsupplies.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Updated W-9 on file",
+      "body": "Attached is our updated W-9 for your records. No change to remittance details."
+    }
+  ],
+  "chat": [
+    {
+      "id": "c-1",
+      "channel": "deals",
+      "user": "U_DANA",
+      "ts": "2026-06-24T17:45:00Z",
+      "text": "Initech renewal is signed. 144k for the year, same list price as last term. Logged in the CRM.",
+      "party_id": "initech"
+    },
+    {
+      "id": "c-2",
+      "channel": "finance",
+      "user": "U_CTRL",
+      "ts": "2026-07-01T14:00:00Z",
+      "text": "July invoices are out. Close calendar is pinned: cash and AR by the 3rd working day of August."
+    },
+    {
+      "id": "c-3",
+      "channel": "cs-escalations",
+      "user": "U_SAM",
+      "ts": "2026-07-07T15:30:00Z",
+      "text": "Wayne reported slow dashboards on Monday. Root cause was a cold cache, fixed the same day. Ticket closed, nothing commercial came up.",
+      "party_id": "wayne"
+    },
+    {
+      "id": "c-4",
+      "channel": "finance",
+      "user": "U_AP",
+      "ts": "2026-07-06T13:10:00Z",
+      "text": "July vendor bills are all in the AP inbox except the cloud bill, which usually lands in the first days of the next month."
+    },
+    {
+      "id": "c-5",
+      "channel": "finance",
+      "user": "U_CTRL",
+      "ts": "2026-07-21T16:20:00Z",
+      "text": "Umbrella told Sam their July payment slips to early August. Forecast should move it.",
+      "party_id": "umbrella"
+    }
+  ],
+  "crm": {
+    "deals": [
+      {
+        "id": "DEAL-CTR-acme-2026",
+        "party_id": "acme",
+        "name": "Acme Corp 2026 subscription",
+        "amount_cents": 10200000,
+        "close_date": "2025-12-15",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-globex-labs-2026",
+        "party_id": "globex-labs",
+        "name": "Globex Labs 2026 subscription",
+        "amount_cents": 18000000,
+        "close_date": "2025-12-15",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-soylent-2026",
+        "party_id": "soylent",
+        "name": "Soylent Foods 2026 subscription",
+        "amount_cents": 7440000,
+        "close_date": "2025-12-15",
+        "owner": "U_JORDAN",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-umbrella-2026",
+        "party_id": "umbrella",
+        "name": "Umbrella Health 2026 subscription",
+        "amount_cents": 11880000,
+        "close_date": "2025-12-15",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-stark-2026",
+        "party_id": "stark",
+        "name": "Stark Industries 2026 subscription",
+        "amount_cents": 30000000,
+        "close_date": "2025-12-15",
+        "owner": "U_JORDAN",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-initech-2025",
+        "party_id": "initech",
+        "name": "Initech 2025 subscription",
+        "amount_cents": 14400000,
+        "close_date": "2025-06-20",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-06-20T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-initech-2026",
+        "party_id": "initech",
+        "name": "Initech 2026 subscription",
+        "amount_cents": 14400000,
+        "close_date": "2026-06-24",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2026-06-24T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-hooli-2026",
+        "party_id": "hooli",
+        "name": "Hooli 2026 subscription",
+        "amount_cents": 21600000,
+        "close_date": "2025-12-15",
+        "owner": "U_JORDAN",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-pied-piper-2026",
+        "party_id": "pied-piper",
+        "name": "Pied Piper 2026 subscription",
+        "amount_cents": 5760000,
+        "close_date": "2025-12-15",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-vandelay-2026",
+        "party_id": "vandelay",
+        "name": "Vandelay Imports 2026 subscription",
+        "amount_cents": 8760000,
+        "close_date": "2025-12-15",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-cyberdyne-2026",
+        "party_id": "cyberdyne",
+        "name": "Cyberdyne Systems 2026 subscription",
+        "amount_cents": 25200000,
+        "close_date": "2025-12-15",
+        "owner": "U_JORDAN",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-tyrell-2026",
+        "party_id": "tyrell",
+        "name": "Tyrell Corp 2026 subscription",
+        "amount_cents": 13680000,
+        "close_date": "2025-12-15",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-wayne-2026",
+        "party_id": "wayne",
+        "name": "Wayne Enterprises 2026 subscription",
+        "amount_cents": 39600000,
+        "close_date": "2025-12-15",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-15T16:00:00Z"
+      }
+    ],
+    "notes": [
+      {
+        "id": "N-1",
+        "party_id": "initech",
+        "ts": "2026-06-24T17:50:00Z",
+        "author": "U_DANA",
+        "text": "Renewal closed at list. Morgan is handling a pricing conversation with Pat Lindqvist (CFO) directly after the May outage."
+      },
+      {
+        "id": "N-2",
+        "party_id": "wayne",
+        "ts": "2026-07-09T19:00:00Z",
+        "author": "U_SAM",
+        "text": "QBR held 9 Jul. Usage up 12%. No commercial issues raised. Next touchpoint in October."
+      },
+      {
+        "id": "N-3",
+        "party_id": "globex-labs",
+        "ts": "2026-06-30T10:00:00Z",
+        "author": "U_DANA",
+        "text": "Globex is centralising treasury under Globex Holdings. Contracting entity stays Globex Labs."
+      }
+    ]
+  },
+  "files": [
+    {
+      "id": "policy-memo",
+      "kind": "policy_memo",
+      "title": "Northwind Systems accounting policy memo (FY2026)",
+      "recorded_time": "2026-01-05T15:00:00Z",
+      "sections": [
+        {
+          "slug": "materiality",
+          "heading": "1. Materiality and approval",
+          "text": "Any adjustment of $500.00 or more (a credit memo, write-off, accrual or reclass) requires approval by a person with sufficient authority before it posts. A cash application that matches an invoice exactly is not an adjustment."
+        },
+        {
+          "slug": "approval-matrix",
+          "heading": "2. Approval matrix",
+          "text": "AP clerk: up to $100. Controller: up to $10,000. CFO: up to $100,000. Nobody approves an entry they prepared."
+        },
+        {
+          "slug": "concessions",
+          "heading": "3. Price concessions",
+          "text": "A price concession needs written agreement from an officer of the company. A concession on a term not yet recognised is booked against deferred revenue, not revenue, and the revenue schedule is revised prospectively."
+        },
+        {
+          "slug": "unapplied-cash",
+          "heading": "4. Unapplied and unidentified cash",
+          "text": "Cash that cannot be tied to a customer document is held in customer credits until identified. It is never applied to another customer's invoice."
+        },
+        {
+          "slug": "accruals",
+          "heading": "5. Accruals",
+          "text": "Services received but not yet billed at month end are accrued from the best available estimate and reversed when the bill arrives."
+        }
+      ]
+    }
+  ]
+}

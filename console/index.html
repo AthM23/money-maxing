@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Footnote console</title>
+<style>
+  :root {
+    --paper: #f6f3ea; --card: #fffdf7; --ink: #1d1b16; --muted: #6f695b; --rule: #d9d2bf;
+    --tick: #b3261e; --ok: #1f6f43; --warn: #9a6200; --accent: #1f3f8f; --hover: #efe9d8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #16150f; --card: #1e1c15; --ink: #ece7d8; --muted: #9a9382; --rule: #38342a; --tick: #ff8a80; --ok: #7ed3a2; --warn: #f0b95b; --accent: #9db7ff; --hover: #28251c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.45 ui-sans-serif, system-ui, "Segoe UI", sans-serif; }
+  header { padding: 18px 24px 14px; border-bottom: 1px solid var(--rule); display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 28px; }
+  h1 { font: 600 22px/1 Georgia, "Times New Roman", serif; margin: 0; letter-spacing: .2px; }
+  h1 sup { color: var(--tick); font-size: 13px; }
+  h2 { font: 600 12px/1 ui-sans-serif, system-ui, sans-serif; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0 0 10px; }
+  .stats { display: flex; flex-wrap: wrap; gap: 6px 22px; color: var(--muted); }
+  .stats b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .tied { color: var(--ok); } .untied { color: var(--tick); font-weight: 600; }
+  main { display: grid; grid-template-columns: minmax(340px, 5fr) 7fr; gap: 18px; padding: 18px 24px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; padding: 16px; } }
+  section { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+  .stack { display: grid; gap: 18px; min-width: 0; }
+  .intent { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 9px 8px; border-top: 1px solid var(--rule); cursor: pointer; border-radius: 4px; }
+  .intent:first-of-type { border-top: 0; } .intent:hover, .intent.sel { background: var(--hover); }
+  .intent .q { font-weight: 500; } .intent .meta { color: var(--muted); font-size: 12px; grid-column: 1 / -1; }
+  .pill { font: 600 11px/1 ui-monospace, Consolas, monospace; padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; white-space: nowrap; align-self: start; }
+  .resolved { color: var(--ok); } .open { color: var(--warn); } .waiting_on_human { color: var(--accent); } .abandoned { color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--ink); padding: 3px 6px; }
+  td { padding: 3px 6px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  td.n, th.n { text-align: right; font-family: ui-monospace, Consolas, monospace; }
+  tr.total td { border-top: 1px solid var(--ink); border-bottom: 3px double var(--ink); font-weight: 600; }
+  .marks { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  .mark { font: 12px ui-monospace, Consolas, monospace; border: 1px solid var(--rule); border-radius: 3px; padding: 2px 6px; }
+  .mark b { color: var(--tick); } .mark.fail { border-color: var(--tick); color: var(--tick); } .mark.judgment { border-style: dashed; }
+  .decision { border-top: 1px solid var(--rule); padding-top: 10px; margin-top: 10px; }
+  .decision:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
+  .kv { color: var(--muted); font-size: 12px; } .kv b { color: var(--ink); font-weight: 500; }
+  pre { white-space: pre-wrap; word-break: break-word; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 8px; margin: 6px 0; font: 12px/1.4 ui-monospace, Consolas, monospace; max-height: 220px; overflow: auto; }
+  .feed { max-height: 320px; overflow: auto; font: 12px/1.5 ui-monospace, Consolas, monospace; }
+  .feed div { border-bottom: 1px solid var(--rule); padding: 2px 0; overflow-wrap: anywhere; } .feed .t { color: var(--accent); } .feed .ts { color: var(--muted); }
+  .empty { color: var(--muted); padding: 8px 0; }
+  .scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Footnote<sup>†</sup></h1>
+  <div class="stats" id="stats">loading…</div>
+</header>
+<main>
+  <div class="stack">
+    <section><h2>Drift board · intents</h2><div id="intents"></div></section>
+    <section><h2>Event bus</h2><div class="feed" id="events"></div></section>
+  </div>
+  <div class="stack">
+    <section><h2>Intent · every artifact it created</h2><div id="detail"><div class="empty">Select an intent.</div></div></section>
+    <section><h2>Trial balance</h2><div class="scroll" id="tb"></div></section>
+  </div>
+</main>
+<script>
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// display only: cents stay integers until the last step, which splits the string rather than dividing
+const usd = (c) => { const a = Math.abs(c), s = String(a).padStart(3, "0"); return (c < 0 ? "(" : "") + Number(s.slice(0, -2)).toLocaleString("en-US") + "." + s.slice(-2) + (c < 0 ? ")" : ""); };
+let selected = null;
+
+async function refresh() {
+  const s = await (await fetch("/api/state")).json();
+  const m = s.summary, tied = m.ar_gl_cents === m.ar_subledger_cents;
+  document.getElementById("stats").innerHTML =
+    `<span>traces <b>${m.traces.map((t) => `${esc(t.source)} ${t.n}`).join(" · ") || 0}</b></span>` +
+    `<span>bank lines <b>${m.bank_lines}</b>, unmatched <b>${m.bank_unmatched}</b></span>` +
+    `<span>intents open <b>${m.intents_open}</b>, resolved <b>${m.intents_resolved}</b></span>` +
+    `<span>routes <b>${m.routes.map((r) => `${esc(r.route)} ${r.n}`).join(" · ") || "none"}</b></span>` +
+    `<span>model calls <b>${m.model_calls}</b></span>` +
+    `<span class="${tied ? "tied" : "untied"}">AR GL ${usd(m.ar_gl_cents)} ${tied ? "=" : "≠"} subledger ${usd(m.ar_subledger_cents)}</span>`;
+  document.getElementById("intents").innerHTML = s.intents.length ? s.intents.map((i) => {
+    const c = i.case_file || {};
+    return `<div class="intent ${i.id === selected ? "sel" : ""}" data-id="${esc(i.id)}"><span class="q">${esc(i.question)}</span><span class="pill ${esc(i.status)}">${esc(i.status)}</span>` +
+      `<span class="meta">${esc(i.function)} · ${esc(c.party_id || "")} · ${esc(c.bank_txn_id || "")} · received ${usd(c.received_cents || 0)} of ${usd(c.expected_cents || 0)} · ${esc(i.routes || "no route yet")}${i.tier != null ? " · tier " + i.tier : ""} · ${i.artifacts} artifact${i.artifacts === 1 ? "" : "s"}</span></div>`;
+  }).join("") : '<div class="empty">No intents yet. Run <code>pnpm skeleton</code>.</div>';
+  document.getElementById("events").innerHTML = s.events.map((e) => `<div><span class="ts">#${e.id} ${esc(e.ts.slice(11, 19))}</span> <span class="t">${esc(e.topic)}</span> ${esc(e.from_function)} ${esc(JSON.stringify(e.payload)).slice(0, 220)}</div>`).join("") || '<div class="empty">Bus is empty.</div>';
+  let dr = 0, cr = 0;
+  document.getElementById("tb").innerHTML = "<table><tr><th>Account</th><th></th><th class=n>Debit</th><th class=n>Credit</th></tr>" + s.trial_balance.map((r) => {
+    const d = r.balance_cents > 0 ? r.balance_cents : 0, c = r.balance_cents < 0 ? -r.balance_cents : 0; dr += d; cr += c;
+    return `<tr><td>${esc(r.account)}</td><td>${esc(r.name)}</td><td class=n>${d ? usd(d) : ""}</td><td class=n>${c ? usd(c) : ""}</td></tr>`;
+  }).join("") + `<tr class=total><td></td><td>${dr === cr ? "Footed" : "DOES NOT FOOT"}</td><td class=n>${usd(dr)}</td><td class=n>${usd(cr)}</td></tr></table>`;
+  if (selected) await showIntent(selected);
+}
+
+async function showIntent(id) {
+  selected = id;
+  const r = await fetch("/api/intent?id=" + encodeURIComponent(id));
+  if (!r.ok) return;
+  const d = await r.json(), c = d.intent.case_file || {};
+  const decisions = d.decisions.map((x) => {
+    const wp = x.workpaper, e = x.entry, p = x.proposal;
+    return `<div class="decision"><div><b>${esc(x.kind)}</b> <span class="pill ${x.posted_at ? "resolved" : "open"}">${esc(x.route || "no route")}${x.posted_at ? " · posted" : ""}</span></div>` +
+      `<div class="kv">actor <b>${esc(x.actor)}</b> · tier <b>${esc(x.tier ?? "-")}</b> · model calls <b>${x.model_calls}</b> · cost <b>$${(x.cost_micros / 1e6).toFixed(4)}</b> · ${esc(x.id)}</div>` +
+      (wp ? `<div class="marks" title="F footed · E agreed to source · P approved by · J per policy">${wp.marks.map((k) => `<span class="mark ${esc(k.status)}" title="${esc(k.detail)}"><b>${esc(k.cls)}</b> ${esc(k.check)} ${k.status === "pass" ? "✓" : k.status === "fail" ? "✗" : "~"}</span>`).join("")}<span class="kv">kernel <b>${esc(wp.kernel_verdict)}</b> · re-performed ${wp.checkable_num}/${wp.checkable_den}</span></div>` : "") +
+      (e ? `<div class="scroll"><table><tr><th>${esc(e.id)} · ${esc(e.date)}</th><th class=n>Debit</th><th class=n>Credit</th></tr>${e.lines.map((l) => `<tr><td>${esc(l.account)} ${esc(l.party_id || "")}</td><td class=n>${l.debit_cents ? usd(l.debit_cents) : ""}</td><td class=n>${l.credit_cents ? usd(l.credit_cents) : ""}</td></tr>`).join("")}</table></div>` : "") +
+      (p && p.evidence && p.evidence.length ? p.evidence.map((v) => `<div class="kv">evidence <b>${esc(v.trace_id)}</b>: ${esc(v.claim)}${v.quote ? ` — “${esc(v.quote)}”` : ""}</div>`).join("") : "") + "</div>";
+  }).join("") || '<div class="empty">No decision yet: waiting for an agent.</div>';
+  document.getElementById("detail").innerHTML =
+    `<div><b>${esc(d.intent.question)}</b> <span class="pill ${esc(d.intent.status)}">${esc(d.intent.status)}</span></div>` +
+    `<div class="kv">party <b>${esc(c.party_id)}</b> · bank line <b>${esc(c.bank_txn_id || "-")}</b> · documents <b>${esc((c.doc_ids || []).join(", ") || "-")}</b> · expected <b>${usd(c.expected_cents || 0)}</b> · received <b>${usd(c.received_cents || 0)}</b> · shortfall <b>${usd(c.shortfall_cents || 0)}</b></div>` +
+    `<h2 style="margin-top:14px">Decisions and workpapers</h2>${decisions}` +
+    `<h2 style="margin-top:14px">Evidence (three clocks)</h2>${d.traces.map((t) => `<div class="kv"><b>${esc(t.id)}</b> v${t.version} · ${esc(t.source)}/${esc(t.kind)} · happened ${esc(t.event_time)} · recorded ${esc(t.recorded_time)} · ingested ${esc(t.ingested_at)}</div><pre>${esc(JSON.stringify(t.payload, null, 1))}</pre>`).join("") || '<div class="empty">none</div>'}` +
+    `<h2 style="margin-top:14px">Ripple</h2><div class="feed">${d.events.map((e) => `<div><span class="ts">#${e.id}</span> <span class="t">${esc(e.topic)}</span> ${esc(e.from_function)}</div>`).join("")}${d.artifacts.map((a) => `<div>artifact <span class="t">${esc(a.system)}/${esc(a.kind)}</span> ${esc(a.external_id)} (${esc(a.function)})</div>`).join("")}</div>`;
+  document.querySelectorAll(".intent").forEach((n) => n.classList.toggle("sel", n.dataset.id === id));
+}
+
+document.getElementById("intents").addEventListener("click", (ev) => { const n = ev.target.closest(".intent"); if (n) showIntent(n.dataset.id); });
+refresh(); setInterval(() => refresh().catch(() => {}), 2000);
+</script>
+</body>
+</html>

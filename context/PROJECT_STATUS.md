@@ -9,7 +9,7 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~19:30 ET |
+| **Last updated** | 2026-09-19 ~21:05 ET |
 | **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
 | **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
@@ -80,6 +80,8 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
 | 09-19 | OpenAI fine-tuning as the route for the small model (spec §6) | OpenAI's deprecations page: organisations that had never fine-tuned were blocked from creating jobs on 2026-05-07 (checked directly 09-19). AthM23 also stated the team will fine-tune an open-weight model. |
 | 09-19 | Learning the route (AUTO / PROPOSE / ESCALATE / REFUSE / BLOCK) with a fine-tuned classifier | The 115 corpus cases are a test set, not training data; ESCALATE is about information that is missing, which case text does not carry; a wrong AUTO has asymmetric cost. Routes stay rules plus a calibrated threshold. |
 | 09-19 | `@excalidraw/mermaid-to-excalidraw` for the editable whiteboard export | Drops classDef colours, keeps `<br>` as literal text so boxes come out thousands of pixels wide, and fails on open links. Replaced by `diagrams/architecture/tools/svg2exc.mjs`, which reads Mermaid's own rendered layout. |
+| 09-19 | Carrying the seeded world id in the Gmail `Message-ID` header | Verified live: `messages.insert` replaces it with Gmail's own id, which broke idempotent seeding (16 duplicates inserted). The id now travels in `X-Footnote-Id`. |
+| 09-19 | A second Phase 0 contract, written on `atharv-branch` | Person A's contract on `main` already had the kernel, runtime, agents and eval built on it. `main` was merged and theirs taken; B's extra tables live in `src/ledger/schema-b.sql`. |
 
 ---
 
@@ -421,3 +423,89 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
 - What this changes in how we talk about it: "zero wrong auto-posts" is a property we test for, and a reviewer found two
   ways to break it within an hour. Say that in the limitations section, with the count of adversarial probes run.
 - Contract change: `decision.posted_at`. `FactLite.value` added to the kernel's input types.
+
+### 2026-09-19 ~20:46 ET — Free integration credentials configured and verified
+
+- User authorized browser-based setup and credential extraction for Northwind Systems, with no purchases. Saved all eight requested QBO/Gmail/HubSpot fields in the Git-ignored `.env`; no secrets recorded here.
+- QBO: reused Northwind Systems workspace and existing Test App (development); sandbox realm `9341457949189147` (Sandbox Company US effc). Authorized accounting scope through Intuit Playground. Verified refresh and sandbox CompanyInfo API both HTTP 200; persisted the refresh token returned by verification.
+- HubSpot: account `247448288`, service key named Northwind Systems Finance Ops (key ID `53805625`). Used service keys because the current UI recommends them over legacy private apps. User explicitly approved companies/contacts/deals read and write (six scopes). Verified all three read endpoints HTTP 200. Did not seed or modify CRM records. Account's formal developer-test classification was not verified.
+- Gmail: signed-in demo mailbox had no accessible Cloud projects, so created Northwind Systems project `hazel-framing-509200-n8`, OAuth app Northwind Systems Finance Ops, web client Northwind Gmail. Enabled Gmail API, added the demo mailbox as a test user, used Google's OAuth Playground with own client credentials. User approved Google terms, API User Data Policy, credential exchange and requested scopes. Verified refresh and profile API HTTP 200; returned scopes exactly gmail.readonly + gmail.insert. App remains in Testing; no billing or paid trial enabled. Earlier note about an existing Gmail client does not describe this signed-in account.
+- No financial transactions, purchases, email sends, or demo seeding performed. Initial API verification was blocked by restricted network; approved network execution succeeded. Browser approval review required explicit scope and credential-destination confirmations, which the user supplied.
+
+### 2026-09-19 ~20:53 ET — Slack app configured and connection verified
+
+- Created and installed Northwind Finance Ops (`A0C37Q8RUSY`) in existing Northwind Systems workspace (`T0C3620JPBK`). User explicitly approved bot scopes chat:write/im:write, app-token scope connections:write, and installation terms.
+- Saved SLACK_BOT_TOKEN and SLACK_APP_TOKEN in ignored `.env`. Enabled Socket Mode and interactivity to match existing `src/agents/slack/transport.ts`; no public callback or paid plan needed.
+- Verified Slack auth.test, apps.connections.open, and a live WebSocket hello handshake. No messages sent and no persistent agent started. Full approval interaction remains untested; real human Slack IDs must be mapped by the seeder to approver records.
+- Added `context/SLACK_SETUP.md` with non-secret IDs and runtime handoff. No financial authority changes, purchases, or additional history-reading scopes.
+
+### 2026-09-19 ~21:05 ET — Phase 1, Person B: world, ingestion, drift, bus, console; walking skeleton runs; QuickBooks and Gmail verified live (AthM23 + Claude Code session)
+
+- **Contract: Person A's wins. Superseded:** a Phase 0 contract was also written on `atharv-branch` (commit `3b750a3`,
+  ~20:15, never on `main`). Person A's `src/contract/` already had the kernel, runtime, agents and eval built on it and
+  nothing was built on B's, so `main` was merged into `atharv-branch` with every conflict resolved to `main`. B's Phase 0
+  decisions matched A's proposals on all four points (AUTO above $500 only through a ceiling or an exact cash match; GPT
+  controller is a reviewer; bank feed is a file; processor payout is a file, stretch). **`src/contract/` was not edited.**
+  Tables B needs that the contract lacks live in `src/ledger/schema-b.sql` (additive, never read by the kernel or a
+  tool): `event_cursor`, `seed_manifest`, `bank_match_seed`, `drift_case` (intent dedupe; `intent` has no dedupe column).
+- **Landed (all of B's Phase 1 column):**
+  - `world/northwind.json` v0 from an integer seed (`src/seed/generate.ts`, byte-identical per seed): 12 customers plus
+    the Globex parent, 10 vendors, Q2 + July invoices and bills, 78 bank lines, 16 emails, 5 chat messages, CRM deals and
+    notes, contracts, a policy memo. Plants: Initech ($10,800 on INV-1042, CEO email of 28 Jun), Wayne ($3,300 short,
+    nothing explains it, and a test asserts that), parent pays for subsidiary, a late payer, two July wire-fee
+    short-pays, and six Q2 wire-fee write-offs as `decision_point` rows with `case_json` + `human_outcome_json` (one
+    booked to the wrong account, for replay's `human_inconsistent`). The answer key is `world/answer-key.json`,
+    gitignored. **The 12 customers bill $172k a month, not $60M a year: they are the modelled slice, not the company.**
+  - Local seeder: parties, aliases, approvers (incl. `controller:gpt` at 49,999, as A asked), contracts, documents and
+    the human-closed Q2 books. Kernel F3 holds before any proposal: GL 1200 = open invoices, GL 2000 = approved bills,
+    the trial balance foots, GL cash at 30 Jun = the bank's running balance.
+  - Ingestion (`src/ingest/`): the only writer of `trace` and `bank_txn`; idempotent on `(source, external_id)`, sha256
+    content hash, changed content becomes version n+1 with `evidence.reversioned`; three clocks kept apart; entity
+    resolution from the alias table only. The bank file is validated before content (field count, two-place decimals,
+    running balance as the control total) and refused whole on failure (`ingest.refused`).
+  - Event bus (`src/bus/`): `emit` (refuses a topic outside the 50) · `poll` with a per-subscriber cursor,
+    at-least-once · `subscribe`.
+  - Drift comparator C2, invoice vs cash received: one intent per unmatched credit with a `CaseFile` in
+    `intent.case_json`; emits `bankrec.unmatched` (side credit), and `drift.explained` when an active fact explains the
+    shortfall. Intents close from the ledger (bank line applied, documents settled), not on an agent's say-so.
+  - Ledger reads, plus `LEDGER_TOOL_SPECS` in A's `ToolSpec` shape for `ledger.get_invoice`, `bank.unmatched` and
+    `ledger.trial_balance`. **For Karan:** spread them into `READ_TOOL_SPECS` to give them to the agent; B did not edit
+    `src/agents/`. `ledger.open_invoices` and `bank.get_transaction` already exist in A's tool layer.
+  - Console v0 (`pnpm console`, port 4317): drift board, intent detail with tick marks, the entry, evidence with its
+    three clocks, ripple, event feed, trial balance.
+- **Walking skeleton, measured** (`pnpm seed --target=local --reset && pnpm skeleton`, no model key): 11 July credits →
+  11 intents → router tier 0 → `propose_entry` → kernel → ledger. 6 clean payments post AUTO (kernel 19 of 19 marks, 0
+  model calls) and their intents resolve; Initech, Wayne and the two wire short-pays get their cash applied AUTO and stay
+  open for judgment; the parent's payment is rejected by the kernel's party tie and waits for an agent; AR stays tied; a
+  second pass does nothing. `pnpm test` → 26 files, **318 passing**; typecheck clean.
+- **Deviation from spec §6, proposed:** the console is a zero-dependency Node server plus one HTML page, not Next.js.
+  Reason: no build step, no second package, runs wherever the database is. Revisit in Phase 2 if the ripple view needs
+  more. **Not checked:** the page in a browser (the API responses and the page script's syntax were checked).
+- **Verified live tonight:**
+  - *QuickBooks sandbox:* 13 customers, 10 vendors, 1 item and 12 July invoices created; read back INV-1042 = Initech,
+    TxnDate 2026-07-01 (backdating works), $12,000; the 12 sum to $172,100.00, equal to the world. A re-run creates
+    nothing; after a local reset the records are adopted, not duplicated. This confirms points the code marks
+    UNVERIFIED: `DocNumber` is honoured, no `TaxCodeRef` is needed, minorversion 75 is accepted, vendor `AcctNum` takes
+    the `fn:` id. **Not exercised:** `--reset` against QuickBooks (delete and deactivate).
+  - *Gmail:* seeded, then read back through live ingestion (`pnpm skeleton --live=gmail`);
+    `internalDateSource=dateHeader` backdates correctly; the CEO email arrives with `recorded_time` 2026-06-28 and
+    resolves to Initech. Two findings. (1) **`messages.insert` replaces a `Message-ID: <fn:...>` header with Gmail's
+    own**, so the first idempotency check failed and a second run inserted 16 duplicates. The world id now travels in
+    `X-Footnote-Id`, existing mail is recognised by content, and the reader collapses copies (32 in the mailbox → 16
+    traces). (2) This token cannot create labels or trash mail (HTTP 403), so the label is optional and reads use the
+    seeded domain. **The 16 duplicates are still in the mailbox**; removing them needs `gmail.modify` or a hand delete.
+    They do not affect ingestion.
+  - *Found while testing:* `--reset` could not delete the database while the console held it open (Windows file lock).
+    It now falls back to dropping every table in place.
+- **Blocked on a human:**
+  - **Slack reads and seeding.** The bot token works, but the 20:53 entry above records that it was given
+    `chat:write` and `im:write` only, with no history-reading scopes, on purpose. So `pnpm seed --target=slack` and
+    `--live=slack` stop with `missing_scope`, and chat stays on the local store. To turn them on the app needs
+    `channels:read`, `channels:history`, `channels:join`, `channels:manage`, `users:read`, `users:read.email` and a
+    reinstall: a decision for Atharv and Karan. Separately, `party.owner_user` and `approver.slack_user` still hold
+    placeholders such as `U_DANA`; `slackUserMap()` (needs `users:read.email`) is written but not wired, so A's
+    escalations cannot reach a real person yet.
+  - **Karan:** `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` are empty in B's `.env`, so no model tier ran here.
+  - HubSpot: the token is set, but no HubSpot connector exists yet (CRM is a local store). Not in Phase 1.
+- Commands: `pnpm seed --target=<world|local|quickbooks|gmail|slack|all> [--reset]` · `pnpm ingest [--live=gmail,slack]`
+  · `pnpm skeleton [--live=gmail]` · `pnpm console`.

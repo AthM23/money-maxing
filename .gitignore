@@ -9,3 +9,6 @@ node_modules/
 runs/
 dist/
 .DS_Store
+# Person B: local state and generated stores; the planted-drift answer key is never committed
+data/
+world/answer-key*.json
