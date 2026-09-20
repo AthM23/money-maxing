@@ -1,4 +1,4 @@
-# What Maximor actually runs on (checked 20 Sep 2026, ~01:05 ET)
+# What Maximor actually runs on (checked 20 Sep 2026, 00:58 ET)
 
 Why: so that when a judge asks "how would this deploy", our answer is shaped like their stack, not like whatever
 cloud account we happen to have. Sources are public pages only. Where a page refused our fetcher (403) the fact comes
