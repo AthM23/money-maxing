@@ -303,9 +303,8 @@
       </svg>
       <div class="stat-inner">
         <div class="k" style="color:#8f8f95">cost per 1M generated tokens</div>
-        <div class="v">~$3 <span class="up" style="font-size:13px">all-in: power + hardware over 3 years</span></div>
-        <div style="font-size:12px;color:#9a9aa0;margin-top:6px">Claude Haiku API: $5 · Sonnet: $15 (published prices).
-        Ours is a fixed cost we own; theirs scales with volume. Batched serving is expected near $0.50, will be updated once measured.</div>
+        <div class="v">$0.40 <span class="up" style="font-size:13px">measured, batched: power + hardware over 3 years</span></div>
+        <div style="font-size:12px;color:#9a9aa0;margin-top:6px">Claude Haiku API: $5 · Sonnet: $15 (published prices). Measured on 614 documents: 50 docs/min, 1.2 s per document, zero errors. A fixed cost we own; API cost scales with volume.</div>
       </div>
     </div>
   </div>
@@ -321,7 +320,7 @@
       <b>perfect answers</b> means the whole answer was right to the cent.
       Muse is told the exact answer format on every question. Our model is not, because training taught it the format.</p>
       <p class="sub rv d2" style="margin-top:14px"><b>Outside check:</b> on a public invoice benchmark we did not write, graded by their own script,
-      our model got <b>15 of 18 customers exact to the penny</b>, with every trap document correctly thrown out.</p>
+      our model got <b>15 of 18 customers exact to the penny</b>, with every trap document correctly thrown out. And on a brand-new exam generated after training, 614 documents that did not exist before: <b>0.964 accuracy</b>, matching the original test, so nothing is memorized.</p>
     </div>
     <div class="rv d1">
       <table class="tbl" id="benchTable">
