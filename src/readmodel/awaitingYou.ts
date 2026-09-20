@@ -3,7 +3,7 @@ import type { Db } from "../runtime/db.js";
 import { safeJson } from "../runtime/lookups.js";
 import { listParkedDecisions } from "./parked.js";
 import { buildRules } from "./rules.js";
-import type { AwaitingYou, CertificateFollowup, OpenQuestion } from "./types.js";
+import type { AwaitingYou, CertificateFollowup, OpenQuestion, UploadedBill } from "./types.js";
 
 /** Everything with a person's name on it: unanswered questions, parked entries, proposed facts, rule drafts and open certificate follow-ups. */
 export function buildAwaitingYou(db: Db): AwaitingYou {
@@ -13,7 +13,15 @@ export function buildAwaitingYou(db: Db): AwaitingYou {
     proposed_facts: factCandidates(db),
     rule_drafts: buildRules(db).filter((r) => r.status === "proposed"),
     certificate_followups: certificateFollowups(db),
+    uploaded_bills: uploadedBills(db),
   };
+}
+
+/** Bills filed from the pipeline page (id BILL-UP-…) still waiting for a person to accept or reject them. */
+function uploadedBills(db: Db): UploadedBill[] {
+  const rows = db.prepare("SELECT b.id AS bill_id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status = 'open' AND b.id LIKE 'BILL-UP-%' ORDER BY b.bill_date DESC")
+    .all() as { bill_id: string; vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number }[];
+  return rows;
 }
 
 function openQuestions(db: Db): OpenQuestion[] {

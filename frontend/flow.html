@@ -88,9 +88,6 @@
   .entry{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0 0;color:#3c3c38;opacity:0;transition:opacity .4s}
   .entry.on{opacity:1}
   .entry .num{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
-
-  /* ---------- stat bar ---------- */
-  .statbar{background:var(--ink);color:#fff;border-radius:16px;padding:12px 22px;display:flex;gap:30px;align-items:center;flex:0 0 auto}
   .statbar .stat b{font-size:16px;color:var(--lime);margin-right:6px}
   .statbar .stat{font-size:11.5px;color:#b7b7bd;white-space:nowrap}
   .statbar .note{font-size:11px;color:#8f8f96;line-height:1.45;margin-left:auto;max-width:520px}
@@ -218,13 +215,6 @@
         <div class="entry" id="e9"><span>Entries re-performed</span><span class="num">15/15 clean</span></div>
         <div class="entry" id="e10"><span>One tampered digit</span><span class="num">5 findings</span></div></div>
     </div>
-  </div>
-
-  <div class="statbar">
-    <span class="stat"><b>97.2%</b>field accuracy, measured</span>
-    <span class="stat"><b>1.2 s</b>per document</span>
-    <span class="stat"><b>$0.40</b>per 1M tokens, all-in</span>
-    <span class="stat"><b>15 min</b>to retrain</span>
   </div>
 </div>
 
@@ -507,7 +497,7 @@ async function runDoc(){
         body:JSON.stringify({vendor:f.vendor,ref:String(f.ref),bill_date:f.date,period:(f.period||'').slice(0,7)||undefined,amount_cents:f.amount_cents,terms_days:f.terms_days,raw:raw.slice(0,6000)})});
       const fj=await fr.json();
       if(fj.status==='filed'){
-        msg('System',`Filed into the company's books as ${fj.bill_id}, with the document kept as evidence. Ask the books "what bills are open?" on the dashboard and it is there. <span class="chip live">written to the books</span>`);
+        msg('System',`Filed into the company's books as ${fj.bill_id}, with the document kept as evidence. It is now waiting in Input needed on the dashboard, where you accept or reject it. <span class="chip live">written to the books</span>`);
         card.querySelector('.chip').textContent='in the books';card.querySelector('.chip').className='chip live';
       } else if(fj.status==='duplicate'){
         msg('System',`Already on file as ${fj.bill_id}: the books take a bill once.`);

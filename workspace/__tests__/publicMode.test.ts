@@ -13,7 +13,7 @@ describe("a public copy of the workspace can be read and cannot be written or bi
     const refused = Object.keys(ACTIONS).filter((name) => {
       try { assertAllowed(name, {}, true); return false; } catch { return true; }
     });
-    expect(refused.sort()).toEqual(["accruals", "answer", "approve", "decide", "fact", "learn", "policy", "run", "upload_bill"]);
+    expect(refused.sort()).toEqual(["accruals", "answer", "approve", "bill_review", "decide", "fact", "learn", "policy", "run", "upload_bill"]);
     expect(() => assertAllowed("ask", { model: "claude-haiku-4-5" }, true)).toThrow(/code only/);
     expect(() => assertAllowed("ask", { model: "code" }, true)).not.toThrow();
     // On the team's own machine nothing is refused here: the approval matrix and the kernel decide.

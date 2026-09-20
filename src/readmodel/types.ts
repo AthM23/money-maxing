@@ -222,6 +222,17 @@ export interface AwaitingYou {
   proposed_facts: FactCandidateView[];
   rule_drafts: RuleCard[];
   certificate_followups: CertificateFollowup[];
+  uploaded_bills: UploadedBill[];
+}
+
+/** A bill that arrived as an upload on the pipeline page: on file with its evidence, waiting for a person to accept or reject it. */
+export interface UploadedBill {
+  bill_id: string;
+  vendor: string;
+  ref: string;
+  bill_date: string;
+  service_period: string;
+  total_cents: number;
 }
 
 export interface AuditSummaryView {

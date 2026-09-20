@@ -45,6 +45,7 @@ const UploadBill = z.object({
   period: z.string().regex(/^\d{4}-\d{2}( to .*)?$/).optional(), amount_cents: z.number().int().min(1).max(1_000_000_000),
   terms_days: z.number().int().min(0).max(365).optional(), raw: z.string().min(10).max(6000),
 });
+const BillReview = z.object({ bill_id: Id, as: Id, outcome: z.enum(["approved", "rejected"]) });
 const Audit = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/), tamper: z.boolean().optional() });
 const Ask = z.object({ question: z.string().min(2).max(300), period: z.string().regex(/^\d{4}-\d{2}$/), model: z.enum(ASK_MODELS).default("code"), history: AskHistory });
 const Tool = z.object({ name: Id, input: z.unknown().optional(), period: z.string().regex(/^\d{4}-\d{2}$/) });
@@ -72,6 +73,18 @@ export const ACTIONS: Record<string, Handler> = {
         .run(billId, slug, u.ref, u.bill_date, due, (u.period ?? u.bill_date.slice(0, 7)).slice(0, 18), u.amount_cents, u.amount_cents, traceId);
     })();
     return { status: "filed", bill_id: billId, vendor_id: slug, trace_id: traceId };
+  },
+  // Accept or reject a bill that arrived as an upload. Accepting marks it approved for the payment run;
+  // rejecting voids it. Neither touches the ledger: posting stays behind the same gate as everything else.
+  bill_review: (db, body) => {
+    const b = parse(BillReview, body);
+    if (!b.bill_id.startsWith("BILL-UP-")) throw new HttpError(400, "only uploaded bills are reviewed here");
+    const row = db.prepare("SELECT status FROM bill WHERE id = ?").get(b.bill_id) as { status: string } | undefined;
+    if (!row) throw new HttpError(404, "no such bill");
+    if (row.status !== "open") return { status: "already_decided", bill: row.status };
+    const next = b.outcome === "approved" ? "approved" : "void";
+    db.prepare("UPDATE bill SET status = ?, open_cents = CASE WHEN ? = 'void' THEN 0 ELSE open_cents END WHERE id = ?").run(next, next, b.bill_id);
+    return { status: "reviewed", bill_id: b.bill_id, now: next, by: b.as };
   },
   approve: (db, body) => {
     const a = parse(Approve, body);

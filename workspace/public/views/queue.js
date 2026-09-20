@@ -13,7 +13,24 @@ export function renderQueue(app, o) {
     a.parked_entries.map((p) => h("div", { class: "panel" }, parkedCard(app, p))),
     a.rule_drafts.map((r) => h("div", { class: "panel" }, ruleCard(app, r))),
     a.proposed_facts.map((f) => h("div", { class: "panel" }, factCard(app, f))),
+    (a.uploaded_bills ?? []).map((b) => h("div", { class: "panel" }, billCard(app, b))),
     a.certificate_followups.map((c) => h("div", { class: "panel" }, h("span", { class: "tag" }, "Follow-up"), h("p", {}, c.question), h("p", { class: "muted" }, `Owner ${c.owner}`))));
+}
+
+function billCard(app, b) {
+  return h("div", { class: "question" },
+    h("span", { class: "tag wait" }, "Uploaded bill"),
+    h("p", { class: "lead" }, `${b.vendor} sent bill ${b.ref} for ${money(b.total_cents)}, dated ${b.bill_date}, period ${b.service_period}. It arrived through the pipeline and is on file with the document as evidence.`),
+    h("p", { class: "muted" }, "Accepting queues it for the payment run. Nothing posts to the ledger until then."),
+    h("div", { class: "row" },
+      h("button", { class: "primary", on: { click: () => review(app, b, "approved") } }, "Accept the bill"),
+      h("button", { on: { click: () => review(app, b, "rejected") } }, "Reject")));
+}
+
+async function review(app, b, outcome) {
+  const r = await act("bill_review", { bill_id: b.bill_id, as: app.viewer?.id ?? "U_CFO", outcome });
+  toast(r.status === "reviewed" ? (outcome === "approved" ? `${b.ref} accepted for the payment run.` : `${b.ref} rejected and voided.`) : "Already decided.");
+  app.refresh();
 }
 
 export function questionCard(app, item) {
