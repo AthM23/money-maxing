@@ -53,7 +53,7 @@ export interface SeedQuickBooksOpts {
   log?: (s: string) => void;
 }
 
-interface ManifestRow { world_id: string; system: string; kind: string; external_id: string; seeded_at: string }
+interface ManifestRow { world_id: string; system: string; kind: string; external_id: string; seeded_at: string; origin: "created" | "adopted" | null }
 
 const ENTITY: Record<QboSeedKind, string> = { customer: "Customer", vendor: "Vendor", invoice: "Invoice", payment: "Payment", item: "Item", account: "Account" };
 
@@ -75,17 +75,21 @@ export async function seedQuickBooks(db: Db, world: World, client: QboClient, op
 
   const getRow = db.prepare("SELECT * FROM seed_manifest WHERE world_id = ? AND system = ?");
   const upsertRow = db.prepare(
-    `INSERT INTO seed_manifest (world_id, system, kind, external_id, seeded_at) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (world_id, system) DO UPDATE SET kind = excluded.kind, external_id = excluded.external_id, seeded_at = excluded.seeded_at`,
+    `INSERT INTO seed_manifest (world_id, system, kind, external_id, seeded_at, origin) VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT (world_id, system) DO UPDATE SET kind = excluded.kind, external_id = excluded.external_id, seeded_at = excluded.seeded_at, origin = excluded.origin`,
   );
   const deleteRow = db.prepare("DELETE FROM seed_manifest WHERE world_id = ? AND system = ?");
   const manifest = (worldId: string): ManifestRow | undefined => getRow.get(worldId, QBO_SYSTEM) as ManifestRow | undefined;
 
-  /** Every write is verified by the Id on the entity QBO returned, never by searching for it afterwards. */
+  /**
+   * Every write is verified by the Id on the entity QBO returned, never by searching for it afterwards. `how` is
+   * stored: it is the only record of whether the company would still have this customer, invoice or account if we
+   * had never run, and a reset is allowed to remove nothing else.
+   */
   const record = (worldId: string, kind: QboSeedKind, entity: QboEntity | undefined, how: "created" | "adopted"): string => {
     const id = entity?.Id;
     if (typeof id !== "string" || id === "") throw new Error(`QuickBooks ${how} ${kind} ${worldId} but returned no Id: ${JSON.stringify(entity).slice(0, 200)}`);
-    upsertRow.run(worldId, QBO_SYSTEM, kind, id, new Date().toISOString());
+    upsertRow.run(worldId, QBO_SYSTEM, kind, id, new Date().toISOString(), how);
     counts[kind][how]++;
     log(`quickbooks: ${how} ${kind} ${worldId} -> ${id}`);
     return id;
@@ -167,6 +171,12 @@ export async function seedQuickBooks(db: Db, world: World, client: QboClient, op
    * items. A deactivated Customer/Vendor gets " (deleted)" appended to its DisplayName by QBO, so the DisplayName
    * lookup on the re-seed misses it and a fresh record is created rather than the dead one adopted. Accounts are left
    * alone (only their manifest rows go): one may be the company's own, adopted, and an unused account harms nothing.
+   *
+   * A reset removes only what this seeder CREATED. A record it adopted — a customer of that name the company already
+   * had, an invoice already carrying that DocNumber, the stock "Bank charges" account — belongs to whoever put it
+   * there, and deleting or deactivating it would be destroying a stranger's books to clean up after ourselves. Those
+   * rows only leave the manifest. A row written before `origin` existed says nothing about whose the record is, so it
+   * is treated the same way: the manifest row goes, the record stays, and the line says so.
    */
   async function resetQuickBooks(): Promise<void> {
     const order: QboSeedKind[] = ["payment", "invoice", "customer", "vendor", "item", "account"];
@@ -177,6 +187,11 @@ export async function seedQuickBooks(db: Db, world: World, client: QboClient, op
       const entity = ENTITY[kind];
       if (entity === undefined) throw new Error(`seed_manifest row ${row.world_id} has unknown kind ${row.kind}`);
       if (kind === "account") { deleteRow.run(row.world_id, QBO_SYSTEM); continue; }
+      if (row.origin !== "created") {
+        log(`quickbooks: ${kind} ${row.world_id} (${row.external_id}) was ${row.origin === "adopted" ? "already in the company and only adopted" : "recorded before the seeder tracked that"}; left alone, manifest row dropped`);
+        deleteRow.run(row.world_id, QBO_SYSTEM);
+        continue;
+      }
       let current: QboEntity | undefined;
       try {
         current = await client.read<QboEntity>(entity, row.external_id); // the SyncToken must be the current one

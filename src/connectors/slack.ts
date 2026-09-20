@@ -41,6 +41,8 @@ export interface SlackClient {
   };
   users: { list(args: { cursor?: string; limit?: number }): Promise<Paged & { members?: SlackUser[] }> };
   chat: { postMessage(args: { channel: string; text: string; metadata?: SeedMetadata; unfurl_links?: boolean; unfurl_media?: boolean }): Promise<{ ts?: string }> };
+  /** Who this token is. Used to tell a message the seeder posted from one that merely claims to be. */
+  auth: { test(): Promise<{ bot_id?: string; user_id?: string }> };
 }
 
 /** A real client from SLACK_BOT_TOKEN. WebClient already retries on HTTP 429 using Slack's Retry-After. */
@@ -95,6 +97,11 @@ export class SlackConnector implements Connector {
   }
 
   async pull(): Promise<RawItem[]> {
+    const me = await this.client.auth.test().catch((err: unknown) => {
+      this.log(`slack: auth.test failed (${errText(err)}); seeded ids and clocks will not be believed on this pull`);
+      return {} as { bot_id?: string };
+    });
+    const ourBotIds = me.bot_id ? [me.bot_id] : [];
     const byName = new Map((await listChannels(this.client)).map((c) => [c.name ?? "", c]));
     const names = new Map((await listUsers(this.client)).filter((u) => u.id).map((u) => [u.id!, displayName(u)]));
     const items: RawItem[] = [];
@@ -106,7 +113,7 @@ export class SlackConnector implements Connector {
         await this.client.conversations.join({ channel: channel.id }).catch((err: unknown) => this.log(`slack: could not join #${name}: ${errText(err)}`));
       }
       for (const msg of await readHistory(this.client, channel.id, this.pageSize)) {
-        const item = slackToRawItem(msg, { id: channel.id, name }, names);
+        const item = slackToRawItem(msg, { id: channel.id, name }, names, { ourBotIds });
         if (item) items.push(item);
       }
     }
@@ -114,26 +121,42 @@ export class SlackConnector implements Connector {
   }
 }
 
-/** One history message as a RawItem, or undefined for housekeeping. Pure, so it is tested without a workspace. */
-export function slackToRawItem(msg: SlackMessage, channel: { id: string; name: string }, userNames: ReadonlyMap<string, string> = new Map()): RawItem | undefined {
+export interface SlackReadOptions {
+  /** Bot ids whose messages are ours. Only their `footnote_seed` metadata is believed; anyone else's is decoration. */
+  ourBotIds?: readonly string[];
+}
+
+/**
+ * One history message as a RawItem, or undefined for housekeeping. Pure, so it is tested without a workspace.
+ *
+ * Message metadata is attached by whichever app posted the message, so `footnote_seed` on a message this bot did not
+ * post is a claim and not a fact — and `trace` versions by (source, external_id), which would let another app in the
+ * workspace arrive as version 2 of a seeded message under any world id, clock and speaker it liked. So the metadata
+ * is read only off our own bot's messages, and `recorded_time` is always Slack's `ts`: the one clock here that the
+ * writer does not choose. `event_time` is the world's clock for seeded history (Slack cannot backdate a post) and
+ * Slack's `ts` for everything else.
+ */
+export function slackToRawItem(msg: SlackMessage, channel: { id: string; name: string }, userNames: ReadonlyMap<string, string> = new Map(), opts: SlackReadOptions = {}): RawItem | undefined {
   if (!msg.ts || (msg.subtype && SKIP_SUBTYPES.has(msg.subtype))) return undefined;
-  const seed = seedPayload(msg);
+  const seed = seedPayload(msg, opts.ourBotIds ?? []);
   const raw = unescapeText(msg.text ?? "");
   const text = seed && raw.startsWith(speakerPrefix(seed.user_name)) ? raw.slice(speakerPrefix(seed.user_name).length) : raw;
-  const when = seed?.ts ?? slackTsToIso(msg.ts);
+  const posted = slackTsToIso(msg.ts);
+  const when = seed?.ts ?? posted;
   const user = seed?.user ?? msg.user ?? msg.bot_id ?? "";
   const userName = seed?.user_name ?? userNames.get(user) ?? msg.username;
   const payload: ChatPayload = { channel: channel.name, user, ...(userName ? { user_name: userName } : {}), ts: when, text };
   return {
     source: "slack", kind: "chat_message", external_id: seed?.world_id ?? `${channel.id}:${msg.ts}`,
-    event_time: when, recorded_time: when, payload: { ...payload }, party_hint: { text },
+    event_time: when, recorded_time: posted, payload: { ...payload }, party_hint: { text },
   };
 }
 
-/** The world's id, clock and speaker when this is a message the seeder posted; undefined for anything else. */
-function seedPayload(msg: SlackMessage): SeedMetadata["event_payload"] | undefined {
+/** The world's id, clock and speaker when this is a message OUR bot posted; undefined for anything else. */
+function seedPayload(msg: SlackMessage, ourBotIds: readonly string[]): SeedMetadata["event_payload"] | undefined {
   // UNVERIFIED: that metadata posted by a bot with chat:write alone round-trips through conversations.history with
   // include_all_metadata=true, without a metadata.message:read scope or an app-manifest metadata subscription.
+  if (!msg.bot_id || !ourBotIds.includes(msg.bot_id)) return undefined;
   if (msg.metadata?.event_type !== SEED_EVENT_TYPE) return undefined;
   const p = msg.metadata.event_payload as Record<string, unknown> | null | undefined;
   if (!p || typeof p.world_id !== "string" || !p.world_id || typeof p.ts !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(p.ts)) return undefined;
@@ -168,6 +191,9 @@ export interface SeedSlackResult { channels_created: number; channels_joined: nu
 export async function seedSlack(world: World, opts: SeedSlackOptions = {}): Promise<SeedSlackResult> {
   const client = opts.client ?? slackClientFromEnv(opts.env);
   const people = new Map(world.people.map((p) => [p.id, p.name]));
+  // Our own bot id: what is already seeded is what WE posted. Another app's `footnote_seed` metadata would otherwise
+  // be able to make the seeder skip a message, leaving its own in the history in place of the world's.
+  const ourBotIds = await client.auth.test().then((me) => (me.bot_id ? [me.bot_id] : []));
   const existing = new Map((await listChannels(client)).map((c) => [c.name ?? "", c]));
   const result: SeedSlackResult = { channels_created: 0, channels_joined: 0, posted: 0, skipped: 0, channel_ids: {} };
 
@@ -184,7 +210,7 @@ export async function seedSlack(world: World, opts: SeedSlackOptions = {}): Prom
     }
     result.channel_ids[name] = channel.id;
     for (const msg of await readHistory(client, channel.id, opts.pageSize ?? 200)) {
-      const seed = seedPayload(msg);
+      const seed = seedPayload(msg, ourBotIds);
       if (seed) present.add(seed.world_id);
     }
   }
