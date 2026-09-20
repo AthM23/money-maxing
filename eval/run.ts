@@ -6,6 +6,7 @@ import { formatRatio, formatUsd } from "./report-format.js";
 import { writeReportFiles } from "./report-writer.js";
 import type { ReportArtifact, RunMeta } from "./report.js";
 import { notImplementedSut, recordedSut, type CaseOutcome, type SystemUnderTest } from "./sut.js";
+import { kernelPackSut } from "./suts/kernelPack.js";
 
 /** Never throws: every failure path is caught and turned into an exit code, so this is directly
  *  testable without a subprocess. Exit 2 = false auto-post found, 1 = harness error, 0 = otherwise. */
@@ -14,7 +15,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     const options = parseCliArgs(argv);
     const allRows = loadCases();
     const rows = filterRows(allRows, options);
-    const sut = options.outcomesPath ? recordedSut(options.outcomesPath) : notImplementedSut;
+    const sut = selectSut(options);
     const outcomes = await runAllCases(sut, rows, options);
     const metrics = computeMetrics(rows, outcomes);
     const artifact = buildArtifact(metrics, sut, options, rows.length);
@@ -25,6 +26,14 @@ export async function main(argv: readonly string[]): Promise<number> {
     process.stderr.write(`eval run failed: ${(err as Error).message}\n`);
     return 1;
   }
+}
+
+/** --outcomes takes priority when both are given; otherwise --sut kernel-pack opts into the real
+ *  system, and anything else (including no --sut at all) keeps the original notImplementedSut. */
+function selectSut(options: CliOptions): SystemUnderTest {
+  if (options.outcomesPath) return recordedSut(options.outcomesPath);
+  if (options.sut === "kernel-pack") return kernelPackSut;
+  return notImplementedSut;
 }
 
 function filterRows(rows: readonly CaseRow[], options: CliOptions): CaseRow[] {

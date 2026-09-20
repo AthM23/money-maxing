@@ -4,9 +4,10 @@ import type { ApprovalLite } from "../kernel/types.js";
 import { DEFAULT_CONFIG, systemClock } from "./config.js";
 import type { Db } from "./db.js";
 import { newId } from "./ids.js";
+import { settleIntent } from "./intentStatus.js";
 import { buildKernelContext } from "./kernelContext.js";
 import { safeJson } from "./lookups.js";
-import { insertWorkpaper, persistBlock } from "./persist.js";
+import { insertWorkpaper, persistBlock, storedFeatures } from "./persist.js";
 import { postEntry } from "./post.js";
 import { findExisting, postFailure, type RuntimeDeps } from "./proposeEntry.js";
 
@@ -31,6 +32,13 @@ interface DecisionRow {
  * post gate with the approver's identity, which is how a BLOCK can still fire after someone clicks approve.
  */
 export function approveDecision(db: Db, decisionId: string, approval: ApprovalInput, deps: RuntimeDeps = {}): ApproveResult {
+  const result = decide(db, decisionId, approval, deps);
+  const intent = db.prepare("SELECT intent_id FROM decision WHERE id = ?").get(decisionId) as { intent_id: string } | undefined;
+  if (intent) settleIntent(db, deps.clock ?? systemClock, intent.intent_id);
+  return result;
+}
+
+function decide(db: Db, decisionId: string, approval: ApprovalInput, deps: RuntimeDeps): ApproveResult {
   const clock = deps.clock ?? systemClock;
   const config = deps.config ?? DEFAULT_CONFIG;
   const row = db.prepare("SELECT id, intent_id, mode, route, proposal_json, actor, autonomy_level FROM decision WHERE id = ?")
@@ -48,11 +56,13 @@ export function approveDecision(db: Db, decisionId: string, approval: ApprovalIn
     return { status: "declined", decision_id: decisionId };
   }
 
+  // The gate judges the same case the proposal was judged on: a cited policy is re-tested against those features.
+  const features = storedFeatures(db, decisionId);
   const ctx = buildKernelContext(db, proposal, {
-    mode: "live", preparer: row.actor, autonomy_level: row.autonomy_level, approval, intent_id: row.intent_id,
+    mode: "live", preparer: row.actor, autonomy_level: row.autonomy_level, approval, intent_id: row.intent_id, features,
   }, config);
   const gate = runKernel(proposal, ctx, "post_gate");
-  insertWorkpaper(db, clock, decisionId, gate);
+  insertWorkpaper(db, clock, decisionId, gate, features);
   if (gate.verdict === "block" && gate.block_rule) {
     persistBlock(db, clock, decisionId, proposal, gate.block_rule, approval.approver_id);
     return { status: "blocked", decision_id: decisionId, rule: gate.block_rule };

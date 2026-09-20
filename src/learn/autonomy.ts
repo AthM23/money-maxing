@@ -1,12 +1,19 @@
 import type { AutonomyLevel } from "../contract/types.js";
+import { earnedLevel } from "../runtime/autonomy.js";
 import type { Clock } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 
-export interface LadderRow {
-  function: string;
-  kind: string;
+export interface LadderStats {
   agree: number;
   n: number;
+  /** The same counts over covered decisions only: reached by code, an approved policy or an active fact. */
+  covered_agree: number;
+  covered_n: number;
+}
+
+export interface LadderRow extends LadderStats {
+  function: string;
+  kind: string;
   covered: boolean;
   level: AutonomyLevel;
 }
@@ -15,23 +22,29 @@ const AUTO_RATE = 0.95;
 const AUTO_MIN_N = 5;
 const REVIEW_RATE = 0.8;
 
+const COVERED_SQL = `(d.tier = 0 OR json_array_length(json_extract(d.proposal_json, '$.policy_refs')) > 0
+  OR json_array_length(json_extract(d.proposal_json, '$.fact_refs')) > 0)`;
+const AGREES_SQL = "(r.agrees = 1 OR r.triage = 'human_inconsistent')";
+
 /**
- * Autonomy is earned per decision kind from replay: auto-post at 95% agreement with at least five cases AND an
- * approved policy or active fact covering the kind; post-with-review at 80%; otherwise shadow. Human inconsistency
- * is not counted against the agent. Counts are stored, never just a percentage.
+ * Autonomy is earned per kind of entry the agent proposes, because that is what it would post on its own. The
+ * measure is precision: of the times the agent proposed this kind, how often the humans had booked the same.
+ * Auto takes 95% on at least five COVERED decisions (code, an approved policy or an active fact); agreement reached
+ * by free inference never counts towards auto. Post-with-review takes 80% overall; otherwise shadow. Human
+ * inconsistency is not held against the agent. Counts are stored, never just a percentage.
  */
 export function rebuildLadder(db: Db, clock: Clock): LadderRow[] {
   const rows = db
     .prepare(
-      `SELECT p.function AS function, p.kind AS kind,
-              SUM(CASE WHEN r.agrees = 1 OR r.triage = 'human_inconsistent' THEN 1 ELSE 0 END) AS agree, COUNT(*) AS n
-       FROM replay_result r JOIN decision_point p ON p.id = r.decision_point_id GROUP BY p.function, p.kind`,
+      `SELECT p.function AS function, d.kind AS kind, COUNT(*) AS n,
+              SUM(CASE WHEN ${AGREES_SQL} THEN 1 ELSE 0 END) AS agree,
+              SUM(CASE WHEN ${COVERED_SQL} THEN 1 ELSE 0 END) AS covered_n,
+              SUM(CASE WHEN ${COVERED_SQL} AND ${AGREES_SQL} THEN 1 ELSE 0 END) AS covered_agree
+       FROM replay_result r JOIN decision_point p ON p.id = r.decision_point_id JOIN decision d ON d.id = r.decision_id
+       GROUP BY p.function, d.kind ORDER BY p.function, d.kind`,
     )
-    .all() as { function: string; kind: string; agree: number; n: number }[];
-  const ladder = rows.map((r) => {
-    const covered = isCovered(db, r.function, r.kind);
-    return { ...r, covered, level: levelFor(r.agree, r.n, covered) };
-  });
+    .all() as Array<LadderStats & { function: string; kind: string }>;
+  const ladder = rows.map((r) => ({ ...r, covered: meetsAutoBar(r), level: levelFor(r) }));
   const upsert = db.prepare(
     `INSERT INTO autonomy (function, kind, agree, n, covered, level, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(function, kind) DO UPDATE SET agree = excluded.agree, n = excluded.n, covered = excluded.covered,
@@ -41,29 +54,17 @@ export function rebuildLadder(db: Db, clock: Clock): LadderRow[] {
   return ladder;
 }
 
-export function levelFor(agree: number, n: number, covered: boolean): AutonomyLevel {
-  if (n === 0) return "shadow";
-  const rate = agree / n;
-  if (rate >= AUTO_RATE && n >= AUTO_MIN_N && covered) return "auto";
-  return rate >= REVIEW_RATE ? "review" : "shadow";
+function meetsAutoBar(s: LadderStats): boolean {
+  return s.covered_n >= AUTO_MIN_N && s.covered_agree / s.covered_n >= AUTO_RATE;
 }
 
-/** The level a live decision of this kind runs at. A kind never replayed starts in shadow. */
+export function levelFor(s: LadderStats): AutonomyLevel {
+  if (s.n === 0) return "shadow";
+  if (meetsAutoBar(s)) return "auto";
+  return s.agree / s.n >= REVIEW_RATE ? "review" : "shadow";
+}
+
+/** The level a kind has earned. A kind never seen starts in shadow. */
 export function autonomyFor(db: Db, fn: string, kind: string): AutonomyLevel {
-  const row = db.prepare("SELECT level FROM autonomy WHERE function = ? AND kind = ?").get(fn, kind) as { level: AutonomyLevel } | undefined;
-  return row?.level ?? "shadow";
-}
-
-/** Covered means the agent reached its answers through an approved policy or an active fact, not free inference. */
-function isCovered(db: Db, fn: string, kind: string): boolean {
-  const row = db
-    .prepare(
-      `SELECT COUNT(*) AS n FROM replay_result r
-       JOIN decision_point p ON p.id = r.decision_point_id JOIN decision d ON d.id = r.decision_id
-       WHERE p.function = ? AND p.kind = ? AND (r.agrees = 1 OR r.triage = 'human_inconsistent')
-         AND (json_array_length(json_extract(d.proposal_json, '$.policy_refs')) > 0
-           OR json_array_length(json_extract(d.proposal_json, '$.fact_refs')) > 0)`,
-    )
-    .get(fn, kind) as { n: number };
-  return row.n > 0;
+  return earnedLevel(db, fn, kind);
 }

@@ -5,3 +5,5 @@ export { emit } from "./events.js";
 export { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "./config.js";
 export { readControlTotals } from "./kernelContext.js";
 export { openDecision, type IntakeInput } from "./persist.js";
+export { earnedLevel, resolveAutonomy, type AutonomySetting, type AutonomySubject } from "./autonomy.js";
+export { intentStanding, settleIntent, type IntentStatus } from "./intentStatus.js";

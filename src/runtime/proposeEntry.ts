@@ -1,6 +1,7 @@
 import { Proposal, type BlockRule, type KernelResult, type Mark } from "../contract/types.js";
 import { runKernel } from "../kernel/index.js";
 import type { DocLite, ExtraCheck } from "../kernel/types.js";
+import { resolveAutonomy } from "./autonomy.js";
 import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "./config.js";
 import type { Db } from "./db.js";
 import { buildKernelContext, type ContextMeta } from "./kernelContext.js";
@@ -48,12 +49,13 @@ export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: Ru
   const reuse = meta.decision_id && attachProposal(db, meta.decision_id, proposal, meta) ? meta.decision_id : undefined;
   const decisionId = reuse ?? insertDecision(db, clock, proposal, meta);
   const ctxMeta: ContextMeta = {
-    mode: meta.mode, as_of: meta.as_of, preparer: meta.actor, autonomy_level: meta.autonomy_level,
+    mode: meta.mode, as_of: meta.as_of, preparer: meta.actor,
+    autonomy_level: resolveAutonomy(db, meta.autonomy_level, proposal, meta.tier),
     approval: null, intent_id: proposal.intent_id, features: meta.features, extra_checks: meta.extra_checks,
     replay_docs: meta.replay_docs,
   };
   const first = runKernel(proposal, buildKernelContext(db, proposal, ctxMeta, config), "proposal");
-  insertWorkpaper(db, clock, decisionId, first);
+  insertWorkpaper(db, clock, decisionId, first, meta.features);
   return dispose(db, clock, config, decisionId, proposal, ctxMeta, first);
 }
 
@@ -78,7 +80,7 @@ function postThroughGate(
   db: Db, clock: Clock, config: RuntimeConfig, decisionId: string, proposal: Proposal, ctxMeta: ContextMeta,
 ): ProposeResult {
   const gate = runKernel(proposal, buildKernelContext(db, proposal, ctxMeta, config), "post_gate");
-  insertWorkpaper(db, clock, decisionId, gate);
+  insertWorkpaper(db, clock, decisionId, gate, ctxMeta.features);
   if (gate.verdict === "block" && gate.block_rule) {
     persistBlock(db, clock, decisionId, proposal, gate.block_rule, null);
     return { status: "blocked", decision_id: decisionId, rule: gate.block_rule };

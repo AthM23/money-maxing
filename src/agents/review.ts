@@ -1,4 +1,5 @@
 import { CaseFile } from "../contract/types.js";
+import type { AutonomySetting } from "../runtime/autonomy.js";
 import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { newId } from "../runtime/ids.js";
@@ -20,7 +21,8 @@ export interface ReviewLoopResult {
  * the controller's notes attached. One revision, not a loop: two model opinions that still differ are a person's call.
  */
 export async function reviewAndRevise(
-  db: Db, controller: Controller, decisionId: string, investigators: Investigator[], deps: { clock?: Clock; config?: RuntimeConfig } = {},
+  db: Db, controller: Controller, decisionId: string, investigators: Investigator[],
+  deps: { clock?: Clock; config?: RuntimeConfig; autonomy_level?: AutonomySetting } = {},
 ): Promise<ReviewLoopResult> {
   const first = await controllerReview(db, controller, decisionId, deps);
   if (first.status !== "disagreed") return { first, revised_decision_id: null, second: null };
@@ -29,7 +31,7 @@ export async function reviewAndRevise(
   if (!caseFile) return { first, revised_decision_id: null, second: null };
   decline(db, deps.clock ?? systemClock, decisionId, controller.id, first.verdict.note);
   const revised = await runCase(db, caseFile, {
-    mode: "live", autonomy_level: "auto", investigators, start_tier: Math.min(2, investigators.length), clock: deps.clock, config: deps.config,
+    mode: "live", autonomy_level: deps.autonomy_level ?? "auto", investigators, start_tier: Math.min(2, investigators.length), clock: deps.clock, config: deps.config,
     extra_notes: [`An independent controller rejected the previous draft: ${first.verdict.note}`, ...first.verdict.concerns.map((c) => `Concern: ${c}`)],
   });
   if (!revised.decision_id || revised.final_route !== "PROPOSE") return { first, revised_decision_id: revised.decision_id, second: null };

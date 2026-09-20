@@ -1,6 +1,8 @@
-import { CaseFile, type AutonomyLevel, type Route } from "../contract/types.js";
+import { CaseFile, type Route } from "../contract/types.js";
+import type { AutonomySetting } from "../runtime/autonomy.js";
 import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
+import { intentStanding, settleIntent } from "../runtime/intentStatus.js";
 import { openDecision, setRoute } from "../runtime/persist.js";
 import { caseFeatures } from "../router/tier0.js";
 import { routeTier0 } from "../router/route.js";
@@ -12,7 +14,8 @@ import { callTool, type ToolCallResult } from "./toolset.js";
 
 export interface RunCaseOptions {
   mode: "live" | "replay";
-  autonomy_level: AutonomyLevel;
+  /** A fixed level, or "earned" to run each proposed entry at the level its kind holds on the ladder. */
+  autonomy_level: AutonomySetting;
   as_of?: string;
   /** Investigators by tier, cheapest first. Tier numbers start at 1; tier 0 is code. */
   investigators: Investigator[];
@@ -40,7 +43,28 @@ export interface CaseResult {
 export async function runCase(db: Db, input: unknown, opts: RunCaseOptions): Promise<CaseResult> {
   const parsed = CaseFile.safeParse(input);
   if (!parsed.success) return { status: "invalid", routes: [], final_route: null, tier_used: 0, decision_id: null, report: null, notes: parsed.error.issues.map((i) => i.message) };
-  const c = parsed.data;
+  const result = await runTiers(db, parsed.data, opts);
+  if (opts.mode === "live") {
+    const clock = opts.clock ?? systemClock;
+    if (result.final_route === null && intentStanding(db, parsed.data.intent_id) !== "waiting_on_human") recordUnsettled(db, clock, parsed.data, result);
+    settleIntent(db, clock, parsed.data.intent_id);
+  }
+  return result;
+}
+
+/**
+ * Nothing settled the case, yet the record would read as done (the cash was applied) or untouched. Say so on the
+ * record, so the case waits on a person with the reasons attached instead of looking finished.
+ */
+function recordUnsettled(db: Db, clock: Clock, c: CaseFile, result: CaseResult): void {
+  const id = openDecision(db, clock, {
+    intent_id: c.intent_id, function: c.function, mode: "live", actor: "router:unsettled", autonomy_level: "shadow", tier: result.tier_used,
+  });
+  db.prepare("INSERT INTO decision_step (decision_id, step_no, ts, kind, tier, output_json) VALUES (?, 1, ?, 'route', ?, ?)")
+    .run(id, clock.now(), result.tier_used, JSON.stringify({ route: null, reason: "no tier reached a route", notes: result.notes }));
+}
+
+async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<CaseResult> {
   const deps = { clock: opts.clock ?? systemClock, config: opts.config ?? DEFAULT_CONFIG };
   db.prepare("UPDATE intent SET case_json = COALESCE(case_json, ?) WHERE id = ?").run(JSON.stringify(c), c.intent_id);
   const t0 = routeTier0(db, c, { mode: opts.mode, autonomy_level: opts.autonomy_level, as_of: opts.as_of }, deps);

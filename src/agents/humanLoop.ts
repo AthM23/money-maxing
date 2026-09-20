@@ -7,6 +7,7 @@ import { approveFact, recordFactCandidate } from "../memory/facts.js";
 import { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { newId } from "../runtime/ids.js";
+import { settleIntent } from "../runtime/intentStatus.js";
 import { safeJson } from "../runtime/lookups.js";
 import { proposeEntry, type ProposeResult } from "../runtime/proposeEntry.js";
 
@@ -49,6 +50,8 @@ export function recordHumanAnswer(
 
   const fact = rememberAnswer(db, clock, ctx.case_file, answer, answerer, traceId);
   const proposal = resume(db, ctx.case_file, answer, traceId, fact.fact_id, { clock, config: deps.config ?? DEFAULT_CONFIG });
+  // "Chase the customer" books nothing: the case stays with a person instead of going back to the agents.
+  settleIntent(db, clock, ctx.case_file.intent_id);
   return { status: "answered", trace_id: traceId, fact_id: fact.fact_id, fact_status: fact.status, proposal };
 }
 

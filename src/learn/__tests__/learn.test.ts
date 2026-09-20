@@ -85,8 +85,8 @@ describe("replay: answers hidden, scored in code, humans' inconsistency not held
     expect(db.prepare("SELECT COUNT(*) AS n FROM replay_result").get()).toEqual({ n: 6 });
 
     const ladder = rebuildLadder(db, fixedClock);
-    expect(ladder).toEqual([{ function: "ar", kind: "short_pay", agree: 6, n: 6, covered: true, level: "auto" }]);
-    expect(autonomyFor(db, "ar", "short_pay")).toBe("auto");
+    expect(ladder).toEqual([{ function: "ar", kind: "write_off", agree: 6, n: 6, covered_agree: 6, covered_n: 6, covered: true, level: "auto" }]);
+    expect(autonomyFor(db, "ar", "write_off")).toBe("auto");
     expect(autonomyFor(db, "ar", "never_seen")).toBe("shadow");
   });
 
@@ -98,10 +98,14 @@ describe("replay: answers hidden, scored in code, humans' inconsistency not held
   });
 
   it("the ladder needs rate, count and coverage together for auto", () => {
-    expect(levelFor(5, 5, true)).toBe("auto");
-    expect(levelFor(5, 5, false)).toBe("review");
-    expect(levelFor(4, 4, true)).toBe("review");
-    expect(levelFor(7, 10, true)).toBe("shadow");
-    expect(levelFor(0, 0, true)).toBe("shadow");
+    expect(levelFor({ agree: 5, n: 5, covered_agree: 5, covered_n: 5 })).toBe("auto");
+    expect(levelFor({ agree: 5, n: 5, covered_agree: 0, covered_n: 0 })).toBe("review");
+    expect(levelFor({ agree: 4, n: 4, covered_agree: 4, covered_n: 4 })).toBe("review");
+    expect(levelFor({ agree: 7, n: 10, covered_agree: 7, covered_n: 10 })).toBe("shadow");
+    expect(levelFor({ agree: 0, n: 0, covered_agree: 0, covered_n: 0 })).toBe("shadow");
+    // Twenty agreements reached by free inference and one by a policy do not add up to auto.
+    expect(levelFor({ agree: 21, n: 21, covered_agree: 1, covered_n: 1 })).toBe("review");
+    expect(levelFor({ agree: 19, n: 20, covered_agree: 19, covered_n: 20 })).toBe("auto");
+    expect(levelFor({ agree: 18, n: 20, covered_agree: 18, covered_n: 20 })).toBe("review");
   });
 });

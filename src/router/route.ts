@@ -1,4 +1,5 @@
-import { CaseFile, type AutonomyLevel, type Route } from "../contract/types.js";
+import { CaseFile, type Route } from "../contract/types.js";
+import type { AutonomySetting } from "../runtime/autonomy.js";
 import type { Db } from "../runtime/db.js";
 import { proposeEntry, type ProposeResult, type RuntimeDeps } from "../runtime/proposeEntry.js";
 import { caseFeatures, planTier0 } from "./tier0.js";
@@ -15,7 +16,7 @@ export interface RouteOutcome {
 
 export interface RouteMeta {
   mode: "live" | "replay";
-  autonomy_level: AutonomyLevel;
+  autonomy_level: AutonomySetting;
   as_of?: string;
 }
 

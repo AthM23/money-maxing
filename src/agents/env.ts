@@ -1,4 +1,4 @@
-import type { AutonomyLevel } from "../contract/types.js";
+import type { AutonomySetting } from "../runtime/autonomy.js";
 import type { Clock, RuntimeConfig } from "../runtime/config.js";
 import type { DocLite } from "../kernel/types.js";
 import type { Db } from "../runtime/db.js";
@@ -14,7 +14,7 @@ export interface ToolEnv {
   tier: number;
   /** The highest model tier configured for this run. Only tier 2 and above may ask a person, when one exists. */
   max_tier?: number;
-  autonomy_level: AutonomyLevel;
+  autonomy_level: AutonomySetting;
   intent_id: string;
   /** Date of the case in hand. */
   entry_date?: string;

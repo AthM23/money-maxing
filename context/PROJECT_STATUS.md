@@ -474,3 +474,42 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
 - One behaviour change the reviewer flagged, reversed on purpose: a dispute hold reduces nothing, so it carries no
   adjustment and needs no approver with authority over the disputed amount. It is the safe default when nobody answers.
 - `pnpm test` → 25 files, **273 passing**.
+
+### 2026-09-19 21:25 ET — The hand-off worker, earned autonomy per kind of entry, and two real defects it exposed (Person A)
+
+- **Lane C (Preet, fine-tune on the GX10) is agreed.** It is on `main` and Karan confirmed it; nothing in lanes A or B
+  waits on it.
+- **The worker** (`src/worker/`): one pass over `intent` rows with `status = 'open'` and a `case_json`, oldest first,
+  each through the router at the autonomy its kind of entry has earned. This is the seam with lane B: the drift
+  monitor writes the intent and the case file, the worker takes it from there. A case file that does not parse, or
+  that names another intent, goes to a person with the reason. A run that throws (a model outage) leaves the case
+  open for the next pass, three times, then hands it to a person. One failing case never stops the pass. The worker
+  also stores the document balances as they stood before anything posted (`docs_snapshot`), which is what lets a
+  live case be replayed later.
+- **Autonomy is resolved per proposed entry, not per case** (`src/runtime/autonomy.ts`, setting `"earned"`). One case
+  applies cash (routine) and then concedes revenue (judgment); they do not share a level. Two rules on top:
+  1. **Free inference never posts alone.** Even on a kind that has earned auto, an entry from a model tier that cites
+     no approved policy and no active fact is held for review. Only compiled judgment auto-posts.
+  2. **The controller agent cannot approve a kind still in shadow** (kernel P2). Two models agreeing is not a track
+     record; a person clicks until the kind has one.
+- **The ladder was keyed on the wrong thing.** It grouped by the seeder's case label (`short_pay`) while a live entry
+  is looked up by its proposal kind (`write_off`), so an earned level would never have been found. It is now keyed on
+  the kind the agent proposed, which is also the honest measure: precision, "of the times it proposed this, how often
+  had the humans booked the same". Auto needs 95% on at least five **covered** decisions (code, policy or fact);
+  twenty agreements by free inference plus one by policy used to read as covered, and no longer do.
+- **Defect found by the worker's tests: a policy-driven entry that parked could never be approved.** The approval gate
+  re-ran the kernel without the case features, so J1 ("the cited policy's condition holds on this case") failed for
+  every such entry. It had never shown because policy-driven entries had always auto-posted. The workpaper now stores
+  the features the kernel judged against (`marks_json` is `{stage, marks, features}`), and the approval gate re-tests
+  on the same facts. **Lane B: if the console parses `marks_json`, there is one more key.**
+- **Defect found by the worker's tests: "cash applied" read as "case resolved".** Tier 0 applies the cash, nobody
+  explains the shortfall, and the newest decision on the intent is a posted one. Intent status is now derived in one
+  place from what happened (`src/runtime/intentStatus.ts`): resolved only when the newest live decision took effect and
+  nothing is parked or unanswered; anything attempted and unsettled waits on a person, with the reasons on record.
+  Approvals and answers re-settle the intent, and a replayed historical case is filed as resolved so the worker can
+  never pick it up.
+- **First corpus cases run against the real system** (`pnpm eval --sut kernel-pack`): 11 of 110 routed cases (G-01 to
+  G-08, B-24, F-09, H-1), each a fixture driven through the real `proposeEntry`, `approveDecision`, memory and compile
+  code with no model call. 11 of 11 routes correct, 0 false auto-posts. For the learning-layer cases the route is the
+  harness's mapping of what the compile step did (a refused draft reads as BLOCK). The other 99 report NOT_RUN.
+- `pnpm test` → 27 files, **306 passing**. In progress: audit pack, AP pack, run 1 → learn → run 2.

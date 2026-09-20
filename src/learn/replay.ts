@@ -71,9 +71,12 @@ function lastJudgmentDecision(db: Db, intentId: string): { id: string; proposal:
   return rows[0] && first?.success ? { id: rows[0].id, proposal: first.data } : null;
 }
 
+/** A replayed case is history, already settled by people. It is filed as resolved so no live worker ever picks it up. */
 function ensureIntent(db: Db, c: CaseFile, point: PointRow): void {
-  db.prepare("INSERT OR IGNORE INTO intent (id, function, question, owner, status, case_json, created_at) VALUES (?, ?, ?, 'replay', 'open', ?, ?)")
-    .run(c.intent_id, c.function, `Replay of ${point.id}`, point.case_json, point.decided_at);
+  db.prepare(
+    `INSERT OR IGNORE INTO intent (id, function, question, owner, status, case_json, created_at, closed_at)
+     VALUES (?, ?, ?, 'replay', 'resolved', ?, ?, ?)`,
+  ).run(c.intent_id, c.function, `Replay of ${point.id}`, point.case_json, point.decided_at, point.decided_at);
 }
 
 /**

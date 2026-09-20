@@ -80,10 +80,16 @@ export function checkP2(ctx: KernelContext, stage: KernelStage, required: boolea
   return passMark("P", "P2", detail, refs);
 }
 
-/** A controller agent may sign below materiality. At or above it, a person must click. */
+/**
+ * A controller agent may sign below materiality, and only on a kind of entry with a track record. At or above
+ * materiality, or while the kind is still in shadow, a person must click: two models agreeing is not a record.
+ */
 function controllerAgentProblem(ctx: KernelContext, adjustment: number): string | undefined {
   const approval = ctx.approval;
   if (!approval || approval.approver_kind !== "controller_agent") return undefined;
+  if (ctx.autonomy_level === "shadow") {
+    return `controller_agent ${approval.approver_id} cannot approve a kind of entry still in shadow; a person must approve`;
+  }
   if (adjustment < ctx.materiality_cents) return undefined;
   return (
     `controller_agent ${approval.approver_id} cannot approve adjustment ${adjustment} ` +
