@@ -12,5 +12,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src", "eval", "world", "console"]
+  "include": ["src", "eval", "world", "console", "workspace"]
 }

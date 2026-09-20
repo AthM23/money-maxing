@@ -23,6 +23,7 @@
     "rerun": "tsx src/learn/rerunCli.ts",
     "demo:scenario": "tsx src/demo/scenario/cli.ts",
     "state": "tsx src/readmodel/cli.ts",
+    "workspace": "tsx --env-file-if-exists=.env workspace/server.ts",
     "demo:seed": "tsx src/demo/seedCli.ts",
     "desk": "tsx src/desk/cli.ts",
     "spine": "tsx --env-file-if-exists=.env src/spine/run.ts",
