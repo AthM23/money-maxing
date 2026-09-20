@@ -11,7 +11,7 @@ import { openDb, type Db } from "../../../runtime/db.js";
 import { readControlTotals } from "../../../runtime/kernelContext.js";
 import { proposeEntry } from "../../../runtime/proposeEntry.js";
 import { runOpenIntents } from "../../../worker/runOpenIntents.js";
-import { seedMainScene } from "../mainScene.js";
+import { MAIN_CASES, seedMainScene } from "../mainScene.js";
 import { standIn } from "../standIns.js";
 import { seedGlobalJuly } from "../world.js";
 
@@ -122,6 +122,38 @@ describe("the main scene: one wire, $4,200 short for three reasons, and only one
 
     // The auditor re-performs every posted entry, the FX ones included.
     expect(buildAuditPack(db, clock, { period: "2026-07", seed: "main", size: 50 }).summary.findings_total).toBe(0);
+  });
+
+  it("the euro strengthens instead: a fee and a gain are never netted into a small short-pay, by code or by a model citing the rule", async () => {
+    const db = await world();
+    // Vossberg pays INV-3202 in full, EUR 25,000.00, at 1.1004 less a USD 25.00 fee: USD 27,485.00 arrives, USD 15.00
+    // short of the booked USD 27,500.00. The truth is a 25.00 fee and a 10.00 gain. SHORT-PAY-01 covers a wire 15.00 short.
+    const addon = { ...MAIN_CASES[1]!, received_cents: 2748500, shortfall_cents: 1500 };
+    db.prepare("UPDATE bank_txn SET amount_cents = 2748500 WHERE id = 'BTX-321'").run();
+    db.prepare("UPDATE bank_txn_fx SET foreign_amount_cents = 2500000, rate_ppm = 1100400 WHERE bank_txn_id = 'BTX-321'").run();
+    db.prepare("UPDATE intent SET case_json = ? WHERE id = 'int_addon'").run(JSON.stringify(addon));
+
+    await runOpenIntents(db, { investigators: [], intent_id: "int_addon", clock, config: APP_CONFIG });
+    expect(posted(db, "int_addon")).toEqual(["apply_payment:2748500"]);
+    // Code does not even draft a write-off for it: a converted receipt it cannot split is left to the judgment tiers.
+    expect(db.prepare("SELECT COUNT(*) AS n FROM decision WHERE intent_id = 'int_addon' AND kind = 'write_off'").get()).toEqual({ n: 0 });
+    expect(open(db, "INV-3202")).toBe(1500);
+    expect(status(db, "int_addon")).toBe("open");
+
+    // A model that cites the approved rule for the same net 15.00 is refused by the kernel, in words it can act on.
+    const rule = db.prepare("SELECT id FROM policy WHERE status = 'approved' AND function = 'ar'").get() as { id: string };
+    const netted = proposeEntry(db, {
+      intent_id: "int_addon", function: "ar", kind: "write_off", party_id: "vossberg", entry_date: addon.entry_date,
+      applications: [{ doc_id: "INV-3202", amount_cents: 1500 }],
+      entries: [{ account: "6150", debit_cents: 1500, credit_cents: 0, memo: "wire short" }, { account: "1200", debit_cents: 0, credit_cents: 1500, memo: "wire short" }],
+      evidence: [{ claim: "bank charges on the wire", trace_id: "tr_advice_BTX-321", quote: "Bank charges deducted USD 25.00" }],
+      policy_refs: [rule.id], fact_refs: [], judgment: [],
+    }, { actor: "agent:ar:haiku", mode: "live", autonomy_level: "auto", tier: 1, features: { shortfall_cents: 1500, method: "wire", party_id: "vossberg" } }, deps);
+    expect(netted.status).toBe("rejected");
+    const f10 = netted.status === "rejected" ? netted.failed.find((m) => m.check === "F10") : undefined;
+    expect(f10?.detail).toContain("a rule can write off the bank's fee (25.00) and nothing else, this entry writes off 15.00");
+    expect(open(db, "INV-3202")).toBe(1500);
+    expect(tied(db)).toBe(true);
   });
 
   it("the bank's figures have to be stated whole, and the bank's fee is never booked as a concession to the customer", async () => {

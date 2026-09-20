@@ -132,6 +132,8 @@ export interface KernelContext {
   bankTxnAppliedDocs?(bank_txn_id: string): string[] | undefined;
   getDocFx?(doc_id: string): DocFxLite | undefined;
   getBankFx?(bank_txn_id: string): BankFxLite | undefined;
+  /** The foreign-currency records of the receipts whose cash was applied to this document. Undefined in replay. */
+  bankFxForDoc?(doc_id: string): BankFxLite[] | undefined;
   /** Cents of realized FX already posted against this receipt. FX on one receipt is realized once. */
   fxRealizedCents?(bank_txn_id: string): number;
   /** DUPLICATE_PAYMENT: a different paid document for the same vendor and amount. */

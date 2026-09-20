@@ -5,7 +5,7 @@ import type { Condition } from "../kernel/types.js";
 import { applicableFacts } from "../memory/applicability.js";
 import type { Db } from "../runtime/db.js";
 import { bankTxnAppliedCents } from "../runtime/kernelContext.js";
-import { getTrace, safeJson } from "../runtime/lookups.js";
+import { getBankFx, getTrace, safeJson } from "../runtime/lookups.js";
 import { foreignParts, labelledQuote, type ForeignParts } from "./foreign.js";
 
 /** Tier 0 builds proposals in code from an exact match, an active fact or an approved policy. No model call. */
@@ -37,6 +37,9 @@ export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
   }
   const foreign = replaying ? null : foreignParts(db, c, notes);
   if (foreign) return planForeign(db, c, foreign, stillOpen, proposals, notes);
+  // A receipt the bank converted that code could not split is never settled on its net difference: a fee and a rate
+  // effect cancel into something that looks like a small short-pay (a $25 fee and a $10 gain look like $15 short).
+  if (!replaying && c.bank_txn_id && getBankFx(db, c.bank_txn_id)) return { proposals, unexplained_cents: stillOpen, notes };
   if (stillOpen !== c.shortfall_cents) {
     notes.push(`${stillOpen} cents are still open on ${c.doc_ids.join(", ")}, the case file says ${c.shortfall_cents}: something else has adjusted these documents`);
     return { proposals, unexplained_cents: stillOpen, notes };

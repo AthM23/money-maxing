@@ -60,6 +60,29 @@ export function checkFxRealized(proposal: Proposal, ctx: KernelContext): Mark {
 }
 
 /**
+ * F10 — on an invoice paid by a converted receipt, a rule can write off the bank's own fee and nothing else. A fee and
+ * a rate effect cancel into a figure that looks like a small short-pay (a 25.00 fee and a 10.00 gain look like 15.00
+ * short); a short-pay rule tested on that net figure would hide both. An entry that rests on a person's answer is
+ * theirs to size, so only a write-off that cites a rule and no fact is held to this. Null when it does not apply.
+ */
+export function checkFeeOnConvertedReceipt(proposal: Proposal, ctx: KernelContext): Mark | null {
+  if (proposal.kind !== "write_off" || proposal.policy_refs.length === 0 || proposal.fact_refs.length > 0) return null;
+  const problems: string[] = [];
+  const refs: string[] = [];
+  for (const app of proposal.applications) {
+    const receipts = ctx.bankFxForDoc?.(app.doc_id) ?? [];
+    if (receipts.length === 0) continue;
+    refs.push(app.doc_id);
+    if (!receipts.some((r) => r.fee_cents === app.amount_cents)) {
+      const fees = receipts.map((r) => amountText(r.fee_cents)).join(" or ");
+      problems.push(`${app.doc_id} was paid by a converted receipt: a rule can write off the bank's fee (${fees}) and nothing else, this entry writes off ${amountText(app.amount_cents)}. The rest is a rate effect or the customer's: book realized FX, or leave it to a person`);
+    }
+  }
+  if (refs.length === 0) return null;
+  return verdictMark("F", "F10", problems, "the write-off is exactly the bank's fee on the converted receipt", refs);
+}
+
+/**
  * The numbers have to be the bank's, in the bank's words: the advice is cited, current, and states the amount and the
  * rate as figures of their own. The workpaper has to show them with their meaning, so each figure is quoted from the
  * advice in a span that also names the currency ("Amount received: EUR 98,000.00", "1.0800 USD per EUR"); E2 agrees

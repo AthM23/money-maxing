@@ -48,6 +48,7 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     getFact: (id) => getFact(db, id),
     getDocFx: (id) => getDocFx(db, id),
     getBankFx: (id) => getBankFx(db, id),
+    bankFxForDoc: (id) => meta.mode === "replay" ? undefined : bankFxForDoc(db, id),
     fxRealizedCents: (id) => fxRealizedCents(db, id),
     getPolicy: (id) => getPolicy(db, id),
     getApprover: (id) => getApprover(db, id),
@@ -116,6 +117,21 @@ export function bankTxnAppliedDocs(db: Db, bankTxnId: string): string[] {
     )
     .all(bankTxnId) as { doc_id: string }[];
   return rows.map((r) => r.doc_id);
+}
+
+/** The foreign-currency records of the receipts whose cash went to this document, from the cash applications that took effect. */
+export function bankFxForDoc(db: Db, docId: string): NonNullable<ReturnType<typeof getBankFx>>[] {
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT json_extract(d.proposal_json, '$.bank_txn_id') AS bank_txn_id
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.kind = 'apply_payment' AND a.value ->> '$.doc_id' = ?`,
+    )
+    .all(docId) as { bank_txn_id: string | null }[];
+  return rows.flatMap((r) => {
+    const fx = r.bank_txn_id ? getBankFx(db, r.bank_txn_id) : undefined;
+    return fx ? [fx] : [];
+  });
 }
 
 /** A date with no period row is treated as locked: nothing posts to a month nobody opened. */
