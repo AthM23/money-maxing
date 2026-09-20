@@ -1,5 +1,6 @@
 import type { CaseFile } from "../contract/types.js";
 import { realizedFxCents } from "../kernel/fx.js";
+import { normalizeWs, statesFigure } from "../kernel/util.js";
 import type { Db } from "../runtime/db.js";
 import { fxRealizedCents, getBankFx, getDocFx } from "../runtime/lookups.js";
 
@@ -59,4 +60,15 @@ function feeBooked(db: Db, c: CaseFile, feeCents: number, adviceTraceId: string 
     )
     .get(c.intent_id, feeCents, adviceTraceId ?? "") as { n: number };
   return row.n > 0;
+}
+
+/**
+ * The bank's own line for a figure, label and all: "Incoming wire fee: USD 40.00", not "40.00". The advice is cut at
+ * line ends and sentence ends, and the first piece that states the figure as a number of its own is the quote, so a
+ * reviewer reads what the number means and the kernel agrees the whole phrase to the source. Falls back to the bare
+ * figure when no piece states it; the kernel then decides.
+ */
+export function labelledQuote(adviceText: string, figure: string): string {
+  const pieces = adviceText.split(/\r?\n|(?<=[.;])\s+(?=[A-Z])/).map((p) => normalizeWs(p).replace(/[.;]$/, ""));
+  return pieces.find((p) => p.length <= 200 && statesFigure(p, figure)) ?? figure;
 }

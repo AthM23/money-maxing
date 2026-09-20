@@ -1,7 +1,7 @@
 import type { Mark, Proposal } from "../contract/types.js";
 import { remittanceProvenanceProblems, parseRemittance } from "../contract/remittance.js";
 import type { BankTxnLite, KernelContext, TraceLite } from "./types.js";
-import { failMark, isAfterAsOf, isControlAccount, naMark, normalizeWs, truncate, verdictMark } from "./util.js";
+import { failMark, isAfterAsOf, isControlAccount, isFigure, naMark, normalizeWs, statesFigure, truncate, verdictMark } from "./util.js";
 
 /** E1 — every cited trace resolves, and in replay nothing recorded after as_of may be cited. */
 export function checkE1(proposal: Proposal, ctx: KernelContext): Mark {
@@ -22,7 +22,11 @@ export function checkE1(proposal: Proposal, ctx: KernelContext): Mark {
   return verdictMark("E", "E1", problems, `${refs.length} cited trace(s) resolve within the replay window`, refs);
 }
 
-/** E2 — every quote is a whitespace-normalised, case-sensitive substring of its trace payload. */
+/**
+ * E2 — every quote is a whitespace-normalised, case-sensitive substring of its trace payload. A quote that is only a
+ * number has to stand in the source as a number of its own: "40.00" is not evidence of a fee because a source says
+ * "105,840.00".
+ */
 export function checkE2(proposal: Proposal, ctx: KernelContext): Mark {
   const quoted = proposal.evidence.filter((item) => item.quote !== undefined);
   const refs = quoted.map((item) => item.trace_id);
@@ -35,8 +39,11 @@ export function checkE2(proposal: Proposal, ctx: KernelContext): Mark {
       continue;
     }
     const needle = normalizeWs(item.quote ?? "");
-    if (!normalizeWs(trace.payload_text).includes(needle)) {
+    const source = normalizeWs(trace.payload_text);
+    if (!source.includes(needle)) {
       problems.push(`quote "${truncate(needle)}" is not in trace ${trace.id} payload (${trace.payload_text.length} chars)`);
+    } else if (isFigure(needle) && !statesFigure(source, needle)) {
+      problems.push(`quote "${needle}" appears in trace ${trace.id} only inside a longer number, not as a figure of its own`);
     }
   }
   return verdictMark("E", "E2", problems, `${quoted.length} quote(s) agreed to source text`, refs);

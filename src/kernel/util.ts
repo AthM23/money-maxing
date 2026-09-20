@@ -29,6 +29,19 @@ export function normalizeWs(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/** A quote that is nothing but a number: "40.00", "98,000.00", "1.0800". */
+const FIGURE = /^\d[\d,]*(?:\.\d+)?$/;
+
+export function isFigure(text: string): boolean {
+  return FIGURE.test(text);
+}
+
+/** The figure as a number of its own: "40.00" is not stated by "105,840.00", nor "1.0800" by "11.0800". */
+export function statesFigure(text: string, figure: string): boolean {
+  const escaped = figure.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\d.,])${escaped}(?![\\d])(?![.,]\\d)`).test(text);
+}
+
 export function truncate(text: string, max = 80): string {
   return text.length <= max ? text : `${text.slice(0, max)}…`;
 }

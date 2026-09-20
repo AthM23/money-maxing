@@ -5,8 +5,8 @@ import type { Condition } from "../kernel/types.js";
 import { applicableFacts } from "../memory/applicability.js";
 import type { Db } from "../runtime/db.js";
 import { bankTxnAppliedCents } from "../runtime/kernelContext.js";
-import { safeJson } from "../runtime/lookups.js";
-import { foreignParts, type ForeignParts } from "./foreign.js";
+import { getTrace, safeJson } from "../runtime/lookups.js";
+import { foreignParts, labelledQuote, type ForeignParts } from "./foreign.js";
 
 /** Tier 0 builds proposals in code from an exact match, an active fact or an approved policy. No model call. */
 export interface Tier0Plan {
@@ -61,14 +61,15 @@ function planForeign(db: Db, c: CaseFile, f: ForeignParts, stillOpen: number, pr
     return { proposals, unexplained_cents: stillOpen, notes };
   }
   const evidence = f.advice_trace_id ? [{ claim: "the bank's credit advice for this receipt", trace_id: f.advice_trace_id }] : [];
+  const adviceText = (f.advice_trace_id ? getTrace(db, f.advice_trace_id)?.payload_text : undefined) ?? "";
   let unexplained = 0;
   if (feeDue > 0) {
     // The fee is the bank's stated deduction, quoted as printed, never whatever is left over after the other causes.
-    const stated = (feeDue / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const stated = labelledQuote(adviceText, (feeDue / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     const fee = fromPolicy(db, { ...c, shortfall_cents: feeDue }, notes, evidence.map((e) => ({ ...e, claim: "the fee the bank deducted, as its advice states it", quote: stated })), "write_off");
     if (fee) { features[proposals.length] = caseFeatures({ ...c, shortfall_cents: feeDue }); proposals.push(fee); } else unexplained += feeDue;
   }
-  if (fxDue > 0) proposals.push(realizedFx(c, f, fxDue, evidence));
+  if (fxDue > 0) proposals.push(realizedFx(c, f, fxDue, evidence, adviceText));
   if (heldBack > 0) {
     const residualCase = { ...c, shortfall_cents: heldBack };
     const adjustment = fromFact(db, residualCase, notes) ?? fromPolicy(db, residualCase, notes);
@@ -77,18 +78,19 @@ function planForeign(db: Db, c: CaseFile, f: ForeignParts, stillOpen: number, pr
   return { proposals, unexplained_cents: unexplained, notes, features_by_index: features };
 }
 
-function realizedFx(c: CaseFile, f: ForeignParts, cents: number, evidence: Proposal["evidence"]): Proposal {
+function realizedFx(c: CaseFile, f: ForeignParts, cents: number, evidence: Proposal["evidence"], adviceText: string): Proposal {
   const memo = `Realized FX loss: ${f.currency} receipt settled at ${(f.rate_ppm / 1_000_000).toFixed(4)}, booked at ${(f.booked_rate_ppm / 1_000_000).toFixed(4)}`;
   const p = base(c, "fx_realized", [{ doc_id: c.doc_ids[0] ?? "", amount_cents: cents }], [
     { account: ACCOUNTS.fx_gain_loss, debit_cents: cents, credit_cents: 0, memo },
     { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: cents, memo },
   ]);
   p.bank_txn_id = c.bank_txn_id;
-  // The two numbers the arithmetic rests on, quoted as the bank printed them, so a reviewer sees them in the advice.
+  // The two numbers the arithmetic rests on, quoted with the bank's own labels ("Amount received: EUR 98,000.00"), so a
+  // reviewer reads what each number means and the kernel agrees the whole phrase to the advice.
   const amount = (f.foreign_amount_cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   p.evidence = evidence.flatMap((e) => [
-    { ...e, claim: `the bank received ${f.currency} ${amount}`, quote: amount },
-    { ...e, claim: "the rate the bank applied", quote: (f.rate_ppm / 1_000_000).toFixed(4) }]);
+    { ...e, claim: `the bank received ${f.currency} ${amount}`, quote: labelledQuote(adviceText, amount) },
+    { ...e, claim: "the rate the bank applied", quote: labelledQuote(adviceText, (f.rate_ppm / 1_000_000).toFixed(4)) }]);
   return p;
 }
 

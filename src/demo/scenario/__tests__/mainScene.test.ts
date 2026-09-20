@@ -48,11 +48,25 @@ describe("the main scene: one wire, $4,200 short for three reasons, and only one
     const lines = db.prepare("SELECT l.account, l.debit_cents FROM gl_line l JOIN gl_entry e ON e.id = l.entry_id JOIN decision d ON d.id = e.source_decision_id WHERE d.intent_id = 'int_main' AND l.debit_cents > 0 ORDER BY l.rowid").all();
     expect(lines).toEqual([{ account: "1000", debit_cents: 10580000 }, { account: "6150", debit_cents: 4000 }, { account: "7100", debit_cents: 196000 }]);
     expect(tied(db)).toBe(true);
+    // The workpapers quote the bank's own labelled lines, not bare numbers.
+    const quotes = (db.prepare("SELECT e.value ->> '$.quote' AS q FROM decision d, json_each(json_extract(d.proposal_json, '$.evidence')) e WHERE d.intent_id = 'int_main' AND d.kind IN ('write_off','fx_realized') ORDER BY d.rowid, e.key").all() as { q: string }[]).map((r) => r.q);
+    expect(quotes).toEqual(["Bank charges deducted USD 40.00", "Amount received EUR 98,000.00", "Exchange rate applied 1.0800 USD per EUR"]);
+  });
+
+  it("a foreign-currency record that does not tie to the bank line cannot drive the arithmetic", async () => {
+    const db = await world();
+    // EUR 98,000.00 at 1.0800 less 40.00 is the 105,800.00 that arrived. Say the fee was 50.00 and it no longer is.
+    db.prepare("UPDATE bank_txn_fx SET fee_cents = 5000 WHERE bank_txn_id = 'BTX-320'").run();
+    await runOpenIntents(db, { investigators: [], intent_id: "int_main", clock, config: APP_CONFIG });
+    expect(posted(db, "int_main")).not.toContain("fx_realized:196000");
+    const marks = db.prepare("SELECT w.marks_json FROM workpaper w JOIN decision d ON d.id = w.decision_id WHERE d.intent_id = 'int_main' AND d.kind = 'fx_realized'").get() as { marks_json: string } | undefined;
+    expect(marks?.marks_json ?? "").toContain("the bank line is 10580000");
   });
 
   it("realized FX is re-performed, not believed: a wrong amount, a wrong account, a second booking and an uncited advice are all refused", async () => {
     const db = await world();
-    const fx = (cents: number, account = "7100", evidence = [{ claim: "the bank's credit advice", trace_id: "tr_advice_BTX-320" }]) => ({
+    const quoted = (amount: string, rate: string) => [{ claim: "the amount the bank received", trace_id: "tr_advice_BTX-320", quote: amount }, { claim: "the rate the bank applied", trace_id: "tr_advice_BTX-320", quote: rate }];
+    const fx = (cents: number, account = "7100", evidence: { claim: string; trace_id: string; quote?: string }[] = quoted("Amount received EUR 98,000.00", "Exchange rate applied 1.0800 USD per EUR")) => ({
       intent_id: "int_main", function: "ar" as const, kind: "fx_realized" as const, party_id: "vossberg", entry_date: "2026-07-15", bank_txn_id: "BTX-320",
       applications: [{ doc_id: "INV-3201", amount_cents: cents }],
       entries: [{ account, debit_cents: cents, credit_cents: 0, memo: "fx" }, { account: "1200", debit_cents: 0, credit_cents: cents, memo: "fx" }],
@@ -68,6 +82,8 @@ describe("the main scene: one wire, $4,200 short for three reasons, and only one
     expect(failed(fx(420000))).toContain("F9");                       // the whole shortfall called FX
     expect(failed(fx(196000, "6990"))).toContain("J4");                // the right amount hidden in misc expense
     expect(failed(fx(196000, "7100", []))).toContain("F9");            // the bank's advice not cited
+    expect(failed(fx(196000, "7100", quoted("98,000.00", "1.0800")))).toContain("F9"); // bare numbers: nothing says what they are
+    expect(failed(fx(196000, "7100", quoted("Amount received EUR 98,000.00", "USD equivalent 105,840.00")))).toContain("F9"); // the rate is not quoted
     expect(proposeEntry(db, fx(196000), agent, deps).status).toBe("posted");
     expect(failed({ ...fx(196000), entry_date: "2026-07-16" })).toContain("F9"); // a second booking for the same receipt
   });

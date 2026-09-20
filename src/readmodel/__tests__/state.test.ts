@@ -60,7 +60,7 @@ describe("buildConsoleState", () => {
     // (c) the workpaper for the FX decision: marks by class, and one evidence offset that really points at the quote.
     const workpaper = buildConsoleState(db, { decision_id: fx.decision_id }).workpaper;
     expect(workpaper?.marks_by_class.F.some((m) => m.check === "F9" && m.status === "pass")).toBe(true);
-    const advice = workpaper?.evidence.find((e) => e.trace_id === "tr_advice_BTX-320" && e.quote === "1.0800");
+    const advice = workpaper?.evidence.find((e) => e.trace_id === "tr_advice_BTX-320" && e.quote === "Exchange rate applied 1.0800 USD per EUR");
     expect(advice?.offset).toBeTruthy();
     const traceRow = db.prepare("SELECT payload_json FROM trace WHERE id = 'tr_advice_BTX-320'").get() as { payload_json: string };
     const adviceText = payloadText(traceRow.payload_json);

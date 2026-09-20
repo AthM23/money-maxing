@@ -95,6 +95,19 @@ describe("E2 quotes agree to source", () => {
     expect(statusOf(runKernel(proposal, makeCtx(demoWorld), "proposal"), "E2")).toBe("fail");
   });
 
+  it("a quoted number has to stand in the source as a number of its own: 40.00 is not stated by 105,840.00", () => {
+    const advice = (text: string) => makeCtx({ ...demoWorld, traces: [...demoWorld.traces, trace("trace:advice", text)] });
+    const citing = (quote: string) => creditMemo({ evidence: [...creditMemo().evidence, { claim: "the bank's fee", trace_id: "trace:advice", quote }] });
+    const feeSentenceDeleted = "Amount received EUR 98,000.00. USD equivalent 105,840.00. Net credit USD 105,800.00.";
+    const mark = markOf(runKernel(citing("40.00"), advice(feeSentenceDeleted), "proposal"), "E2");
+    expect(mark.status).toBe("fail");
+    expect(mark.detail).toContain("only inside a longer number");
+    const withFee = `Bank charges deducted USD 40.00. ${feeSentenceDeleted}`;
+    expect(statusOf(runKernel(citing("40.00"), advice(withFee), "proposal"), "E2")).toBe("pass");
+    expect(statusOf(runKernel(citing("Bank charges deducted USD 40.00"), advice(withFee), "proposal"), "E2")).toBe("pass");
+    expect(statusOf(runKernel(citing("98,000"), advice(withFee), "proposal"), "E2")).toBe("fail"); // 98,000 is not 98,000.00
+  });
+
   it("fails a quote that is not in the payload at all", () => {
     const proposal = creditMemo({
       evidence: [{ claim: "invented", trace_id: "trace:ceo-email", quote: "Approved: write the whole thing off" }],
