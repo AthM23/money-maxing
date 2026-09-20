@@ -24,7 +24,14 @@ ap.add_argument("--limit", type=int, default=120)
 ap.add_argument("--local", action="append", default=[])    # name=hf_id
 ap.add_argument("--adapter", action="append", default=[])  # name=hf_id:adapter_path
 ap.add_argument("--api", action="append", default=[])      # name=env:BASE_URL_VAR,KEY_VAR,model
+ap.add_argument("--hint", action="store_true", help="append the JSON schema to every prompt (fair zero-shot condition)")
 a = ap.parse_args()
+
+SCHEMA_HINT = """
+Output schema (use EXACTLY these keys; amounts are INTEGER CENTS, dates ISO YYYY-MM-DD):
+- remittance: {"doc_kind":"remittance","payer":str,"date":str,"amount_cents":int,"applications":[{"invoice":str,"amount_cents":int}],"discount_pct":int,"discount_cents":int,"method":"ACH"|"wire"|"check","ref":str}
+- vendor_bill: {"doc_kind":"vendor_bill","vendor":str,"date":str,"amount_cents":int,"period":str,"terms_days":int,"ref":str}
+- contract_clause: {"doc_kind":"contract_clause","payer":str,"date":str,"amount_cents":int,"billing":str,"discount_pct":int,"escalator_pct":int,"ref":str}"""
 out_path = Path(a.out or f"{a.data}/benchmark_results.json")
 
 rows = [json.loads(l) for l in Path(f"{a.data}/sft.test.jsonl").read_text().splitlines() if l.strip()]
@@ -34,6 +41,7 @@ step = max(1, len(rows) // a.limit)
 test = rows[::step][: a.limit]
 
 def canon(s):
+    if not s: return None  # reasoning models can return content:null when tokens run out mid-think
     s = s.strip()
     if s.startswith("```"): s = s.strip("`").removeprefix("json").strip()
     if "{" in s: s = s[s.index("{"): s.rindex("}") + 1]
@@ -59,11 +67,17 @@ def score(pred_text, gold_text):
     f1 = 2 * prec * rec / max(prec + rec, 1e-9)
     return {"schema_valid": 1, "exact": int(fp == fg), "field_f1": round(f1, 4)}
 
+def with_hint(messages):
+    if not a.hint: return messages
+    m = [dict(x) for x in messages]
+    m[0]["content"] = m[0]["content"].replace("as JSON.", "as JSON." + SCHEMA_HINT, 1)
+    return m
+
 def evaluate(name, gen_fn, price_per_mtok=0.0):
     per, t_lat = [], []
     for r in test:
         t0 = time.time()
-        try: text, toks = gen_fn(r["messages"][:-1])
+        try: text, toks = gen_fn(with_hint(r["messages"][:-1]))
         except Exception as e: text, toks = f"ERROR {e}", 0
         lat = time.time() - t0; t_lat.append(lat)
         s = score(text, r["messages"][-1]["content"])
@@ -121,7 +135,10 @@ for spec in a.api:
     if not base or not key:
         print(f"skip {name}: {base_var}/{key_var} not set"); continue
     def api_gen(messages, base=base, key=key, model_id=model_id):
-        body = json.dumps({"model": model_id, "messages": messages, "max_tokens": 512, "temperature": 0}).encode()
+        payload = {"model": model_id, "messages": messages, "max_tokens": 1536, "temperature": 0}
+        if "muse" in model_id or "spark" in model_id:
+            payload["reasoning_effort"] = "low"  # else Spark spends the whole budget thinking and returns content:null
+        body = json.dumps(payload).encode()
         req = urllib.request.Request(base.rstrip("/") + "/chat/completions", data=body,
                                      headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=90) as resp:
