@@ -2,30 +2,31 @@
  "protocol": {
   "scorer": "strict-v2",
   "n": 120,
-  "note": "answers produced by claude-haiku-4-5 subagents, graded by the same v2 scorer"
+  "test_sha256": "868313a4a67be7e033c25487ffc2533f6bf50ba4e584c48537d98b03d7ac4bbb",
+  "note": "same 120-document slice as the local models, verified by sha256"
  },
  "models": {
-  "haiku-bare": {
+  "haiku-hinted": {
    "n": 120,
-   "schema_valid": 0.0,
-   "exact": 0.0,
-   "field_f1": 0.106,
-   "held_out_n": 88,
-   "held_out_exact": 0.0,
-   "held_out_f1": 0.12,
+   "schema_valid": 0.883,
+   "exact": 0.608,
+   "field_f1": 0.943,
+   "held_out_n": 74,
+   "held_out_exact": 0.676,
+   "held_out_f1": 0.954,
    "avg_latency_s": null,
    "est_cost_usd": null,
    "kind": "api-agent",
    "model": "claude-haiku-4-5 via Claude Code agents"
   },
-  "haiku-hinted": {
+  "haiku-bare": {
    "n": 120,
-   "schema_valid": 0.967,
-   "exact": 0.742,
-   "field_f1": 0.962,
-   "held_out_n": 88,
-   "held_out_exact": 0.761,
-   "held_out_f1": 0.969,
+   "schema_valid": 0.0,
+   "exact": 0.0,
+   "field_f1": 0.087,
+   "held_out_n": 74,
+   "held_out_exact": 0.0,
+   "held_out_f1": 0.104,
    "avg_latency_s": null,
    "est_cost_usd": null,
    "kind": "api-agent",

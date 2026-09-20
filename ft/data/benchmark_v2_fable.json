@@ -2,17 +2,18 @@
  "protocol": {
   "scorer": "strict-v2",
   "n": 120,
-  "note": "answers produced by claude-fable-5 subagents, graded by the same v2 scorer"
+  "test_sha256": "868313a4a67be7e033c25487ffc2533f6bf50ba4e584c48537d98b03d7ac4bbb",
+  "note": "same 120-document slice as the local models, verified by sha256"
  },
  "models": {
   "fable-hinted": {
    "n": 120,
    "schema_valid": 1.0,
-   "exact": 0.775,
-   "field_f1": 0.974,
-   "held_out_n": 88,
-   "held_out_exact": 0.807,
-   "held_out_f1": 0.979,
+   "exact": 0.617,
+   "field_f1": 0.952,
+   "held_out_n": 74,
+   "held_out_exact": 0.676,
+   "held_out_f1": 0.961,
    "avg_latency_s": null,
    "est_cost_usd": null,
    "kind": "api-agent",
