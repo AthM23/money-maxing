@@ -115,6 +115,20 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
   });
 });
 
+describe("worker: the snapshot is of the case before anything posted, whoever ran it first", () => {
+  it("adds back what an earlier pass already applied, so the entry can be re-performed later", async () => {
+    const db = world();
+    // Another runner (the walking skeleton) applies Initech's cash before the worker ever sees the case.
+    const { runCase } = await import("../../agents/runCase.js");
+    const initech = JSON.parse((db.prepare("SELECT case_json FROM intent WHERE id = 'int_initech'").get() as { case_json: string }).case_json) as unknown;
+    await runCase(db, initech, { mode: "live", autonomy_level: "auto", investigators: [], clock: fixedClock });
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1042'").get()).toEqual({ open_cents: 120000 });
+    await runOpenIntents(db, { investigators: [], function: "ar", retry: true, clock: fixedClock });
+    const row = db.prepare("SELECT case_json FROM intent WHERE id = 'int_initech'").get() as { case_json: string };
+    expect(JSON.parse(row.case_json).docs_snapshot[0]).toMatchObject({ id: "INV-1042", open_cents: 1200000 });
+  });
+});
+
 describe("worker: who may approve what parked", () => {
   it("the controller agent cannot approve a kind still in shadow; a person can, and the intent then resolves", async () => {
     const db = world();

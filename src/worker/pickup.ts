@@ -84,17 +84,33 @@ function problemWith(row: IntentRow): CaseFile | string {
   return parsed.data;
 }
 
+/** Kinds whose applications reduce a document's open balance when they post (see postEntry). */
+const REDUCES_OPEN = ["apply_payment", "credit_memo", "write_off", "customer_credit", "schedule_payment"] as const;
+
 /**
- * Keep the document balances as they stood before anything posted. Live runs ignore the snapshot; it is what lets
- * this case be replayed later, once the ledger shows the documents settled.
+ * Keep the document balances as they stood before anything posted on this case. Live runs ignore the snapshot; it
+ * is what lets the case be replayed, or an entry re-performed by the auditor, once the ledger shows the documents
+ * settled. A case may already have had entries posted by an earlier pass, so what they took off is added back.
  */
 function withDocsSnapshot(db: Db, intentId: string, c: CaseFile): CaseFile {
   if (c.docs_snapshot) return c;
   const docs = c.doc_ids.flatMap((id) => {
     const doc = getDoc(db, id);
-    return doc ? [doc] : [];
+    return doc ? [{ ...doc, open_cents: doc.open_cents + alreadyTakenOff(db, intentId, id) }] : [];
   });
   const withSnapshot: CaseFile = { ...c, docs_snapshot: docs };
   db.prepare("UPDATE intent SET case_json = ? WHERE id = ?").run(JSON.stringify(withSnapshot), intentId);
   return withSnapshot;
+}
+
+function alreadyTakenOff(db: Db, intentId: string, docId: string): number {
+  const row = db
+    .prepare(
+      `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
+       WHERE d.intent_id = ? AND d.mode = 'live' AND d.posted_at IS NOT NULL AND a.value ->> '$.doc_id' = ?
+         AND d.kind IN (${REDUCES_OPEN.map(() => "?").join(", ")})`,
+    )
+    .get(intentId, docId, ...REDUCES_OPEN) as { n: number };
+  return row.n;
 }
