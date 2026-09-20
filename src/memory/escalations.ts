@@ -57,6 +57,7 @@ export function openEscalation(db: Db, clock: Clock, input: OpenEscalationInput)
 function covers(answer: Record<string, unknown>, entryDate?: string, amountCents?: number): boolean {
   if (answer.uses !== "standing") return false;
   const validTo = typeof answer.valid_to === "string" ? answer.valid_to : null;
+  if (!validTo || !entryDate) return false;
   if (validTo && entryDate && entryDate > validTo) return false;
   const ceiling = typeof answer.max_amount_cents === "number" ? answer.max_amount_cents : null;
   return !(ceiling !== null && amountCents !== undefined && amountCents > ceiling);

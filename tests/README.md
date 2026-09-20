@@ -46,7 +46,7 @@ Difficulty: `T1` a decent matcher handles it · `T2` separates good from average
 | `pack` | which of our function packs owns it (see below) |
 | `min_fixture` | `yes` = part of the corpus's minimum viable fixture. **Seed these first.** |
 | `in_spec_scope` | `no` = the case falls in the spec's declared out-of-scope area. See the gap list below. |
-| `status` | `todo` → `seeded` → `passing` / `failing`. All `todo` right now. |
+| `status` | `todo` → `seeded` → `passing` / `failing`. 11 routed fixtures are passing as of the 19 September audit; see RESULTS.md for the coverage denominator. |
 
 `pack` values are the function packs from `context/PROJECT_SPEC.md`: `ar`, `ap`,
 `bank-rec`, `revenue`, `close`, `forecast`, `reporting`, `audit`, `equity` —

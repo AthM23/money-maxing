@@ -13,16 +13,24 @@ export interface EscalationQuestion {
 
 const dollars = (cents: number): string => `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2 })}`;
 
+/** Slack refuses the whole message if a button label passes 75 characters or a section passes 3,000. */
+const BUTTON_MAX = 75;
+const SECTION_MAX = 2900;
+
+function clip(text: string, max: number): string {
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
 export function escalationBlocks(escalationId: string, q: EscalationQuestion): Block[] {
   const checked = q.what_was_checked.map((c) => `• ${c.source}: “${c.query}” → ${c.hits} hit${c.hits === 1 ? "" : "s"}`).join("\n");
   const prior = q.prior_answer ? `\n*Last time you said:* ${String(q.prior_answer.text ?? JSON.stringify(q.prior_answer))}` : "";
   return [
-    { type: "section", text: { type: "mrkdwn", text: `*I'm blocked and need one thing from you.*\n${q.what_happened}${prior}` } },
-    { type: "section", text: { type: "mrkdwn", text: `*What I checked*\n${checked}` } },
-    { type: "section", text: { type: "mrkdwn", text: `*What I don't know*\n${q.what_is_unknown}` } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Trigger*\n${q.what_happened}${prior}`, SECTION_MAX) } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Sources checked*\n${checked}`, SECTION_MAX) } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Why this could not resolve*\n${q.what_is_unknown}\n*Candidate treatments*\n${q.treatments.map(t => t.label).join(" · ")}`, SECTION_MAX) } },
     {
       type: "actions", block_id: `esc:${escalationId}`,
-      elements: q.treatments.map((t) => ({ type: "button", text: { type: "plain_text", text: t.label }, action_id: `answer:${t.id}`, value: escalationId })),
+      elements: q.treatments.map((t) => ({ type: "button", text: { type: "plain_text", text: clip(t.label, BUTTON_MAX) }, action_id: `answer:${t.id}`, value: escalationId })),
     },
     { type: "context", elements: [{ type: "mrkdwn", text: "If nobody answers, the balance stays open as a dispute hold. Nothing is written off on a guess." }] },
   ];
@@ -39,6 +47,10 @@ export function answerModal(escalationId: string, treatment: string): Block {
       { type: "input", block_id: "uses", label: { type: "plain_text", text: "Does it apply again?" },
         element: { type: "radio_buttons", action_id: "uses", initial_option: option("one_time", "One time only"),
           options: [option("one_time", "One time only"), option("standing", "Standing, until an end date")] } },
+      { type: "input", block_id: "expiry", optional: true, label: { type: "plain_text", text: "End date (required for standing answers)" },
+        element: { type: "datepicker", action_id: "date" } },
+      { type: "input", block_id: "rate", optional: true, label: { type: "plain_text", text: "Agreed percentage, if any (0–100)" },
+        element: { type: "plain_text_input", action_id: "pct" } },
     ],
   };
 }
@@ -49,9 +61,9 @@ export function approvalBlocks(decisionId: string, proposal: Proposal, marks: Ma
     .map((cls) => `${cls} ${marks.filter((m) => m.cls === cls && m.status === "pass").length}/${marks.filter((m) => m.cls === cls).length}`).join(" · ");
   const quotes = proposal.evidence.filter((e) => e.quote).map((e) => `> ${e.quote}\n_${e.claim} (${e.trace_id})_`).join("\n");
   return [
-    { type: "section", text: { type: "mrkdwn", text: `*Approval needed:* ${proposal.kind.replaceAll("_", " ")} for ${proposal.party_id}\n${lines}` } },
-    { type: "section", text: { type: "mrkdwn", text: `*Kernel re-checked the workpaper:* ${tally}\n${quotes}` } },
-    ...(controllerNote ? [{ type: "context", elements: [{ type: "mrkdwn", text: `Controller agent: ${controllerNote}` }] }] : []),
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Approval needed:* ${proposal.kind.replaceAll("_", " ")} for ${proposal.party_id}\n${lines}`, SECTION_MAX) } },
+    { type: "section", text: { type: "mrkdwn", text: clip(`*Kernel re-checked the workpaper:* ${tally}\n${quotes}`, SECTION_MAX) } },
+    ...(controllerNote ? [{ type: "context", elements: [{ type: "mrkdwn", text: clip(`Controller agent: ${controllerNote}`, SECTION_MAX) }] }] : []),
     {
       type: "actions", block_id: `apr:${decisionId}`,
       elements: [

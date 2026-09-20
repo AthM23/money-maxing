@@ -23,9 +23,12 @@ export const ControllerVerdict = z.object({
 export type ControllerVerdict = z.infer<typeof ControllerVerdict>;
 
 /** An independent reviewer on a different model family from the preparer, so its errors are not the preparer's errors. */
+/** Tokens a review cost, when the reviewer can say. Metered on the decision's timeline like every other model call. */
+export interface ReviewUsage { tokens_in: number; tokens_out: number }
+
 export interface Controller {
   id: string;
-  review(packet: ReviewPacket): Promise<ControllerVerdict>;
+  review(packet: ReviewPacket): Promise<ControllerVerdict & { usage?: ReviewUsage }>;
 }
 
 export type ControllerOutcome =
@@ -43,8 +46,9 @@ export async function controllerReview(
 ): Promise<ControllerOutcome> {
   const packet = buildPacket(db, decisionId);
   if (!packet) return { status: "not_pending", decision_id: decisionId };
-  const verdict = ControllerVerdict.parse(await controller.review(packet));
-  recordNote(db, deps.clock ?? systemClock, decisionId, controller.id, verdict);
+  const reviewed = await controller.review(packet);
+  const verdict = ControllerVerdict.parse(reviewed);
+  recordNote(db, deps.clock ?? systemClock, decisionId, controller.id, verdict, reviewed.usage);
   if (!verdict.agrees) return { status: "disagreed", decision_id: decisionId, verdict };
 
   const result = approveDecision(db, decisionId, { approver_id: controller.id, approver_kind: "controller_agent", outcome: "approved", note: verdict.note },
@@ -70,10 +74,10 @@ function buildPacket(db: Db, decisionId: string): ReviewPacket | null {
 }
 
 /** The controller's note is a step on the decision timeline, so the human approver and the auditor both see it. */
-function recordNote(db: Db, clock: Clock, decisionId: string, controllerId: string, verdict: ControllerVerdict): void {
+function recordNote(db: Db, clock: Clock, decisionId: string, controllerId: string, verdict: ControllerVerdict, usage?: ReviewUsage): void {
   const next = db.prepare("SELECT COALESCE(MAX(step_no), 0) + 1 AS n FROM decision_step WHERE decision_id = ?").get(decisionId) as { n: number };
-  db.prepare("INSERT INTO decision_step (decision_id, step_no, ts, kind, tool, output_json) VALUES (?, ?, ?, 'model_turn', ?, ?)")
-    .run(decisionId, next.n, clock.now(), `controller:${controllerId}`, JSON.stringify(verdict));
+  db.prepare("INSERT INTO decision_step (decision_id, step_no, ts, kind, tool, output_json, tokens_in, tokens_out) VALUES (?, ?, ?, 'model_turn', ?, ?, ?, ?)")
+    .run(decisionId, next.n, clock.now(), `controller:${controllerId}`, JSON.stringify(verdict), usage?.tokens_in ?? null, usage?.tokens_out ?? null);
 }
 
 export const CONTROLLER_PROMPT = `You are the controller reviewing an accounting entry an agent prepared. You did not prepare it and you owe it nothing.

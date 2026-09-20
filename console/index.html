@@ -424,6 +424,7 @@ function renderDecision(x, traces, open) {
   const amount = e ? e.lines.reduce((n, l) => n + int(l.debit_cents), 0) : null;
   const body =
     `<div class="kv">actor <b>${esc(x.actor)}</b> · tier <b>${esc(x.tier ?? "-")}</b> · model calls <b>${int(x.model_calls)}</b> · cost <b>$${(int(x.cost_micros) / 1e6).toFixed(4)}</b> · ${esc(x.id)}</div>` +
+    (wp && wp.stale ? '<p class="pill open">Evidence changed — this workpaper needs review</p>' : "") +
     (wp ? `<div class="kv" style="margin-top:6px">Workpaper <b>${esc(wp.id)}</b> · stage <b>${esc(wp.stage || "?")}</b>${(wp.stages || []).length > 1 ? ` (latest of ${esc(wp.stages.join(" → "))})` : ""} · kernel <b class="${wp.kernel_verdict === "accept" ? "good" : "neg"}">${esc(wp.kernel_verdict)}</b> · re-performed ${int(wp.checkable_num)}/${int(wp.checkable_den)} · ${when(wp.created_at)}</div>` +
       `<div class="ticks">${CLASSES.map(([c, name]) => tickBox(c, name, marks.filter((k) => k.cls === c))).join("")}</div>` : '<div class="empty">No workpaper yet.</div>') +
     renderApprovals(x) +

@@ -18,6 +18,7 @@ export interface Tier0Plan {
 export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
   const notes: string[] = [];
   const proposals: Proposal[] = [];
+  if (c.matching_issue) return { proposals, unexplained_cents: Math.max(1, c.received_cents), notes: [c.matching_issue] };
   const replaying = asOf !== undefined;
   const cashToApply = replaying ? c.received_cents : cashStillToApply(db, c, notes);
   if (cashToApply > 0 && c.bank_txn_id) proposals.push(cashApplication(db, c, replaying));
@@ -25,6 +26,9 @@ export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
 
   const stillOpen = replaying ? c.shortfall_cents : shortfallStillOpen(db, c, cashToApply);
   if (stillOpen <= 0) return { proposals, unexplained_cents: 0, notes };
+  if (c.remittance && c.remittance.applications.filter(a => (replaying ? snapshotBalance(db, c, a.doc_id) : liveOpenBalance(db, a.doc_id)) > a.amount_cents).length > 1) {
+    return { proposals, unexplained_cents: stillOpen, notes: ["Multiple remittance lines are short; investigate each allocation before adjusting."] };
+  }
   if (stillOpen !== c.shortfall_cents) {
     notes.push(`${stillOpen} cents are still open on ${c.doc_ids.join(", ")}, the case file says ${c.shortfall_cents}: something else has adjusted these documents`);
     return { proposals, unexplained_cents: stillOpen, notes };
@@ -58,7 +62,8 @@ function cashApplication(db: Db, c: CaseFile, replaying: boolean): Proposal {
   const applications: Proposal["applications"] = [];
   for (const docId of c.doc_ids) {
     if (left <= 0) break;
-    const amount = Math.min(left, replaying ? snapshotBalance(db, c, docId) : liveOpenBalance(db, docId));
+    const amount = c.remittance?.applications.find(a => a.doc_id === docId)?.amount_cents
+      ?? Math.min(left, replaying ? snapshotBalance(db, c, docId) : liveOpenBalance(db, docId));
     if (amount > 0) applications.push({ doc_id: docId, amount_cents: amount });
     left -= amount;
   }
@@ -70,6 +75,10 @@ function cashApplication(db: Db, c: CaseFile, replaying: boolean): Proposal {
     ...(c.received_cents > applied ? [{ account: ACCOUNTS.customer_credits, debit_cents: 0, credit_cents: c.received_cents - applied, memo: `${memo}: unapplied` }] : []),
   ]);
   if (c.received_cents > applied) p.evidence = unappliedCashEvidence(db, c);
+  if (c.remittance) {
+    p.remittance_trace_id = c.remittance.trace_id;
+    p.evidence.push({ claim: "Customer's per-invoice remittance instructions", trace_id: c.remittance.trace_id });
+  }
   return p;
 }
 

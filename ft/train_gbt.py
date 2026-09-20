@@ -4,6 +4,7 @@
 import argparse, csv, json, hashlib
 from collections import defaultdict
 from pathlib import Path
+from scoring import choose_threshold
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.isotonic import IsotonicRegression
 
@@ -32,7 +33,7 @@ def xy(split):
     return X, y
 
 Xtr, ytr = xy("train")
-clf = HistGradientBoostingClassifier(max_iter=200).fit(Xtr, ytr)
+clf = HistGradientBoostingClassifier(max_iter=200, random_state=7).fit(Xtr, ytr)
 Xc, yc = xy("cal")
 iso = IsotonicRegression(out_of_bounds="clip").fit(clf.predict_proba(Xc)[:, 1], yc) if Xc else None
 
@@ -40,7 +41,6 @@ def rank_eval(split):
     top1 = r3 = n = 0
     scored = []  # (calibrated top score, correct?) per txn, for the auto-clear threshold
     for cands in by_split[split].values():
-        if not any(int(r["label"]) for r in cands): continue
         probs = clf.predict_proba([[float(r[f]) for f in FEATS] for r in cands])[:, 1]
         if iso is not None: probs = iso.predict(probs)
         order = sorted(range(len(cands)), key=lambda i: -probs[i])
@@ -49,17 +49,15 @@ def rank_eval(split):
         scored.append((float(probs[order[0]]), correct))
     return top1, r3, n, scored
 
+# The test labels NEVER select the operating threshold. No-match transactions count as errors if selected.
+_, _, n_cal, calibration_scores = rank_eval("cal")
+thr = choose_threshold(calibration_scores)
 top1, r3, n, scored = rank_eval("test")
-# choose the lowest threshold with >= 99% precision on calibrated top scores
-thr, cover = 1.01, 0.0
-for t in sorted({s for s, _ in scored}, reverse=True):
-    hit = [c for s, c in scored if s >= t]
-    if hit and sum(hit) / len(hit) >= 0.99:
-        thr, cover = t, len(hit) / max(n, 1)
-
+selected = [correct for confidence, correct in scored if confidence >= thr]
 report = {"n_test_txns": n, "top1": round(top1 / max(n, 1), 3), "recall_at_3": round(r3 / max(n, 1), 3),
-          "auto_clear_threshold": None if thr > 1 else round(thr, 4),
-          "auto_clear_coverage_at_99pct_precision": round(cover, 3),
-          "n_train_pairs": len(Xtr)}
+          "auto_clear_threshold": None if thr > 1 else thr, "threshold_source": "calibration", "n_cal_txns": n_cal,
+          "test_auto_clear_coverage": round(len(selected) / max(n, 1), 3),
+          "test_auto_clear_precision": round(sum(selected) / len(selected), 3) if selected else None,
+          "test_false_auto_clears": sum(not correct for correct in selected), "n_train_pairs": len(Xtr)}
 Path(a.out).write_text(json.dumps(report, indent=2))
 print("GBT", json.dumps(report))

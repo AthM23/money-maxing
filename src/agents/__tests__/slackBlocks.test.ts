@@ -44,3 +44,18 @@ describe("controller reply parsing", () => {
     expect(parseVerdict('{"agrees":"yes"}').agrees).toBe(false);
   });
 });
+
+describe("Slack refuses a whole message over one long field, so nothing a model writes can be too long", () => {
+  it("clips a button label to 75 characters and a section to under 3,000", () => {
+    const long = "x".repeat(5000);
+    const blocks = escalationBlocks("esc_1", {
+      what_happened: long, what_was_checked: [{ source: "mail_search", query: "credit", hits: 0 }], what_is_unknown: long,
+      treatments: [{ id: "credit_memo", label: "y".repeat(200) }, { id: "chase", label: "Chase it" }],
+    });
+    const texts = JSON.stringify(blocks);
+    const button = (blocks[3] as { elements: { text: { text: string } }[] }).elements[0]!.text.text;
+    expect(button.length).toBeLessThanOrEqual(75);
+    for (const b of blocks.slice(0, 3)) expect((b as { text: { text: string } }).text.text.length).toBeLessThan(3000);
+    expect(texts).toContain("answer:credit_memo");
+  });
+});

@@ -25,7 +25,7 @@ export async function runSkeleton(db: Db, opts: { stores_dir?: string; investiga
   await poll(db, "ar-dispatch", ["bankrec.unmatched"], async (e) => {
     if (e.payload.side !== "credit" || !e.intent_id) return;
     const intent = db.prepare("SELECT question, case_json FROM intent WHERE id = ?").get(e.intent_id) as { question: string; case_json: string };
-    const result = await runCase(db, JSON.parse(intent.case_json), { mode: "live", autonomy_level: "auto", investigators: opts.investigators ?? [] });
+    const result = await runCase(db, JSON.parse(intent.case_json), { mode: "live", autonomy_level: "earned", investigators: opts.investigators ?? [] });
     rows.push({ intent_id: e.intent_id, bank_txn_id: e.payload.bank_txn_id as string | undefined, question: intent.question, routes: result.routes, final_route: result.final_route, tier: result.tier_used, intent_status: "open" });
   });
   closeSettledIntents(db);

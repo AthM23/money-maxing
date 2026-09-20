@@ -86,6 +86,12 @@ describe("asked once: the answer becomes evidence, a scoped fact, and the entry"
     const esc = db.prepare("SELECT id FROM escalation").get() as { id: string };
     const out = recordHumanAnswer(db, esc.id, "U_RANDOM", { treatment: "write_off", text: "just write it off" }, { clock: fixedClock });
     expect(out.status).toBe("unauthorised");
+    expect(recordHumanAnswer(db, esc.id, "U_SAM", { treatment: "credit_memo", text: "Ongoing credit", uses: "standing" }, { clock: fixedClock }).status).toBe("invalid");
     expect(db.prepare("SELECT COUNT(*) AS n FROM fact").get()).toEqual({ n: 0 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM trace WHERE kind = 'human_answer'").get()).toEqual({ n: 0 });
+    const answer = { treatment: "credit_memo", text: "One-time SSO credit" };
+    expect(recordHumanAnswer(db, esc.id, "U_SAM", answer, { clock: fixedClock }).status).toBe("answered");
+    expect(recordHumanAnswer(db, esc.id, "U_SAM", answer, { clock: fixedClock }).status).toBe("already_answered");
+    expect(db.prepare("SELECT COUNT(*) AS n FROM trace WHERE kind = 'human_answer'").get()).toEqual({ n: 1 });
   });
 });

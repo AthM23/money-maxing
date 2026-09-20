@@ -122,7 +122,7 @@ function state(db: Db): unknown {
 // ───────────── intent detail: decisions and workpapers
 
 function workpaperFor(db: Db, decisionId: string): Row | null {
-  const all = rows(db, "workpaper", "SELECT id, marks_json, kernel_verdict, checkable_num, checkable_den, created_at FROM workpaper WHERE decision_id = ? ORDER BY created_at, rowid", decisionId);
+  const all = rows(db, "workpaper", "SELECT id, marks_json, kernel_verdict, checkable_num, checkable_den, stale, created_at FROM workpaper WHERE decision_id = ? ORDER BY created_at, rowid", decisionId);
   const latest = all.at(-1);
   if (!latest) return null;
   const body = (parse(latest.marks_json) ?? {}) as { stage?: string; marks?: unknown[]; features?: unknown };
@@ -295,4 +295,4 @@ createServer((req, res) => {
   } catch (err) {
     send(res, 500, "text/plain", err instanceof Error ? err.message : String(err));
   }
-}).listen(PORT, () => process.stdout.write(`Footnote console: http://localhost:${PORT}  (db ${dbPath()})\n`));
+}).listen(PORT, "127.0.0.1", () => process.stdout.write(`Footnote console: http://localhost:${PORT}  (db ${dbPath()})\n`));

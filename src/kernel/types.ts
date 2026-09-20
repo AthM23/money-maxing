@@ -10,6 +10,8 @@ export interface TraceLite {
   /** The trace payload flattened to text. Quotes are checked against this. */
   payload_text: string;
   party_id?: string | null;
+  /** A replacement visible at the evaluation time invalidates this citation. */
+  superseded_by?: string;
 }
 
 export interface DocLite {
@@ -26,6 +28,7 @@ export interface BankTxnLite {
   /** Signed: money in is positive. */
   amount_cents: number;
   posted_date: string;
+  descriptor?: string;
   party_id?: string | null;
 }
 

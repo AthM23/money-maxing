@@ -33,10 +33,12 @@ interface DecisionRow {
  * post gate with the approver's identity, which is how a BLOCK can still fire after someone clicks approve.
  */
 export function approveDecision(db: Db, decisionId: string, approval: ApprovalInput, deps: RuntimeDeps = {}): ApproveResult {
-  const result = decide(db, decisionId, approval, deps);
-  const intent = db.prepare("SELECT intent_id FROM decision WHERE id = ?").get(decisionId) as { intent_id: string } | undefined;
-  if (intent) settleIntent(db, deps.clock ?? systemClock, intent.intent_id);
-  return result;
+  return db.transaction(() => {
+    const result = decide(db, decisionId, approval, deps);
+    const intent = db.prepare("SELECT intent_id FROM decision WHERE id = ?").get(decisionId) as { intent_id: string } | undefined;
+    if (intent) settleIntent(db, deps.clock ?? systemClock, intent.intent_id);
+    return result;
+  }).immediate();
 }
 
 function decide(db: Db, decisionId: string, approval: ApprovalInput, deps: RuntimeDeps): ApproveResult {
@@ -46,6 +48,18 @@ function decide(db: Db, decisionId: string, approval: ApprovalInput, deps: Runti
     .get(decisionId) as DecisionRow | undefined;
   if (!row) return { status: "not_found", decision_id: decisionId };
   if (row.route !== "PROPOSE" || row.mode !== "live" || isPosted(db, decisionId)) return { status: "not_pending", decision_id: decisionId };
+  if (db.prepare("SELECT 1 FROM approval WHERE decision_id = ? AND outcome = 'rejected'").get(decisionId)) {
+    return { status: "not_pending", decision_id: decisionId };
+  }
+  const signer = db.prepare("SELECT role FROM approver WHERE id = ?").get(approval.approver_id) as { role: string } | undefined;
+  if (!signer || (signer.role === "controller_agent") !== (approval.approver_kind === "controller_agent")) {
+    return { status: "rejected", decision_id: decisionId, failed: [{ cls: "P", check: "P3", status: "fail",
+      detail: "approval identity and actor kind must match the approval matrix", refs: [approval.approver_id] }] };
+  }
+  if (approval.outcome !== "rejected" && db.prepare("SELECT 1 FROM workpaper WHERE decision_id = ? AND stale = 1").get(decisionId)) {
+    return { status: "rejected", decision_id: decisionId, failed: [{ cls: "E", check: "E1", status: "fail",
+      detail: "source evidence changed; prepare a fresh decision before approving", refs: [decisionId] }] };
+  }
 
   const parsed = Proposal.safeParse(safeJson(row.proposal_json));
   if (!parsed.success) return { status: "rejected", decision_id: decisionId, failed: [] };

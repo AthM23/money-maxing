@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACCOUNTS } from "../../contract/accounts.js";
 import { routeTier0 } from "../../router/route.js";
+import { evaluateCondition } from "../../kernel/condition.js";
 import { fixedClock, seedInitech } from "../../runtime/__tests__/seed.js";
 import type { Db } from "../../runtime/db.js";
 import { autonomyFor, levelFor, rebuildLadder } from "../autonomy.js";
@@ -43,6 +44,7 @@ describe("compile: repeated judgment becomes a policy draft, in code", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]).toMatchObject({ action: { kind: "write_off", account: ACCOUNTS.bank_charges }, backtest: { n: 6, agree: 5, account_outliers: ["dp4"], regressions: [] } });
     expect(JSON.stringify(drafts[0]!.condition)).toContain('"value":4500');
+    expect(evaluateCondition(drafts[0]!.condition, { party_id: "unseen_strategic_shortpayer", shortfall_cents: 3800, method: "wire" })).toBe(false);
     // The in-sample 5 of 6 flatters the rule. Drafted without each case in turn it still covers 4 of 5: never the one that set the ceiling.
     expect(drafts[0]!.backtest).toMatchObject({ held_out_n: 5, held_out_covered: 4 });
     expect(db.prepare("SELECT status FROM policy").get()).toEqual({ status: "proposed" });

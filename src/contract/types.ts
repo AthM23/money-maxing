@@ -3,7 +3,10 @@ import { z } from "zod";
 /** Money is integer cents everywhere. A float on a money path is a bug (corpus F-07). */
 export const Cents = z.number().int();
 export const NonNegCents = Cents.nonnegative();
-export const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "ISO date YYYY-MM-DD");
+export const IsoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "ISO date YYYY-MM-DD").refine((s) => {
+  const date = new Date(`${s}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === s;
+}, "must be a real calendar date");
 
 export const FUNCTIONS = [
   "ar", "ap", "bank-rec", "revenue", "close", "forecast", "reporting", "audit", "equity",
@@ -63,6 +66,8 @@ export const Proposal = z.object({
   entry_date: IsoDate,
   /** Bank transaction being applied, when kind is apply_payment or bank_adjustment. */
   bank_txn_id: z.string().min(1).optional(),
+  /** Separate remittance that explicitly directs this cash allocation. Re-read at each kernel gate. */
+  remittance_trace_id: z.string().min(1).optional(),
   applications: z.array(z.object({ doc_id: z.string().min(1), amount_cents: NonNegCents })),
   entries: z.array(EntryLine),
   terms_change: z.object({ pct_off: z.number().min(0).max(100).optional(), until: IsoDate.optional() }).optional(),
@@ -93,6 +98,8 @@ export const CaseFile = z.object({
   shortfall_cents: Cents,
   method: z.enum(["ach", "wire", "check", "card", "other"]).optional(),
   trace_ids: z.array(z.string().min(1)),
+  matching_issue: z.string().optional(),
+  remittance: z.object({ trace_id: z.string().min(1), applications: z.array(z.object({ doc_id: z.string(), amount_cents: NonNegCents })) }).optional(),
   /** Replay only: document balances as they stood at the decision, because today's ledger already shows them paid. */
   docs_snapshot: z
     .array(z.object({

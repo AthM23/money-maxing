@@ -44,7 +44,7 @@ function duplicatePayment(db: Db): string {
     INSERT INTO party (id, kind, name, owner_user) VALUES ('acme','vendor','Acme Supply','U_LEE');
     INSERT INTO bill (id, party_id, vendor_invoice_no, bill_date, due_date, service_period, total_cents, open_cents, status) VALUES
       ('BILL-PAID','acme','ACME-1','2026-05-01','2026-05-31','2026-05',40000,0,'paid'),
-      ('BILL-NEW','acme','ACME-2','2026-07-01','2026-07-31','2026-07',40000,0,'paid');
+      ('BILL-NEW','acme','ACME-2','2026-07-01','2026-07-31','2026-05',40000,0,'paid');
   `);
   return insertPostedApplication(db, {
     id: "dec_pay", kind: "schedule_payment", fn: "ap", party_id: "acme", doc_id: "BILL-NEW", amount_cents: 40_000,
@@ -107,6 +107,12 @@ describe("re-performance: no finding for what the entry itself changed", () => {
 });
 
 describe("re-performance reads the world for itself, not the preparer's account of it", () => {
+  it("does not label a separate month's equal-value bill as a duplicate payment", () => {
+    const db = seedAudit();
+    const decisionId = duplicatePayment(db);
+    db.prepare("UPDATE bill SET service_period = '2026-07' WHERE id = 'BILL-NEW'").run();
+    expect(details(rerunDecision(db, decisionId))).not.toContain("DUPLICATE_PAYMENT");
+  });
   it("finds the over-application on the second of two cash applications to one invoice", () => {
     const db = seedAudit();
     const second = doubleApplication(db);

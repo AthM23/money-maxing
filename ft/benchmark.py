@@ -14,7 +14,9 @@
 #     --api haiku=env:ANTHROPIC_BASE_URL,ANTHROPIC_KEY,claude-haiku-4-5
 # Results merge into --out (benchmark_results.json): rerunning adds/updates contenders, never drops rows,
 # so API models can be benchmarked from the Mac and local models on the GX10 into the same file.
-import argparse, json, time, urllib.request
+import argparse, hashlib, json, time, urllib.request
+from collections import defaultdict
+from scoring import SCORER_VERSION, score
 from pathlib import Path
 
 ap = argparse.ArgumentParser()
@@ -26,46 +28,30 @@ ap.add_argument("--adapter", action="append", default=[])  # name=hf_id:adapter_
 ap.add_argument("--api", action="append", default=[])      # name=env:BASE_URL_VAR,KEY_VAR,model
 ap.add_argument("--hint", action="store_true", help="append the JSON schema to every prompt (fair zero-shot condition)")
 a = ap.parse_args()
+if a.limit < 1: ap.error("--limit must be positive")
 
 SCHEMA_HINT = """
 Output schema (use EXACTLY these keys; amounts are INTEGER CENTS, dates ISO YYYY-MM-DD):
 - remittance: {"doc_kind":"remittance","payer":str,"date":str,"amount_cents":int,"applications":[{"invoice":str,"amount_cents":int}],"discount_pct":int,"discount_cents":int,"method":"ACH"|"wire"|"check","ref":str}
 - vendor_bill: {"doc_kind":"vendor_bill","vendor":str,"date":str,"amount_cents":int,"period":str,"terms_days":int,"ref":str}
 - contract_clause: {"doc_kind":"contract_clause","payer":str,"date":str,"amount_cents":int,"billing":str,"discount_pct":int,"escalator_pct":int,"ref":str}"""
-out_path = Path(a.out or f"{a.data}/benchmark_results.json")
+out_path = Path(a.out or f"{a.data}/benchmark_results_v2.json")
 
 rows = [json.loads(l) for l in Path(f"{a.data}/sft.test.jsonl").read_text().splitlines() if l.strip()]
-# stable, stratified slice: alternate held-out-party and normal rows so every run sees the hard cases
-rows.sort(key=lambda r: (not r["meta"].get("held_out_party", False), r["meta"].get("family", "")))
-step = max(1, len(rows) // a.limit)
-test = rows[::step][: a.limit]
-
-def canon(s):
-    if not s: return None  # reasoning models can return content:null when tokens run out mid-think
-    s = s.strip()
-    if s.startswith("```"): s = s.strip("`").removeprefix("json").strip()
-    if "{" in s: s = s[s.index("{"): s.rindex("}") + 1]
-    try: return json.loads(s)
-    except Exception: return None
-
-def flat(d, prefix=""):
-    o = {}
-    for k, v in (d or {}).items():
-        if isinstance(v, dict): o.update(flat(v, f"{prefix}{k}."))
-        elif isinstance(v, list):
-            for i, x in enumerate(v):
-                o.update(flat(x, f"{prefix}{k}[{i}].") if isinstance(x, dict) else {f"{prefix}{k}[{i}]": x})
-        else: o[f"{prefix}{k}"] = v
-    return o
-
-def score(pred_text, gold_text):
-    p, g = canon(pred_text), json.loads(gold_text)
-    if p is None: return {"schema_valid": 0, "exact": 0, "field_f1": 0.0}
-    fp, fg = flat(p), flat(g)
-    hit = sum(1 for k, v in fg.items() if fp.get(k) == v)
-    prec = hit / max(len(fp), 1); rec = hit / max(len(fg), 1)
-    f1 = 2 * prec * rec / max(prec + rec, 1e-9)
-    return {"schema_valid": 1, "exact": int(fp == fg), "field_f1": round(f1, 4)}
+# Deterministic round-robin over actual strata, including held-out families.
+strata = defaultdict(list)
+for row in rows:
+    key = (row["meta"].get("family", ""), bool(row["meta"].get("held_out_party")), bool(row["meta"].get("test_only_family")))
+    strata[key].append(row)
+for group in strata.values():
+    group.sort(key=lambda row: hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest())
+test = []
+while len(test) < a.limit and any(strata.values()):
+    for key in sorted(strata):
+        if strata[key] and len(test) < a.limit: test.append(strata[key].pop(0))
+if not test: ap.error("test dataset is empty")
+protocol = {"scorer": SCORER_VERSION, "hint": a.hint, "n": len(test),
+            "test_sha256": hashlib.sha256(json.dumps(test, sort_keys=True).encode()).hexdigest()}
 
 def with_hint(messages):
     if not a.hint: return messages
@@ -73,7 +59,7 @@ def with_hint(messages):
     m[0]["content"] = m[0]["content"].replace("as JSON.", "as JSON." + SCHEMA_HINT, 1)
     return m
 
-def evaluate(name, gen_fn, price_per_mtok=0.0):
+def evaluate(name, gen_fn, price_per_mtok=None):
     per, t_lat = [], []
     for r in test:
         t0 = time.time()
@@ -89,12 +75,15 @@ def evaluate(name, gen_fn, price_per_mtok=0.0):
     res = {"n": n, "schema_valid": agg(per, "schema_valid"), "exact": agg(per, "exact"),
            "field_f1": agg(per, "field_f1"), "held_out_n": len(ho), "held_out_exact": agg(ho, "exact"),
            "held_out_f1": agg(ho, "field_f1"), "avg_latency_s": round(sum(t_lat) / max(n, 1), 2),
-           "est_cost_usd": round(sum(x["tokens"] for x in per) / 1e6 * price_per_mtok, 4),
+           "est_cost_usd": None if price_per_mtok is None else round(sum(x["tokens"] for x in per) / 1e6 * price_per_mtok, 4),
            "ts": time.strftime("%H:%M")}
     print(name, json.dumps(res))
     return res
 
-results = json.loads(out_path.read_text()) if out_path.exists() else {}
+saved = json.loads(out_path.read_text()) if out_path.exists() else None
+if saved is not None and saved.get("protocol") != protocol:
+    ap.error("output contains a different dataset, prompt condition, or scorer; choose a new --out file")
+results = saved["models"] if saved else {}
 
 # ---- local HF models (GX10) -------------------------------------------------
 if a.local or a.adapter:
@@ -147,8 +136,9 @@ for spec in a.api:
         return j["choices"][0]["message"]["content"], u.get("prompt_tokens", 0) + u.get("completion_tokens", 0)
     results[name] = {**evaluate(name, api_gen), "kind": "api", "model": model_id}
 
-out_path.write_text(json.dumps(results, indent=2))
+out_path.parent.mkdir(parents=True, exist_ok=True)
+out_path.write_text(json.dumps({"protocol": protocol, "models": results}, indent=2))
 hdr = f"{'model':16} {'exact':>6} {'f1':>6} {'held-out f1':>11} {'lat(s)':>7} {'$':>7}"
 print("\n" + hdr + "\n" + "-" * len(hdr))
 for k, v in sorted(results.items(), key=lambda kv: -kv[1]["field_f1"]):
-    print(f"{k:16} {v['exact']:>6} {v['field_f1']:>6} {v['held_out_f1']:>11} {v['avg_latency_s']:>7} {v['est_cost_usd']:>7}")
+    print(f"{k:16} {v['exact']:>6} {v['field_f1']:>6} {v['held_out_f1']:>11} {v['avg_latency_s']:>7} {str(v['est_cost_usd']) if v['est_cost_usd'] is not None else 'unknown':>7}")

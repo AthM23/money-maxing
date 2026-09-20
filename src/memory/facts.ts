@@ -4,6 +4,7 @@ import type { Clock } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { emit } from "../runtime/events.js";
 import { newId } from "../runtime/ids.js";
+import { getTrace, safeJson } from "../runtime/lookups.js";
 
 /** What an answer or a found document may turn into. Nothing open-ended, nothing wider than what was said. */
 export const FactCandidate = z.object({
@@ -63,10 +64,14 @@ export type ApproveFactResult =
  * supersedes the old one; the old row stays on record.
  */
 export function approveFact(db: Db, clock: Clock, factId: string, approverId: string): ApproveFactResult {
-  const fact = db.prepare("SELECT id, party_id, predicate, status FROM fact WHERE id = ?")
-    .get(factId) as { id: string; party_id: string; predicate: string; status: string } | undefined;
+  const fact = db.prepare("SELECT id, party_id, predicate, status, source_trace_ids_json FROM fact WHERE id = ?")
+    .get(factId) as { id: string; party_id: string; predicate: string; status: string; source_trace_ids_json: string } | undefined;
   if (!fact) return { status: "not_found", fact_id: factId };
   if (fact.status !== "candidate") return { status: "not_candidate", fact_id: factId };
+  const sources = safeJson(fact.source_trace_ids_json);
+  if (!Array.isArray(sources) || !sources.length || sources.some(id => typeof id !== "string" || !getTrace(db, id) || getTrace(db, id)?.superseded_by)) {
+    return { status: "unauthorised", fact_id: factId, reason: "source evidence is missing or superseded; record a fresh candidate" };
+  }
   const approver = db.prepare("SELECT limit_cents FROM approver WHERE id = ?").get(approverId) as { limit_cents: number } | undefined;
   if (!approver) return { status: "unauthorised", fact_id: factId, reason: `${approverId} is not in the approval matrix` };
 

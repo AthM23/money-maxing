@@ -15,6 +15,9 @@ export const UNSETTLED_ACTOR = "router:unsettled";
  * something is parked or asked, a tier refused or was blocked, or every model tier tried and none settled it.
  */
 export function intentStanding(db: Db, intentId: string): IntentStatus {
+  // A source amendment cannot be cleared simply because the old entry already posted.
+  if (db.prepare(`SELECT 1 FROM workpaper w JOIN decision d ON d.id = w.decision_id
+    WHERE d.intent_id = ? AND d.mode = 'live' AND w.stale = 1 LIMIT 1`).get(intentId)) return "waiting_on_human";
   const waiting = db
     .prepare(
       `SELECT

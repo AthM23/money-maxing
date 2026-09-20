@@ -46,10 +46,8 @@ export function bankUnmatched(db: Db, opts: { side?: "credit" | "debit"; since?:
   const rows = db
     .prepare(
       `SELECT b.*, COALESCE((
-         SELECT SUM(CASE WHEN json_array_length(json_extract(d.proposal_json, '$.applications')) > 0
-                         THEN (SELECT SUM(a.value ->> '$.amount_cents') FROM json_each(json_extract(d.proposal_json, '$.applications')) a)
-                         ELSE (SELECT COALESCE(SUM(ABS((l.value ->> '$.debit_cents') - (l.value ->> '$.credit_cents'))), 0)
-                               FROM json_each(json_extract(d.proposal_json, '$.entries')) l WHERE l.value ->> '$.account' = '${ACCOUNTS.cash}') END)
+         SELECT SUM((SELECT COALESCE(SUM(ABS((l.value ->> '$.debit_cents') - (l.value ->> '$.credit_cents'))), 0)
+                     FROM json_each(json_extract(d.proposal_json, '$.entries')) l WHERE l.value ->> '$.account' = '${ACCOUNTS.cash}'))
          FROM decision d WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND json_extract(d.proposal_json, '$.bank_txn_id') = b.id), 0) AS applied_cents
        FROM bank_txn b
        WHERE NOT EXISTS (SELECT 1 FROM bank_match_seed s WHERE s.bank_txn_id = b.id)

@@ -952,6 +952,81 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 5. Realised FX only if there is time on both lanes: it needs currency and rate on invoices and bank lines (lane B) and
    one deterministic kernel check (lane A).
 
+### 2026-09-19 22:52 ET — Demo story and documents proposed; withholding tax built and run on real models; review findings all closed (Person A)
+
+- **Two proposals for the team, from the read of Maximor's site:** `context/DEMO_STORY.md` ("The 2%": Learns → Runs →
+  the 2% in three kinds of not knowing → Improves → the auditor, each beat marked built or not built) and
+  `context/DEMO_DOCUMENTS.md` (what real bank lines, remittance advices and AP documents look like, and the cheap
+  changes to the seed: keep every id, rename the film-and-TV customers, label entities, currencies and bank accounts,
+  add remittance advice emails). Neither is agreed yet. Karan's framing of the judges' point: a workflow that exists
+  only for the demo loses; show pain real finance teams have, on realistic documents.
+- **On Preet's plain-language summary of the project:** right about the spine (detective, dumb checker, one question to
+  a person, remembered with scope) and about lane C. Two corrections for anything said on stage: the routine work is
+  done by **code** (exact matches and compiled rules: 8 of 11 receipts in the seeded July with no model call), not by
+  the small model; and the summary leaves out Learns, Improves, earned autonomy and the auditor, which are the beats
+  that match Maximor's own widget. "The fix ripples to future invoices and the forecast" is not built on lane A's
+  side (the event is emitted; nothing consumes it yet).
+- **Withholding tax deducted at source** (new kind `tax_withholding`, account 1350 Withholding tax receivable).
+  Not a short-pay and not a discount: the kernel (J4) refuses it on any other account and refuses 1350 under any
+  other kind. A person's answer can choose it and is remembered as a standing **rate** with an end date, so next
+  month's different amount books from code with no model and no question (tested). The demo world gains a Bengaluru
+  customer paying net of 10% TDS, with the remittance advice in the mailbox and the treatment in the policy memo.
+  Settlement kinds are now one list in the contract (`NON_CASH_SETTLEMENT_KINDS`, `REDUCES_INVOICE_KINDS`) used by
+  kernel, ledger, worker and audit pack. **Additive contract change: one proposal kind, one account.**
+- **Run on real models, twice.** First run: Haiku and then Sonnet both named it correctly on their own (kind, 1350,
+  the memo quoted verbatim) and were rejected by the kernel on mechanics, not accounting: the cash amount in
+  `applications`, a bank id used as a trace id, a bank line cited on an entry that moves no cash, the written memo
+  cited in `policy_refs`. Then the Sonnet call **hung for twenty minutes** and had to be killed. Fixes: the tool
+  descriptions now say what those four fields mean, and each model tier has a wall-clock limit (150, 240, 300 s)
+  after which the case moves up a tier or to a person. Second run: **Haiku alone, 20 turns, $0.065**: Dr 1350 / Cr
+  1200 for $1,800 against INV-1071, memo quoted, a judgment note explaining the inference, a standing fact candidate
+  at 10% (applies to nothing until a person approves it). Parked for a person, as it should be: over $500, and the
+  kind has no track record.
+- **Closed vocabularies after seeing real model output:** the question key (`predicate`, `decision_kind`) and now
+  the fact `predicate` are closed lists. Free text in either would let a rephrased question be asked twice or a newer
+  fact fail to supersede an older one.
+- **The rest of the second review is closed** (audit and AP, by a separate builder, every fix with a test that failed
+  first): duplicate bills one cent apart or with the period written with a day on it; re-performance now rebuilds
+  balances from the ledger instead of believing the case file's snapshot; a locked period with no lock time stays
+  locked; the audit pack runs with the app configuration; the independence fence is an allow-list; unknown-tier
+  auto-posts are must-test; remit details compared canonically.
+- Paid model spend by lane A tonight, all on Karan's key: about $0.75 (Initech $0.069 and $0.078, Wayne $0.21,
+  withholding tax $0.061 + a killed Sonnet call of unknown cost + $0.065, the accidental skeleton run about $0.13).
+- `pnpm test` → 48 files, **473 passing**; typecheck clean. **Still to do on lane A:** run the Slack desk live with a
+  person clicking; the improve beat and run 2 on the seeded world; README results and limitations. **Team:** the
+  Plume project must exist by 23:59 tonight.
+
+### 2026-09-19 23:02 ET — Preparer, reviewer, revision loop run on real models; first messages delivered to Slack; README (Person A)
+
+- **The whole review loop ran on real models on the seeded world, for the first time.** Initech, draft 1 (Haiku,
+  $0.052): the Opus controller **declined it on the record**: the concession was properly authorised, but two of the
+  four evidence claims did not say what they were cited for ("paid $10,800 on 12 July" rested on an instruction in
+  an email, not on a bank line), and it raised a real accounting point: 12 of July's 31 days were already delivered,
+  so that sliver belongs against revenue, not deferred revenue. Draft 2 (Haiku, $0.070, given the controller's
+  concerns): three sources (the CEO's email, the contract, the concessions memo). Second review: **agrees**, with the
+  ratable sliver noted as immaterial at $1,200. Over $500, so it is parked for a person with the controller's note.
+  A reviewer's concerns now reach the next preparer **from the record** (`runCase` reads declined drafts on the case),
+  so they survive even when the revision runs in a later pass.
+- **Wayne again, with the closed vocabularies:** Haiku handed up ($0.056), Sonnet escalated ($0.219, 3 minutes):
+  predicate `shortfall_reason`, kind `credit_memo`, four valid answers with short labels. The first run's question
+  could not have been sent: its four answer ids were invented (every button would have done nothing) and its labels
+  were sentences (Slack refuses a message with a button label over 75 characters). Answer ids are now the five
+  treatments the runtime can act on, labels are at most 60 characters, and every Slack text field is clipped to
+  Slack's limits.
+- **Slack, live:** `pnpm desk data/footnote.db --once` delivered both messages to the Northwind Systems workspace:
+  Wayne's question to the account owner's mapped user and Initech's approval request, with the controller's note, to
+  the controller's mapped user (all personas map to one real user today). A desk is now running on lane A's machine
+  so clicks come back through `recordHumanAnswer` and `approveDecision`. **The click itself has not been tested:**
+  it needs a person in that workspace.
+- **Root `README.md` drafted** (there was none): the loop in the order of Maximor's widget, what stops a wrong entry,
+  a measured table with n, limits stated plainly (six false-auto-post paths found by review and closed; one entity,
+  one currency, one bank; only AR end to end; same-family controller; Slack click untested; in-sample backtest; the
+  ripple is not built), and the commands. Lane B and C owners should correct their parts.
+- **Known gap found here:** the controller's own model cost is not metered into `decision.cost_micros`, so the
+  scoreboard's cost line understates a run that includes reviews.
+- Paid spend this stretch: about $0.45 of investigator cost on the scoreboard, plus four Opus reviews not metered.
+- `pnpm test` → 48 files, **474 passing**; typecheck clean.
+
 ### 2026-09-19 ~23:15 ET — Phase 2, Person B: the spine runs across AR → revenue → forecast → close on one ledger; two independent reviews, 22 findings fixed (AthM23 + Claude Code session)
 
 - **Landed (all of B's Phase 2 column).** Conventions and event payloads: [`src/engines/README.md`](../src/engines/README.md).
@@ -1037,6 +1112,37 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - This working tree also holds another session's uncommitted research (`context/research/storytelling/`, a sponsor PDF,
   and the two entries above this one). They were left uncommitted and untouched by this commit.
 
+### 2026-09-19 23:25 ET — Architecture/code audit, safety fixes, remittance scene and demo decisions (Codex)
+
+- Reviewed all twenty architecture sheets, GitHub/local code and the user's pasted storytelling artifact.
+  Incorporated concurrent code commits through `d602757` before validation and results-only `6a2bb33` afterward. Full findings, decisions,
+  reproduction and remaining work: `context/AUDIT_2026-09-19.md`.
+- Decision: avenue A → scoped learning → audit proof; keep synthetic Northwind and existing fixtures; defer FX,
+  multi-entity, ASC 606, equity and usage-revenue work. Fine-tune remains an extraction experiment.
+- Fixed transactional posting/approval, terminal declines and signer identity, full bank-cash consumption,
+  replay/live idempotency, superseded evidence and stale workpapers, poisoned/retried human answers, explicit
+  standing-answer expiry, fact amount verification, ambiguous cash matching, AP duplicate scope and malformed
+  bank files. Skeleton now uses earned autonomy. New seeds authorize the Claude reviewer below materiality.
+- Learned rules now name observed customers; an unseen strategic short-payer cannot inherit the bank-fee rule.
+  Legacy generated policies without customer scope fail J_SCOPE until a scoped replacement is approved.
+  Leave-one-out respects customer coverage and the three-case compilation minimum.
+- Added `pnpm demo:remittance`: a separate in-memory 14-invoice scene; $13,505 applied, $495 left on INV-3001,
+  with the kernel independently verifying the per-invoice remittance. Defined email-body format only; not XLSX
+  or the fine-tuned model. Wrong-allocation and ambiguous-match regressions covered.
+- Corrected benchmark schema scoring, malformed output handling, result provenance and test-set threshold leakage.
+  Prior model figures need rerun under v2. Four Python tests pass; no paid/GPU run or new GBT score claimed.
+- Validation: 488 TS tests / 50 files; typecheck clean; four Python tests. Fresh seeded world: 6/11 intents
+  resolved in code, ten cash entries, zero model calls; audit 10/10 clean. Approving the synthetic learned rule
+  leaves two write-offs proposed for review. This supersedes the earlier 8/11 AUTO claim under forced autonomy.
+  The controlled 24→0 model-call rerun test remains passing; run 2 still needs six approvals.
+- Console now binds loopback and flags stale workpapers; HTTP/API and script-syntax smoke pass. Browser visual
+  check and live Slack click are still unverified. Added CI workflow, not yet executed remotely.
+- Corpus remains 11/110 routed cases executed (all correct), 99 NOT_RUN, plus five invariant rows. Updated
+  `tests/RESULTS.md` and matching CSV statuses; passing unit tests do not imply full corpus coverage.
+- No live messages, paid model calls, accounting-system writes or production-data resets during this audit.
+  Already-posted source corrections remain explicit review holds; rematching existing CaseFiles and a reviewed
+  reversal/acknowledgement workflow remain follow-up work, described in the audit.
+
 ### 2026-09-19 ~23:30 ET — Lane B Phase 2 checked against the newer `main` (AthM23 + Claude Code session)
 
 - `main` moved ten commits (`03ca96d..c205715`: A's second review, withholding tax, `desk`, demo documents, Lane C
@@ -1049,3 +1155,4 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   revenue tied). No semantic conflict found this time. Not re-checked on the merged tree: the console in a browser.
 - `atharv-branch` itself is **not** merged with `main` yet; fast-forward it to `b-phase2-on-main` once the working tree
   is clean. Finding 1 for Karan in the 23:15 entry (a rejected decision can still be approved) is still open on `main`.
+

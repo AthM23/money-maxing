@@ -6,12 +6,17 @@ import type { Db } from "./db.js";
 import { payloadText } from "./payloadText.js";
 
 /** Read-side adapters from SQLite rows to the kernel's plain types. No writes happen here. */
-export function getTrace(db: Db, id: string): TraceLite | undefined {
+export function getTrace(db: Db, id: string, asOf?: string): TraceLite | undefined {
   const row = db
     .prepare("SELECT id, recorded_time, party_id, payload_json FROM trace WHERE id = ?")
     .get(id) as { id: string; recorded_time: string; party_id: string | null; payload_json: string } | undefined;
   if (!row) return undefined;
-  return { id: row.id, recorded_time: row.recorded_time, party_id: row.party_id, payload_text: payloadText(row.payload_json) };
+  const newer = db.prepare(`SELECT n.id FROM trace n JOIN trace old ON old.id = ?
+    WHERE n.source = old.source AND n.external_id = old.external_id AND n.version > old.version
+      ${asOf ? "AND n.recorded_time <= ?" : ""} ORDER BY n.version DESC LIMIT 1`)
+    .get(...(asOf ? [id, asOf] : [id])) as { id: string } | undefined;
+  return { id: row.id, recorded_time: row.recorded_time, party_id: row.party_id,
+    payload_text: payloadText(row.payload_json), ...(newer ? { superseded_by: newer.id } : {}) };
 }
 
 export function getDoc(db: Db, id: string): DocLite | undefined {
@@ -27,7 +32,7 @@ export function getDoc(db: Db, id: string): DocLite | undefined {
 
 export function getBankTxn(db: Db, id: string): BankTxnLite | undefined {
   return db
-    .prepare("SELECT id, amount_cents, posted_date, party_id FROM bank_txn WHERE id = ?")
+    .prepare("SELECT id, amount_cents, posted_date, party_id, descriptor FROM bank_txn WHERE id = ?")
     .get(id) as BankTxnLite | undefined;
 }
 

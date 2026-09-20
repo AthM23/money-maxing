@@ -31,8 +31,8 @@ export async function reviewAndRevise(
   if (!caseFile) return { first, revised_decision_id: null, second: null };
   decline(db, deps.clock ?? systemClock, decisionId, controller.id, first.verdict.note);
   const revised = await runCase(db, caseFile, {
+    // The reviewer's concerns reach the next preparer from the record (runCase reads declined drafts on the case).
     mode: "live", autonomy_level: deps.autonomy_level ?? "auto", investigators, start_tier: Math.min(2, investigators.length), clock: deps.clock, config: deps.config,
-    extra_notes: [`An independent controller rejected the previous draft: ${first.verdict.note}`, ...first.verdict.concerns.map((c) => `Concern: ${c}`)],
   });
   if (!revised.decision_id || revised.final_route !== "PROPOSE") return { first, revised_decision_id: revised.decision_id, second: null };
   const second = await controllerReview(db, controller, revised.decision_id, deps);

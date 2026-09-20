@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { IsoDate } from "../contract/types.js";
 import type { ChatPayload, Connector, MailPayload, RawItem } from "./types.js";
 
 /**
@@ -133,15 +134,21 @@ export function parseBankCsv(text: string, label = "bank file"): RawItem[] {
   if (lines[0] !== BANK_HEADER) throw new Error(`REFUSE ${label}: unexpected header`);
   const width = BANK_HEADER.split(",").length;
   let balance: number | null = null;
+  const ids = new Set<string>();
   return lines.slice(1).map((line, i): RawItem => {
     const f = splitCsv(line);
     if (f.length !== width) throw new Error(`REFUSE ${label}: row ${i + 2} has ${f.length} fields, header has ${width}`);
     const [id, posted, amount, descriptor, method, recorded, running] = f as [string, string, string, string, string, string, string];
+    if (!id || ids.has(id)) throw new Error(`REFUSE ${label}: missing or duplicate external_id at row ${i + 2}`);
+    ids.add(id);
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(recorded) || !Number.isFinite(Date.parse(recorded)) || !IsoDate.safeParse(recorded.slice(0, 10)).success) {
+      throw new Error(`REFUSE ${label}: row ${i + 2} recorded_time is not a valid UTC timestamp`);
+    }
     const cents = toCents(amount, label, i + 2);
     const printed = toCents(running, label, i + 2);
     if (balance !== null && balance + cents !== printed) throw new Error(`REFUSE ${label}: row ${i + 2} breaks the running balance (${balance} + ${cents} is not ${printed})`);
     balance = printed;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(posted)) throw new Error(`REFUSE ${label}: row ${i + 2} posted_date is not YYYY-MM-DD`);
+    if (!IsoDate.safeParse(posted).success) throw new Error(`REFUSE ${label}: row ${i + 2} posted_date is not a valid YYYY-MM-DD`);
     return {
       source: "bank", kind: "bank_line", external_id: id, event_time: `${posted}T00:00:00Z`, recorded_time: recorded,
       payload: { posted_date: posted, amount_cents: cents, amount, descriptor, method },
@@ -154,7 +161,9 @@ export function parseBankCsv(text: string, label = "bank file"): RawItem[] {
 function toCents(s: string, label: string, row: number): number {
   const m = /^(-?)(\d+)\.(\d{2})$/.exec(s);
   if (!m) throw new Error(`REFUSE ${label}: row ${row} amount "${s}" is not a plain decimal with two places`);
-  return (m[1] ? -1 : 1) * (Number(m[2]) * 100 + Number(m[3]));
+  const cents = (m[1] ? -1 : 1) * (Number(m[2]) * 100 + Number(m[3]));
+  if (!Number.isSafeInteger(cents)) throw new Error(`REFUSE ${label}: row ${row} amount exceeds safe integer cents`);
+  return cents;
 }
 
 function splitCsv(line: string): string[] {
@@ -171,6 +180,7 @@ function splitCsv(line: string): string[] {
     else if (ch === ",") { out.push(cur); cur = ""; }
     else cur += ch;
   }
+  if (quoted) throw new Error("REFUSE bank file: unterminated quoted field");
   out.push(cur);
   return out;
 }

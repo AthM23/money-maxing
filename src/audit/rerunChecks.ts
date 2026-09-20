@@ -3,6 +3,7 @@ import type { EntryLine } from "../contract/types.js";
 import { normalizeWs } from "../kernel/util.js";
 import type { Db } from "../runtime/db.js";
 import { payloadText } from "../runtime/payloadText.js";
+import { getTrace } from "../runtime/lookups.js";
 import { entryAmountCents, finding } from "./shared.js";
 import type { RerunSubject } from "./subject.js";
 import type { Finding } from "./types.js";
@@ -63,6 +64,9 @@ export function evidenceIntegrity(db: Db, subject: RerunSubject): Finding[] {
     const row = db.prepare("SELECT content_hash, payload_json FROM trace WHERE id = ?").get(id) as TraceRow | undefined;
     loaded.set(id, row ?? null);
     out.push(...traceProblems(subject.decision_id, id, row));
+    const superseded = getTrace(db, id)?.superseded_by;
+    if (superseded) out.push(finding("evidence_invalidated", `trace ${id} has been replaced by ${superseded}; review the affected entry`,
+      { decision_id: subject.decision_id, trace_id: id }));
   }
   for (const item of subject.proposal.evidence) {
     const row = loaded.get(item.trace_id);

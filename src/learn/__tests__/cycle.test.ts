@@ -108,13 +108,13 @@ describe("improves: what a person approves beyond the rule becomes the rule's ne
     expect(db.prepare("SELECT code, version, status FROM policy ORDER BY version").all()).toEqual([
       { code: "SHORT-PAY-01", version: 1, status: "retired" }, { code: "SHORT-PAY-01", version: 2, status: "approved" }]);
 
-    // The next $55 fee closes on v2 with no model call.
+    // An unseen customer does not inherit the learned policy, even under the new ceiling.
     seedCustomer(db, 8, 5500);
     db.exec("UPDATE gl_line SET debit_cents = debit_cents + 2000000 WHERE entry_id = 'je_open' AND line_no = 1; UPDATE gl_line SET credit_cents = credit_cents + 2000000 WHERE entry_id = 'je_open' AND line_no = 2;");
     const eighth = await runOpenIntents(db, { investigators: [writesOffTheFee], clock: fixedClock });
-    expect(eighth.worked).toMatchObject([{ intent_id: "int_8", tier_used: 0 }]);
-    const cited = db.prepare("SELECT json_extract(proposal_json, '$.policy_refs[0]') AS ref FROM decision WHERE intent_id = 'int_8' AND kind = 'write_off'").get() as { ref: string };
-    expect(cited.ref).toBe(v2!.policy_id);
+    expect(eighth.worked).toMatchObject([{ intent_id: "int_8", tier_used: 1, final_route: "PROPOSE" }]);
+    const cited = db.prepare("SELECT json_extract(proposal_json, '$.policy_refs[0]') AS ref FROM decision WHERE intent_id = 'int_8' AND kind = 'write_off'").get() as { ref: string | null };
+    expect(cited.ref).toBeNull();
   });
 });
 

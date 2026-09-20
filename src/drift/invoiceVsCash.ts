@@ -5,6 +5,7 @@ import { bankUnmatched, openInvoices, type InvoiceRow, type UnmatchedBankTxn } f
 import { applicableFacts } from "../memory/applicability.js";
 import { systemClock, type Clock } from "../runtime/config.js";
 import { newId } from "../runtime/ids.js";
+import { findRemittance } from "./remittance.js";
 
 export const COMPARATOR = "C2_invoice_vs_cash";
 const UNIDENTIFIED = "unidentified";
@@ -38,7 +39,7 @@ export function runInvoiceVsCash(db: Db, clock: Clock = systemClock): DriftFindi
 }
 
 function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
-  const { party_id, docs } = candidateDocs(db, txn);
+  const { party_id, docs, remittance, matching_issue } = candidateDocs(db, txn);
   const expected = docs.reduce((n, d) => n + d.open_cents, 0);
   const received = txn.unapplied_cents;
   const shortfall = expected - received;
@@ -56,7 +57,7 @@ function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
   const caseFile = CaseFile.parse({
     intent_id: intentId, function: "ar", party_id, entry_date: txn.posted_date, bank_txn_id: txn.id,
     doc_ids: docs.map((d) => d.id), expected_cents: expected, received_cents: received, shortfall_cents: shortfall,
-    method: methodOf(txn.method), trace_ids: txn.trace_id ? [txn.trace_id] : [],
+    method: methodOf(txn.method), trace_ids: [...(txn.trace_id ? [txn.trace_id] : []), ...(remittance ? [remittance.trace_id] : [])], remittance, matching_issue,
   });
   db.prepare("INSERT INTO intent (id, function, question, owner, status, end_condition_json, case_json, created_at) VALUES (?, 'ar', ?, 'ar', 'open', ?, ?, ?)")
     .run(intentId, question(kind, txn, docs, shortfall, payerLabel(db, txn, party_id)), JSON.stringify({ bank_txn_applied: txn.id, docs_settled: docs.map((d) => d.id) }), JSON.stringify(caseFile), clock.now());
@@ -81,38 +82,59 @@ function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
  * amount against the payer's open invoices. A payer with nothing open is checked against its subsidiaries for an
  * exact amount only; the case then names the subsidiary, and the kernel's party tie decides whether that stands.
  */
-function candidateDocs(db: Db, txn: UnmatchedBankTxn): { party_id: string; docs: InvoiceRow[] } {
+function candidateDocs(db: Db, txn: UnmatchedBankTxn): { party_id: string; docs: InvoiceRow[]; remittance?: CaseFile["remittance"]; matching_issue?: string } {
   const payer = txn.party_id ?? UNIDENTIFIED;
+  const unresolved = (reason: string) => ({ party_id: payer, docs: [], matching_issue: reason });
+  if (!txn.party_id) return unresolved("Payer is unidentified; invoice references alone do not establish the payer.");
+  const remits = findRemittance(db, txn);
+  if (remits.length > 1) return unresolved("Multiple remittances match this payment; resolve the conflicting instructions.");
+  if (remits.length === 1) {
+    const remit = remits[0]!;
+    const open = openInvoices(db, payer);
+    const named = remit.data.applications.map(a => open.find(d => d.id === a.doc_id));
+    if (named.some((d, i) => !d || remit.data.applications[i]!.amount_cents > d.open_cents)) return unresolved("Remittance names a missing, foreign, settled or over-allocated invoice.");
+    const docs = named as InvoiceRow[];
+    // One short line follows the same investigation path as a single short-paid invoice.
+    docs.sort((a, b) => Number(a.open_cents > remit.data.applications.find(x => x.doc_id === a.id)!.amount_cents)
+      - Number(b.open_cents > remit.data.applications.find(x => x.doc_id === b.id)!.amount_cents));
+    return { party_id: payer, docs, remittance: { trace_id: remit.trace_id, applications: remit.data.applications } };
+  }
   const refs = [...new Set(txn.descriptor.match(/INV-\d+/g) ?? [])];
   if (refs.length > 0) {
     const all = openInvoices(db);
     const named = refs.map((r) => all.find((i) => i.id === r)).filter((i): i is InvoiceRow => i !== undefined);
     const owner = named[0]?.party_id;
-    if (owner && named.every((i) => i.party_id === owner) && (txn.party_id === null || txn.party_id === owner)) return { party_id: owner, docs: named };
+    if (owner && named.length === refs.length && named.every((i) => i.party_id === owner) && txn.party_id === owner) return { party_id: owner, docs: named };
+    return unresolved("Explicit invoice references do not all resolve to open invoices for this payer.");
   }
   const own = openInvoices(db, payer);
-  if (own.length > 0) return { party_id: payer, docs: covering(own, txn.unapplied_cents) };
+  if (own.length > 0) {
+    const docs = covering(own, txn.unapplied_cents);
+    return docs.length ? { party_id: payer, docs } : unresolved("No unique invoice allocation; obtain the customer's remittance.");
+  }
 
   const subsidiaries = db.prepare("SELECT id FROM party WHERE parent_id = ?").all(payer) as { id: string }[];
-  for (const s of subsidiaries) {
-    const exact = openInvoices(db, s.id).find((i) => i.open_cents === txn.unapplied_cents);
-    if (exact) return { party_id: s.id, docs: [exact] };
-  }
+  const exact = subsidiaries.flatMap(s => openInvoices(db, s.id).filter(i => i.open_cents === txn.unapplied_cents));
+  if (exact.length === 1) return { party_id: exact[0]!.party_id, docs: exact };
+  if (exact.length > 1) return unresolved("Multiple subsidiary invoices match the receipt.");
   return { party_id: payer, docs: [] };
 }
 
-/** One invoice for the exact amount if there is one; else oldest first until the cash is covered. */
+/** A single invoice, or a unique exact subset. A search limit means unresolved, never first-match wins. */
 function covering(open: InvoiceRow[], cents: number): InvoiceRow[] {
-  const exact = open.find((i) => i.open_cents === cents);
-  if (exact) return [exact];
-  const out: InvoiceRow[] = [];
-  let sum = 0;
-  for (const inv of open) {
-    if (sum >= cents) break;
-    out.push(inv);
-    sum += inv.open_cents;
+  if (open.length === 1) return open;
+  if (open.length > 24) return [];
+  const matches: InvoiceRow[][] = [];
+  let visits = 0;
+  function visit(i: number, sum: number, chosen: InvoiceRow[]): void {
+    if (++visits > 20_000 || matches.length > 1 || sum > cents) return;
+    if (sum === cents) { matches.push(chosen); return; }
+    if (i === open.length) return;
+    visit(i + 1, sum + open[i]!.open_cents, [...chosen, open[i]!]);
+    visit(i + 1, sum, chosen);
   }
-  return out;
+  visit(0, 0, []);
+  return visits <= 20_000 && matches.length === 1 ? matches[0]! : [];
 }
 
 function explainingFact(db: Db, c: CaseFile): string | undefined {

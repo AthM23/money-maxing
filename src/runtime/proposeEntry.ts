@@ -35,6 +35,12 @@ export type ProposeResult =
  * then post, park for approval, or persist a block. An agent can call this; it cannot post any other way.
  */
 export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: RuntimeDeps = {}): ProposeResult {
+  // Reserve the writer before reading balances, evidence or approvals. Another connection cannot
+  // change a gate input between validation and the ledger write.
+  return db.transaction(() => proposeInTransaction(db, input, meta, deps)).immediate();
+}
+
+function proposeInTransaction(db: Db, input: unknown, meta: ProposeMeta, deps: RuntimeDeps): ProposeResult {
   const clock = deps.clock ?? systemClock;
   const config = deps.config ?? DEFAULT_CONFIG;
   const parsed = Proposal.safeParse(input);
@@ -42,7 +48,7 @@ export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: Ru
   const proposal = parsed.data;
   if (!intentExists(db, proposal.intent_id)) return { status: "invalid", issues: [`intent_id: unknown intent ${proposal.intent_id}`] };
 
-  const existing = findExisting(db, proposal);
+  const existing = meta.mode === "live" ? findExisting(db, proposal) : undefined;
   if (existing?.posted_at) return { status: "posted", decision_id: existing.decision_id, route: existing.route === "PROPOSE" ? "PROPOSE" : "AUTO", entry_id: existing.entry_id };
   if (existing && meta.mode === "live") return { status: "pending_approval", decision_id: existing.decision_id, route: "PROPOSE", marks: [] };
 
@@ -115,6 +121,7 @@ export function findExisting(db: Db, proposal: Proposal): { decision_id: string;
        FROM decision d
        WHERE d.intent_id = ? AND d.mode = 'live' AND d.proposal_json = ?
          AND (d.posted_at IS NOT NULL OR (d.route = 'PROPOSE'
+              AND NOT EXISTS (SELECT 1 FROM workpaper w WHERE w.decision_id = d.id AND w.stale = 1)
               AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected')))
        ORDER BY d.posted_at IS NULL, d.rowid LIMIT 1`,
     )

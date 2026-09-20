@@ -63,6 +63,7 @@ export function fact(id: string, over: Partial<FactLite> = {}): FactLite {
     id,
     party_id: "cust:initech",
     predicate: "discount_terms",
+    value: { amount_cents: 120_000 },
     status: "active",
     valid_from: "2026-01-01",
     valid_to: "2026-12-31",
