@@ -19,6 +19,8 @@ export interface PickupFilter {
   limit?: number;
   /** True when this pass has model tiers. Without them, a case only code has already tried is not tried again. */
   has_model_tiers?: boolean;
+  /** Try every open case again regardless, e.g. after the code itself was fixed. */
+  retry?: boolean;
 }
 
 interface IntentRow { id: string; function: string; case_json: string }
@@ -35,7 +37,7 @@ export function pickOpenIntents(db: Db, filter: PickupFilter = {}): { ready: Pic
        ORDER BY created_at, id`,
     )
     .all(filter.function ?? null, filter.function ?? null) as IntentRow[])
-    .filter((row) => filter.has_model_tiers || worthAnotherCodePass(db, row.id))
+    .filter((row) => filter.retry || filter.has_model_tiers || worthAnotherCodePass(db, row.id))
     .slice(0, filter.limit ?? undefined);
   const ready: PickedIntent[] = [];
   const skipped: SkippedIntent[] = [];
