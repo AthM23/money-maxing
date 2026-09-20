@@ -55,8 +55,9 @@ const REQUEST_ID_MAX = 50; // Intuit's limit on the `requestid` query parameter
 /**
  * The idempotency key of one create: sha256 of the step kind and the object's NATURAL key, never of a decision id
  * (random per run). Same object after a reset → same key, so a replayed POST cannot make a second one.
- * UNVERIFIED against the sandbox: that Intuit answers a repeated `requestid` with the original response, and what it
- * does when the original object has since been deleted in QuickBooks (it may hand back the dead Id).
+ * Verified against the sandbox on 2026-09-20: Intuit answers a repeated `requestid` with the original response, and
+ * still does once that object has been deleted, handing back the dead Id and creating nothing. The mirror therefore
+ * checks every create by Id and salts the key with the dead Ids (`createForReal` in mirror.ts).
  */
 export function mirrorRequestId(kind: string, naturalKey: readonly string[]): string {
   return createHash("sha256").update(JSON.stringify([kind, ...naturalKey])).digest("hex").slice(0, REQUEST_ID_MAX);

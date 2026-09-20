@@ -1538,3 +1538,32 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   connector is about 250 lines plus tests and changes nothing a judge sees. **Proposed: do not build it; keep CRM local;
   if an hour is free, make the scene use the CRM note it already has** (corroboration that the credit was requested and
   not granted, and the account owner for the escalation), which is lane A's scenario code.
+
+
+### 2026-09-20 ~03:00 ET — Lane B: the mirror ran live for the first time, is live by default, and can be reset; an Intuit replay defect found and fixed (AthM23 + Claude Code session)
+
+- **Direction (AthM23):** what the agents post should land in QuickBooks by default, and the same demo must be
+  showable to one judge after another. **Supersedes** the "Not run / Hazard" bullet of the ~02:00 entry.
+- **Changed:** `pnpm mirror` is live by default; `--dry-run` is the old behaviour; `--live` is still accepted.
+  `pnpm spine` is unchanged (dry run unless `--qbo-live`). New `pnpm mirror --reset` (`src/mirror/reset.ts`): deletes
+  every Payment, CreditMemo (with its attached files) and JournalEntry carrying the mirror's `fn:dec_…` marker, Payments
+  first because they are what links the others to an invoice; never touches what the seeder made (`fn:<world id>`);
+  clears the local mirror log, ripples and artifacts and rewinds the mirror's bus cursor. It finds its objects in
+  QuickBooks, not in a database, because the stage database is thrown away between runs.
+- **Defect found by rehearsing, fixed with a test that simulates it:** after a reset, run 2 printed "13 mirrored" and
+  QuickBooks had not changed. Intuit answers a create under an already-used `requestid` with the ORIGINAL response even
+  after that object was deleted: dead Id, nothing created (this was marked UNVERIFIED in `payloads.ts`; now verified).
+  Every create is now checked by Id, and a replay is re-sent under a `requestid` salted with the dead Ids QuickBooks
+  handed back (`createForReal` in `mirror.ts`): still a pure function of the natural key, no local state needed.
+- **Measured live, sandbox:** four runs in a row with a reset between. Seeded world (`data/global-july.db` copy, `learn`
+  + `worker --code-only`): 13 of 13 steps mirrored (11 Payments, 2 FX JournalEntries with their applications), then
+  `pnpm qbo:check` → 18 of 18 invoices agree, **$58,207.98 open on each side**; after `--reset` → $299,044.98 on each
+  side again. Stage path (`demo:scenario` database): 19 of 19 mirrored including the fee write-offs as `WO-…`
+  JournalEntries, 17 of 17 agree at $38,104.98, reset removed all 19. The sandbox was left at its seeded state.
+  `pnpm test` → 76 files, 703 passing, the same 2 Windows `EBUSY` failures in lane A's `scenario/cli.test.ts`.
+- **Not exercised live:** a credit memo through the mirror (no judgment leg was run, so no CreditMemo or attachment was
+  sent or deleted; the Attachable delete in the reset is UNVERIFIED). **Not reset by any command:** the desk's Slack
+  DMs from earlier runs.
+- **For Karan (runbook):** the between-judges reset is three commands, written up in `SEED_GLOBAL_JULY.md` under
+  "Showing the same demo again"; `pnpm mirror` + `pnpm qbo:check` after the worker is a 20-second beat that shows the
+  agents' entries inside a real accounting system. Proposed, not added to `DEMO_RUNBOOK.md` (lane A's file).

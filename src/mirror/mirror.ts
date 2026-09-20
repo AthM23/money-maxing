@@ -62,7 +62,31 @@ interface StepSpec {
   delta_cents?: number;
   /** Look for an object an earlier, interrupted run (or QuickBooks itself) already made. Adopted instead of duplicated. */
   find: (c: QboLike) => Promise<Found>;
-  act: (c: QboLike) => Promise<QboObject>;
+  /**
+   * `salt` is empty on the first try. It goes into the create's `requestid`, and carries the dead Ids of earlier
+   * replays: see `createForReal`. An upload has no `requestid` and ignores it.
+   */
+  act: (c: QboLike, salt: readonly string[]) => Promise<QboObject>;
+}
+
+/** How many dead objects one natural key may have behind it: one per `pnpm mirror --reset` since the key was first used. */
+const MAX_REPLAYS = 25;
+
+/**
+ * Seen live on 2026-09-20: after an object is deleted in QuickBooks, a create under the same `requestid` makes nothing
+ * and answers with the ORIGINAL response, dead Id and all. So every create is checked by Id, and a replay is sent again
+ * under a `requestid` salted with the dead Ids so far: still a pure function of the natural key and of what QuickBooks
+ * itself said, so a retried POST stays idempotent and no local state has to survive a reset.
+ */
+async function createForReal(c: QboLike, spec: StepSpec): Promise<QboObject> {
+  const dead: string[] = [];
+  for (;;) {
+    const obj = await spec.act(c, dead);
+    if (spec.entity === "Attachable" || typeof obj.Id !== "string" || obj.Id === "") return obj;
+    if ((await c.query(`select * from ${spec.entity} where Id = '${qboEscape(obj.Id)}'`)).length > 0) return obj;
+    if (dead.includes(obj.Id) || dead.length >= MAX_REPLAYS) throw new Error(`QuickBooks keeps answering the ${spec.kind} create with deleted object ${obj.Id}`);
+    dead.push(obj.Id);
+  }
 }
 
 const SPECIFIC_KINDS: ReadonlySet<string> = new Set(["apply_payment", "credit_memo"]);
@@ -131,7 +155,7 @@ async function mirrorPayment(pass: Pass, t: Target): Promise<void> {
       const adopt = same.find((o) => hasMarker(o, t.decision_id)) ?? same[0];
       return adopt ? { adopt } : undefined;
     },
-    act: (c) => c.create("Payment", body, { requestId: mirrorRequestId("Payment", naturalKey) }),
+    act: (c, salt) => c.create("Payment", body, { requestId: mirrorRequestId("Payment", [...naturalKey, ...salt]) }),
   });
 }
 
@@ -148,7 +172,7 @@ async function mirrorCreditMemo(pass: Pass, t: Target): Promise<void> {
     kind: "CreditMemo", entity: "CreditMemo", ripple_kind: "qbo_credit_memo", preview: body, delta_cents: -memoCents,
     summary: `QuickBooks CreditMemo ${docNumber} for $${centsToDecimal(memoCents)}`,
     find: async (c) => byNaturalKey(await c.query(`select * from CreditMemo where DocNumber = '${qboEscape(docNumber)}'`), ids.customer_id, memoCents, t.decision_id),
-    act: (c) => c.create("CreditMemo", body, { requestId: mirrorRequestId("CreditMemo", [docNumber, ids.customer_id]) }),
+    act: (c, salt) => c.create("CreditMemo", body, { requestId: mirrorRequestId("CreditMemo", [docNumber, ids.customer_id, ...salt]) }),
   });
   if (memoId === null) return; // the failed CreditMemo row brings the whole decision back on the next live pass
   const apply = applyCreditBody({ decision_id: t.decision_id, customer_id: ids.customer_id, entry_date: p.entry_date, invoice_id: invoiceId, seq, credit_memo_id: memoId, lines: ids.lines });
@@ -166,7 +190,7 @@ async function mirrorCreditMemo(pass: Pass, t: Target): Promise<void> {
       if (adopt) return { adopt };
       return zero[0] ? { conflict: zero[0], detail: `credit memo ${memoId} is already applied to a different invoice by Payment ${String(zero[0].Id)}` } : undefined;
     },
-    act: (c) => c.create("Payment", apply, { requestId: mirrorRequestId("CreditApplication", [docNumber, ids.customer_id, memoId, ...invoiceIds]) }),
+    act: (c, salt) => c.create("Payment", apply, { requestId: mirrorRequestId("CreditApplication", [docNumber, ids.customer_id, memoId, ...invoiceIds, ...salt]) }),
   });
   await attachAll(pass, t, memoId, docNumber);
 }
@@ -219,7 +243,7 @@ async function mirrorArAdjustment(pass: Pass, t: Target, prefix: string): Promis
       const agreeing = found.filter((o) => arCreditCents(o, arAccountId, ids.customer_id) === applied);
       return agreeing.length > 0 ? { adopt: agreeing.find((o) => hasMarker(o, t.decision_id)) ?? agreeing[0]! } : { conflict: found[0]! };
     },
-    act: (c) => c.create("JournalEntry", body, { requestId: mirrorRequestId("JournalEntry", [docNumber, ids.customer_id]) }),
+    act: (c, salt) => c.create("JournalEntry", body, { requestId: mirrorRequestId("JournalEntry", [docNumber, ids.customer_id, ...salt]) }),
   });
   if (journalId === null) return; // the failed JournalEntry row brings the whole decision back on the next live pass
   const apply = applyJournalBody({ decision_id: t.decision_id, customer_id: ids.customer_id, entry_date: p.entry_date, doc_number: docNumber, journal_entry_id: journalId, lines: ids.lines });
@@ -234,7 +258,7 @@ async function mirrorArAdjustment(pass: Pass, t: Target, prefix: string): Promis
       if (adopt) return { adopt };
       return zero[0] ? { conflict: zero[0], detail: `journal entry ${journalId} is already applied to a different invoice by Payment ${String(zero[0].Id)}` } : undefined;
     },
-    act: (c) => c.create("Payment", apply, { requestId: mirrorRequestId("JournalApplication", [docNumber, ids.customer_id, journalId, ...invoiceIds]) }),
+    act: (c, salt) => c.create("Payment", apply, { requestId: mirrorRequestId("JournalApplication", [docNumber, ids.customer_id, journalId, ...invoiceIds, ...salt]) }),
   });
 }
 
@@ -303,7 +327,7 @@ async function runStep(pass: Pass, t: Target, spec: StepSpec): Promise<string | 
       logStep(pass, t.decision_id, spec.kind, "failed", null, found.detail ?? `exists with different amount/customer: ${String(found.conflict.Id)}`);
       return null;
     }
-    const obj = found ? found.adopt : await spec.act(pass.client);
+    const obj = found ? found.adopt : await createForReal(pass.client, spec);
     if (typeof obj.Id !== "string" || obj.Id === "") throw new Error(`QuickBooks returned no Id for the ${spec.kind}`);
     logStep(pass, t.decision_id, spec.kind, "mirrored", obj.Id, found ? `adopted existing ${spec.entity} ${obj.Id}` : "created");
     ripple(pass, t, spec, obj.Id, true);

@@ -153,6 +153,8 @@ export class FakeQbo implements QboLike {
   /** Everything created or uploaded, by entity: what a real company would hand back to a later query. */
   stored: Array<{ entity: string; obj: QboObject }> = [];
   private next = 900;
+  /** `requestid` → what the first create under it returned. Like Intuit, a repeat answers with that, even once the object is gone. */
+  private replies = new Map<string, QboObject>();
 
   get writes(): FakeRequest[] { return this.requests.filter((r) => r.op !== "query"); }
 
@@ -163,14 +165,20 @@ export class FakeQbo implements QboLike {
 
   async create(entity: string, body: Record<string, unknown>, opts?: { requestId?: string }): Promise<QboObject> {
     this.record({ op: "create", entity, body, request_id: opts?.requestId });
+    const replay = opts?.requestId !== undefined ? this.replies.get(opts.requestId) : undefined;
+    if (replay) return replay;
     const lines = Array.isArray(body.Line) ? (body.Line as Array<{ Amount?: number }>) : [];
     // QuickBooks computes a CreditMemo's TotalAmt from its lines; a Payment is sent with one
     const obj: QboObject = { TotalAmt: lines.reduce((sum, l) => sum + (l.Amount ?? 0), 0), ...body, Id: String(this.next++) };
     this.stored.push({ entity, obj });
+    if (opts?.requestId !== undefined) this.replies.set(opts.requestId, obj);
     return obj;
   }
 
+  /** The mirror's "does what I just created exist" check is answered from `stored` and kept out of `requests`: the tests' request lists are about what the mirror decides to send. */
   async query(sql: string): Promise<QboObject[]> {
+    const byId = /^select \* from (\w+) where Id = '([^']*)'$/.exec(sql);
+    if (byId) return this.stored.filter((s) => s.entity === byId[1] && s.obj.Id === byId[2]).map((s) => s.obj);
     this.record({ op: "query", sql });
     return this.answer(sql);
   }

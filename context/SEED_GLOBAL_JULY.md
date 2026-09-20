@@ -81,7 +81,26 @@ cash the history already applied (`BTX-300` on `INV-3191`) and the accounts the 
 `pnpm qbo:check` ties AR and AP here to QuickBooks document by document, read-only (as seeded: 18 of 18 agree,
 $299,044.98 open on each side). `pnpm mirror` (dry run) or `pnpm mirror --live` after the worker sends the cash
 applications as Payments and the realised FX and fee write-offs as JournalEntries applied to their invoices; run
-`pnpm qbo:check` again and every line should agree. The live mirror has not been run, and nothing un-mirrors.
+`pnpm qbo:check` again and every line should agree. ~~The live mirror has not been run, and nothing un-mirrors.~~
+Superseded 09-20 ~03:00: `pnpm mirror` is **live by default** (`--dry-run` for the old behaviour) and
+`pnpm mirror --reset` deletes what the mirror made in QuickBooks, never what the seeder made.
+
+### Showing the same demo again (between judges)
+
+Everything the system has learned (facts, rules, answers, decisions, the mirror's log) lives in the stage database, so
+a new database file is a system with no memory. Gmail and Slack are read-only inputs and do not change during a run.
+QuickBooks is the only outside system a run writes to.
+
+```bash
+pnpm mirror --reset          # QuickBooks back to the seeded state (needs no particular database)
+rm -rf runs/stage            # the stage database and its copies: memory, rules, history, all gone
+pnpm demo:scenario runs/stage/july.db        # or the seed + ingest block above
+pnpm qbo:check               # FOOTNOTE_DB pointing at the new database: every line agrees before you start
+```
+Rehearsed live on 09-20, four runs in a row with a reset between: 13 objects mirrored each time on the seeded
+world (19 on the `demo:scenario` database), `pnpm qbo:check` agreeing to the cent after each, and the seeded state
+back after each reset. Not reset by any command: the desk's own Slack DMs from earlier runs (cosmetic; clear the DM by
+hand if the history is on screen).
 
 ## What lane A reads
 
