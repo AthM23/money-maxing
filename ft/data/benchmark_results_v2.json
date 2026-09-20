@@ -33,6 +33,20 @@
       "ts": "22:40",
       "kind": "local+lora",
       "model": "Qwen/Qwen3-4B-Instruct-2507+/home/asus/ft/out/run1/adapter"
+    },
+    "tuned06": {
+      "n": 120,
+      "schema_valid": 1.0,
+      "exact": 0.717,
+      "field_f1": 0.972,
+      "held_out_n": 74,
+      "held_out_exact": 0.757,
+      "held_out_f1": 0.977,
+      "avg_latency_s": 2.05,
+      "est_cost_usd": null,
+      "ts": "01:26",
+      "kind": "local+lora",
+      "model": "Qwen/Qwen3-0.6B+/home/asus/ft/out/run06/adapter"
     }
   }
 }
