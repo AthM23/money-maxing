@@ -1,0 +1,109 @@
+import { act, h, money, toast, words } from "/dom.js";
+
+const TREATMENTS = { credit_memo: "An agreed credit", write_off: "We will not collect it", tax_withholding: "Tax deducted at source", dispute_hold: "Hold it as disputed", chase: "Collect the balance" };
+
+/** Everything that is waiting for a person, in one place. Each button goes through the same functions Slack uses. */
+export function renderQueue(app, o) {
+  const a = o.awaiting_you;
+  const empty = Object.values(a).every((list) => list.length === 0);
+  return h("section", {},
+    h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Input needed"), h("p", { class: "muted" }, "The agents stop here. What you decide is recorded with your name, and what you say once is not asked again."))),
+    empty ? h("div", { class: "panel" }, h("p", { class: "muted" }, "Nothing is waiting for a person.")) : null,
+    a.open_questions.map((q) => h("div", { class: "panel" }, questionCard(app, q))),
+    a.parked_entries.map((p) => h("div", { class: "panel" }, parkedCard(app, p))),
+    a.rule_drafts.map((r) => h("div", { class: "panel" }, ruleCard(app, r))),
+    a.proposed_facts.map((f) => h("div", { class: "panel" }, factCard(app, f))),
+    a.certificate_followups.map((c) => h("div", { class: "panel" }, h("span", { class: "tag" }, "Follow-up"), h("p", {}, c.question), h("p", { class: "muted" }, `Owner ${c.owner}`))));
+}
+
+export function questionCard(app, item) {
+  const q = item.question ?? {};
+  const form = h("form", { class: "answer", on: { submit: (e) => submitAnswer(e, app, item.escalation_id) } },
+    h("label", {}, "Treatment", h("select", { name: "treatment" }, (q.treatments ?? []).map((t) => h("option", { value: t.id }, `${TREATMENTS[t.id] ?? words(t.id)} — ${t.label}`)))),
+    h("label", {}, "This answer is", h("select", { name: "uses" }, h("option", { value: "one_time" }, "for this case only"), h("option", { value: "standing" }, "standing, until the date below"))),
+    h("label", {}, "Until", h("input", { type: "date", name: "valid_to" })),
+    h("label", {}, "Rate %, if it is a rate", h("input", { type: "number", name: "pct", min: "0", max: "100", step: "0.01", placeholder: "e.g. 2" })),
+    h("label", { class: "wide" }, "In your words (kept as evidence)", h("textarea", { name: "text", rows: "2", required: true, minlength: "3" })),
+    h("button", { class: "primary", type: "submit" }, "Answer"));
+  return h("div", { class: "question" },
+    h("span", { class: "tag wait" }, `Question for ${nameOf(app, q.asked_user ?? item.asked_user)}`),
+    h("p", { class: "lead" }, q.what_happened ?? ""),
+    q.what_was_checked?.length ? h("details", {}, h("summary", {}, `What was checked (${q.what_was_checked.length} places)`), h("ul", {}, q.what_was_checked.map((c) => h("li", {}, `${c.source}${c.query ? `: “${c.query}”` : ""} → ${c.hits ?? 0} hit(s)`)))) : null,
+    h("p", {}, h("b", {}, "What is not known: "), q.what_is_unknown ?? ""),
+    form);
+}
+
+function nameOf(app, id) {
+  const person = app.overview?.people.find((p) => p.id === id);
+  return person ? `${person.name.replace(/\s*\(.*\)$/, "")}, ${person.role.replaceAll("_", " ")}` : id;
+}
+
+async function submitAnswer(event, app, escalationId) {
+  event.preventDefault();
+  const f = new FormData(event.target);
+  const treatment = f.get("treatment");
+  const pct = f.get("pct") ? Number(f.get("pct")) : undefined;
+  const payload = { escalation_id: escalationId, as: app.viewer?.id, treatment, uses: f.get("uses"), text: f.get("text"), valid_to: f.get("valid_to") || undefined,
+    ...(pct === undefined ? {} : treatment === "tax_withholding" ? { pct_withheld: pct } : { pct_off: pct }) };
+  try {
+    const r = await act("answer", payload);
+    if (r.status !== "answered") return toast(`Not saved: ${r.status}${r.detail ? ` (${r.detail})` : ""}`, "bad");
+    toast(r.fact_status === "active" ? "Saved and remembered. It will not be asked again for cases this covers." : "Saved.");
+    await app.refresh();
+  } catch (err) { toast(err.message, "bad"); }
+}
+
+function parkedCard(app, p) {
+  return h("div", {},
+    h("span", { class: "tag wait" }, "Approval"), h("p", { class: "lead" }, `${words(p.kind)} of ${money(p.amount_cents)} for ${p.party_id}`),
+    h("p", { class: "muted" }, `Prepared by ${p.prepared_by.label}. ${p.controller_note ? `Controller agent: ${p.controller_note}` : ""}`),
+    h("div", { class: "actions" },
+      h("button", { class: "ghost", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
+      h("button", { class: "ghost", on: { click: () => decide(app, p.decision_id, "rejected") } }, "Decline"),
+      h("button", { class: "primary", on: { click: () => decide(app, p.decision_id, "approved") } }, "Approve")));
+}
+
+async function decide(app, decisionId, outcome) {
+  try {
+    const r = await act("approve", { decision_id: decisionId, as: app.viewer?.id, outcome });
+    if (r.status === "posted") toast("Posted. The kernel re-checked the entry with your approval on it.");
+    else if (r.status === "rejected") toast(`The kernel refused it: ${r.failed.map((m) => `${m.check} ${m.detail}`).join("; ")}`, "bad");
+    else if (r.status === "blocked") toast(`Blocked by rule ${r.rule}. An approval cannot lift this.`, "bad");
+    else toast(`Nothing posted (${r.status}).`, outcome === "rejected" ? "ok" : "bad");
+    await app.refresh();
+  } catch (err) { toast(err.message, "bad"); }
+}
+
+function ruleCard(app, r) {
+  const b = r.backtest ?? {};
+  return h("div", {},
+    h("span", { class: "tag" }, "Policy derived"), h("p", { class: "lead mono" }, r.name),
+    h("p", { class: "muted" }, `From what your team booked: matched ${b.n ?? "?"}, exactly this ${b.agree ?? "?"}, leave-one-out ${b.held_out_covered ?? "?"} of ${b.held_out_n ?? "?"}. Customers: ${r.customer_scope.join(", ") || "any"}.${r.supersedes ? ` Retires ${r.supersedes}.` : ""}`),
+    h("div", { class: "actions" }, h("button", { class: "primary", on: { click: () => approveRule(app, r.policy_id) } }, "Approve like a pull request")));
+}
+
+async function approveRule(app, policyId) {
+  try {
+    const r = await act("policy", { policy_id: policyId, as: app.viewer?.id });
+    toast(r.status === "approved" ? `Approved. Replay now agrees on ${r.agreed} of ${r.replayed} closed decisions.` : `Not approved: ${r.status}`, r.status === "approved" ? "ok" : "bad");
+    await app.refresh();
+  } catch (err) { toast(err.message, "bad"); }
+}
+
+function factCard(app, f) {
+  return h("div", {},
+    h("span", { class: "tag" }, "Remember this?"), h("p", { class: "lead" }, `${f.party_id} · ${words(f.predicate)}`),
+    h("pre", { class: "small" }, JSON.stringify(f.value, null, 1)),
+    h("p", { class: "muted" }, `${f.uses} · for ${f.kinds.join(", ") || "any kind"} · ${f.valid_from} to ${f.valid_to} · proposed by ${f.stated_by}`),
+    h("div", { class: "actions" },
+      h("button", { class: "ghost", on: { click: () => decideFact(app, f.id, "rejected") } }, "Do not remember"),
+      h("button", { class: "primary", on: { click: () => decideFact(app, f.id, "approved") } }, "Remember")));
+}
+
+async function decideFact(app, factId, outcome) {
+  try {
+    const r = await act("fact", { fact_id: factId, as: app.viewer?.id, outcome });
+    toast(r.status === "active" ? "Remembered, within your limit and its end date." : r.status === "rejected" ? "Not remembered." : `Nothing changed (${r.status}).`, r.status === "unauthorised" ? "bad" : "ok");
+    await app.refresh();
+  } catch (err) { toast(err.message, "bad"); }
+}

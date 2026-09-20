@@ -18,6 +18,8 @@ export interface CashReceipt {
   account: string | null;
   country: string | null;
   currency: string;
+  /** Where the customer is, when the seeded world says (lane B's `party_profile`). */
+  payer_country: string | null;
   /** From bank_txn_fx, when the receipt was foreign. */
   original_currency: string | null;
   foreign_amount_cents: number | null;
@@ -29,6 +31,8 @@ export interface CashGroup {
   country: string | null;
   currency: string;
   total_cents: number;
+  /** Receipts in this account that the bank converted from another currency. */
+  converted_receipts: number;
   receipts: CashReceipt[];
 }
 

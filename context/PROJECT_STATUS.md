@@ -1539,6 +1539,44 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   if an hour is free, make the scene use the CRM note it already has** (corroboration that the credit was requested and
   not granted, and the account owner for the escalation), which is lane A's scenario code.
 
+### 2026-09-20 01:53 ET — The Money Maxer workspace (one seat, flow-canvas trace), two kernel fixes from the judge panel, Maximor's stack and product tour read (Person A)
+
+- **`pnpm workspace <db>`** (new `workspace/`, lane B's `console/` untouched; pushed as `aa074f3`). One page over one
+  database, 127.0.0.1 only. Reads through `src/readmodel`; writes only through `approveDecision`,
+  `recordHumanAnswer`, `approveFact`/`rejectFact`, `approvePolicy`, `runOpenIntents` (code tier only) and the audit
+  pack. Writes must carry the page's own Origin; bodies are bounded and zod-checked; errors never carry a stack; all
+  text is set with textContent (mail bodies and model text are untrusted). Name and look follow lane C's landing page.
+  - **One seat, no role switcher** (Karan: "we're replacing the finance team, give it a CEO view"): the viewer is
+    `WORKSPACE_USER` or whoever has the most authority in the approval matrix. Checked: the same person can answer a
+    question and approve the entry it produces, because the preparer is the code tier.
+  - Pages: Overview (receipts gauge, 13-week forecast, KPI tiles, "ask the books"), Cash (a receipt as one bank line
+    beside its book lines with GL, FX rate and who settled it; the shortfall split; the question; the evidence drawer
+    with the quote inside its source and every check re-performed), Revenue, Close (checklist plus the auditor and the
+    one-changed-digit run on a temporary copy), Reports (AR ageing, trial balance), Input needed, Policies, Agents.
+  - **Agent trace as a flow on a grid** (Karan's ask, after LangSmith and a journey-builder canvas): a node per turn,
+    tool calls as bubbles, model id, time, calls and cost at the node's bottom right, the kernel's refusals as a side
+    branch, labelled edges; click a bubble for the tool's stored input and output. A timeline view sits beside it. A
+    scripted stand-in is labelled as one, never as a model.
+  - "Ask the books" is **code, not a model**: a question is matched to a report built from the ledger (AR ageing,
+    trial balance, cash by week, what is waiting) and names the tables it read. Say so on stage.
+  - Revenue, Close and the forecast read lane B's tables (`rev_schedule`, `checklist_item`, `forecast_line`), so they
+    need `pnpm seed --world=global-july`, `pnpm ingest` and `pnpm spine`; on a database without them the page says so.
+  - Not built: AP bills page (the seeded world has no bills), collections mail, board pack, a chat that calls a model.
+- **Two kernel fixes** raised by the judge panel's CTO persona (`4b59a56`): a quoted number must stand in the source as
+  a figure of its own ("40.00" is not stated by "105,840.00"); F9 requires the FX record to tie to the bank line
+  (foreign amount at the settlement rate less the fee, integer arithmetic) and the amount and rate to be quoted with
+  their currency. The code tier now quotes the advice's labelled line ("Incoming wire fee: USD 40.00").
+  **Consequence: `runs/real-main/july.db` (the prepared question from 00:22) was posted under the older kernel and now
+  shows one finding on re-performance. Rebuild the prepared database with the final code at pre-flight.**
+- **Research, in `context/research/`:** `maximor-stack-2026-09-20.md` (AWS, Snowflake, Fivetran, Anthropic and OpenAI,
+  LangSmith, from their subprocessor list and job posts; what we say about deployment) and
+  `maximor-product-tour-2026-09-20.md` (their 2:42 tour screen by screen; no public trace or spend console; what our
+  screen has to show).
+- Lane C's reader rows through the harness landed (`runs/reader-bench/`): fine-tuned Qwen 168 settled + 32 deduction
+  left open, 0 left over, 0 wrong postings (the oracle ceiling); base Qwen 0 settled, all 200 refused by verification,
+  0 wrong postings.
+- `pnpm test` with all lanes merged → 76 files, **709 passing**; typecheck clean.
+
 
 ### 2026-09-20 ~03:00 ET — Lane B: the mirror ran live for the first time, is live by default, and can be reset; an Intuit replay defect found and fixed (AthM23 + Claude Code session)
 
