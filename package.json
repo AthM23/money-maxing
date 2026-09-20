@@ -27,6 +27,7 @@
     "desk": "tsx src/desk/cli.ts",
     "spine": "tsx --env-file-if-exists=.env src/spine/run.ts",
     "mirror": "tsx --env-file-if-exists=.env src/mirror/cli.ts",
+    "qbo:check": "tsx --env-file-if-exists=.env src/mirror/checkCli.ts",
     "bench:reader": "tsx src/reader/benchCli.ts"
   },
   "dependencies": {

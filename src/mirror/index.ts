@@ -4,6 +4,8 @@ import { qboLike, type QboLike } from "./types.js";
 export { JOURNAL_ENTRY_NOT_BUILT, MIRROR_SUBSCRIBER, MIRROR_TOPICS, NO_MAPPING, mirrorOnce } from "./mirror.js";
 export type { MirrorOpts, MirrorResult, MirrorStatus, MirrorStep } from "./mirror.js";
 export { applyCreditBody, centsToAmount, centsToDecimal, creditMemoBody, creditMemoDocNumber, paymentBody, sourceEmailText, workpaperText } from "./payloads.js";
+export { tieOut, tieOutText } from "./tieout.js";
+export type { TieOut, TieRow, TieSide, TieStatus } from "./tieout.js";
 export { attachableMetadata, qboLike } from "./types.js";
 export type { QboLike, QboObject, QboUpload } from "./types.js";
 

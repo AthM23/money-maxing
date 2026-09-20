@@ -120,7 +120,7 @@ function seedLabels(db: Db, world: World): void {
 }
 
 /** Cents settled per document by the seeded history, write-offs included. */
-function settlements(world: World): Map<string, number> {
+export function settlements(world: World): Map<string, number> {
   const out = new Map<string, number>();
   for (const t of world.bank.txns) {
     const h = t.history;

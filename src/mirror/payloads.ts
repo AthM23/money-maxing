@@ -40,9 +40,14 @@ export function marker(decisionId: string): string {
  * (QuickBooks keeps the object, the local decision ids do not survive). The suffix always survives the 21-char cut.
  */
 export function creditMemoDocNumber(invoiceId: string, seq = 1): string {
-  if (!Number.isSafeInteger(seq) || seq < 1) throw new Error(`credit memo sequence must be a positive integer, got ${seq}`);
+  return adjustmentDocNumber("CM", invoiceId, seq);
+}
+
+/** The same numbering for any non-cash adjustment to an invoice: `FX-INV-3201`, `WO-INV-3201-2`. */
+export function adjustmentDocNumber(prefix: string, invoiceId: string, seq = 1): string {
+  if (!Number.isSafeInteger(seq) || seq < 1) throw new Error(`adjustment sequence must be a positive integer, got ${seq}`);
   const suffix = seq > 1 ? `-${seq}` : "";
-  return `${`CM-${invoiceId}`.slice(0, DOC_NUMBER_MAX - suffix.length)}${suffix}`;
+  return `${`${prefix}-${invoiceId}`.slice(0, DOC_NUMBER_MAX - suffix.length)}${suffix}`;
 }
 
 const REQUEST_ID_MAX = 50; // Intuit's limit on the `requestid` query parameter
@@ -154,6 +159,70 @@ export function applyCreditBody(a: ApplyCreditInput): Record<string, unknown> {
     Line: [
       ...a.lines.map(invoiceLine),
       { Amount: centsToAmount(sumCents(a.lines)), LinkedTxn: [{ TxnId: a.credit_memo_id, TxnType: "CreditMemo" }] },
+    ],
+  };
+}
+
+export interface JournalDebit { qbo_account_id: string; amount_cents: number; memo: string }
+
+export interface ArJournalInput {
+  decision_id: string;
+  customer_id: string;
+  entry_date: string;
+  doc_number: string;
+  /** The company's A/R account. */
+  ar_account_id: string;
+  /** What the local entry debited (realised FX, bank charges, ...), account by account. */
+  debits: JournalDebit[];
+  claim: string | null;
+}
+
+/**
+ * A non-cash AR adjustment (`fx_realized`, `write_off`, `tax_withholding`) → JournalEntry: the local entry's debits,
+ * and one credit to A/R carrying the customer, which QuickBooks requires on an A/R line and which makes the credit
+ * appliable to that customer's invoice. Verified against the sandbox on 2026-09-20 with a create-and-delete probe; the
+ * JournalEntry QuickBooks hands back carries TotalAmt 0, so an existing one is recognised by its A/R line, never by TotalAmt.
+ */
+export function arJournalBody(j: ArJournalInput): Record<string, unknown> {
+  if (j.debits.length === 0) throw new Error("nothing to journal: no debit lines");
+  const total = j.debits.reduce((sum, d) => sum + positive(d.amount_cents, "journal debit"), 0);
+  const line = (cents: number, memo: string, detail: Record<string, unknown>): Record<string, unknown> =>
+    ({ DetailType: "JournalEntryLineDetail", Amount: centsToAmount(cents), Description: memo, JournalEntryLineDetail: detail });
+  return {
+    TxnDate: j.entry_date,
+    DocNumber: j.doc_number,
+    PrivateNote: `${marker(j.decision_id)}${j.claim ? ` ${j.claim}` : ""}`.slice(0, PRIVATE_NOTE_MAX),
+    Line: [
+      ...j.debits.map((d) => line(d.amount_cents, d.memo, { PostingType: "Debit", AccountRef: { value: d.qbo_account_id } })),
+      line(total, j.debits[0]!.memo, { PostingType: "Credit", AccountRef: { value: j.ar_account_id }, Entity: { Type: "Customer", EntityRef: { value: j.customer_id } } }),
+    ],
+  };
+}
+
+export interface ApplyJournalInput {
+  decision_id: string;
+  customer_id: string;
+  entry_date: string;
+  doc_number: string;
+  journal_entry_id: string;
+  lines: InvoiceApplication[];
+}
+
+/**
+ * The zero Payment that takes the JournalEntry's A/R credit off the invoice(s): the same shape as `applyCreditBody`.
+ * Without it QuickBooks shows the customer's total right and the invoice still fully open.
+ * Verified against the sandbox on 2026-09-20: INV-3201 went from 110,000.00 to 108,040.00 open, and back on delete.
+ */
+export function applyJournalBody(a: ApplyJournalInput): Record<string, unknown> {
+  return {
+    CustomerRef: { value: a.customer_id },
+    TotalAmt: 0,
+    TxnDate: a.entry_date,
+    PaymentRefNum: a.doc_number,
+    PrivateNote: `${marker(a.decision_id)} journal entry applied`,
+    Line: [
+      ...a.lines.map(invoiceLine),
+      { Amount: centsToAmount(sumCents(a.lines)), LinkedTxn: [{ TxnId: a.journal_entry_id, TxnType: "JournalEntry" }] },
     ],
   };
 }

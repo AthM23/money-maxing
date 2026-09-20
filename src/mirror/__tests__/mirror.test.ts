@@ -3,7 +3,7 @@ import { emit } from "../../bus/bus.js";
 import type { Db } from "../../ledger/db.js";
 import { JOURNAL_ENTRY_NOT_BUILT, mirrorOnce } from "../mirror.js";
 import { creditMemoDocNumber, mirrorRequestId, sourceEmailText, workpaperText } from "../payloads.js";
-import { EMAIL_TRACE, FakeQbo, INTENT, QBO_IDS, clock, logRows, openSeeded, postAccrual, postCreditMemo, postPayment, seedManifest, type FakeRequest } from "./fixture.js";
+import { EMAIL_TRACE, FakeQbo, INTENT, QBO_ACCOUNT_IDS, QBO_IDS, clock, logRows, openSeeded, postAccrual, postCreditMemo, postFeeWriteOff, postFxLoss, postPayment, seedManifest, type FakeRequest } from "./fixture.js";
 
 interface RippleRow { kind: string; ref: string; delta_cents: number | null; event_id: number | null; summary: string }
 const ripples = (db: Db): RippleRow[] => db.prepare("SELECT kind, ref, delta_cents, event_id, summary FROM ripple WHERE intent_id = ? AND function = 'ar' ORDER BY id").all(INTENT) as RippleRow[];
@@ -89,8 +89,88 @@ describe("apply_payment", () => {
   });
 });
 
+describe("non-cash AR adjustment (realised FX, a written-off fee)", () => {
+  const journalBody = (id: string): Record<string, unknown> => ({
+    TxnDate: "2026-07-12", DocNumber: "FX-INV-1042", PrivateNote: `fn:${id} Bank advice states the rate`,
+    Line: [
+      { DetailType: "JournalEntryLineDetail", Amount: 196, Description: "Realized FX loss: settled at 1.0800, booked at 1.1000", JournalEntryLineDetail: { PostingType: "Debit", AccountRef: { value: QBO_ACCOUNT_IDS.fx } } },
+      { DetailType: "JournalEntryLineDetail", Amount: 196, Description: "Realized FX loss: settled at 1.0800, booked at 1.1000", JournalEntryLineDetail: { PostingType: "Credit", AccountRef: { value: QBO_ACCOUNT_IDS.ar }, Entity: { Type: "Customer", EntityRef: { value: QBO_IDS.customer } } } },
+    ],
+  });
+
+  it("sends the JournalEntry (Dr the FX account, Cr A/R for the customer), then the zero Payment that takes it off the invoice", async () => {
+    const db = seeded();
+    const id = postFxLoss(db);
+    const qbo = new FakeQbo();
+    await mirrorOnce(db, { client: qbo }, clock);
+    expect(qbo.requests).toEqual([
+      { op: "query", sql: "select * from JournalEntry where DocNumber = 'FX-INV-1042'" },
+      { op: "create", entity: "JournalEntry", request_id: mirrorRequestId("JournalEntry", ["FX-INV-1042", QBO_IDS.customer]), body: journalBody(id) },
+      { op: "query", sql: `select * from Payment where CustomerRef = '${QBO_IDS.customer}' maxresults 1000` },
+      { op: "create", entity: "Payment", request_id: mirrorRequestId("JournalApplication", ["FX-INV-1042", QBO_IDS.customer, "900", QBO_IDS.invoice]), body: {
+        CustomerRef: { value: QBO_IDS.customer }, TotalAmt: 0, TxnDate: "2026-07-12", PaymentRefNum: "FX-INV-1042", PrivateNote: `fn:${id} journal entry applied`,
+        Line: [
+          { Amount: 196, LinkedTxn: [{ TxnId: QBO_IDS.invoice, TxnType: "Invoice" }] },
+          { Amount: 196, LinkedTxn: [{ TxnId: "900", TxnType: "JournalEntry" }] },
+        ],
+      } },
+    ]);
+    expect(logRows(db, id).map((r) => [r.kind, r.status, r.external_id])).toEqual([["JournalApplication", "mirrored", "901"], ["JournalEntry", "mirrored", "900"]]);
+    expect(ripples(db).map((r) => [r.kind, r.ref, r.delta_cents])).toEqual([["qbo_journal_entry", "900", -19600], ["qbo_journal_applied", "901", null]]);
+  });
+
+  it("after a local reset the same loss adopts the JournalEntry and its application QuickBooks already holds", async () => {
+    const qbo = new FakeQbo().remember();
+    const first = seeded();
+    postFxLoss(first);
+    await mirrorOnce(first, { client: qbo }, clock);
+    const second = seeded(); // new database, new decision id, same QuickBooks company
+    const id = postFxLoss(second);
+    await mirrorOnce(second, { client: qbo }, clock);
+    expect(qbo.writes).toHaveLength(2);
+    expect(logRows(second, id).map((r) => [r.kind, r.status, r.detail])).toEqual([
+      ["JournalApplication", "mirrored", "adopted existing Payment 901"], ["JournalEntry", "mirrored", "adopted existing JournalEntry 900"],
+    ]);
+  });
+
+  it("a JournalEntry holding the DocNumber for another amount is never created over", async () => {
+    const db = seeded();
+    const id = postFxLoss(db);
+    const qbo = new FakeQbo();
+    qbo.answer = (sql) => (sql.includes("from JournalEntry") ? [{ ...journalBody("other"), Id: "77", Line: [] }] : []);
+    await mirrorOnce(db, { client: qbo }, clock);
+    expect(qbo.writes).toEqual([]);
+    expect(logRows(db, id)).toEqual([{ kind: "JournalEntry", status: "failed", external_id: null, detail: "exists with different amount/customer: 77" }]);
+  });
+
+  it("a debit account QuickBooks has not been given yet is a retryable skip, picked up once the account is there", async () => {
+    const db = seeded();
+    const id = postFeeWriteOff(db);
+    const qbo = new FakeQbo();
+    await mirrorOnce(db, { client: qbo }, clock);
+    expect(qbo.writes).toEqual([]);
+    expect(logRows(db, id)).toEqual([{ kind: "JournalEntry", status: "skipped", external_id: null, detail: "no QuickBooks mapping for account 6150 Bank charges: seed_manifest has no 'quickbooks' row (run pnpm seed --target=quickbooks)" }]);
+
+    qbo.answer = (sql) => (sql === "select * from Account where Name = 'Bank charges'" ? [{ Id: QBO_ACCOUNT_IDS.bank_charges }] : []);
+    const again = await mirrorOnce(db, { client: qbo }, clock);
+    expect(again.retried).toBe(1);
+    expect(qbo.writes.map((w) => (w as { entity: string }).entity)).toEqual(["JournalEntry", "Payment"]);
+    expect((qbo.writes[0] as unknown as { body: { DocNumber: string } }).body.DocNumber).toBe("WO-INV-1042");
+    expect(statuses(db, id)).toEqual({ JournalEntry: "mirrored", JournalApplication: "mirrored" });
+  });
+
+  it("a dry run records both bodies and sends nothing", async () => {
+    const db = seeded();
+    const id = postFxLoss(db);
+    await mirrorOnce(db, { dry_run: true }, clock);
+    const rows = logRows(db, id);
+    expect(rows.map((r) => [r.kind, r.status])).toEqual([["JournalApplication", "dry_run"], ["JournalEntry", "dry_run"]]);
+    expect(JSON.parse(rows[1]!.detail!)).toEqual(journalBody(id));
+  });
+});
+
 describe("other kinds", () => {
-  it("are logged as skipped until the JournalEntry mirror exists", async () => {
+  it("are logged as skipped: the JournalEntry mirror covers AR adjustments only", async () => {
     const db = seeded();
     const id = postAccrual(db);
     const qbo = new FakeQbo();

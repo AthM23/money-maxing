@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { QboClient, qboConfigFromEnv, qboEscape, saveRefreshTokenToFile, QBO_TOKEN_URL, type FetchLike, type QboConfig } from "../../connectors/qboClient.js";
 import { openWorldDb, type Db } from "../../ledger/db.js";
 import { generateWorld } from "../generate.js";
+import { generateGlobalJuly } from "../globalJuly.js";
 import { centsToQboAmount, seedQuickBooks, QBO_ITEM_NAME } from "../quickbooks.js";
 
 type Rec = Record<string, unknown> & { Id: string; SyncToken: string };
@@ -25,6 +26,7 @@ class FakeQbo {
 
   constructor() {
     this.put("account", { Name: "Services", AccountType: "Income", Active: true });
+    this.put("account", { Name: "Accounts Receivable (A/R)", AccountType: "Accounts Receivable", Active: true });
   }
 
   put(entity: string, fields: Record<string, unknown>): Rec {
@@ -145,7 +147,11 @@ describe("seedQuickBooks", () => {
 
     // the manifest carries the Id QBO returned, per world id
     const rows = db.prepare("SELECT * FROM seed_manifest WHERE system = 'quickbooks'").all() as Array<{ world_id: string; kind: string; external_id: string; seeded_at: string }>;
-    expect(rows).toHaveLength(13 + 10 + 12 + 1);
+    expect(rows).toHaveLength(13 + 10 + 12 + 1 + 5);
+    // the mirror's JournalEntry accounts: the company's own A/R is adopted, the four it lacks are made
+    expect(counts.account).toEqual({ created: 4, adopted: 1, skipped: 0, removed: 0 });
+    expect(rows.find((r) => r.world_id === "qbo-account:1200")).toMatchObject({ kind: "account", external_id: fake.all("account")[1]?.Id });
+    expect(fake.all("account").find((a) => a.Name === "Realized FX gain or loss")).toMatchObject({ AccountType: "Other Expense", AccountSubType: "ExchangeGainOrLoss" });
     expect(rows.find((r) => r.world_id === "INV-1042")).toMatchObject({ kind: "invoice", external_id: initech?.Id });
     expect(rows.find((r) => r.world_id === "initech")).toMatchObject({ kind: "customer", external_id: initechId });
     expect(rows.every((r) => !Number.isNaN(Date.parse(r.seeded_at)))).toBe(true);
@@ -190,6 +196,9 @@ describe("seedQuickBooks", () => {
     expect(counts.vendor).toEqual({ created: 10, adopted: 0, skipped: 0, removed: 10 });
     expect(counts.invoice).toEqual({ created: 12, adopted: 0, skipped: 0, removed: 12 });
     expect(counts.item).toEqual({ created: 1, adopted: 0, skipped: 0, removed: 1 });
+    // accounts are chart set-up, one of them the company's own: a reset forgets them and the re-seed adopts them again
+    expect(counts.account).toEqual({ created: 0, adopted: 5, skipped: 0, removed: 0 });
+    expect(fake.active("account")).toHaveLength(6);
 
     expect(fake.all("invoice")).toHaveLength(12); // the old twelve are gone for real
     expect(fake.all("invoice").some((i) => oldInvoiceIds.has(i.Id))).toBe(false);
@@ -201,7 +210,7 @@ describe("seedQuickBooks", () => {
 
     const row = db.prepare("SELECT external_id FROM seed_manifest WHERE world_id = 'initech'").get() as { external_id: string };
     expect(row.external_id).not.toBe(oldInitech);
-    expect(db.prepare("SELECT count(*) AS n FROM seed_manifest WHERE system = 'quickbooks'").get()).toEqual({ n: 36 });
+    expect(db.prepare("SELECT count(*) AS n FROM seed_manifest WHERE system = 'quickbooks'").get()).toEqual({ n: 41 });
   });
 
   it("reset tolerates a wiped sandbox: a missing record only costs its manifest row", async () => {
@@ -290,6 +299,24 @@ describe("QboClient", () => {
     await client.create("Customer", { DisplayName: "Dup Co" });
     await expect(client.create("Customer", { DisplayName: "Dup Co" })).rejects.toThrow(/Duplicate Name Exists Error.*6240/);
     await expect(client.read("Invoice", "999")).rejects.toThrow(/Object Not Found/);
+  });
+
+  it("opens A/R equal to the local subledger: earlier invoices still open are seeded, and cash the history applied is a Payment", async () => {
+    const { db, fake, client } = setup();
+    const global = generateGlobalJuly().world;
+    const counts = await seedQuickBooks(db, global, client);
+    const docs = fake.all("invoice").map((i) => String(i.DocNumber));
+    expect(docs).toEqual(expect.arrayContaining(["INV-3181", "INV-3182", "INV-3183", "INV-3201"])); // Castellan's April to June, never paid
+    expect(docs).not.toContain("INV-2404"); // a Q2 invoice the history settled stays out
+    expect(counts.payment).toEqual({ created: 1, adopted: 0, skipped: 0, removed: 0 });
+    const lumen = fake.all("invoice").find((i) => i.DocNumber === "INV-3191");
+    expect(fake.all("payment")).toEqual([expect.objectContaining({
+      PaymentRefNum: "BTX-300", TotalAmt: 6200, TxnDate: "2026-07-03", Line: [{ Amount: 6200, LinkedTxn: [{ TxnId: lumen?.Id, TxnType: "Invoice" }] }],
+    })]);
+
+    const again = await seedQuickBooks(db, global, client, { reset: true });
+    expect(again.payment).toEqual({ created: 1, adopted: 0, skipped: 0, removed: 1 });
+    expect(fake.all("payment")).toHaveLength(1);
   });
 
   it("escapes single quotes in query values and sends minorversion", async () => {

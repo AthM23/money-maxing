@@ -1491,3 +1491,50 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   plain-language benchmark table that live-loads the results JSONs, renamed **Money Maxer** per Preet.
 - Blocked on humans: whether the withholding-tax/international remittance family goes into training data
   (fixture gate), and whether the reader runs live or shadow in the demo (Person A's call).
+
+### 2026-09-20 ~02:00 ET — Lane B: QuickBooks audited against the international scene; FX and fee entries now mirror; AR/AP tie-out command; HubSpot assessed (AthM23 + Claude Code session)
+
+- **Asked:** are we actually using QuickBooks on the international scene, do AR and AP there check out, and is HubSpot
+  worth having. **Found, before any change** (code audit plus read-only queries on the sandbox): QuickBooks was
+  write-only and frozen at the seed. 25 of our invoices, all fully open ($458,350); no Payment, CreditMemo or JournalEntry
+  created since 09-19, so nothing an agent ever posted had reached it; nothing reads it at run time; the mirror is on no
+  demo path (`pnpm mirror` and `pnpm spine --qbo-live` only) and had never run live. On the euro scene the mirror skipped
+  exactly the entries that make it the euro scene: `fx_realized` (7100) and the bank-fee `write_off` fell into
+  "JournalEntry mirror not built". AP: no Bill has ever been seeded or mirrored (Northwind's 10 vendors are bare names);
+  the global July has no vendors or bills at all, by design (`src/seed/globalJuly.ts:16`).
+- **Built, lane B files only** (`src/mirror/`, `src/seed/quickbooks.ts`; `src/contract/` and lane A untouched):
+  - *JournalEntry mirror for non-cash AR adjustments* (`fx_realized`, `write_off`, `tax_withholding`): Dr what the posted
+    ledger entry debited, Cr A/R carrying the customer, then a zero Payment linking the JournalEntry to the invoice, the
+    same adopt-or-create and natural-key rules as the credit memo (`FX-INV-3201`, `WO-…`, `WHT-…`). Other kinds (accruals,
+    revenue) still skip, and the skip text now says so. The seeder creates or adopts the QuickBooks accounts it needs
+    (1350, 6150, 6990, 7100; the company's own A/R is adopted).
+  - *`pnpm qbo:check`* (`src/mirror/tieout.ts`): read-only tie-out of AR and AP against QuickBooks, document by document.
+    `agrees` / `explained` (the difference equals entries posted here and not mirrored yet) / `differs` (exit 1), plus
+    documents open here that QuickBooks does not hold, and how many of our documents belong to the other world.
+  - *Two seeding gaps the tie-out found on its first run, fixed:* `INV-3191` (Lumen) is paid by the seeded history on
+    3 July (that is what makes `BTX-310` a duplicate) but sat fully open in QuickBooks; and five earlier invoices still
+    open on day one (Castellan `INV-3181/2/3`, Tessellate `INV-3111/2`) were not in QuickBooks because only the live
+    period was seeded. The seeder now sends every invoice the history leaves open and a Payment for cash the history
+    already applied.
+- **Measured.** `pnpm typecheck` clean; `pnpm test` → 75 files, 701 passing, **2 failing, both in lane A's new
+  `src/demo/scenario/__tests__/cli.test.ts` on Windows** (`EBUSY` deleting the temp database it just seeded; not touched
+  here, for Karan). Live, sandbox: the seeder created 5 invoices, 1 Payment and 3 accounts and adopted the rest;
+  `pnpm qbo:check` on `data/global-july.db` as seeded → **18 invoices in both, $299,044.98 open on each side, 18 agree**;
+  on a copy after `learn` + `worker --code-only` → 0 differ, 10 explained by entries not mirrored yet; Northwind → 12 of
+  12 agree, and its 10 open bills ($60,940) reported as not in QuickBooks. The JournalEntry shape was verified with a
+  create-and-delete probe: `INV-3201` went 110,000.00 → 108,040.00 open and back to 110,000.00 after cleanup. Mirror dry
+  run on the worked copy: 13 steps, both Vossberg FX entries as JournalEntry + application, 0 skipped.
+- **Not run:** `pnpm mirror --live` on any world. **Hazard, for a human to decide:** nothing removes mirrored objects
+  (`seed --reset` only knows what the seeder made), so the first live mirror run is one-way for this sandbox; a second run
+  adopts rather than creates. Both worlds still share one sandbox company (the tie-out counts the other world's
+  documents and ignores them).
+- **Still not wired:** QuickBooks as a source (no CDC, no ingest connector: the tie-out is the only read) · AP in
+  QuickBooks (no Bill seeding or mirror; irrelevant to the global July, which has no AP) · decisions skipped under the
+  old "not built" text in an existing database are not retried (reseeded databases are unaffected).
+- **HubSpot, assessed; recommendation proposed, not agreed:** token works, no connector exists, CRM is the local
+  `crm.json` (13 deals, 3 notes per world). On the international scene CRM is cited nowhere: the stand-in never calls
+  `crm_notes`, the answer key cites no CRM source, and `src/demo/scenario/` seeds no CRM trace, although the seeded world
+  carries the one note that matters (`GJ-N-2`: "asked in writing for the 2% service credit … Not confirmed by us"). A live
+  connector is about 250 lines plus tests and changes nothing a judge sees. **Proposed: do not build it; keep CRM local;
+  if an hour is free, make the scene use the CRM note it already has** (corroboration that the credit was requested and
+  not granted, and the account owner for the escalation), which is lane A's scenario code.

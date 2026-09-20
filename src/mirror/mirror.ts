@@ -1,14 +1,15 @@
 import { poll, type BusEvent } from "../bus/bus.js";
 import { qboEscape } from "../connectors/qboClient.js";
+import { ACCOUNTS } from "../contract/accounts.js";
 import type { Topic } from "../contract/topics.js";
 import type { Proposal } from "../contract/types.js";
 import { recordRipple } from "../engines/ripple.js";
 import type { Db } from "../ledger/db.js";
 import { systemClock, type Clock } from "../runtime/config.js";
-import { QBO_ITEM_NAME, QBO_ITEM_WORLD_ID, QBO_SYSTEM } from "../seed/quickbooks.js";
+import { QBO_ACCOUNTS, QBO_ITEM_NAME, QBO_ITEM_WORLD_ID, QBO_SYSTEM, qboAccountFindSql, qboAccountWorldId } from "../seed/quickbooks.js";
 import {
-  applyCreditBody, centsToAmount, centsToDecimal, creditMemoBody, creditMemoDocNumber, marker, mirrorRequestId, paymentBody,
-  paymentRefNum, readProposal, sourceEmailText, workpaperText, type InvoiceApplication,
+  adjustmentDocNumber, applyCreditBody, applyJournalBody, arJournalBody, centsToAmount, centsToDecimal, creditMemoBody, creditMemoDocNumber,
+  marker, mirrorRequestId, paymentBody, paymentRefNum, readProposal, sourceEmailText, workpaperText, type InvoiceApplication, type JournalDebit,
 } from "./payloads.js";
 import { attachableMetadata, type QboLike, type QboObject, type QboUpload } from "./types.js";
 
@@ -20,13 +21,17 @@ import { attachableMetadata, type QboLike, type QboObject, type QboUpload } from
  * Identity IN QuickBooks is the object's NATURAL key, not the `fn:<decision_id>` marker: decision ids are random per
  * run and the local database is reset between demo runs while QuickBooks keeps everything. Cash Payment:
  * PaymentRefNum (the bank txn id) + customer. CreditMemo: DocNumber + customer. Credit application: the zero Payment
- * linking this CreditMemo and this Invoice. Key and amount agree → adopt, whatever the marker. Key matches but the
- * amount or customer does not → create nothing and fail the step, for a human to look at.
+ * linking this CreditMemo and this Invoice. A non-cash AR adjustment (realised FX, a written-off bank fee, tax withheld)
+ * is a JournalEntry, DocNumber `FX-<invoice>` / `WO-<invoice>` / `WHT-<invoice>`, applied by a zero Payment the same way.
+ * Key and amount agree → adopt, whatever the marker. Key matches but the amount or customer does not → create nothing
+ * and fail the step, for a human to look at.
  */
 
 export const MIRROR_SUBSCRIBER = "qbo-mirror";
 export const MIRROR_TOPICS: readonly Topic[] = ["ar.payment.applied", "ar.credit_memo.posted", "entry.posted"];
-export const JOURNAL_ENTRY_NOT_BUILT = "JournalEntry mirror not built (Phase 3)";
+export const JOURNAL_ENTRY_NOT_BUILT = "JournalEntry mirror covers non-cash AR adjustments only (fx_realized, write_off, tax_withholding)";
+/** Kinds that take an amount off an invoice without cash, and the DocNumber prefix their JournalEntry carries. */
+const AR_ADJUSTMENT_PREFIX: Readonly<Record<string, string>> = { fx_realized: "FX", write_off: "WO", tax_withholding: "WHT" };
 /** Prefix of the 'skipped' detail that IS worth retrying: the mapping appears once QuickBooks has been seeded. */
 export const NO_MAPPING = "no QuickBooks mapping";
 
@@ -98,6 +103,7 @@ async function mirrorDecision(pass: Pass, decisionId: string, intentId: string |
   try {
     if (kind === "apply_payment") await mirrorPayment(pass, t);
     else if (kind === "credit_memo") await mirrorCreditMemo(pass, t);
+    else if (AR_ADJUSTMENT_PREFIX[kind] !== undefined) await mirrorArAdjustment(pass, t, AR_ADJUSTMENT_PREFIX[kind]);
     else if (!logRow(pass.db, decisionId, primary)) logStep(pass, decisionId, primary, "skipped", null, JOURNAL_ENTRY_NOT_BUILT);
   } catch (err) {
     logStep(pass, decisionId, primary, "failed", null, message(err));
@@ -135,7 +141,7 @@ async function mirrorCreditMemo(pass: Pass, t: Target): Promise<void> {
   const p = t.proposal;
   const invoiceId = p.applications[0]!.doc_id; // resolveIds refused an empty list
   const memoCents = total(ids.lines);
-  const seq = creditMemoSeq(pass.db, t.decision_id, invoiceId);
+  const seq = adjustmentSeq(pass.db, t.decision_id, "credit_memo", invoiceId);
   const docNumber = creditMemoDocNumber(invoiceId, seq);
   const body = creditMemoBody({ decision_id: t.decision_id, customer_id: ids.customer_id, entry_date: p.entry_date, invoice_id: invoiceId, seq, item_id: ids.item_id, memo_cents: memoCents, claim: p.evidence[0]?.claim ?? null });
   const memoId = await runStep(pass, t, {
@@ -165,12 +171,88 @@ async function mirrorCreditMemo(pass: Pass, t: Target): Promise<void> {
   await attachAll(pass, t, memoId, docNumber);
 }
 
+interface GlLine { account: string; debit_cents: number; credit_cents: number; memo: string }
+
+/** Why the posted entry is not "Dr accounts QuickBooks has a counterpart for, Cr A/R for what the proposal applies", or null when it is. */
+function notPlainArAdjustment(lines: GlLine[], appliedCents: number): string | null {
+  if (lines.length === 0) return "it has no ledger entry";
+  const odd = lines.find((l) => (l.credit_cents > 0 ? l.account !== ACCOUNTS.ar : l.account === ACCOUNTS.ar || QBO_ACCOUNTS[l.account] === undefined));
+  if (odd) return `it ${odd.credit_cents > 0 ? "credits" : "debits"} account ${odd.account}`;
+  const arCredit = lines.reduce((sum, l) => sum + l.credit_cents, 0);
+  return arCredit === appliedCents ? null : `it credits A/R ${centsToDecimal(arCredit)} but applies ${centsToDecimal(appliedCents)} to invoices`;
+}
+
 /**
- * 1 for the first posted credit_memo decision on this invoice, 2 for the next… by posted_at then rowid. A rerun of the
- * same scenario after a reset posts the same memos in the same order, so each gets the DocNumber QuickBooks already holds.
+ * Dr what the local entry debited, Cr A/R for the customer, then the zero Payment that takes it off the invoice. The
+ * lines come from the posted ledger entry, not the proposal, so QuickBooks gets what the books got. An entry of any
+ * other shape is skipped and says why.
  */
-function creditMemoSeq(db: Db, decisionId: string, invoiceId: string): number {
-  const rows = db.prepare("SELECT id, proposal_json FROM decision WHERE kind = 'credit_memo' AND posted_at IS NOT NULL ORDER BY posted_at, rowid").all() as Array<{ id: string; proposal_json: string | null }>;
+async function mirrorArAdjustment(pass: Pass, t: Target, prefix: string): Promise<void> {
+  if (logRow(pass.db, t.decision_id, "JournalApplication")?.status === "mirrored") return;
+  const glLines = pass.db.prepare(
+    "SELECT l.account, l.debit_cents, l.credit_cents, e.memo FROM gl_entry e JOIN gl_line l ON l.entry_id = e.id WHERE e.source_decision_id = ? ORDER BY e.posted_at, e.id, l.line_no",
+  ).all(t.decision_id) as GlLine[];
+  const applied = (t.proposal?.applications ?? []).reduce((sum, a) => sum + a.amount_cents, 0);
+  const why = notPlainArAdjustment(glLines, applied);
+  if (why !== null) return logStep(pass, t.decision_id, "JournalEntry", "skipped", null, `not a plain AR adjustment: ${why}`);
+  const ids = await resolveIds(pass, t, "JournalEntry", false);
+  if (!ids || !t.proposal) return;
+  const p = t.proposal;
+  const debitLines = glLines.filter((l) => l.debit_cents > 0);
+  const accountIds = new Map<string, string>();
+  for (const code of new Set([ACCOUNTS.ar, ...debitLines.map((l) => l.account)])) {
+    const id = await externalId(pass, qboAccountWorldId(code), "account", qboAccountFindSql(code));
+    if (id === undefined) return logStep(pass, t.decision_id, "JournalEntry", "skipped", null, `${NO_MAPPING} for account ${code} ${QBO_ACCOUNTS[code]!.name}: seed_manifest has no '${QBO_SYSTEM}' row (run pnpm seed --target=quickbooks)`);
+    accountIds.set(code, id);
+  }
+  const invoiceId = p.applications[0]!.doc_id; // resolveIds refused an empty list
+  const docNumber = adjustmentDocNumber(prefix, invoiceId, adjustmentSeq(pass.db, t.decision_id, t.kind, invoiceId));
+  const arAccountId = accountIds.get(ACCOUNTS.ar)!;
+  const debits: JournalDebit[] = debitLines.map((l) => ({ qbo_account_id: accountIds.get(l.account)!, amount_cents: l.debit_cents, memo: l.memo }));
+  const body = arJournalBody({ decision_id: t.decision_id, customer_id: ids.customer_id, entry_date: p.entry_date, doc_number: docNumber, ar_account_id: arAccountId, debits, claim: p.evidence[0]?.claim ?? null });
+  const journalId = await runStep(pass, t, {
+    kind: "JournalEntry", entity: "JournalEntry", ripple_kind: "qbo_journal_entry", preview: body, delta_cents: -applied,
+    summary: `QuickBooks JournalEntry ${docNumber} for $${centsToDecimal(applied)} to ${[...new Set(debitLines.map((l) => QBO_ACCOUNTS[l.account]!.name))].join(", ")}`,
+    find: async (c) => {
+      const found = await c.query(`select * from JournalEntry where DocNumber = '${qboEscape(docNumber)}'`);
+      if (found.length === 0) return undefined;
+      const agreeing = found.filter((o) => arCreditCents(o, arAccountId, ids.customer_id) === applied);
+      return agreeing.length > 0 ? { adopt: agreeing.find((o) => hasMarker(o, t.decision_id)) ?? agreeing[0]! } : { conflict: found[0]! };
+    },
+    act: (c) => c.create("JournalEntry", body, { requestId: mirrorRequestId("JournalEntry", [docNumber, ids.customer_id]) }),
+  });
+  if (journalId === null) return; // the failed JournalEntry row brings the whole decision back on the next live pass
+  const apply = applyJournalBody({ decision_id: t.decision_id, customer_id: ids.customer_id, entry_date: p.entry_date, doc_number: docNumber, journal_entry_id: journalId, lines: ids.lines });
+  const invoiceIds = ids.lines.map((l) => l.qbo_invoice_id);
+  await runStep(pass, t, {
+    kind: "JournalApplication", entity: "Payment", ripple_kind: "qbo_journal_applied", preview: apply,
+    summary: `QuickBooks zero-amount Payment applying journal entry ${docNumber} to ${docIds(p)}`,
+    find: async (c) => {
+      const zero = (await c.query(`select * from Payment where CustomerRef = '${qboEscape(ids.customer_id)}' maxresults 1000`))
+        .filter((o) => amountIs(o, 0) && linkedIds(o, "JournalEntry").includes(journalId));
+      const adopt = zero.find((o) => sameSet(linkedIds(o, "Invoice"), invoiceIds));
+      if (adopt) return { adopt };
+      return zero[0] ? { conflict: zero[0], detail: `journal entry ${journalId} is already applied to a different invoice by Payment ${String(zero[0].Id)}` } : undefined;
+    },
+    act: (c) => c.create("Payment", apply, { requestId: mirrorRequestId("JournalApplication", [docNumber, ids.customer_id, journalId, ...invoiceIds]) }),
+  });
+}
+
+/** What a JournalEntry credits to A/R for this customer, in cents: the amount it can take off their invoices. */
+function arCreditCents(o: QboObject, arAccountId: string, customerId: string): number {
+  type Detail = { PostingType?: unknown; AccountRef?: { value?: unknown }; Entity?: { EntityRef?: { value?: unknown } } };
+  const lines = Array.isArray(o.Line) ? (o.Line as Array<{ Amount?: unknown; JournalEntryLineDetail?: Detail }>) : [];
+  return lines
+    .filter((l) => l.JournalEntryLineDetail?.PostingType === "Credit" && String(l.JournalEntryLineDetail.AccountRef?.value) === arAccountId && String(l.JournalEntryLineDetail.Entity?.EntityRef?.value) === customerId)
+    .reduce((sum, l) => sum + Math.round(Number(l.Amount) * 100), 0);
+}
+
+/**
+ * 1 for the first posted decision of this kind on this invoice, 2 for the next… by posted_at then rowid. A rerun of the
+ * same scenario after a reset posts the same entries in the same order, so each gets the DocNumber QuickBooks already holds.
+ */
+function adjustmentSeq(db: Db, decisionId: string, kind: string, invoiceId: string): number {
+  const rows = db.prepare("SELECT id, proposal_json FROM decision WHERE kind = ? AND posted_at IS NOT NULL ORDER BY posted_at, rowid").all(kind) as Array<{ id: string; proposal_json: string | null }>;
   const onInvoice = rows.filter((r) => readProposal(r.proposal_json)?.applications[0]?.doc_id === invoiceId).map((r) => r.id);
   const at = onInvoice.indexOf(decisionId);
   return at >= 0 ? at + 1 : onInvoice.length + 1;

@@ -76,6 +76,13 @@ pnpm console                                           # cash strip by entity, b
 `pnpm seed --target=world --world=global-july` regenerates the file; `--target=gmail|slack|quickbooks --world=global-july`
 seed the live systems. `FOOTNOTE_WORLD=global-july` in `.env` does the same as the flag.
 
+QuickBooks, added 09-20 ~02:00: the seeder also sends every earlier invoice the history leaves open, a Payment for
+cash the history already applied (`BTX-300` on `INV-3191`) and the accounts the mirror's JournalEntry posts to.
+`pnpm qbo:check` ties AR and AP here to QuickBooks document by document, read-only (as seeded: 18 of 18 agree,
+$299,044.98 open on each side). `pnpm mirror` (dry run) or `pnpm mirror --live` after the worker sends the cash
+applications as Payments and the realised FX and fee write-offs as JournalEntries applied to their invoices; run
+`pnpm qbo:check` again and every line should agree. The live mirror has not been run, and nothing un-mirrors.
+
 ## What lane A reads
 
 `invoice_fx` (written by the seeder) and `bank_txn_fx`, in lane A's contract tables. `bank_txn_fx` is written by

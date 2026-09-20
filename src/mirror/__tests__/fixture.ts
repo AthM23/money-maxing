@@ -6,7 +6,7 @@ import type { Clock } from "../../runtime/config.js";
 import { insertDecision, insertWorkpaper } from "../../runtime/persist.js";
 import { postEntry } from "../../runtime/post.js";
 import { seedLocal } from "../../seed/local.js";
-import { QBO_ITEM_WORLD_ID } from "../../seed/quickbooks.js";
+import { QBO_ITEM_WORLD_ID, qboAccountWorldId } from "../../seed/quickbooks.js";
 import { World } from "../../seed/world.js";
 import type { QboLike, QboObject, QboUpload } from "../types.js";
 
@@ -21,6 +21,7 @@ export const INTENT = "int_initech";
 export const EMAIL_TRACE = "tr_gmail_m_initech_2";
 export const CHAT_TRACE = "tr_slack_c_1";
 export const QBO_IDS = { customer: "64", invoice: "150", item: "19" }; // the sandbox's real ids, read on 2026-09-19
+export const QBO_ACCOUNT_IDS = { ar: "84", fx: "120", bank_charges: "8" }; // 84 is the sandbox's A/R; the other two are made up
 
 export function openSeeded(): Db {
   const db = openWorldDb();
@@ -40,6 +41,8 @@ export function seedManifest(db: Db): void {
   ins.run("initech", "customer", QBO_IDS.customer, clock.now());
   ins.run("INV-1042", "invoice", QBO_IDS.invoice, clock.now());
   ins.run(QBO_ITEM_WORLD_ID, "item", QBO_IDS.item, clock.now());
+  ins.run(qboAccountWorldId(ACCOUNTS.ar), "account", QBO_ACCOUNT_IDS.ar, clock.now());
+  ins.run(qboAccountWorldId(ACCOUNTS.fx_gain_loss), "account", QBO_ACCOUNT_IDS.fx, clock.now());
 }
 
 const MARKS: Mark[] = [
@@ -95,7 +98,33 @@ export function postCreditMemo(db: Db): string {
   }, true);
 }
 
-/** A kind the mirror does not build yet: it reaches the mirror on entry.posted only. */
+/** Realised FX on a converted receipt: no cash moves, the loss comes off the invoice. Reaches the mirror on entry.posted only. */
+export function postFxLoss(db: Db): string {
+  return post(db, {
+    intent_id: INTENT, function: "ar", kind: "fx_realized", party_id: "initech", entry_date: "2026-07-12", bank_txn_id: "BTX-0070",
+    applications: [{ doc_id: "INV-1042", amount_cents: 19600 }],
+    entries: [
+      { account: ACCOUNTS.fx_gain_loss, debit_cents: 19600, credit_cents: 0, memo: "Realized FX loss: settled at 1.0800, booked at 1.1000" },
+      { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 19600, memo: "Realized FX loss: settled at 1.0800, booked at 1.1000" },
+    ],
+    evidence: [{ claim: "Bank advice states the rate", trace_id: EMAIL_TRACE }], policy_refs: [], fact_refs: [], judgment: [],
+  }, false);
+}
+
+/** A write-off whose debit account has no manifest row: bank charges is not in `seedManifest`. */
+export function postFeeWriteOff(db: Db): string {
+  return post(db, {
+    intent_id: INTENT, function: "ar", kind: "write_off", party_id: "initech", entry_date: "2026-07-12",
+    applications: [{ doc_id: "INV-1042", amount_cents: 4000 }],
+    entries: [
+      { account: ACCOUNTS.bank_charges, debit_cents: 4000, credit_cents: 0, memo: "Wire fee kept by the bank" },
+      { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 4000, memo: "Wire fee kept by the bank" },
+    ],
+    evidence: [], policy_refs: [], fact_refs: [], judgment: [],
+  }, false);
+}
+
+/** A kind the mirror does not build: it reaches the mirror on entry.posted only. */
 export function postAccrual(db: Db): string {
   return post(db, {
     intent_id: INTENT, function: "close", kind: "accrual", party_id: "initech", entry_date: "2026-07-31", applications: [],
