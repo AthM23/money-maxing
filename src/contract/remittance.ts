@@ -39,8 +39,9 @@ function moneyTokens(text: string): Token[] {
 /**
  * Check a free-form remittance that a model (or a person) read, against the customer's own words. Nothing the reader
  * said is trusted: every invoice number must appear in the text, its amount must sit next to it with no other
- * invoice in between (so a correct total cannot hide amounts swapped between invoices), the total must appear, and
- * the allocations must foot to it. Pure text and arithmetic; the kernel runs it again at every gate.
+ * document number in between (so a correct total cannot hide amounts swapped between invoices, and a payment cannot be
+ * moved onto an invoice the customer only mentioned), the total must appear, and the allocations must foot to it.
+ * Pure text and arithmetic; the kernel runs it again at every gate.
  */
 export function remittanceProvenanceProblems(
   text: string, applications: ReadonlyArray<{ doc_id: string; amount_cents: number }>, totalCents: number,
@@ -51,41 +52,51 @@ export function remittanceProvenanceProblems(
   if (new Set(applications.map((a) => a.doc_id)).size !== applications.length) problems.push("an invoice is allocated twice");
   const footed = applications.reduce((n, a) => n + a.amount_cents, 0);
   if (footed !== totalCents) problems.push(`allocations foot to ${footed}, the receipt is ${totalCents}`);
-  if (!money.some((t) => t.cents === totalCents)) problems.push(`the receipt total ${totalCents} is not stated in the remittance`);
-  return [...problems, ...pairingProblems(text, money, applications)];
+  const pairing = pairAmounts(text, money, applications);
+  // With several invoices the total has to be a figure of its own, not one of the amounts already paired to an invoice.
+  const free = applications.length === 1 ? money : money.filter((t) => !pairing.used.has(t.at));
+  if (!free.some((t) => t.cents === totalCents)) problems.push(`the receipt total ${totalCents} is not stated in the remittance`);
+  return [...problems, ...pairing.problems];
 }
 
 type Application = { doc_id: string; amount_cents: number };
+type Side = "after" | "before";
+interface Pairing { problems: string[]; used: Set<number> }
 
 /**
  * Which amount belongs to which invoice. Customers write one way or the other throughout a remittance: the amount
  * after the invoice ("INV-1 ($5.00)", "INV-1:5.00") or before it ("$5.00 against INV-1"). Every line has to pair
- * in the same direction, with no other invoice number in between. One invoice has nothing to be confused with.
+ * in the same direction, with no other document number in between, and an invoice named more than once has to carry
+ * the same amount each time: a statement block followed by a payment block is a person's to read.
  */
-function pairingProblems(text: string, money: Token[], applications: ReadonlyArray<Application>): string[] {
+function pairAmounts(text: string, money: Token[], applications: ReadonlyArray<Application>): Pairing {
   const named = applications.map((a) => ({ app: a, at: positionsOf(text, a.doc_id) }));
   const missing = named.filter((n) => n.at.length === 0).map((n) => `${n.app.doc_id} is not named in the remittance`);
-  if (missing.length > 0) return missing;
-  if (applications.length === 1) {
-    const only = applications[0]!;
-    return money.some((t) => t.cents === only.amount_cents) ? [] : [`${only.amount_cents} is not stated in the remittance for ${only.doc_id}`];
+  if (missing.length > 0) return { problems: missing, used: new Set() };
+  const barriers = documentNumberPositions(text);
+  let firstFailure: string[] = [];
+  for (const side of ["after", "before"] as const) {
+    const seen = named.map((n) => ({ app: n.app, tokens: n.at.map((idAt) => neighbour(money, barriers, idAt, side)).filter((t): t is Token => t !== undefined) }));
+    const bad = seen.filter((n) => n.tokens.length === 0 || n.tokens.some((t) => t.cents !== n.app.amount_cents));
+    if (bad.length === 0) return { problems: [], used: new Set(seen.flatMap((n) => n.tokens.map((t) => t.at))) };
+    if (side === "after") firstFailure = bad.map((n) => `${n.app.amount_cents} is not stated next to ${n.app.doc_id} in the remittance`);
   }
-  const allIds = named.flatMap((n) => n.at).sort((a, b) => a - b);
-  const after = named.filter((n) => !n.at.some((idAt) => neighbour(money, allIds, idAt, "after") === n.app.amount_cents));
-  if (after.length === 0) return [];
-  const before = named.filter((n) => !n.at.some((idAt) => neighbour(money, allIds, idAt, "before") === n.app.amount_cents));
-  if (before.length === 0) return [];
-  return after.map((n) => `${n.app.amount_cents} is not stated next to ${n.app.doc_id} in the remittance`);
+  return { problems: firstFailure, used: new Set() };
 }
 
-/** The first amount after an invoice number (or the last one before it), short of the next invoice number and the window. */
-function neighbour(money: Token[], allIds: number[], idAt: number, side: "after" | "before"): number | undefined {
+/** The first amount after a document number (or the last one before it), short of the next document number and the window. */
+function neighbour(money: Token[], barriers: number[], idAt: number, side: Side): Token | undefined {
   if (side === "after") {
-    const limit = Math.min(allIds.find((o) => o > idAt) ?? Infinity, idAt + PAIRING_WINDOW);
-    return money.find((t) => t.at > idAt && t.at < limit)?.cents;
+    const limit = Math.min(barriers.find((o) => o > idAt) ?? Infinity, idAt + PAIRING_WINDOW);
+    return money.find((t) => t.at > idAt && t.at < limit);
   }
-  const limit = Math.max([...allIds].reverse().find((o) => o < idAt) ?? -Infinity, idAt - PAIRING_WINDOW);
-  return [...money].reverse().find((t) => t.at < idAt && t.at > limit)?.cents;
+  const limit = Math.max([...barriers].reverse().find((o) => o < idAt) ?? -Infinity, idAt - PAIRING_WINDOW);
+  return [...money].reverse().find((t) => t.at < idAt && t.at > limit);
+}
+
+/** Anything written like a document number (INV-3182, PO-4471, NW-48213), allocated or not: an amount belongs to the nearest one. */
+function documentNumberPositions(text: string): number[] {
+  return [...text.matchAll(/(?<![A-Za-z0-9-])[A-Za-z]{2,8}-?\d{3,}(?:-\d+)*(?![A-Za-z0-9-])/g)].map((m) => m.index ?? 0);
 }
 
 function positionsOf(text: string, id: string): number[] {

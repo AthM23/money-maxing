@@ -53,6 +53,21 @@ describe("asked once: the answer becomes evidence, a scoped fact, and the entry"
     expect(t.ar_gl_cents).toBe(t.ar_subledger_cents);
   });
 
+  it("a percentage answer books that percentage, not the whole shortfall: what it does not explain stays open", async () => {
+    const db = seedInitech();
+    seedWayne(db);
+    await runCase(db, wayne, { ...opts, investigators: [asksTheOwner] });
+    const esc = db.prepare("SELECT id FROM escalation").get() as { id: string };
+    // Wayne is 10% short ($3,300 of $33,000). The owner confirms only a 2% service credit.
+    const out = recordHumanAnswer(db, esc.id, "U_SAM", { treatment: "credit_memo", text: "We agreed a 2% service credit, nothing more.", uses: "standing", pct_off: 2, valid_to: "2026-12-31" }, { clock: fixedClock });
+    const decisionId = out.status === "answered" && out.proposal?.status === "pending_approval" ? out.proposal.decision_id : "";
+    const booked = db.prepare("SELECT json_extract(proposal_json, '$.applications[0].amount_cents') AS cents FROM decision WHERE id = ?").get(decisionId) as { cents: number };
+    expect(booked.cents).toBe(66000);
+    expect(approveDecision(db, decisionId, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
+    expect(db.prepare("SELECT open_cents, status FROM invoice WHERE id = 'INV-1050'").get()).toEqual({ open_cents: 264000, status: "open" });
+    expect((db.prepare("SELECT status FROM intent WHERE id = 'int_9'").get() as { status: string }).status).not.toBe("resolved");
+  });
+
   it("the one-time credit is not reused next month: the fact is refused by name, and the new question carries the old answer", async () => {
     const db = seedInitech();
     seedWayne(db);

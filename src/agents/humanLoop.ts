@@ -126,7 +126,7 @@ function resume(
   if (!docId) return null;
   // The answer covers what is still open, which can be less than the case's shortfall: a bank fee and a rate
   // difference on the same receipt are booked from code before anyone is asked about the rest.
-  const amount = stillOpenOn(db, docId, c.shortfall_cents);
+  const amount = answeredAmount(db, docId, answer, c.shortfall_cents);
   const proposal: Proposal = {
     intent_id: c.intent_id, function: c.function, kind: answer.treatment, party_id: c.party_id, entry_date: c.entry_date,
     applications: [{ doc_id: docId, amount_cents: amount }],
@@ -140,7 +140,15 @@ function resume(
   return proposeEntry(db, proposal, { actor: "router:resume", mode: "live", autonomy_level: "review", tier: 0 }, deps);
 }
 
-function stillOpenOn(db: Db, docId: string, shortfallCents: number): number {
-  const row = db.prepare("SELECT open_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number } | undefined;
-  return row && row.open_cents > 0 ? Math.min(shortfallCents, row.open_cents) : shortfallCents;
+/**
+ * A percentage answer books that percentage of the invoice, which is what the kernel recomputes from the fact and
+ * what code will book from it next month; any other answer covers what is still open. If the percentage explains
+ * less than what is open, the rest stays open: one answer never books two different amounts.
+ */
+function answeredAmount(db: Db, docId: string, answer: HumanAnswer, shortfallCents: number): number {
+  const row = db.prepare("SELECT open_cents, total_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number; total_cents: number } | undefined;
+  const open = row && row.open_cents > 0 ? Math.min(shortfallCents, row.open_cents) : shortfallCents;
+  const pct = answer.treatment === "tax_withholding" ? answer.pct_withheld : answer.pct_off;
+  if (!row || pct === undefined) return open;
+  return Math.min(open, Math.round((row.total_cents * pct) / 100));
 }

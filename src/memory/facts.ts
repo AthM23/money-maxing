@@ -72,8 +72,10 @@ export function approveFact(db: Db, clock: Clock, factId: string, approverId: st
   if (!Array.isArray(sources) || !sources.length || sources.some(id => typeof id !== "string" || !getTrace(db, id) || getTrace(db, id)?.superseded_by)) {
     return { status: "unauthorised", fact_id: factId, reason: "source evidence is missing or superseded; record a fresh candidate" };
   }
-  const approver = db.prepare("SELECT limit_cents FROM approver WHERE id = ?").get(approverId) as { limit_cents: number } | undefined;
+  const approver = db.prepare("SELECT limit_cents, role FROM approver WHERE id = ?").get(approverId) as { limit_cents: number; role: string } | undefined;
   if (!approver) return { status: "unauthorised", fact_id: factId, reason: `${approverId} is not in the approval matrix` };
+  // Memory decides what code may post later with nobody watching, so only a person puts something into it.
+  if (approver.role === "controller_agent") return { status: "unauthorised", fact_id: factId, reason: "a controller agent cannot approve what the system remembers" };
 
   const run = db.transaction(() => {
     db.prepare("UPDATE fact SET status = 'superseded' WHERE party_id = ? AND predicate = ? AND status = 'active'")
@@ -98,15 +100,26 @@ function reopenCasesWaitingOnMemory(db: Db, partyId: string): void {
     `UPDATE intent SET status = 'open', closed_at = NULL
      WHERE status = 'waiting_on_human' AND json_extract(case_json, '$.party_id') = ?
        AND NOT EXISTS (SELECT 1 FROM decision d WHERE d.intent_id = intent.id AND d.mode = 'live' AND d.route = 'PROPOSE' AND d.posted_at IS NULL
-                         AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected'))
+                         AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected' AND a.approver_kind != 'human'))
        AND NOT EXISTS (SELECT 1 FROM escalation e JOIN decision d ON d.id = e.decision_id WHERE d.intent_id = intent.id AND e.answered_at IS NULL)`,
   ).run(partyId);
 }
 
-/** A person said no. The candidate is kept on record and never applies; the schema's word for that is expired. */
-export function rejectFact(db: Db, factId: string): { status: "rejected" | "not_candidate" } {
-  const info = db.prepare("UPDATE fact SET status = 'expired' WHERE id = ? AND status = 'candidate'").run(factId);
-  return { status: info.changes === 1 ? "rejected" : "not_candidate" };
+/**
+ * A person said no. The candidate is kept on record and never applies; the schema's word for that is expired. Who said
+ * no is checked against the approval matrix and recorded, the same as who said yes.
+ */
+export function rejectFact(db: Db, clock: Clock, factId: string, approverId: string): { status: "rejected" | "not_candidate" | "unauthorised" } {
+  const approver = db.prepare("SELECT role FROM approver WHERE id = ?").get(approverId) as { role: string } | undefined;
+  if (!approver || approver.role === "controller_agent") return { status: "unauthorised" };
+  const fact = db.prepare("SELECT party_id, predicate FROM fact WHERE id = ? AND status = 'candidate'").get(factId) as { party_id: string; predicate: string } | undefined;
+  if (!fact) return { status: "not_candidate" };
+  const run = db.transaction(() => {
+    db.prepare("UPDATE fact SET status = 'expired' WHERE id = ? AND status = 'candidate'").run(factId);
+    emit(db, clock, { topic: "fact.rejected", from_function: "memory", intent_id: null, payload: { fact_id: factId, party_id: fact.party_id, predicate: fact.predicate, rejected_by: approverId } });
+  });
+  run();
+  return { status: "rejected" };
 }
 
 export interface FactCandidateView {

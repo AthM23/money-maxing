@@ -45,17 +45,18 @@ export function foreignParts(db: Db, c: CaseFile, notes: string[]): ForeignParts
   notes.push(`Of the ${money(c.shortfall_cents)} difference: ${money(bankFx.fee_cents)} is the bank's fee, ${money(fx)} is the rate moving from ${rate(docFx.booked_rate_ppm)} at booking to ${rate(bankFx.rate_ppm)} at settlement on ${bankFx.currency} ${money(bankFx.foreign_amount_cents)}, and ${money(residual)} is ${bankFx.currency} ${money(docFx.foreign_total_cents - bankFx.foreign_amount_cents)} the customer did not pay.`);
   return { currency: bankFx.currency, advice_trace_id: bankFx.advice_trace_id, foreign_amount_cents: bankFx.foreign_amount_cents,
     booked_rate_ppm: docFx.booked_rate_ppm, rate_ppm: bankFx.rate_ppm, fee_cents: bankFx.fee_cents, fx_loss_cents: fx, residual_cents: residual,
-    fee_booked: feeBooked(db, c, bankFx.fee_cents), fx_booked: fxRealizedCents(db, c.bank_txn_id) > 0 };
+    fee_booked: feeBooked(db, c, bankFx.fee_cents, bankFx.advice_trace_id), fx_booked: fxRealizedCents(db, c.bank_txn_id) > 0 };
 }
 
-/** The fee counts as booked once a write-off for exactly that amount has taken effect on this case. */
-function feeBooked(db: Db, c: CaseFile, feeCents: number): boolean {
+/** The fee counts as booked once a write-off for exactly that amount, citing the bank's advice, has taken effect on this case. */
+function feeBooked(db: Db, c: CaseFile, feeCents: number, adviceTraceId: string | null): boolean {
   if (feeCents === 0) return true;
   const row = db
     .prepare(
       `SELECT COUNT(*) AS n FROM decision d WHERE d.intent_id = ? AND d.mode = 'live' AND d.posted_at IS NOT NULL AND d.kind = 'write_off'
-         AND (SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) FROM json_each(json_extract(d.proposal_json, '$.applications')) a) = ?`,
+         AND (SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) FROM json_each(json_extract(d.proposal_json, '$.applications')) a) = ?
+         AND EXISTS (SELECT 1 FROM json_each(json_extract(d.proposal_json, '$.evidence')) e WHERE e.value ->> '$.trace_id' = ?)`,
     )
-    .get(c.intent_id, feeCents) as { n: number };
+    .get(c.intent_id, feeCents, adviceTraceId ?? "") as { n: number };
   return row.n > 0;
 }

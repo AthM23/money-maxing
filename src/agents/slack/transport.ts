@@ -82,7 +82,7 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     return;
   }
   if (body.type === "block_actions" && action && (action.action_id === "fact_approve" || action.action_id === "fact_reject")) {
-    const result = action.action_id === "fact_approve" ? approveFact(db, systemClock, action.value, approverFor(db, body.user.id)) : rejectFact(db, action.value);
+    const result = action.action_id === "fact_approve" ? approveFact(db, systemClock, action.value, approverFor(db, body.user.id)) : rejectFact(db, systemClock, action.value, approverFor(db, body.user.id));
     const said = result.status === "active" ? "Remembered. It applies from now, within your limit and its end date."
       : result.status === "rejected" ? "Not remembered." : `Nothing changed (${result.status}${"reason" in result ? `: ${result.reason}` : ""}).`;
     await web.chat.postMessage({ channel: body.user.id, text: said } as never);

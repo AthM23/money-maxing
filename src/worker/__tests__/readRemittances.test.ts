@@ -7,6 +7,7 @@ import type { DocumentReader } from "../../reader/types.js";
 import { fixedClock } from "../../runtime/__tests__/seed.js";
 import { openDb, type Db } from "../../runtime/db.js";
 import { readControlTotals } from "../../runtime/kernelContext.js";
+import { proposeEntry } from "../../runtime/proposeEntry.js";
 import { runOpenIntents } from "../runOpenIntents.js";
 
 const REMITTANCE = "2026-07-18 ACH RMT76314 CASTELLAN BIOTECH USD 8,511.30 INV-2002:3,016.32 INV-2004:5,494.98";
@@ -87,5 +88,20 @@ describe("a small model reads the customer's remittance; code decides whether to
     const report = await runOpenIntents(db, { investigators: [], reader: down, clock: fixedClock });
     expect(report.readings).toMatchObject([{ outcome: "rejected", reason: "reader unreachable: ECONNREFUSED" }]);
     expect(report.worked[0]).toMatchObject({ status: "open" });
+  });
+
+  it("a remittance from another month cannot direct this receipt, whoever proposes it: the kernel checks the dates itself", () => {
+    const db = world();
+    const payload = JSON.stringify({ from: "ap@castellanbiotech.test", to: "ar@northwind.test", subject: "payment sent", body: REMITTANCE });
+    db.prepare("INSERT INTO trace (id, source, kind, external_id, event_time, recorded_time, ingested_at, party_id, content_hash, payload_json) VALUES ('tr_old','gmail','email','m-castellan-0',?,?,?,'castellan',?,?)")
+      .run("2026-05-20T15:00:00Z", "2026-05-20T15:00:00Z", "2026-09-19T20:00:00Z", createHash("sha256").update(payload).digest("hex"), payload);
+    const entry = (traceId: string) => ({ intent_id: "int_c", function: "ar" as const, kind: "apply_payment" as const, party_id: "castellan", entry_date: "2026-07-18", bank_txn_id: "BTX-C",
+      remittance_trace_id: traceId, applications: [{ doc_id: "INV-2002", amount_cents: 301632 }, { doc_id: "INV-2004", amount_cents: 549498 }],
+      entries: [{ account: ACCOUNTS.cash, debit_cents: 851130, credit_cents: 0, memo: "cash" }, { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 851130, memo: "cash" }],
+      evidence: [{ claim: "the customer's remittance", trace_id: traceId }], policy_refs: [], fact_refs: [], judgment: [] });
+    const meta = { actor: "agent:ar:haiku", mode: "live" as const, autonomy_level: "auto" as const, tier: 1 };
+    const stale = proposeEntry(db, entry("tr_old"), meta, { clock: fixedClock });
+    expect(stale.status === "rejected" ? stale.failed.map((m) => `${m.check}: ${m.detail}`).join(" ") : stale.status).toContain("too far apart to be the same payment");
+    expect(proposeEntry(db, entry("tr_remit"), meta, { clock: fixedClock }).status).toBe("posted");
   });
 });

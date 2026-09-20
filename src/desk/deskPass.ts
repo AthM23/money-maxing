@@ -57,12 +57,22 @@ async function postFactCandidates(db: Db, poster: Poster, alreadyAsked: Set<stri
   if (!poster.postFact) return;
   for (const f of factCandidates(db)) {
     if (alreadyAsked.has(f.id)) continue;
-    const approver = chooseApprover(db, { id: f.id, actor: f.stated_by, amount_cents: f.explained_amount_cents ?? 0, answered_by: null });
+    const approver = chooseApprover(db, { id: f.id, actor: f.stated_by, amount_cents: factExposureCents(db, f), answered_by: null });
     if (!approver) { report.unroutable.push({ decision_id: f.id, reason: "no reachable approver for a proposed fact" }); continue; }
     if (!(await poster.postFact(f.id, approver.slack_user))) continue;
     alreadyAsked.add(f.id);
     report.facts_posted.push({ fact_id: f.id, approver_id: approver.id });
   }
+}
+
+/**
+ * What approving this fact would let code do with nobody watching. A fact that explains an amount is sized by it; one
+ * that says who pays for whom lets that payer's cash through, so it is sized by what the customer owes. The approver's
+ * limit becomes the fact's ceiling, so asking someone whose limit is too small would produce a fact that never applies.
+ */
+function factExposureCents(db: Db, f: { party_id: string; explained_amount_cents: number | null }): number {
+  const owed = db.prepare("SELECT COALESCE(SUM(open_cents), 0) AS n FROM invoice WHERE party_id = ? AND open_cents > 0").get(f.party_id) as { n: number };
+  return Math.max(f.explained_amount_cents ?? 0, f.explained_amount_cents === null ? owed.n : 0);
 }
 
 interface Parked { id: string; actor: string; amount_cents: number; answered_by: string | null }

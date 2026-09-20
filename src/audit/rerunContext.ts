@@ -174,8 +174,13 @@ function appliedByOthers(db: Db, subject: RerunSubject, bankTxnId: string, neutr
  */
 function asOfPolicy(db: Db, subject: RerunSubject, base: KernelContext, id: string, neutralised: string[]): ReturnType<KernelContext["getPolicy"]> {
   const policy = base.getPolicy(id);
-  if (!policy || policy.status !== "retired") return policy;
+  if (!policy) return policy;
   const own = db.prepare("SELECT approved_at FROM policy WHERE id = ?").get(id) as { approved_at: string | null } | undefined;
+  if (policy.status === "approved" && own?.approved_at && own.approved_at > subject.posted_at) {
+    neutralised.push(`policy ${id} read as not yet approved: it was approved at ${own.approved_at}, after this entry posted at ${subject.posted_at}`);
+    return { ...policy, status: "proposed" };
+  }
+  if (policy.status !== "retired") return policy;
   const successor = db.prepare("SELECT id, approved_at FROM policy WHERE supersedes = ? AND approved_at IS NOT NULL ORDER BY approved_at LIMIT 1")
     .get(id) as { id: string; approved_at: string } | undefined;
   if (!own?.approved_at || !successor || own.approved_at > subject.posted_at || successor.approved_at <= subject.posted_at) return policy;

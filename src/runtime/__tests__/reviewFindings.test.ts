@@ -71,6 +71,22 @@ describe("review findings: no path to the ledger around the kernel", () => {
     expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1050'").get()).toEqual({ open_cents: 3300000 });
   });
 
+  it("3b · a payer fact is capped on the cash it lets through: a $100 approver's word does not apply a $10,800 receipt", () => {
+    const db = seedInitech();
+    db.exec(`INSERT INTO party (id, kind, name, owner_user) VALUES ('initech_holdings','customer','Initech Holdings BV','U_DANA');
+             UPDATE bank_txn SET party_id = 'initech_holdings' WHERE id = 'BTX-1';`);
+    const rec = recordFactCandidate(db, fixedClock, {
+      party_id: "initech", predicate: "payer_alias", value: { payer_party_id: "initech_holdings" }, kinds: ["apply_payment"], uses: "standing",
+      valid_from: "2026-01-01", valid_to: "2026-12-31", source_trace_ids: ["tr_email_1"], stated_by: "U_DANA",
+    });
+    const factId = rec.status === "candidate" ? rec.fact_id : "";
+    expect(approveFact(db, fixedClock, factId, "U_AP")).toMatchObject({ status: "active", max_amount_cents: 10000 });
+    const r = proposeEntry(db, { ...applyPayment(), fact_refs: [factId] }, { ...agent, tier: 0 }, deps);
+    expect(r.status).toBe("rejected");
+    if (r.status === "rejected") expect(r.failed.map((m) => `${m.check}: ${m.detail}`).join(" ")).toContain("caps at 10000, the cash applied is 1080000");
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1042'").get()).toEqual({ open_cents: 1200000 });
+  });
+
   it("4 · re-proposing a human-approved entry reports PROPOSE, not AUTO", () => {
     const db = seedInitech();
     const parked = proposeEntry(db, creditMemo(), agent, deps);

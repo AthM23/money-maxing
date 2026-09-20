@@ -4,7 +4,7 @@ import { proposeEntry } from "../../runtime/proposeEntry.js";
 import { creditMemo, fixedClock, seedInitech } from "../../runtime/__tests__/seed.js";
 import { applicableFacts } from "../applicability.js";
 import { answerEscalation, dedupeKey, openEscalation } from "../escalations.js";
-import { approveFact, expireFacts, recordFactCandidate } from "../facts.js";
+import { approveFact, expireFacts, recordFactCandidate, rejectFact } from "../facts.js";
 
 const concession = {
   party_id: "initech", predicate: "concession_pct", value: { pct_off: 10 }, kinds: ["credit_memo"], uses: "standing",
@@ -116,5 +116,37 @@ describe("escalations: asked once", () => {
     const r = approveDecision(db, decisionId, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock });
     expect(r.status).toBe("rejected");
     if (r.status === "rejected") expect(r.failed.map((m) => m.check)).toContain("P4");
+  });
+});
+
+describe("who may change what the system remembers, and what that reopens", () => {
+  const alias = { party_id: "initech", predicate: "payer_alias", value: { payer_party_id: "initech_holdings" }, kinds: ["apply_payment" as const], uses: "standing" as const,
+    valid_from: "2026-01-01", valid_to: "2026-12-31", source_trace_ids: ["tr_email_1"], stated_by: "U_DANA" };
+
+  it("a case whose entry a person declined is not reopened by an unrelated fact; a controller agent cannot approve or reject memory", () => {
+    const db = seedInitech();
+    db.exec("INSERT INTO approver (id, name, role, slack_user, limit_cents) VALUES ('controller:gpt','Controller agent','controller_agent',NULL,50000)");
+    const parked = proposeEntry(db, creditMemo(), { actor: "agent:ar", mode: "live", autonomy_level: "auto" }, { clock: fixedClock });
+    const decisionId = parked.status === "pending_approval" ? parked.decision_id : "";
+    approveDecision(db, decisionId, { approver_id: "U_CTRL", approver_kind: "human", outcome: "rejected", note: "not agreed" }, { clock: fixedClock });
+    db.prepare("UPDATE intent SET status = 'waiting_on_human', case_json = ? WHERE id = 'int_1'").run(JSON.stringify({ party_id: "initech" }));
+
+    const rec = recordFactCandidate(db, fixedClock, alias);
+    const factId = rec.status === "candidate" ? rec.fact_id : "";
+    expect(approveFact(db, fixedClock, factId, "controller:gpt").status).toBe("unauthorised");
+    expect(rejectFact(db, fixedClock, factId, "controller:gpt").status).toBe("unauthorised");
+    expect(rejectFact(db, fixedClock, factId, "U_NOBODY").status).toBe("unauthorised");
+    expect(approveFact(db, fixedClock, factId, "U_CTRL").status).toBe("active");
+    expect((db.prepare("SELECT status FROM intent WHERE id = 'int_1'").get() as { status: string }).status).toBe("waiting_on_human");
+  });
+
+  it("a rejection is on the record with who made it", () => {
+    const db = seedInitech();
+    const rec = recordFactCandidate(db, fixedClock, alias);
+    const factId = rec.status === "candidate" ? rec.fact_id : "";
+    expect(rejectFact(db, fixedClock, factId, "U_CTRL").status).toBe("rejected");
+    const event = db.prepare("SELECT payload_json FROM event WHERE topic = 'fact.rejected'").get() as { payload_json: string };
+    expect(JSON.parse(event.payload_json)).toMatchObject({ fact_id: factId, rejected_by: "U_CTRL" });
+    expect(rejectFact(db, fixedClock, factId, "U_CTRL").status).toBe("not_candidate");
   });
 });

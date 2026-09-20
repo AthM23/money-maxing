@@ -72,8 +72,10 @@ function factProblems(fact: FactLite, proposal: Proposal, ctx: KernelContext, ad
   if (fact.uses === "one_time" && fact.used_count !== 0) {
     problems.push(`fact ${id} is one_time and has already been used ${fact.used_count} time(s)`);
   }
-  if (typeof fact.max_amount_cents === "number" && adjustment > fact.max_amount_cents) {
-    problems.push(`fact ${id} caps at ${fact.max_amount_cents}, adjustment is ${adjustment}`);
+  // A cash application adjusts nothing, so its size is the cash: a fact that says who pays for whom is capped on that.
+  const exposure = proposal.kind === "apply_payment" ? proposal.applications.reduce((n, a) => n + a.amount_cents, 0) : adjustment;
+  if (typeof fact.max_amount_cents === "number" && exposure > fact.max_amount_cents) {
+    problems.push(`fact ${id} caps at ${fact.max_amount_cents}, ${proposal.kind === "apply_payment" ? "the cash applied" : "adjustment"} is ${exposure}`);
   }
   if (isAfterAsOf(ctx, fact.learned_at)) {
     problems.push(`fact ${id} learned ${fact.learned_at} is after as_of ${ctx.as_of}`);

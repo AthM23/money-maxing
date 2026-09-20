@@ -42,7 +42,7 @@ function main(): number {
     return r.status === "posted" || r.status === "declined" ? 0 : 1;
   }
   if (command === "approve-fact" || command === "reject-fact") {
-    const r = command === "approve-fact" ? approveFact(db, systemClock, id, flags.as) : rejectFact(db, id);
+    const r = command === "approve-fact" ? approveFact(db, systemClock, id, flags.as) : rejectFact(db, systemClock, id, flags.as);
     out(JSON.stringify(r, null, 2));
     return r.status === "active" || r.status === "rejected" ? 0 : 1;
   }

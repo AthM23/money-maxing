@@ -139,6 +139,11 @@ export function approvePolicy(db: Db, clock: Clock, policyId: string, approverId
     db.prepare("UPDATE policy SET status = 'approved', approved_by = ?, approved_at = ?, max_amount_cents = ? WHERE id = ?")
       .run(approverId, clock.now(), approver.limit_cents, policyId);
     db.prepare("UPDATE policy SET status = 'retired' WHERE id = (SELECT supersedes FROM policy WHERE id = ?)").run(policyId);
+    // Two drafts can both name the same predecessor. Whichever is approved last stands alone: the family has one live version.
+    db.prepare(
+      `UPDATE policy SET status = 'retired' WHERE status = 'approved' AND id != ? AND code IS NOT NULL
+         AND code = (SELECT code FROM policy WHERE id = ?) AND function = (SELECT function FROM policy WHERE id = ?)`,
+    ).run(policyId, policyId, policyId);
   });
   swap();
   return { status: "approved", max_amount_cents: approver.limit_cents };
