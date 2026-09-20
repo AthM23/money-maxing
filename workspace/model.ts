@@ -53,6 +53,10 @@ const CONTENDERS: { file: string; key: string; label: string; note: string; ours
   { file: "ft/data/benchmark_results_v2.json", key: "base4b", label: "Qwen3-4B, not fine-tuned", note: "the same open model before our training" },
   { file: "ft/data/benchmark_v2_haiku.json", key: "haiku-bare", label: "Claude Haiku 4.5", note: "same prompt as ours, no schema given" },
   { file: "ft/data/benchmark_v2_haiku.json", key: "haiku-hinted", label: "Claude Haiku 4.5 + schema", note: "the full JSON schema pasted into every prompt" },
+  { file: "ft/data/benchmark_v2_sonnet.json", key: "sonnet-hinted", label: "Claude Sonnet 5 + schema", note: "the full JSON schema pasted into every prompt" },
+  { file: "ft/data/benchmark_v2_opus.json", key: "opus-hinted", label: "Claude Opus 5 + schema", note: "the full JSON schema pasted into every prompt" },
+  { file: "ft/data/benchmark_v2_fable.json", key: "fable-hinted", label: "Claude Fable 5 + schema", note: "the full JSON schema pasted into every prompt" },
+  { file: "ft/data/benchmark_results_v2.json", key: "tuned06", label: "Qwen3-0.6B + our LoRA", note: "the same recipe on a model seven times smaller; no schema in the prompt", ours: true },
   { file: "ft/data/benchmark_results_v2.json", key: "ours", label: "Qwen3-4B + our LoRA", note: "no schema in the prompt: it learned the format", ours: true },
 ];
 
@@ -78,13 +82,14 @@ function read<S extends z.ZodType>(root: string, path: string, schema: S, proble
 function extraction(root: string, problems: string[]): unknown {
   const files = new Map<string, z.infer<typeof Bench> | null>();
   for (const c of CONTENDERS) if (!files.has(c.file)) files.set(c.file, read(root, c.file, Bench, problems));
+  const notes = [...files.values()].flatMap((f) => (f?.protocol.note ? [f.protocol.note] : []));
   const rows = CONTENDERS.flatMap((c) => {
     const score = files.get(c.file)?.models[c.key];
     return score ? [{ key: c.key, label: c.label, note: c.note, ours: c.ours === true, ...score }] : [];
   });
   const local = files.get("ft/data/benchmark_results_v2.json");
   if (rows.length === 0 || !local) return null;
-  return { scorer: local.protocol.scorer, n: local.protocol.n, test_sha256: local.protocol.test_sha256 ?? null, api_note: files.get("ft/data/benchmark_v2_haiku.json")?.protocol.note ?? null, rows };
+  return { scorer: local.protocol.scorer, n: local.protocol.n, test_sha256: local.protocol.test_sha256 ?? null, api_note: notes.length ? notes.join("; ") : null, rows };
 }
 
 /** Every reader the harness was benchmarked with, each at the largest n it was run on. */

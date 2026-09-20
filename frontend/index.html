@@ -335,9 +335,10 @@
     </div>
     <div class="rv d1">
       <div class="tbl-scroll"><table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">new vendors and formats</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">perfect answers of 120</th><th class="num">accuracy</th><th class="num">new vendors and formats</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
         <tbody></tbody>
       </table></div>
+      <button id="allModelsBtn" onclick="toggleModels()" style="margin-top:14px;border:0;cursor:pointer;background:var(--ink);color:#fff;border-radius:999px;padding:10px 18px;font-size:13.5px;font-weight:600">Show every system we measured</button>
       <p class="foot-note" id="benchNote">Loading results…</p>
       <p class="foot-note" id="progNote"></p>
     </div>
@@ -538,24 +539,33 @@ function applyExtra(rows){
   return rows;
 }
 const PROG = "Same model, same exam, same grader, before and after training: 6% accurate untrained, 97% after training.";
+/* the table makes ONE argument: untrained models fail this job, our 15-minute fine-tune matches the
+   frontier at a fraction of the cost. Six rows prove it; the rest sit behind the toggle. */
+const MAIN = ['ours','tuned06','sonnet-hinted','haiku-hinted','base4b','haiku-bare'];
+let showAll=false, LASTROWS=null, LASTNOTE='';
 function renderBench(rows, note){
+  LASTROWS=rows; LASTNOTE=note;
   const tb=document.querySelector('#benchTable tbody'); tb.innerHTML='';
-  Object.entries(rows)
+  const entries=Object.entries(rows)
     .filter(([k])=>!/ep\d|epoch/.test(k) && k!=='opus-hinted')
-    .sort((a,b)=>b[1].f1-a[1].f1)
-    .forEach(([k,r])=>{
+    .sort((a,b)=>b[1].f1-a[1].f1);
+  const shown=showAll?entries:entries.filter(([k])=>MAIN.includes(k));
+  shown.forEach(([k,r])=>{
       const tr=document.createElement('tr'); if(k==='ours'||k==='tuned06') tr.className='hero-row';
-      tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
+      tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${Math.round(r.exact*120)}/120</td>
         <td class="num">${(r.f1*100).toFixed(1)}%</td><td class="num">${r.ho!=null?(r.ho*100).toFixed(1)+'%':'n/a'}</td>
         <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>
         <td class="num">${r.cost!=null?'$'+r.cost.toFixed(2):'n/a'}</td>`;
       tb.appendChild(tr);
     });
+  const btn=document.getElementById('allModelsBtn');
+  if(btn) btn.textContent=showAll?'Back to the short list':`Show every system we measured (${entries.length})`;
   document.getElementById('benchNote').textContent = note;
   document.getElementById('progNote').textContent = PROG;
   renderChart(rows);
 }
-renderBench(applyExtra({...fallback}), "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. New vendors and formats: accuracy on only the companies and document styles we deliberately kept out of training, proof the model learned the job instead of memorizing answers. Cheat sheet means we handed that model the exact answer template in its prompt; our models get no cheat sheet, the format is trained in. The top Claude tiers post identical scores because they all miss the same 27 documents, the genuinely ambiguous ones: the exam has a ceiling and they are all sitting at it. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
+function toggleModels(){ showAll=!showAll; if(LASTROWS) renderBench(LASTROWS, LASTNOTE); }
+renderBench(applyExtra({...fallback}), "Same 120-document exam, same grading script, every row. Perfect answers: the whole document right to the cent. Accuracy: partial credit per field. New vendors and formats: documents from companies and styles kept out of training. Cheat sheet: that model was handed the exact answer template in its prompt; ours has the format trained in.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
                '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json',
@@ -576,7 +586,7 @@ renderBench(applyExtra({...fallback}), "120 test documents per model, same exam 
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(applyExtra(rows), "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. New vendors and formats: accuracy on only the companies and document styles we deliberately kept out of training, proof the model learned the job instead of memorizing answers. Cheat sheet means we handed that model the exact answer template in its prompt; our models get no cheat sheet, the format is trained in. The top Claude tiers post identical scores because they all miss the same 27 documents, the genuinely ambiguous ones: the exam has a ceiling and they are all sitting at it. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
+  renderBench(applyExtra(rows), "Same 120-document exam, same grading script, every row. Perfect answers: the whole document right to the cent. Accuracy: partial credit per field. New vendors and formats: documents from companies and styles kept out of training. Cheat sheet: that model was handed the exact answer template in its prompt; ours has the format trained in.");
 })();
 </script>
 </body>

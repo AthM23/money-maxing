@@ -2,8 +2,8 @@ import { clock, cost, duration, getJson, h, money, statusPill } from "/dom.js";
 import { icon } from "/icons.js";
 import { tracePanel } from "/views/tracepanel.js";
 
-const KIND = { code: ["code", "Code"], model: ["spark", "Model"], person: ["user", "Person"] };
-const WORKER = { code: ["code", "Code"], reader: ["reader", "Reader"], haiku: ["model", "Haiku"], sonnet: ["model", "Sonnet"], opus: ["model", "Opus"], controller: ["controller", "Controller"], person: ["person", "Person"] };
+const KIND = { code: ["shield", "Harness"], model: ["spark", "LLM agent"], person: ["user", "Person"] };
+const WORKER = { code: ["code", "Rules"], reader: ["reader", "Reader"], haiku: ["model", "Haiku"], sonnet: ["model", "Sonnet"], opus: ["model", "Opus"], controller: ["controller", "Controller"], person: ["person", "Person"] };
 
 // Which run's trace is open. Kept across redraws so the page does not jump back while you are reading one.
 let selected = null;
@@ -32,7 +32,8 @@ export async function renderFleet(app) {
     h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Agents"), h("p", { class: "muted" }, "Who works here, what each of them did, and every run's trace. Each turn is a row in the ledger's own database, so this is a record, not a log someone chose to keep."))),
     h("div", { class: "stats" }, stat(f.runs.length, "runs this month"), stat(f.totals.tool_calls, "lookups"), stat(f.totals.model_calls, "model calls"),
       stat(`${cost(f.totals.cost_micros)}${f.totals.uncosted_turns ? "+" : ""}`, f.totals.uncosted_turns ? `model cost · ${f.totals.uncosted_turns} aborted turn(s) not costed` : "model cost"), stat(f.totals.kernel_refusals, "drafts the kernel refused", f.totals.kernel_refusals ? "bad" : "")),
-    h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "The team"), h("p", { class: "muted" }, "Cheapest first: code, then models by price, then a person. One that was not needed says so."))), roster(f.roster)),
+    h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "The agents"), h("p", { class: "muted" }, "They read documents, reason over them and propose. Cheapest first, and one that was not needed says so."))), roster(f.roster.filter((e) => e.group === "agents"))),
+    h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "The harness around them"), h("p", { class: "muted" }, "What lets an agent be trusted with the books, and what makes it cheaper every month: a checker that can only refuse, the rules the team has already approved, and the monitors and engines that keep every book in step."))), roster(f.roster.filter((e) => e.group !== "agents"))),
     h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "Runs"), h("p", { class: "muted" }, "One row per case. Pick one to read its trace below."))), runs(f.runs, first?.intent_id, pick)),
     traceSlot,
     h("div", { class: "panel" }, h("h2", {}, "As it happened"), h("ol", { class: "feed" }, f.feed.map((item) => feedRow(pick, item)))));
