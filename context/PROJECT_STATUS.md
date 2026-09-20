@@ -1978,3 +1978,21 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
 - Browser audit: 16/16 clean; tampered copy 5 findings. Fresh 200-document oracle checker control: 168 settled/32 deductions open/0 wrong; saboteur: 200 refused/0 wrong. These are not model benchmarks.
 - Verified INV-3202 revenue schedule revision by $550. INV-3201's revenue adjustment still needs review; the close now says so. Vercel remains a read-only uninvestigated snapshot; fixes not deployed.
 - Details and limits: context/PRESENTATION_VERIFICATION_2026-09-20.md in .worktrees/demo-e2e. Changes remain isolated from the original checkout's existing edits.
+
+### 2026-09-20 — Judge-readiness review of code and updated Vercel site (Codex)
+
+- Added `context/JUDGE_READINESS_REVIEW_2026-09-20.md`: assessment against the track brief and both judge conversations, practical priorities, presentation sequence and judge questions. Recommendations only; no application code or deployment changed.
+- Source boundaries: this checkout remained at `dc33ce3`; newer implementation inspected read-only in `C:/Users/A1M/Projects/mm-vercel` (vercel-setup, observed at `9bed874`). User reported redeploying from latest main; site and artifacts moved during review, so observations are snapshots, not an immutable release certification.
+- Measured here on `dc33ce3`: 72 files / 686 tests passed; typecheck passed. Not fresh validation of the deployed revision.
+- Observed authenticated Vercel: 12 receipts, 3 settled, 8 open, 1 awaiting a person, 14 code-posted entries, zero model calls; Close 4/11. Vossberg has code-only cash/fee/FX trace and USD 2,200 unresolved. Hosted read-only audit: 14/14 posted entries clean, zero findings.
+- Key finding: deploying newer code still builds prepared.db without the real model pass unless a snapshot is supplied; Vercel is read-only by construction. Proposed demo on existing writable local workspace plus a clearly labeled hosted snapshot with the real trace.
+- Other proposed priorities: reconcile landing-page receipt/entry/close claims and inconsistent benchmark versions across live pages; show scoped answer reuse on a new invoice and a negative case; extend memory to contract/incident/service period and enforce officer role separately from amount authority. No new finance function proposed.
+- No paid model run, external write, approval submission, reset, or benchmark rerun performed. Saved GPU results are treated as artifacts, not independently re-measured results.
+
+
+
+### 2026-09-20 — Main integration authorized (Codex)
+
+- User authorized merging fixes to main and handling conflicts/branches. Merged the latest origin/main ef88de0 into codex/demo-e2e; workspace/app.ts auto-merged cleanly. Preserved the earlier judge-readiness report and log.
+- Combined revision verified: 93 test files, 776 tests passing; typecheck clean. This supersedes the earlier 775-test count for the integrated source.
+- Publishing the integrated branch to main also triggers the existing Vercel deployment pipeline. The hosted site remains read-only; this does not install a live model or replace its prepared database with the local chat verification state.
