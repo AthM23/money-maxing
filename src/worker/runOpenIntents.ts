@@ -17,6 +17,10 @@ export interface WorkerOptions {
   autonomy_level?: AutonomySetting;
   function?: string;
   limit?: number;
+  /** Try every open case again, even ones only code has already tried with nothing new in memory. */
+  retry?: boolean;
+  /** Work this one case only. */
+  intent_id?: string;
   max_turns?: number;
   clock?: Clock;
   config?: RuntimeConfig;
@@ -46,7 +50,7 @@ export interface WorkerReport {
  * kind of entry has earned. One failing case never stops the pass.
  */
 export async function runOpenIntents(db: Db, opts: WorkerOptions): Promise<WorkerReport> {
-  const { ready, skipped } = pickOpenIntents(db, { function: opts.function, limit: opts.limit });
+  const { ready, skipped } = pickOpenIntents(db, { function: opts.function, limit: opts.limit, has_model_tiers: opts.investigators.length > 0, retry: opts.retry, intent_id: opts.intent_id });
   const worked: WorkedIntent[] = [];
   for (const intent of ready) {
     const result = await workOne(db, intent, opts);

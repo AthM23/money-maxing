@@ -176,11 +176,12 @@ describe("walking skeleton: bank line → drift → intent → router → propos
     expect(row(hooli.id)).toMatchObject({ final_route: "AUTO", intent_status: "resolved" });
   });
 
-  it("Initech and Wayne: the cash is applied, the shortfall is left for judgment, and the intent waits on a person", () => {
+  it("Initech and Wayne: the cash is applied, the shortfall is left for judgment, and the intent stays open for a pass with model tiers", () => {
     for (const [plant, party, inv, short] of [["initech_ceo_concession", "initech", "INV-1042", 120_000], ["wayne_unexplained_short_pay", "wayne", "INV-1048", 330_000]] as const) {
       const r = row(key(plant, party).bank_txn_id);
-      // Cash applied is not case resolved: with no model tier, what code cannot settle goes to a person, on the record.
-      expect(r.intent_status).toBe("waiting_on_human");
+      // Cash applied is not case resolved. Only code has tried, so the case stays open, with that on the record; it
+      // becomes a person's once every model tier has tried, or when something is parked or asked.
+      expect(r.intent_status).toBe("open");
       expect(unsettled(r.intent_id)).toBe(1);
       expect(r.question).toContain("shortfall");
       expect(openInvoices(db, party)).toMatchObject([{ id: inv, open_cents: short }]);
@@ -189,7 +190,7 @@ describe("walking skeleton: bank line → drift → intent → router → propos
 
   it("the parent's payment is not applied to the subsidiary on a guess: the kernel rejects it", () => {
     const r = row(key("parent_pays_for_subsidiary", "globex-labs").bank_txn_id);
-    expect(r).toMatchObject({ routes: [], final_route: null, intent_status: "waiting_on_human" });
+    expect(r).toMatchObject({ routes: [], final_route: null, intent_status: "open" });
     // The rejected proposal is the record of why, nothing posted, and the case is marked unsettled as its newest decision.
     expect(db.prepare("SELECT w.kernel_verdict, d.posted_at FROM workpaper w JOIN decision d ON d.id = w.decision_id WHERE d.intent_id = ?").all(r.intent_id)).toEqual([{ kernel_verdict: "reject", posted_at: null }]);
     expect(unsettled(r.intent_id)).toBe(1);

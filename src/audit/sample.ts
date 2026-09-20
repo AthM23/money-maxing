@@ -77,8 +77,18 @@ function mustTestReasons(db: Db, row: PopulationRow, materialityCents: number): 
   if (amount >= materialityCents) reasons.push(`entry moves ${amount} cents, at or above materiality ${materialityCents}`);
   if (hasJudgmentMark(db, row.decision_id)) reasons.push("latest proposal workpaper still carries a judgment mark");
   if (agentApproved(db, row.decision_id)) reasons.push("approved by a controller_agent, not by a person");
-  if (row.autonomy_level === "auto" && (row.tier ?? 0) >= 1) reasons.push(`posted on auto by model tier ${row.tier}`);
+  if (row.autonomy_level === "auto") reasons.push(...autoPostReasons(row.tier));
   return reasons;
+}
+
+/**
+ * An auto-post a model made is must-test. So is one whose tier nobody wrote down: unknown provenance
+ * is risk, not safety, and reading a missing tier as tier 0 lets a model's own posting sit in the
+ * stratum reserved for what the code tier settled.
+ */
+function autoPostReasons(tier: number | null): string[] {
+  if (tier === null) return ["posted on auto with no model tier recorded"];
+  return tier >= 1 ? [`posted on auto by model tier ${tier}`] : [];
 }
 
 /** The last proposal-stage workpaper: judgment the preparer left on the table and nobody re-performed. */

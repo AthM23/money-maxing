@@ -4,6 +4,7 @@ import { evaluateCondition } from "../kernel/index.js";
 import type { Condition } from "../kernel/types.js";
 import { applicableFacts } from "../memory/applicability.js";
 import type { Db } from "../runtime/db.js";
+import { bankTxnAppliedCents } from "../runtime/kernelContext.js";
 import { safeJson } from "../runtime/lookups.js";
 
 /** Tier 0 builds proposals in code from an exact match, an active fact or an approved policy. No model call. */
@@ -17,21 +18,47 @@ export interface Tier0Plan {
 export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
   const notes: string[] = [];
   const proposals: Proposal[] = [];
-  if (c.received_cents > 0 && c.bank_txn_id) proposals.push(cashApplication(db, c));
+  const replaying = asOf !== undefined;
+  const cashToApply = replaying ? c.received_cents : cashStillToApply(db, c, notes);
+  if (cashToApply > 0 && c.bank_txn_id) proposals.push(cashApplication(db, c, replaying));
   if (c.shortfall_cents <= 0) return { proposals, unexplained_cents: 0, notes };
 
+  const stillOpen = replaying ? c.shortfall_cents : shortfallStillOpen(db, c, cashToApply);
+  if (stillOpen <= 0) return { proposals, unexplained_cents: 0, notes };
+  if (stillOpen !== c.shortfall_cents) {
+    notes.push(`${stillOpen} cents are still open on ${c.doc_ids.join(", ")}, the case file says ${c.shortfall_cents}: something else has adjusted these documents`);
+    return { proposals, unexplained_cents: stillOpen, notes };
+  }
   const adjustment = fromFact(db, c, notes, asOf) ?? fromPolicy(db, c, notes);
   if (adjustment) proposals.push(adjustment);
   return { proposals, unexplained_cents: adjustment ? 0 : c.shortfall_cents, notes };
 }
 
+/**
+ * A case can come round again: after a person's answer, after a rule is approved, after a failed pass. The plan is
+ * made from the ledger as it stands, so money that has already been applied is never applied twice.
+ */
+function cashStillToApply(db: Db, c: CaseFile, notes: string[]): number {
+  if (!c.bank_txn_id || c.received_cents <= 0) return 0;
+  const applied = bankTxnAppliedCents(db, c.bank_txn_id);
+  if (applied === 0) return c.received_cents;
+  if (applied < c.received_cents) notes.push(`bank line ${c.bank_txn_id}: ${applied} of ${c.received_cents} cents already applied by another entry; the rest is left for a person`);
+  return 0;
+}
+
+/** What the documents will still owe once the cash in hand has landed. */
+function shortfallStillOpen(db: Db, c: CaseFile, cashToApply: number): number {
+  const open = c.doc_ids.reduce((n, id) => n + liveOpenBalance(db, id), 0);
+  return open - Math.min(cashToApply, open);
+}
+
 /** Apply what arrived, oldest document first. Arithmetic in code; the kernel re-checks it anyway. */
-function cashApplication(db: Db, c: CaseFile): Proposal {
+function cashApplication(db: Db, c: CaseFile, replaying: boolean): Proposal {
   let left = c.received_cents;
   const applications: Proposal["applications"] = [];
   for (const docId of c.doc_ids) {
     if (left <= 0) break;
-    const amount = Math.min(left, openBalance(db, c, docId));
+    const amount = Math.min(left, replaying ? snapshotBalance(db, c, docId) : liveOpenBalance(db, docId));
     if (amount > 0) applications.push({ doc_id: docId, amount_cents: amount });
     left -= amount;
   }
@@ -39,42 +66,66 @@ function cashApplication(db: Db, c: CaseFile): Proposal {
   const memo = `Cash application ${c.bank_txn_id}`;
   const p = base(c, "apply_payment", applications, [
     { account: ACCOUNTS.cash, debit_cents: c.received_cents, credit_cents: 0, memo },
-    { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: applied, memo },
+    ...(applied > 0 ? [{ account: ACCOUNTS.ar, debit_cents: 0, credit_cents: applied, memo }] : []),
     ...(c.received_cents > applied ? [{ account: ACCOUNTS.customer_credits, debit_cents: 0, credit_cents: c.received_cents - applied, memo: `${memo}: unapplied` }] : []),
   ]);
-  if (c.received_cents > applied) p.evidence = c.trace_ids.map((trace_id) => ({ claim: "bank line showing the overpayment", trace_id }));
+  if (c.received_cents > applied) p.evidence = unappliedCashEvidence(db, c);
   return p;
 }
 
+/**
+ * Money held as a customer credit is a judgment, so it needs a quoted source. The source is the bank line itself:
+ * its descriptor is quoted, and the kernel agrees the quote against the stored bank record character by character.
+ */
+function unappliedCashEvidence(db: Db, c: CaseFile): Proposal["evidence"] {
+  const txn = c.bank_txn_id
+    ? (db.prepare("SELECT descriptor FROM bank_txn WHERE id = ?").get(c.bank_txn_id) as { descriptor: string } | undefined)
+    : undefined;
+  return c.trace_ids.map((trace_id) => ({
+    claim: "bank line showing money received with no open document to apply it to", trace_id,
+    ...(txn?.descriptor ? { quote: txn.descriptor } : {}),
+  }));
+}
+
 /** In replay the balance comes from the case snapshot: today's ledger already shows the invoice settled. */
-function openBalance(db: Db, c: CaseFile, docId: string): number {
-  const snap = c.docs_snapshot?.find((d) => d.id === docId);
-  if (snap) return snap.open_cents;
+function snapshotBalance(db: Db, c: CaseFile, docId: string): number {
+  return c.docs_snapshot?.find((d) => d.id === docId)?.open_cents ?? liveOpenBalance(db, docId);
+}
+
+function liveOpenBalance(db: Db, docId: string): number {
   const doc = db.prepare("SELECT open_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number } | undefined;
   return doc?.open_cents ?? 0;
 }
 
+/** What a remembered fact can settle, and how each is booked. The percentage lives in the fact; the account lives here. */
+const FACT_TREATMENTS = [
+  { kind: "credit_memo", account: ACCOUNTS.deferred_revenue, pct_key: "pct_off", label: "Concession" },
+  { kind: "tax_withholding", account: ACCOUNTS.wht_receivable, pct_key: "pct_withheld", label: "Tax withheld at source" },
+] as const;
+
 function fromFact(db: Db, c: CaseFile, notes: string[], asOf?: string): Proposal | null {
-  const { applicable, refused } = applicableFacts(db, {
-    party_id: c.party_id, kind: "credit_memo", entry_date: c.entry_date, amount_cents: c.shortfall_cents, as_of: asOf,
-  });
-  for (const r of refused) notes.push(`fact ${r.fact_id} not used: ${r.failed_dimension} (${r.detail})`);
-  for (const fact of applicable) {
-    const pct = typeof fact.value.pct_off === "number" ? fact.value.pct_off : null;
-    const cents = typeof fact.value.amount_cents === "number" ? fact.value.amount_cents : null;
-    const explains = pct !== null ? Math.round((c.expected_cents * pct) / 100) : cents;
-    if (explains !== c.shortfall_cents) {
-      notes.push(`fact ${fact.fact_id} explains ${explains ?? "nothing"}, shortfall is ${c.shortfall_cents}: not used`);
-      continue;
+  for (const treatment of FACT_TREATMENTS) {
+    const { applicable, refused } = applicableFacts(db, {
+      party_id: c.party_id, kind: treatment.kind, entry_date: c.entry_date, amount_cents: c.shortfall_cents, as_of: asOf,
+    });
+    for (const r of refused) notes.push(`fact ${r.fact_id} not used: ${r.failed_dimension} (${r.detail})`);
+    for (const fact of applicable) {
+      const pct = fact.value[treatment.pct_key];
+      const cents = typeof fact.value.amount_cents === "number" ? fact.value.amount_cents : null;
+      const explains = typeof pct === "number" ? Math.round((c.expected_cents * pct) / 100) : cents;
+      if (explains !== c.shortfall_cents) {
+        notes.push(`fact ${fact.fact_id} explains ${explains ?? "nothing"}, shortfall is ${c.shortfall_cents}: not used`);
+        continue;
+      }
+      const memo = `${treatment.label} per fact ${fact.fact_id}, approved by ${fact.approved_by ?? "unknown"}`;
+      const p = base(c, treatment.kind, lastDocApplication(c), [
+        { account: treatment.account, debit_cents: c.shortfall_cents, credit_cents: 0, memo },
+        { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: c.shortfall_cents, memo },
+      ]);
+      p.fact_refs = [fact.fact_id];
+      p.evidence = factEvidence(db, fact.fact_id);
+      return p;
     }
-    const memo = `Concession per fact ${fact.fact_id}, approved by ${fact.approved_by ?? "unknown"}`;
-    const p = base(c, "credit_memo", lastDocApplication(c), [
-      { account: ACCOUNTS.deferred_revenue, debit_cents: c.shortfall_cents, credit_cents: 0, memo },
-      { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: c.shortfall_cents, memo },
-    ]);
-    p.fact_refs = [fact.fact_id];
-    p.evidence = factEvidence(db, fact.fact_id);
-    return p;
   }
   return null;
 }

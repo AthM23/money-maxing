@@ -9,7 +9,7 @@ import { openDb } from "../runtime/db.js";
 import { reviewParked } from "./reviewParked.js";
 import { runOpenIntents } from "./runOpenIntents.js";
 
-const USAGE = "usage: pnpm worker <db> [--code-only] [--review] [--function ar] [--limit N]";
+const USAGE = "usage: pnpm worker <db> [--code-only] [--review] [--retry] [--intent <id>] [--function ar] [--limit N]";
 
 /**
  * One pass over the open intents in a seeded database. `--code-only` runs tier 0 alone and costs nothing;
@@ -17,7 +17,7 @@ const USAGE = "usage: pnpm worker <db> [--code-only] [--review] [--function ar] 
  * Before the first pass the database is copied to `<db>.cold`, so the same month can be run again from cold.
  */
 async function main(): Promise<number> {
-  const args = parseArgs(process.argv.slice(2), ["code-only", "review"]);
+  const args = parseArgs(process.argv.slice(2), ["code-only", "review", "retry"]);
   const dbPath = args.positional[0];
   if (!dbPath || !existsSync(dbPath)) {
     warn(dbPath ? `no database at ${dbPath}` : USAGE);
@@ -37,7 +37,7 @@ async function main(): Promise<number> {
   }
   const investigators = codeOnly ? [] : defaultTiers();
   const report = await runOpenIntents(db, {
-    investigators, function: flagString(args, "function"), limit: flagInt(args, "limit"),
+    investigators, function: flagString(args, "function"), limit: flagInt(args, "limit"), retry: args.flags.retry === true, intent_id: flagString(args, "intent"),
     onWorked: (w) => out(`${w.intent_id}: ${w.routes.join(" → ") || "(no route)"} · tier ${w.tier_used} · ${w.status} · ${w.elapsed_ms} ms${w.error ? ` · ERROR ${w.error}` : ""}`),
   });
   for (const s of report.skipped) warn(`skipped ${s.intent_id}: ${s.reason}`);

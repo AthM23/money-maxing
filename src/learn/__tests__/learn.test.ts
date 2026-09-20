@@ -43,6 +43,8 @@ describe("compile: repeated judgment becomes a policy draft, in code", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]).toMatchObject({ action: { kind: "write_off", account: ACCOUNTS.bank_charges }, backtest: { n: 6, agree: 5, account_outliers: ["dp4"], regressions: [] } });
     expect(JSON.stringify(drafts[0]!.condition)).toContain('"value":4500');
+    // The in-sample 5 of 6 flatters the rule. Drafted without each case in turn it still covers 4 of 5: never the one that set the ceiling.
+    expect(drafts[0]!.backtest).toMatchObject({ held_out_n: 5, held_out_covered: 4 });
     expect(db.prepare("SELECT status FROM policy").get()).toEqual({ status: "proposed" });
   });
 
@@ -59,9 +61,10 @@ describe("compile: repeated judgment becomes a policy draft, in code", () => {
     const db = seedInitech();
     seedQ2(db);
     const [draft] = compilePolicies(db, fixedClock, "ar");
+    db.exec("INSERT INTO bank_txn (id, posted_date, amount_cents, descriptor, method, party_id) VALUES ('BTX-W','2026-07-20',1198000,'WIRE INITECH INC','wire','initech')");
     const july = {
-      intent_id: "int_1", function: "ar", party_id: "initech", entry_date: "2026-07-20", doc_ids: ["INV-1042"],
-      expected_cents: 1200000, received_cents: 0, shortfall_cents: 2000, method: "wire", trace_ids: ["tr_email_1"],
+      intent_id: "int_1", function: "ar", party_id: "initech", entry_date: "2026-07-20", bank_txn_id: "BTX-W", doc_ids: ["INV-1042"],
+      expected_cents: 1200000, received_cents: 1198000, shortfall_cents: 2000, method: "wire", trace_ids: ["tr_email_1"],
     };
     const before = routeTier0(db, july, { mode: "live", autonomy_level: "auto" }, { clock: fixedClock });
     expect(before.status).toBe("needs_agent");
@@ -88,6 +91,33 @@ describe("replay: answers hidden, scored in code, humans' inconsistency not held
     expect(ladder).toEqual([{ function: "ar", kind: "write_off", agree: 6, n: 6, covered_agree: 6, covered_n: 6, covered: true, level: "auto" }]);
     expect(autonomyFor(db, "ar", "write_off")).toBe("auto");
     expect(autonomyFor(db, "ar", "never_seen")).toBe("shadow");
+  });
+
+  it("replaying the same history twice does not double the evidence: three agreeing cases never add up to five", async () => {
+    const db = seedInitech();
+    seedQ2(db);
+    db.prepare("DELETE FROM decision_point WHERE id IN ('dp4','dp5','dp6')").run();
+    const [draft] = compilePolicies(db, fixedClock, "ar");
+    approvePolicy(db, fixedClock, draft!.policy_id!, "U_CTRL");
+    await replay(db, { investigators: [], function: "ar", clock: fixedClock });
+    await replay(db, { investigators: [], function: "ar", clock: fixedClock });
+    expect(rebuildLadder(db, fixedClock)).toEqual([{ function: "ar", kind: "write_off", agree: 3, n: 3, covered_agree: 3, covered_n: 3, covered: false, level: "review" }]);
+  });
+
+  it("a rule retired since the last replay shows up as lost agreement, and the kind falls back to shadow", async () => {
+    const db = seedInitech();
+    seedQ2(db);
+    const [draft] = compilePolicies(db, fixedClock, "ar");
+    approvePolicy(db, fixedClock, draft!.policy_id!, "U_CTRL");
+    await replay(db, { investigators: [], function: "ar", clock: fixedClock });
+    rebuildLadder(db, fixedClock);
+    expect(autonomyFor(db, "ar", "write_off")).toBe("auto");
+
+    db.prepare("UPDATE policy SET status = 'retired' WHERE id = ?").run(draft!.policy_id);
+    const rows = await replay(db, { investigators: [], function: "ar", clock: fixedClock });
+    expect(rows.every((r) => !r.diff.agrees)).toBe(true);
+    expect(rebuildLadder(db, fixedClock)).toEqual([]);
+    expect(autonomyFor(db, "ar", "write_off")).toBe("shadow");
   });
 
   it("without any policy, tier 0 proposes nothing and every point is a miss, not a guess", async () => {

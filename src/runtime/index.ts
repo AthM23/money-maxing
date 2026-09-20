@@ -6,4 +6,4 @@ export { DEFAULT_CONFIG, systemClock, type Clock, type RuntimeConfig } from "./c
 export { readControlTotals } from "./kernelContext.js";
 export { openDecision, type IntakeInput } from "./persist.js";
 export { earnedLevel, resolveAutonomy, type AutonomySetting, type AutonomySubject } from "./autonomy.js";
-export { intentStanding, settleIntent, type IntentStatus } from "./intentStatus.js";
+export { intentStanding, settleIntent, UNSETTLED_ACTOR, type IntentStatus } from "./intentStatus.js";

@@ -21,7 +21,11 @@ export interface ClaudeInvestigatorOptions {
   name: string;
   /** Hard dollar cap per decision. The run stops and the case goes up a tier or to a person. */
   max_budget_usd?: number;
+  /** Hard wall-clock cap. A model call that hangs must not hold the whole worker: the case moves on. */
+  max_seconds?: number;
 }
+
+const DEFAULT_MAX_SECONDS = 240;
 
 /**
  * The Claude Agent SDK as one Investigator. The model gets our tools and nothing else: no file, shell or web
@@ -40,6 +44,7 @@ export function claudeInvestigator(opts: ClaudeInvestigatorOptions): Investigato
           return { content: [{ type: "text" as const, text: JSON.stringify(r.output) }], isError: !r.ok };
         }, { alwaysLoad: true }),
       );
+      const abort = new AbortController();
       const stream = sdk.query({
         prompt: task.task_message,
         options: {
@@ -53,25 +58,56 @@ export function claudeInvestigator(opts: ClaudeInvestigatorOptions): Investigato
           cwd: mkdtempSync(join(tmpdir(), "footnote-agent-")),
           maxTurns: task.max_turns,
           maxBudgetUsd: opts.max_budget_usd ?? 0.75,
+          abortController: abort,
         },
       });
-      let cost = 0;
-      let turns = 0;
-      for await (const message of stream) {
-        if (DEBUG) debugMessage(message);
-        if (message.type === "system" && message.subtype === "init" && (message.tools ?? []).length < ALL_TOOLS.length) {
-          // Without its tools the model writes tool calls as prose. Stop here and say so.
-          await stream.interrupt().catch(() => undefined);
-          return { outcome: "budget_exhausted", summary: `the agent was given ${(message.tools ?? []).length} of ${ALL_TOOLS.length} tools; a tool schema is being rejected`, places_looked: [], model_calls: 0, cost_micros: 0 };
-        }
-        if (message.type !== "result") continue;
-        cost = message.total_cost_usd ?? 0;
-        turns = message.num_turns ?? 0;
+      const seconds = opts.max_seconds ?? DEFAULT_MAX_SECONDS;
+      const usage = await withinSeconds(seconds, consume(stream), () => abort.abort());
+      if (usage === "timed_out") {
+        return { outcome: "budget_exhausted", summary: `no answer within ${seconds} seconds; the run was stopped`, places_looked: [], model_calls: 0, cost_micros: 0 };
       }
+      if (usage.problem) return { outcome: "budget_exhausted", summary: usage.problem, places_looked: [], model_calls: 0, cost_micros: 0 };
       const base: InvestigationReport = finished ?? { outcome: "budget_exhausted", summary: "ended without calling finish", places_looked: [] };
-      return { ...base, model_calls: turns, cost_micros: Math.round(cost * 1_000_000) };
+      return { ...base, model_calls: usage.turns, cost_micros: Math.round(usage.cost * 1_000_000) };
     },
   };
+}
+
+interface Usage { cost: number; turns: number; problem?: string }
+type SdkStream = AsyncIterable<{ type: string } & Record<string, unknown>> & { interrupt(): Promise<unknown> };
+
+async function consume(stream: SdkStream): Promise<Usage> {
+  const usage: Usage = { cost: 0, turns: 0 };
+  for await (const message of stream) {
+    if (DEBUG) debugMessage(message);
+    const given = Array.isArray(message.tools) ? message.tools.length : ALL_TOOLS.length;
+    if (message.type === "system" && message.subtype === "init" && given < ALL_TOOLS.length) {
+      // Without its tools the model writes tool calls as prose. Stop here and say so.
+      await stream.interrupt().catch(() => undefined);
+      return { ...usage, problem: `the agent was given ${given} of ${ALL_TOOLS.length} tools; a tool schema is being rejected` };
+    }
+    if (message.type !== "result") continue;
+    usage.cost = typeof message.total_cost_usd === "number" ? message.total_cost_usd : 0;
+    usage.turns = typeof message.num_turns === "number" ? message.num_turns : 0;
+  }
+  return usage;
+}
+
+/** Whichever comes first: the work, or the clock. On the clock, `onTimeout` stops the work and the caller moves on. */
+export async function withinSeconds<T>(seconds: number, work: Promise<T>, onTimeout: () => void): Promise<T | "timed_out"> {
+  let timer: NodeJS.Timeout | undefined;
+  const clock = new Promise<"timed_out">((resolve) => { timer = setTimeout(() => resolve("timed_out"), seconds * 1000); });
+  try {
+    const first = await Promise.race([work, clock]);
+    if (first === "timed_out") {
+      onTimeout();
+      // The abandoned stream may still reject once aborted; that is expected and already accounted for.
+      work.catch(() => undefined);
+    }
+    return first;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 function toReport(output: unknown): InvestigationReport {
@@ -83,8 +119,8 @@ function toReport(output: unknown): InvestigationReport {
 /** Tiers 1 to 3, cheapest first. Tier 0 is code and lives in src/router. */
 export function defaultTiers(): Investigator[] {
   return [
-    claudeInvestigator({ name: "haiku", model: "claude-haiku-4-5", max_budget_usd: 0.15 }),
-    claudeInvestigator({ name: "sonnet", model: "claude-sonnet-5", max_budget_usd: 0.6 }),
-    claudeInvestigator({ name: "opus", model: "claude-opus-5", max_budget_usd: 1.5 }),
+    claudeInvestigator({ name: "haiku", model: "claude-haiku-4-5", max_budget_usd: 0.15, max_seconds: 150 }),
+    claudeInvestigator({ name: "sonnet", model: "claude-sonnet-5", max_budget_usd: 0.6, max_seconds: 240 }),
+    claudeInvestigator({ name: "opus", model: "claude-opus-5", max_budget_usd: 1.5, max_seconds: 300 }),
   ];
 }

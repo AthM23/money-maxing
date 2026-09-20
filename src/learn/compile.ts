@@ -6,12 +6,19 @@ import type { Clock } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { newId } from "../runtime/ids.js";
 import { safeJson } from "../runtime/lookups.js";
+import { lineageFor, retireOvertakenDrafts, ruleName } from "./policyVersions.js";
 
 const MIN_AGREEING = 3;
 
 export interface Backtest {
-  n: number;                 // decision points the condition matches
+  n: number;                 // decision points the condition matches (the same history the rule was drafted from)
   agree: number;             // humans did exactly this
+  /**
+   * Leave-one-out, because the line above is in-sample: for each case behind the rule, the rule drafted from the
+   * OTHER cases alone. How many of them it would still have covered. The case that set the ceiling never is.
+   */
+  held_out_n: number;
+  held_out_covered: number;
   account_outliers: string[]; // same treatment, different account: an inconsistent human, shown to the approver
   regressions: string[];     // humans did something materially different: the policy would have mis-cleared
 }
@@ -23,6 +30,10 @@ export interface PolicyDraft {
   action: { kind: string; account: string };
   backtest: Backtest;
   refused_reason?: string;
+  /** The same rule is already on file (proposed or approved): nothing new was drafted. */
+  unchanged?: boolean;
+  /** The approved version this draft retires once it is approved. */
+  supersedes?: string;
 }
 
 interface Point { id: string; case_file: CaseFile; human: HumanOutcome }
@@ -56,22 +67,40 @@ function draftFor(db: Db, clock: Clock, fn: string, all: Point[], group: Point[]
     { field: "shortfall_cents", op: "<=", value: ceiling },
     { field: "method", op: "==", value: method },
   ] };
-  const backtest = runBacktest(all, condition, action);
-  const name = `${action.kind} to ${action.account} for ${method} shortfalls up to ${ceiling} cents`;
+  const backtest = { ...runBacktest(all, condition, action), ...leaveOneOut(group) };
+  const [actionJson, conditionJson] = [JSON.stringify(action), JSON.stringify(condition)];
+  const lookup = lineageFor(db, fn, actionJson, method, conditionJson);
+  if (lookup.status === "unchanged") {
+    const row = db.prepare("SELECT name FROM policy WHERE id = ?").get(lookup.policy_id) as { name: string };
+    return { policy_id: lookup.policy_id, name: row.name, condition, action, backtest, unchanged: true };
+  }
+  const { lineage } = lookup;
+  const name = ruleName(lineage, action, method, ceiling);
   if (backtest.regressions.length > 0) {
     return { policy_id: null, name, condition, action, backtest, refused_reason: `would have mis-cleared ${backtest.regressions.join(", ")}` };
   }
   const id = newId("pol");
   db.prepare(
-    `INSERT INTO policy (id, function, name, condition_json, action_json, intent_text, tier, backtest_json, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'company', ?, 'proposed')`,
-  ).run(id, fn, name, JSON.stringify(condition), JSON.stringify(action),
-    `Humans booked this ${backtest.agree} of ${backtest.n} times in the closed periods (${clock.now().slice(0, 10)}).`, JSON.stringify(backtest));
-  return { policy_id: id, name, condition, action, backtest };
+    `INSERT INTO policy (id, function, name, condition_json, action_json, intent_text, tier, backtest_json, status, code, version, supersedes)
+     VALUES (?, ?, ?, ?, ?, ?, 'company', ?, 'proposed', ?, ?, ?)`,
+  ).run(id, fn, name, conditionJson, actionJson,
+    `Humans booked this ${backtest.agree} of ${backtest.n} times (${clock.now().slice(0, 10)}).`, JSON.stringify(backtest),
+    lineage.code, lineage.version, lineage.supersedes);
+  retireOvertakenDrafts(db, fn, actionJson, method, id);
+  return { policy_id: id, name, condition, action, backtest, supersedes: lineage.supersedes ?? undefined };
 }
 
-function runBacktest(all: Point[], condition: Condition, action: PolicyDraft["action"]): Backtest {
-  const bt: Backtest = { n: 0, agree: 0, account_outliers: [], regressions: [] };
+function leaveOneOut(group: Point[]): Pick<Backtest, "held_out_n" | "held_out_covered"> {
+  let covered = 0;
+  for (const held of group) {
+    const others = group.filter((p) => p !== held).map((p) => p.case_file.shortfall_cents);
+    if (others.length > 0 && held.case_file.shortfall_cents <= Math.max(...others)) covered += 1;
+  }
+  return { held_out_n: group.length, held_out_covered: covered };
+}
+
+function runBacktest(all: Point[], condition: Condition, action: PolicyDraft["action"]): Omit<Backtest, "held_out_n" | "held_out_covered"> {
+  const bt: Omit<Backtest, "held_out_n" | "held_out_covered"> = { n: 0, agree: 0, account_outliers: [], regressions: [] };
   for (const p of all) {
     if (!evaluateCondition(condition, caseFeatures(p.case_file))) continue;
     bt.n += 1;
@@ -103,7 +132,12 @@ export function approvePolicy(db: Db, clock: Clock, policyId: string, approverId
   if (row.status !== "proposed") return { status: "not_proposed" };
   const approver = db.prepare("SELECT limit_cents FROM approver WHERE id = ?").get(approverId) as { limit_cents: number } | undefined;
   if (!approver) return { status: "unauthorised" };
-  db.prepare("UPDATE policy SET status = 'approved', approved_by = ?, approved_at = ?, max_amount_cents = ? WHERE id = ?")
-    .run(approverId, clock.now(), approver.limit_cents, policyId);
+  // The new version takes over and the one before it retires, together: two versions of one rule are never both live.
+  const swap = db.transaction(() => {
+    db.prepare("UPDATE policy SET status = 'approved', approved_by = ?, approved_at = ?, max_amount_cents = ? WHERE id = ?")
+      .run(approverId, clock.now(), approver.limit_cents, policyId);
+    db.prepare("UPDATE policy SET status = 'retired' WHERE id = (SELECT supersedes FROM policy WHERE id = ?)").run(policyId);
+  });
+  swap();
   return { status: "approved", max_amount_cents: approver.limit_cents };
 }

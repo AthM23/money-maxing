@@ -703,7 +703,7 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   resolved as a union (B's `data/` and answer-key rules + C's `__pycache__/`). Re-measured after it: typecheck clean,
   365 passing, seed → skeleton → second pass unchanged. `ft/benchmark.py` and its F1 numbers were not run or checked here.
 
-### 2026-09-19 21:45 ET — Run 1 → learn → run 2 works end to end; audit pack and AP pack landed; one approval-gate hole closed (Person A)
+### 2026-09-19 21:35 ET — Run 1 → learn → run 2 works end to end; audit pack and AP pack landed; one approval-gate hole closed (Person A)
 
 - **The same month twice, only memory changed** (`src/learn/harvest.ts`, `carry.ts`, `scoreboard.ts`, test
   `src/learn/__tests__/cycle.test.ts`). Six customers short-pay a wire by a bank fee; nothing on file explains it.
@@ -746,6 +746,55 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   `content_hash` must be the sha256 of `payload_json` or every entry citing it reads as tampered in the audit pack.
 - `pnpm test` → 38 files, **373 passing**; typecheck clean. Not yet reviewed by the independent reviewer.
 
+### 2026-09-19 21:45 ET — Lanes A and B checked together with a local merge; one planner bug found and fixed; Slack tokens verified (Person A)
+
+- **Nothing on `main` was overwritten.** Karan asked for a check because three people and their agents push here.
+  History is linear with no forced update, every file from Person A's commits is intact, and the only file another
+  author touched outside their own lane is one added line in `.gitignore`. The check is now a script,
+  `scripts/prepush-check.sh` (fetch, refuse on rewritten history, list what others touched in the paths you own,
+  rebase, list deletions, typecheck, test, scan the outgoing commits for secrets). Run it before every push.
+- **Local merge of `main` + `origin/atharv-branch`, not pushed** (the merge to `main` is Atharv's call). Conflicts
+  were only the four append-style files (`.gitignore`, `package.json` scripts, this log, the judge note). The merged
+  tree typechecks and **433 of 433 tests pass**, the walking-skeleton tests included.
+- **The two halves run as one on the seeded world, in code, for $0:** `pnpm seed --target=local --reset` →
+  `pnpm skeleton` (6 of 11 July receipts clear by exact match) → `pnpm learn data/footnote.db --replay` (replay of
+  the six Q2 decisions: 0 agree; compile drafts "write off wire shortfalls up to $45 to bank charges", backtest 5 of
+  6 with the one other-account outlier shown) → a person approves it → replay again: 5 agree and the sixth is triaged
+  as human inconsistency, so `ar/write_off` earns auto on six covered decisions → `pnpm worker data/footnote.db
+  --code-only --retry`: the $35 and $25 wire shortfalls clear by the compiled rule with zero model calls.
+  **8 of 11 resolved, AR control 2,940,000 = subledger 2,940,000.** Still open, and rightly: Initech $1,200 (the
+  reason is in a CEO email: model tier), Wayne $3,300 (nothing explains it: ask the owner once), Globex (the parent
+  paid for the subsidiary: the kernel refuses the party tie until a payer fact exists).
+- **One semantic difference settled in B's favour.** An intent the code tier could not settle now stays `open`
+  (it was `waiting_on_human`), which is what the drift monitor's end conditions assume. It becomes a person's once
+  every model tier has tried, when something is parked or asked, or when the function has no pack. A code-only pass
+  retries such a case only if memory changed since (a rule approved, a fact activated, a question answered) or with
+  `--retry`.
+- **Planner bug found by this run, fixed.** A case that came round again re-planned the cash application from the
+  invoice's new balance and called the rest an overpayment. The kernel rejected it (F2: bank line already applied),
+  so nothing wrong posted, but the rejection stopped the rule-driven write-off queued behind it. The code tier now
+  plans from the ledger as it stands: cash already applied is never planned again, and a shortfall is adjusted only
+  if the ledger still shows exactly that amount open. Two old test fixtures whose numbers did not add up were made
+  consistent, and the worker now hands such a case file to a person.
+- **Ladder hole found by the independent reviewer (in progress), fixed:** replaying the same history twice doubled the
+  evidence, so three agreeing cases could read as six and reach auto. Each historical decision now counts once.
+- **Slack:** the bot and app tokens are in the local `.env` and verified read-only (`auth.test`: workspace
+  "Northwind Systems", bot `northwind_finance_ops`; the default recipient resolves). No message has been sent from
+  lane A yet.
+- **For Atharv, before or at the merge:** (1) the approver table has `controller:gpt` only; with no OpenAI key the
+  controller runs as `controller:claude`, which P3 refuses as "not on the authority list": please seed both rows
+  (limit 49,999). (2) The skeleton calls `runCase` with `autonomy_level: "auto"`; the worker uses `"earned"`, which
+  is what makes run 1 against run 2 mean something. Suggest the skeleton's dispatch calls `runOpenIntents`
+  (`src/worker/`) or passes `"earned"`. (3) `workpaper.marks_json` gained a `features` key. (4) `runCase` now settles
+  `intent.status` itself and records a `router:unsettled` decision when no tier reaches a route.
+- **While this was being written Atharv merged lane B into `main` himself** (his ~21:35 and ~21:50 entries, which sit
+  either side of this one). His merge had adapted two walking-skeleton assertions to the earlier reading
+  (`waiting_on_human`); with the reading above they are back to `open`, which is what that test said originally. That
+  is the only lane B file touched here (`src/skeleton/__tests__/skeleton.test.ts`, two assertions and a test name).
+  His note that a skeleton pass leaves "5 `waiting_on_human`" is superseded: it leaves 5 `open`.
+- Measured on the rebased tree, lanes A, B and C together: typecheck clean; `pnpm test` → 43 files, **434 passing**
+  (the reviewer's scratch probes under `src/__review__/` are excluded and never committed).
+
 ### 2026-09-19 ~21:50 ET — Lane B merge pushed to `main` on top of A's Phase 2; one more seam moved (AthM23 + Claude Code session)
 
 - `main` moved three times while the ~21:35 merge was being validated (`c930480` and `d76b963` from Lane C, then A's
@@ -762,6 +811,146 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   kernel-pack` 0 false auto-posts. **Not re-run on Phase 2:** the console API check and the ingest → worker hand-off from
   the ~21:35 entry, and none of Phase 2's own commands (`worker`, `learn`, `rerun`, `auditpack`, `demo:seed`) beyond
   their unit tests. The two findings in the ~21:35 entry were not re-checked against Phase 2 and may be answered by it.
+
+### 2026-09-19 22:02 ET — The judges' three stories on the merged world: what runs today, measured (Person A)
+
+Read against `context/judge-feedback-v2-2026-09-19.md` and Preet's capture of Maximor's homepage widget
+(`context/research/maximor-website-2026-09-19.md`: **Learns → Runs → Escalates → Improves**). Everything below was
+run on `main` with lanes A, B and C merged, on the locally seeded world (`pnpm seed --target=local --reset`).
+
+- **Learns / Runs, in code, $0.** `pnpm skeleton` with the model key blanked: 6 of 11 July receipts clear by exact
+  match. `pnpm learn data/footnote.db --replay --approve-as U_CTRL`: replay of the six Q2 decisions agrees 0 of 6;
+  compile drafts **`SHORT-PAY-01 v1 · wire short ≤ $45.00 → write_off to 6150`** (backtest 5 of 6, the one
+  other-account outlier shown to the approver); approved; replay again agrees 5 of 6 with the sixth triaged as human
+  inconsistency, so `ar/write_off` earns auto on six covered decisions. `pnpm worker data/footnote.db --code-only`:
+  the $35 and $25 wire shortfalls close on the rule. **8 of 11 resolved, 0 model calls, 280 of 280 tick marks
+  re-performed in code, AR control = subledger.**
+- **Improves (new).** Rules now carry a code and a version and are never edited. When a person approves something
+  beyond the rule (a $60 wire fee against a $45 ceiling), the next `pnpm learn` drafts **`SHORT-PAY-01 v2 · wire short
+  ≤ $60.00`**, backtested again on every closed decision and every entry a person approved this month; approving v2
+  retires v1 in the same transaction, and the next $55 fee closes on v2 with no model call. Compiling with nothing new
+  drafts nothing. Contract change, additive: `policy` gains nullable `code`, `version` (default 1) and `supersedes`;
+  `openDb` adds them to databases that predate it. **Atharv: shout if the console reads `policy`.**
+- **The reason lives in somebody's inbox, on real models.** Initech through `pnpm worker` at earned autonomy: Haiku,
+  21 turns, **$0.069**, found the CEO's email in the seeded mail store, quoted it verbatim, proposed Dr 2400 / Cr 1200
+  for $1,200 with two quoted sources; the kernel accepted; it parked for a person because the amount is over $500 and
+  `credit_memo` has no track record. Wayne is running on the model tiers as this is written (Haiku gave up after 32
+  turns and $0.069 and handed up; only tier 2 and above may ask a person).
+- **An entry you can defend.** `pnpm auditpack data/footnote.db 2026-07 demo 5`: population 12, all 12 sampled (10
+  must-test), **12 of 12 re-performed clean, 0 findings**. Then one character of a cited bank line was changed after
+  posting (`WIRE` → `W1RE`): the pack flags exactly that entry, `evidence_invalidated`, 11 of 12 clean; restored, 12 of
+  12 again. The first attempt raised four false findings: the skeleton had applied the cash before the worker took its
+  snapshot, so the snapshot showed balances after posting. The snapshot now adds back what earlier passes posted.
+- **Cash application, the part that is not the easy 90%** (`src/router/__tests__/cashDepth.test.ts`): one payment
+  naming three invoices is applied to each and posts from code; a second payment for an invoice already paid is held
+  as unapplied cash in customer credits with the bank line quoted as its source and parks for a person (the kernel had
+  been rejecting it for lack of a quoted source, leaving no record at all). Not built: the $12.40-style small
+  difference as its own seeded case (it would be learned exactly as the wire fee is, given history).
+- **Three rules changed under this, each with tests:**
+  1. *Trust is earned only where there is judgment.* A cash application planned by code that touches only control
+     accounts carries no judgment amount and is fully re-performed by the kernel, so under `"earned"` it posts from
+     day one. An overpayment held as a customer credit is judged like everything else.
+  2. *An intent closes on its end condition in the ledger* (lane B's `end_condition_json`: bank line applied,
+     documents settled), not because an entry posted. A dispute hold leaves it with people.
+  3. *The code tier stops at an entry that parks.* Nothing is adjusted on top of cash a person has not approved yet;
+     the case comes round again and is planned from the ledger as it then stands.
+- **Human desk (new, `pnpm desk <db>`):** every open question goes to the person it was addressed to and every parked
+  entry to the least senior approver whose limit covers it (not the person who asked for the credit, when someone else
+  can sign), each once, with the controller's note attached; the request is recorded on the decision's timeline
+  (`decision_step.kind = 'human_request'`). It keeps the Socket Mode connection open so clicks come back through
+  `recordHumanAnswer` and `approveDecision`. **Not yet run against the live workspace**: it sends real DMs, and a
+  person has to click. Slack tokens are verified read-only.
+- **Paid runs, disclosed:** `pnpm skeleton` loads `.env`, so with the Anthropic key present it runs the model tiers. One
+  such run was started by mistake and killed after about $0.13. For code-only runs blank the key in the shell
+  (`export ANTHROPIC_API_KEY= OPENAI_API_KEY=`) and use `pnpm worker --code-only`. Deliberate spend so far tonight on
+  the merged world: Initech $0.069, Wayne in progress.
+- `pnpm test` → 45 files, **443 passing**; typecheck clean. The independent review of tonight's lane A commits is
+  still running; its findings will be logged with their fixes.
+
+### 2026-09-19 22:14 ET — Second independent review of lane A: four false-auto-post paths confirmed, all closed (Person A)
+
+The reviewer attacked tonight's lane A commits (`3356c85..2afe6ac`) and reproduced every finding below before
+reporting it. Fixes are on `main` at `cdb59cc`, each with a regression test. The audit and AP findings (4, 6, 7, 8
+and four medium ones) are being fixed now by a separate builder and will be logged when they land.
+
+- **Correction to the 21:35 entry.** It said run 2 had "12 of 12 decisions settled by code". Six of those twelve were
+  rule-driven write-offs that **parked** for review; only the six cash applications posted with no person. The
+  scoreboard called routed work "settled". It now reports three different things: reached by code, posted with no
+  person, and parked. Correct reading of that run: 12 reached by code, 0 model calls, 6 posted with no person, 6 parked.
+- **Critical 1: a valid rule that says something else gave free inference cover.** J1 checked that a cited policy
+  resolved, was approved and that its condition held, never that it was a rule *for this entry*. Reproduced: a tier 2
+  concession to deferred revenue citing the wire-fee rule (whose action is a write-off to 6150) passed J1, counted as
+  compiled judgment, and **auto-posted with no approval row in the database**. J1 now requires the same function,
+  the same kind, and the judgment amount on the rule's account; a rule with no readable action covers nothing.
+- **Critical 2: the controller agent approved exactly what the free-inference rule had held back.** An entry demoted
+  from auto to review *because* it was free inference sat at `review`, where the controller agent could sign it.
+  Reproduced: posted, zero human approvals. P2 now lets the controller agent sign only compiled judgment (planned by
+  code, or citing an approved policy or an active fact), below materiality, on a kind with a track record. An unknown
+  preparer tier counts as a model tier.
+- **Critical 3: replaying the same history twice doubled the evidence** (three cases read as six and reached auto).
+  Fixed earlier tonight: each historical decision counts once, latest replay stands.
+- **High: a credit for half the shortfall closed the case** when no end condition had been written (every intent not
+  opened by the drift monitor). The condition is now read off the case file: bank line applied, documents settled; a
+  bill counts as settled once a decision has been taken on it.
+- **High: replay could never record a regression.** It scored the newest replay decision on the intent, not the one
+  this pass made, so after a rule was retired the old agreements still stood. It now scores only this pass, records a
+  pass that proposes nothing as a result, and the ladder is recomputed in full: retire the rule and its kind is back
+  in shadow.
+- **Medium:** compile's backtest is in-sample, and said so nowhere. It now also reports a leave-one-out check (the rule
+  drafted without each case in turn: 4 of 5 on the Q2 wire fees, never the case that set the ceiling), and the CLI
+  labels both. Harvest learns only from plain approvals (`corrected` was scored both ways). Carried memory uses fixed
+  column lists, not the source file's schema.
+- **Seen in the Wayne run, fixed:** the agent put a full sentence in the question's `predicate` and an invented
+  `decision_kind`. Those two fields are the key that makes a question "the same question", so a rephrased question
+  would have been asked twice. `predicate` is now a closed list of seven unknowns and `decision_kind` is a proposal
+  kind; the sentence goes in `what_is_unknown`.
+- **Wayne on real models, merged world:** Haiku searched for 32 turns ($0.069) and handed up; Sonnet found the contract
+  clause and the policy memo section that require written officer agreement for any discount, found no such
+  agreement, and **escalated to the account owner** ($0.139). Route ESCALATE, nothing posted, $0.21 in all. The
+  question has not been sent to Slack yet.
+- Clean, per the reviewer: harvest ignores controller approvals, agent-posted entries and rejected drafts; carried
+  memory holds nothing that lets run 2 cheat; `tier` comes from the runtime, never the model; empty stored features
+  cannot make J1 pass; no style violations.
+- `pnpm test` on a clean checkout of `cdb59cc` → 46 files, **450 passing**; typecheck clean.
+
+### 2026-09-19 22:17 ET — Maximor's whole site read; what it changes for the demo cases (Person A)
+
+Karan's worry after the judges' note: our cases may be generic (Kiteworks is global cash: many entities, currencies,
+banks and country rules, not one SaaS with one bank account). Full write-up with a source URL on every claim:
+`context/research/maximor-site-deep-read-2026-09-19.md` (38 pages read from the sitemap, all 13 blog posts, both
+case-study pages, 4 press pieces; `trust.maximor.ai` returned 403). What matters:
+
+- **Only Kiteworks and HiBid have case-study pages.** Rently, Invst and Dura are home-page tiles. Kiteworks: 10 legal
+  entities after 6 acquisitions, US/EMEA/APAC, **7 currencies, 66 accounts, 20+ bank relationships**, NetSuite, 20
+  accountants down to 5, entity-specific rules, currency translation and intercompany elimination, a daily cash view
+  by currency, entity and region. The "unnamed global cybersecurity company" in the press **is** Kiteworks: do not
+  count it twice. HiBid: cash by check, wire, ACH and **several payment processors**; collected vs AR vs in transit
+  worked out by hand in a 300 MB workbook; close from 3 weeks to 5 days.
+- **The 2% is our story 2 in their words:** the press says the remainder is escalated when an agent meets a decision
+  it has not seen before, and handled automatically the next time. The CEO's post says the system remembers the
+  answer so it never asks twice.
+- **Their own home-page widget is our loop** with names we can mirror exactly: `SHORT-PAY-01` (short ≤ $50 →
+  auto-close; −$38 posted and closed; −$495 awaiting the controller) → `v2` (≤ $50 **or ≤ 5% freight**). Their
+  close-assessment asks, word for word, about one payment covering several invoices and small short-pays.
+- **Their newest thinking is usage-based revenue for AI-native companies** (8 of 13 posts, all in the last six
+  weeks), and one post names **withholding tax deducted at source on cross-border cloud fees**.
+- **Cautions:** the 98% has two scopes (cash transactions at Kiteworks; all platform transactions in the press); the
+  automation-rate numbers differ page to page; do not say Dura has 30+ subsidiaries or 7→0 audit findings (that is an
+  unnamed roll-up); the CFO survey is October 2025 fieldwork republished.
+
+**Recommendation (lane A's view; the world is Atharv's call):** do not re-plumb the ledger for true multi-currency
+tonight. Get the Kiteworks *shape* with the least new logic:
+1. Seed labels, no new logic: 2-3 Northwind legal entities, 3-4 currencies and 6-8 named bank accounts on the bank
+   lines, so the console can show cash by currency, entity and region.
+2. Mirror the widget: a wire covering three invoices short by $38 closes on `SHORT-PAY-01`; one short by $495 goes to
+   the controller; approving it yields `SHORT-PAY-01 v2`. Lane A has all of this except the "or ≤ 5%" clause.
+3. One globally flavoured judgment case that generic demos never have: **a customer in a treaty country pays net of
+   withholding tax.** The reason is a certificate in the inbox; the treatment is a tax receivable, not a concession;
+   remembered as a standing fact, so next month it books from code. Lane A is building the kind, account and checks.
+4. Already built and Kiteworks-shaped: the parent paying for its subsidiary (the kernel refuses the party tie until a
+   payer fact exists), and a duplicate payment held as unapplied cash, visible as a balance.
+5. Realised FX only if there is time on both lanes: it needs currency and rate on invoices and bank lines (lane B) and
+   one deterministic kernel check (lane A).
 
 ### 2026-09-19 ~23:15 ET — Phase 2, Person B: the spine runs across AR → revenue → forecast → close on one ledger; two independent reviews, 22 findings fixed (AthM23 + Claude Code session)
 
@@ -847,3 +1036,16 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   accruals, bank rec pack, JournalEntry mirror, a long-running process (everything here is one pass per command).
 - This working tree also holds another session's uncommitted research (`context/research/storytelling/`, a sponsor PDF,
   and the two entries above this one). They were left uncommitted and untouched by this commit.
+
+### 2026-09-19 ~23:30 ET — Lane B Phase 2 checked against the newer `main` (AthM23 + Claude Code session)
+
+- `main` moved ten commits (`03ca96d..c205715`: A's second review, withholding tax, `desk`, demo documents, Lane C
+  headline) while Phase 2 was being built. Merged into a side branch, **`b-phase2-on-main`**, in a separate worktree,
+  because the shared working tree on `atharv-branch` holds another session's uncommitted research. Conflicts: this Log
+  and `package.json` scripts, both resolved as unions (A's `desk` + B's `spine`, `mirror`; entries in time order).
+- **Measured on the merged tree:** `pnpm typecheck` clean; `pnpm test` → 63 files, **625 passing**; `pnpm seed
+  --target=local --reset && pnpm spine --approve-as U_CTRL --recognise --recognise-as U_CFO` gives the same result as
+  the 23:15 entry (schedule v2 $129,600, forecast v2, C1 explained, 7 of 11 checklist items done, AR and deferred
+  revenue tied). No semantic conflict found this time. Not re-checked on the merged tree: the console in a browser.
+- `atharv-branch` itself is **not** merged with `main` yet; fast-forward it to `b-phase2-on-main` once the working tree
+  is clean. Finding 1 for Karan in the 23:15 entry (a rejected decision can still be approved) is still open on `main`.

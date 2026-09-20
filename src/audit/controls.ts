@@ -1,6 +1,6 @@
 import type { Proposal } from "../contract/types.js";
 import type { Db } from "../runtime/db.js";
-import { PERIOD_PREDICATE, entryAmountCents, finding, groupBy, normaliseVendorName, parseProposal } from "./shared.js";
+import { PERIOD_PREDICATE, canonicalJson, entryAmountCents, finding, groupBy, normaliseVendorName, parseProposal } from "./shared.js";
 import type { AgentApprovedShare, ControlTestResults, Finding } from "./types.js";
 
 /** A payment out that is a round multiple of this, and at least this big, is worth a second look. */
@@ -37,7 +37,7 @@ export function runControlTests(db: Db, input: ControlInput): ControlTestResults
       ...entriesAfterLock(db, input.period),
       ...selfApprovals(db, input.period),
       ...justUnderTheLine(posted, input.materiality_cents),
-      ...splitTransactions(posted, input),
+      ...splitTransactions(db, posted, input),
     ],
     agent_approved: agentApprovedShare(posted),
   };
@@ -50,7 +50,7 @@ function duplicateVendors(db: Db): Finding[] {
     .all() as { id: string; name: string; remit_to_json: string | null }[];
   const byName = collisions(groupBy(rows, (row) => normaliseVendorName(row.name)));
   const withRemit = rows.filter((row) => row.remit_to_json !== null && row.remit_to_json.trim() !== "");
-  const byRemit = collisions(groupBy(withRemit, (row) => row.remit_to_json ?? ""));
+  const byRemit = collisions(groupBy(withRemit, (row) => canonicalJson(row.remit_to_json ?? "")));
   return [
     ...byName.map(([key, group]) => vendorFinding(`normalised name "${key}"`, group)),
     ...byRemit.map(([, group]) => vendorFinding("identical remit_to details", group)),
@@ -87,23 +87,35 @@ function roundNumberPayments(db: Db, period: string): Finding[] {
   );
 }
 
-/** A period lock that lets entries through afterwards is a control that does not operate. */
+/**
+ * A period lock that lets entries through afterwards is a control that does not operate. A locked
+ * period with no `locked_at` is the same finding for the same reason: nobody can show the entry
+ * went in before the lock, and an unprovable control is not a control.
+ */
 function entriesAfterLock(db: Db, period: string): Finding[] {
   const rows = db
     .prepare(
       `SELECT g.id, g.posted_at, g.source_decision_id, p.locked_at
        FROM gl_entry g JOIN period p ON p.id = g.period
-       WHERE g.period = ? AND p.locked_at IS NOT NULL AND g.posted_at > p.locked_at
+       WHERE g.period = ?
+         AND ((p.locked_at IS NOT NULL AND g.posted_at > p.locked_at) OR (p.status = 'locked' AND p.locked_at IS NULL))
        ORDER BY g.id`,
     )
-    .all(period) as { id: string; posted_at: string; source_decision_id: string; locked_at: string }[];
+    .all(period) as { id: string; posted_at: string; source_decision_id: string; locked_at: string | null }[];
   return rows.map((row) =>
-    finding("post_lock_entry", `entry ${row.id} posted at ${row.posted_at}, after period ${period} locked at ${row.locked_at}`, {
+    finding("post_lock_entry", lockDetail(row.id, row.posted_at, period, row.locked_at), {
       entry_id: row.id,
       decision_id: row.source_decision_id,
       period,
     }),
   );
+}
+
+function lockDetail(entryId: string, postedAt: string, period: string, lockedAt: string | null): string {
+  if (lockedAt === null) {
+    return `entry ${entryId} posted at ${postedAt} into locked period ${period}, which has no lock time on file: the lock cannot be shown to fall after it`;
+  }
+  return `entry ${entryId} posted at ${postedAt}, after period ${period} locked at ${lockedAt}`;
 }
 
 /** Segregation of duties, tested on the rows rather than on the rule that was supposed to stop it. */
@@ -145,20 +157,35 @@ function justUnder(amountCents: number, lineCents: number): boolean {
   return amountCents * 100 >= lineCents * JUST_UNDER_NUMERATOR;
 }
 
-/** Several small adjustments to one party in one period that add up to a big one: a split transaction. */
-function splitTransactions(posted: readonly PostedRow[], input: ControlInput): Finding[] {
+/**
+ * Several small adjustments to one party in one period that add up to a big one: a split transaction.
+ * Grouped on the same normalised vendor name the duplicate-vendor control uses, because a split
+ * spread over two rows for the one vendor is the version of this that was meant not to be seen.
+ */
+function splitTransactions(db: Db, posted: readonly PostedRow[], input: ControlInput): Finding[] {
+  const names = vendorNames(db);
   const small = posted.filter((row) => row.amount_cents > 0 && row.amount_cents < input.materiality_cents);
-  const groups = groupBy(small, (row) => row.proposal.party_id);
+  const groups = groupBy(small, (row) => names.get(row.proposal.party_id) ?? row.proposal.party_id);
   const out: Finding[] = [];
-  for (const [partyId, group] of groups) {
+  for (const [key, group] of groups) {
     const total = group.reduce((sum, row) => sum + row.amount_cents, 0);
     if (group.length < 2 || total < input.materiality_cents) continue;
+    const partyIds = [...new Set(group.map((row) => row.proposal.party_id))];
+    const who = partyIds.length > 1 ? `${key} (${partyIds.join(", ")})` : key;
     const detail =
-      `${group.length} sub-materiality adjustments to ${partyId} in ${input.period} total ${total} cents, ` +
+      `${group.length} sub-materiality adjustments to ${who} in ${input.period} total ${total} cents, ` +
       `at or above materiality ${input.materiality_cents}`;
-    out.push(finding("split_transaction", detail, { party_id: partyId, period: input.period, decision_ids: group.map((row) => row.decision_id) }));
+    out.push(finding("split_transaction", detail, {
+      party_id: partyIds[0], party_ids: partyIds, period: input.period, decision_ids: group.map((row) => row.decision_id),
+    }));
   }
   return out;
+}
+
+/** Party id to normalised name, so two rows for the one vendor land in the same group. */
+function vendorNames(db: Db): Map<string, string> {
+  const rows = db.prepare("SELECT id, name FROM party").all() as { id: string; name: string }[];
+  return new Map(rows.map((row) => [row.id, normaliseVendorName(row.name)]));
 }
 
 /** Information, not a finding: how much of the period one agent signed off for another. */

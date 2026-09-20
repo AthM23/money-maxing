@@ -14,10 +14,12 @@ import { proposeEntry, type ProposeResult } from "../runtime/proposeEntry.js";
 
 /** What a person's answer boils down to. Buttons fill `treatment`; the free text is kept verbatim as evidence. */
 export const HumanAnswer = z.object({
-  treatment: z.enum(["credit_memo", "write_off", "dispute_hold", "chase"]),
+  treatment: z.enum(["credit_memo", "write_off", "tax_withholding", "dispute_hold", "chase"]),
   text: z.string().min(1),
   uses: z.enum(["standing", "one_time"]).default("one_time"),
   pct_off: z.number().min(0).max(100).optional(),
+  /** For tax withheld at source: the rate the customer is required to deduct. */
+  pct_withheld: z.number().min(0).max(100).optional(),
   valid_to: IsoDate.optional(),
 });
 export type HumanAnswer = z.infer<typeof HumanAnswer>;
@@ -26,9 +28,10 @@ export type AnswerOutcome =
   | { status: "invalid" | "not_found" | "already_answered" | "unauthorised"; detail: string }
   | { status: "answered"; trace_id: string; fact_id: string | null; fact_status: "active" | "candidate" | "none"; proposal: ProposeResult | null };
 
-const ADJUSTMENT_ACCOUNT: Record<"credit_memo" | "write_off", string> = {
+const ADJUSTMENT_ACCOUNT: Record<"credit_memo" | "write_off" | "tax_withholding", string> = {
   credit_memo: ACCOUNTS.deferred_revenue,
   write_off: ACCOUNTS.bank_charges,
+  tax_withholding: ACCOUNTS.wht_receivable,
 };
 
 /**
@@ -81,8 +84,8 @@ function rememberAnswer(
   if (answer.treatment === "chase" || answer.treatment === "dispute_hold") return { fact_id: null, status: "none" };
   const monthEnd = `${c.entry_date.slice(0, 7)}-31`;
   const rec = recordFactCandidate(db, clock, {
-    party_id: c.party_id, predicate: answer.uses === "one_time" ? "one_time_credit" : "concession_pct",
-    value: answer.pct_off !== undefined ? { pct_off: answer.pct_off } : { amount_cents: c.shortfall_cents },
+    party_id: c.party_id, predicate: predicateFor(answer),
+    value: valueFor(answer, c),
     kinds: [answer.treatment], uses: answer.uses, valid_from: c.entry_date.slice(0, 8) + "01",
     valid_to: answer.valid_to ?? monthEnd, explained_amount_cents: c.shortfall_cents,
     source_trace_ids: [traceId], stated_by: answerer,
@@ -90,6 +93,18 @@ function rememberAnswer(
   if (rec.status !== "candidate") return { fact_id: null, status: "none" };
   const approved = approveFact(db, clock, rec.fact_id, answerer);
   return { fact_id: rec.fact_id, status: approved.status === "active" ? "active" : "candidate" };
+}
+
+function predicateFor(answer: HumanAnswer): string {
+  if (answer.treatment === "tax_withholding") return "withholding_tax_pct";
+  return answer.uses === "one_time" ? "one_time_credit" : "concession_pct";
+}
+
+/** A rate is remembered as a rate, so it explains next month's different amount; otherwise only this amount is. */
+function valueFor(answer: HumanAnswer, c: CaseFile): Record<string, number> {
+  if (answer.treatment === "tax_withholding" && answer.pct_withheld !== undefined) return { pct_withheld: answer.pct_withheld };
+  if (answer.pct_off !== undefined) return { pct_off: answer.pct_off };
+  return { amount_cents: c.shortfall_cents };
 }
 
 function resume(

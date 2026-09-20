@@ -22,14 +22,29 @@ const count = (db: Db, sql: string, ...args: unknown[]): number => (db.prepare(s
 const intentStatus = (db: Db, id: string): string => (db.prepare("SELECT status FROM intent WHERE id = ?").get(id) as { status: string }).status;
 
 describe("worker: open intents run at the autonomy each kind of entry has earned", () => {
-  it("cold start: no track record, so everything parks for a person and nothing posts", async () => {
+  it("cold start: cash that matches posts from code on day one; everything that carries judgment parks for a person", async () => {
     const db = world();
     const report = await runOpenIntents(db, { investigators: [], clock: fixedClock });
-    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_initech", "int_umbrella", "int_wayne"]);
-    expect(report.worked.find((w) => w.intent_id === "int_umbrella")).toMatchObject({ routes: ["PROPOSE", "PROPOSE"], tier_used: 0, status: "waiting_on_human" });
-    expect(report.worked.every((w) => w.status === "waiting_on_human")).toBe(true);
-    expect(count(db, "SELECT COUNT(*) AS n FROM gl_entry")).toBe(1);
-    expect(count(db, "SELECT COUNT(*) AS n FROM decision WHERE mode = 'live' AND autonomy_level != 'shadow' AND id != 'dec_open'")).toBe(0);
+    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_initech", "int_umbrella", "int_wayne", "int_meridian"]);
+    // Umbrella: the wire is applied by code; the rule-driven write-off is a kind with no track record, so it parks.
+    expect(report.worked.find((w) => w.intent_id === "int_umbrella")).toMatchObject({ routes: ["AUTO", "PROPOSE"], tier_used: 0, status: "waiting_on_human" });
+    expect(count(db, "SELECT COUNT(*) AS n FROM gl_entry")).toBe(5);
+    expect(count(db, "SELECT COUNT(*) AS n FROM decision WHERE mode = 'live' AND posted_at IS NOT NULL AND kind != 'apply_payment' AND id != 'dec_open'")).toBe(0);
+    const t = readControlTotals(db);
+    expect(t.ar_gl_cents).toBe(t.ar_subledger_cents);
+  });
+
+  it("a cash application that touches anything but control accounts is judged like everything else", async () => {
+    const db = world();
+    // Umbrella overpays by $50: the excess would sit in customer credits, which is a judgment, so the entry parks.
+    db.prepare("UPDATE bank_txn SET amount_cents = 2005000 WHERE id = 'BTX-2'").run();
+    db.prepare("UPDATE intent SET case_json = ? WHERE id = 'int_umbrella'").run(JSON.stringify({
+      intent_id: "int_umbrella", function: "ar", party_id: "umbrella", entry_date: "2026-07-15", bank_txn_id: "BTX-2", doc_ids: ["INV-1060"],
+      expected_cents: 2000000, received_cents: 2005000, shortfall_cents: -5000, method: "wire", trace_ids: ["tr_bank_2"] }));
+    const report = await runOpenIntents(db, { investigators: [], function: "ar", clock: fixedClock });
+    const umbrella = report.worked.find((w) => w.intent_id === "int_umbrella")!;
+    expect(umbrella.routes.includes("AUTO")).toBe(false);
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1060'").get()).toEqual({ open_cents: 2000000 });
   });
 
   it("a second pass finds nothing to do and records nothing twice", async () => {
@@ -53,22 +68,68 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     expect(t.ar_gl_cents).toBe(t.ar_subledger_cents);
   });
 
-  it("cash applied but the shortfall unexplained is not resolved: it waits on a person, with the reasons on record", async () => {
+  it("cash applied but the shortfall unexplained is not resolved: it stays open for a stronger pass, with the reasons on record", async () => {
     const db = world();
     earn(db, "apply_payment", "auto");
     const report = await runOpenIntents(db, { investigators: [], clock: fixedClock });
-    expect(report.worked.find((w) => w.intent_id === "int_initech")).toMatchObject({ routes: ["AUTO"], final_route: null, status: "waiting_on_human" });
-    expect(intentStatus(db, "int_initech")).toBe("waiting_on_human");
+    expect(report.worked.find((w) => w.intent_id === "int_initech")).toMatchObject({ routes: ["AUTO"], final_route: null, status: "open" });
     const step = db.prepare("SELECT s.output_json FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE d.intent_id = 'int_initech' AND d.actor = 'router:unsettled'").get() as { output_json: string };
     expect(step.output_json).toContain("no tier reached a route");
   });
 
-  it("approving the parked cash application does not resolve a case whose shortfall nobody explained", async () => {
+  it("a code-only pass does not retry what code already tried; a pass with a model tier does, and when every tier fails it is a person's", async () => {
     const db = world();
+    earn(db, "apply_payment", "auto");
     await runOpenIntents(db, { investigators: [], clock: fixedClock });
-    const cash = db.prepare("SELECT id FROM decision WHERE intent_id = 'int_initech' AND kind = 'apply_payment'").get() as { id: string };
-    expect(approveDecision(db, cash.id, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
-    expect(intentStatus(db, "int_initech")).toBe("waiting_on_human");
+    const decisions = count(db, "SELECT COUNT(*) AS n FROM decision");
+    expect((await runOpenIntents(db, { investigators: [], clock: fixedClock })).worked).toEqual([]);
+    expect(count(db, "SELECT COUNT(*) AS n FROM decision")).toBe(decisions);
+
+    // Memory changed: a rule that covers Initech's case was approved after code gave up, so code is worth another pass.
+    const later = { now: () => "2026-07-15T09:00:00.000Z" };
+    db.prepare("UPDATE policy SET approved_at = ? WHERE id = 'pol_wire_fee'").run(later.now());
+    expect((await runOpenIntents(db, { investigators: [], function: "ar", limit: 1, clock: later })).worked.map((w) => w.intent_id)).toEqual(["int_initech"]);
+
+    const shrugs: Investigator = { name: "scripted", investigate: () => Promise.resolve({ outcome: "budget_exhausted", summary: "ran out of turns", places_looked: ["mail"] }) };
+    const again = await runOpenIntents(db, { investigators: [shrugs], clock: fixedClock });
+    expect(again.worked.map((w) => [w.intent_id, w.tier_used, w.status])).toEqual([
+      ["int_initech", 1, "waiting_on_human"], ["int_wayne", 1, "waiting_on_human"], ["int_meridian", 1, "waiting_on_human"]]);
+  });
+
+  it("an intent closes on its end condition in the ledger, not because an entry posted", async () => {
+    const db = world();
+    db.prepare("UPDATE policy SET status = 'retired' WHERE id = 'pol_wire_fee'").run();
+    db.prepare("UPDATE intent SET end_condition_json = ? WHERE id = 'int_umbrella'").run(JSON.stringify({ bank_txn_applied: "BTX-2", docs_settled: ["INV-1060"] }));
+    await runOpenIntents(db, { investigators: [], function: "ar", clock: fixedClock });
+    // The wire is applied and posted, but $20 is still owed on the invoice.
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1060'").get()).toEqual({ open_cents: 2000 });
+    expect(intentStatus(db, "int_umbrella")).toBe("open");
+  });
+
+  it("a credit for half the shortfall does not close the case, even with no end condition written: it is read off the case file", async () => {
+    const db = world();
+    db.prepare("UPDATE policy SET status = 'retired' WHERE id = 'pol_wire_fee'").run();
+    const halfCredit: Investigator = {
+      name: "scripted",
+      async investigate(task, call) {
+        call("propose_entry", {
+          intent_id: task.case_file.intent_id, function: "ar", kind: "write_off", party_id: "umbrella", entry_date: "2026-07-15",
+          applications: [{ doc_id: "INV-1060", amount_cents: 1000 }],
+          entries: [
+            { account: ACCOUNTS.bank_charges, debit_cents: 1000, credit_cents: 0, memo: "Half the fee" },
+            { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 1000, memo: "Half the fee" },
+          ],
+          evidence: [{ claim: "the wire arrived short", trace_id: "tr_bank_2", quote: "WIRE UMBRELLA CORP" }],
+          policy_refs: [], fact_refs: [], judgment: [],
+        });
+        return { outcome: "proposed", summary: "half", places_looked: ["bank"] };
+      },
+    };
+    const report = await runOpenIntents(db, { investigators: [halfCredit], intent_id: "int_umbrella", clock: fixedClock });
+    const parked = report.worked[0]!.decision_id!;
+    expect(approveDecision(db, parked, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1060'").get()).toEqual({ open_cents: 1000 });
+    expect(intentStatus(db, "int_umbrella")).toBe("open");
   });
 
   it("keeps the document balances as they stood before anything posted", async () => {
@@ -81,13 +142,27 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
   });
 });
 
+describe("worker: the snapshot is of the case before anything posted, whoever ran it first", () => {
+  it("adds back what an earlier pass already applied, so the entry can be re-performed later", async () => {
+    const db = world();
+    // Another runner (the walking skeleton) applies Initech's cash before the worker ever sees the case.
+    const { runCase } = await import("../../agents/runCase.js");
+    const initech = JSON.parse((db.prepare("SELECT case_json FROM intent WHERE id = 'int_initech'").get() as { case_json: string }).case_json) as unknown;
+    await runCase(db, initech, { mode: "live", autonomy_level: "auto", investigators: [], clock: fixedClock });
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1042'").get()).toEqual({ open_cents: 120000 });
+    await runOpenIntents(db, { investigators: [], function: "ar", retry: true, clock: fixedClock });
+    const row = db.prepare("SELECT case_json FROM intent WHERE id = 'int_initech'").get() as { case_json: string };
+    expect(JSON.parse(row.case_json).docs_snapshot[0]).toMatchObject({ id: "INV-1042", open_cents: 1200000 });
+  });
+});
+
 describe("worker: who may approve what parked", () => {
   it("the controller agent cannot approve a kind still in shadow; a person can, and the intent then resolves", async () => {
     const db = world();
     await runOpenIntents(db, { investigators: [], function: "ar", limit: 3, clock: fixedClock });
     const parked = db.prepare("SELECT id, kind FROM decision WHERE intent_id = 'int_umbrella' AND route = 'PROPOSE' ORDER BY rowid").all() as { id: string; kind: string }[];
-    expect(parked.map((p) => p.kind)).toEqual(["apply_payment", "write_off"]);
-    const byAgent = approveDecision(db, parked[1]!.id, { approver_id: "controller:claude", approver_kind: "controller_agent", outcome: "approved" }, { clock: fixedClock });
+    expect(parked.map((p) => p.kind)).toEqual(["write_off"]);
+    const byAgent = approveDecision(db, parked[0]!.id, { approver_id: "controller:claude", approver_kind: "controller_agent", outcome: "approved" }, { clock: fixedClock });
     expect(byAgent.status).toBe("rejected");
     expect(byAgent.status === "rejected" && byAgent.failed.map((m) => m.detail).join(" ")).toContain("still in shadow");
     for (const p of parked) {
@@ -133,7 +208,7 @@ describe("worker: bad input and failures are handed to a person, never guessed a
     expect(report.skipped[0]!.reason).toContain("names intent int_umbrella");
     expect(report.skipped[1]!.reason).toContain("does not parse");
     expect(intentStatus(db, "int_wayne")).toBe("waiting_on_human");
-    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_umbrella"]);
+    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_umbrella", "int_meridian"]);
   });
 
   it("a run that throws leaves the case open for another pass, then gives it to a person", async () => {

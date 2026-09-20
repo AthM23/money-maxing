@@ -34,12 +34,29 @@ describe("auditor independence is enforced in the tool layer", () => {
     expect(db(env).prepare("SELECT COUNT(*) AS n FROM decision_step").get()).toEqual({ n: 0 });
   });
 
-  it("lets a read tool through to callTool", () => {
+  it("lets an allow-listed read tool through to callTool", () => {
     const env = auditorEnv();
-    const result = auditorCallTool(env, "crm_owner", { party_id: "initech" });
+    const result = auditorCallTool(env, "ledger_open_invoices", { party_id: "initech" });
     expect(result.ok).toBe(true);
-    expect(result.output).toMatchObject({ party_id: "initech", owner_user: "U_DANA" });
+    expect(result.output).toMatchObject([{ id: "INV-1042", open_cents: 1_200_000 }]);
     expect(db(env).prepare("SELECT COUNT(*) AS n FROM decision_step").get()).toEqual({ n: 1 });
+  });
+
+  it("refuses a tool nobody has thought of yet: the fence is an allow-list, not a list of known bad names", () => {
+    const env = auditorEnv();
+    for (const tool of ["ledger_write_off_everything", "slack_post_message", "crm_owner"]) {
+      const result = auditorCallTool(env, tool, {});
+      expect(result.ok).toBe(false);
+      expect(error(result.output)).toContain("allow-list");
+    }
+    expect(db(env).prepare("SELECT COUNT(*) AS n FROM decision_step").get()).toEqual({ n: 0 });
+  });
+
+  it("refuses the close workbook: reviewer comments are the preparer's own working papers", () => {
+    const env = auditorEnv();
+    for (const tool of ["workbook_lookup", "workbook.lookup"]) {
+      expect(auditorCallTool(env, tool, { query: "july close" }).ok).toBe(false);
+    }
   });
 
   it("refuses a denied tool without writing anything through it", () => {

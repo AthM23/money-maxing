@@ -9,6 +9,8 @@ export interface ContextMeta {
   mode: "live" | "replay";
   as_of?: string;
   preparer: string;
+  /** Router tier that prepared the entry (0 is code). */
+  preparer_tier?: number;
   autonomy_level: AutonomyLevel;
   approval?: ApprovalLite | null;
   intent_id: string;
@@ -26,6 +28,7 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     period: readPeriod(db, proposal.entry_date),
     fiscal_window: config.fiscal_window,
     preparer: meta.preparer,
+    preparer_tier: meta.preparer_tier,
     autonomy_level: meta.autonomy_level,
     approval: meta.approval ?? null,
     materiality_cents: config.materiality_cents,
@@ -71,7 +74,7 @@ function visibleBankTxn(db: Db, id: string, meta: ContextMeta): ReturnType<typeo
 }
 
 /** Cents of a bank line already applied by decisions that took effect. A bank line cannot be spent twice. */
-function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
+export function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n

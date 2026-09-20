@@ -1,4 +1,4 @@
-import type { ProposalKind } from "../contract/types.js";
+import { REDUCES_INVOICE_KINDS, type ProposalKind } from "../contract/types.js";
 import type { DocLite, KernelContext } from "../kernel/types.js";
 import type { RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
@@ -8,7 +8,8 @@ import { storedFeatures } from "../runtime/persist.js";
 import type { RerunSubject } from "./subject.js";
 
 /** Kinds whose posting reduces a document's open balance, which is what has to be added back. */
-const REDUCES_OPEN: readonly ProposalKind[] = ["apply_payment", "credit_memo", "write_off", "schedule_payment"];
+/** The contract's own list of kinds that take an invoice down, plus the one that pays a bill. Never a private copy. */
+const REDUCES_OPEN: readonly ProposalKind[] = [...REDUCES_INVOICE_KINDS, "schedule_payment"];
 
 export interface RerunContext {
   ctx: KernelContext;
@@ -22,14 +23,15 @@ export interface RerunContext {
  * WHY: the kernel is deterministic, so running it on today's database is not a re-performance —
  * it is a test of what the entry itself did. Six things legitimately changed BECAUSE the entry
  * posted, and each would otherwise read as a finding against it:
- *   1. the documents it paid are now settled          → replay_docs, balances added back
+ *   1. the documents it paid are now settled          → replay_docs, balances added back from the LEDGER
  *   2. the bank line it applied is now spent          → its own (and later) applications discounted
- *   3. the period was locked afterwards               → the lock is undone unless it predates posting
+ *   3. the period was locked afterwards               → the lock is undone only if it demonstrably was
  *   4. the one-time facts it cited are now used up    → its own (and later) uses discounted
  *   5. escalations opened later on the same intent    → counted as at the posting instant
  *   6. vendor bank-detail events raised afterwards    → read only up to the posting instant
- * and a duplicate-payment probe would now find the documents LATER decisions settled.
- * Nothing else is relaxed: a defect that was already there stays a finding.
+ * and a duplicate-payment probe would now find the bills a LATER payment settled.
+ * Nothing else is relaxed: a defect that was already there stays a finding, and nothing the
+ * preparer wrote about the world is taken as the world.
  *
  * The case features come from the workpaper, not from today's world, so a cited policy is re-tested on
  * the facts it was judged on — the post gate in `approve.ts` does the same. Without them J1 fails on
@@ -59,36 +61,52 @@ export function buildRerunContext(db: Db, subject: RerunSubject, config: Runtime
     bankTxnAppliedCents: (id) => appliedByOthers(db, subject, id, neutralised),
     getFact: (id) => asOfFact(db, subject, base, id, neutralised),
     findPaidDuplicate: (party, amount, exclude) =>
-      base.findPaidDuplicate?.(party, amount, [...exclude, ...settledLater(db, subject)]),
+      base.findPaidDuplicate?.(party, amount, [...exclude, ...paidLater(db, subject)]),
     remitChangedUnverified: (party) => remitChangedAsOf(db, subject, party),
   };
   return { ctx, neutralised };
 }
 
-/** Document balances as at posting: the snapshot the case file kept, else today's row with this entry undone. */
+/**
+ * Document balances as at posting, rebuilt from the ledger: today's balance plus everything this
+ * entry and every later one took off it.
+ *
+ * WHY not the case file's `docs_snapshot`: it is the preparer's own account of the balances, written
+ * by the same run that is under examination. Believing it means a second application to an invoice
+ * that was already settled re-performs clean, because the snapshot still shows the invoice wide open.
+ * The snapshot is used only for a document that has since gone from the ledger, where there is
+ * nothing to rebuild from — and the workpaper says which source was used, either way.
+ */
 function asOfDocs(db: Db, subject: RerunSubject, neutralised: string[]): DocLite[] {
-  const snapshot = subject.case_file?.docs_snapshot ?? [];
-  const byId = new Map<string, DocLite>(snapshot.map((doc) => [doc.id, doc]));
-  if (snapshot.length > 0) neutralised.push(`documents read from the case file snapshot (${snapshot.length} document(s))`);
+  const snapshot = new Map((subject.case_file?.docs_snapshot ?? []).map((doc) => [doc.id, doc]));
+  const byId = new Map<string, DocLite>();
   for (const app of subject.proposal.applications) {
-    if (byId.has(app.doc_id)) continue;
     const current = getDoc(db, app.doc_id);
-    if (!current) continue; // F2 reports a document that has gone; the auditor does not invent one.
+    if (!current) {
+      const kept = snapshot.get(app.doc_id);
+      // F2 reports a document that has gone; the auditor does not invent one it has no record of.
+      if (kept) byId.set(app.doc_id, kept);
+      neutralised.push(`${app.doc_id} is no longer in the ledger: open balance ${kept ? "read from the case file snapshot" : "cannot be rebuilt"}`);
+      continue;
+    }
     const restored = restoredCents(db, subject, app.doc_id);
-    if (restored > 0) neutralised.push(`${app.doc_id} open balance restored by ${restored} cents settled at or after this posting`);
     byId.set(app.doc_id, { ...current, open_cents: current.open_cents + restored });
+    neutralised.push(
+      `${app.doc_id} open balance restored by ${restored} cents applied at or after this posting, ` +
+      `read from the ledger and not from the case file`,
+    );
   }
   return [...byId.values()];
 }
 
-/** Cents taken off a document by this decision, plus by any decision that posted after it. */
+/** Cents taken off a document by this decision, plus by any decision that posted at the same instant or later. */
 function restoredCents(db: Db, subject: RerunSubject, docId: string): number {
   const kinds = REDUCES_OPEN.map(() => "?").join(",");
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n
        FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
-       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND (d.id = ? OR d.posted_at > ?)
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND (d.id = ? OR d.posted_at >= ?)
          AND json_extract(d.proposal_json, '$.kind') IN (${kinds})
          AND a.value ->> '$.doc_id' = ?`,
     )
@@ -96,13 +114,22 @@ function restoredCents(db: Db, subject: RerunSubject, docId: string): number {
   return row.n;
 }
 
-/** A period locked after this entry posted was open when it posted. A lock that predates it stays a finding. */
+/**
+ * A period locked after this entry posted was open when it posted, so the lock is undone. A lock that
+ * predates it stays a finding — and so does a lock with no `locked_at` on file: without a lock time
+ * there is nothing to show the lock came afterwards, and the benefit of that doubt belongs to the
+ * control, not to the entry.
+ */
 function asOfPeriod(db: Db, period: KernelContext["period"], postedAt: string, neutralised: string[]): KernelContext["period"] {
   if (period.status !== "locked") return period;
   const row = db.prepare("SELECT locked_at FROM period WHERE id = ?").get(period.id) as { locked_at: string | null } | undefined;
   if (!row) return period; // no period row at all: nobody ever opened that month, which is a real defect.
-  if (row.locked_at !== null && row.locked_at <= postedAt) return period;
-  neutralised.push(`period ${period.id} locked at ${row.locked_at ?? "an unrecorded time"}, after this entry posted at ${postedAt}`);
+  if (row.locked_at === null) {
+    neutralised.push(`period ${period.id} is locked with no locked_at on file, so the lock could not be shown to fall after this entry posted at ${postedAt}: left locked`);
+    return period;
+  }
+  if (row.locked_at <= postedAt) return period;
+  neutralised.push(`period ${period.id} locked at ${row.locked_at}, after this entry posted at ${postedAt}`);
   return { ...period, status: "open" };
 }
 
@@ -147,13 +174,21 @@ function asOfFact(db: Db, subject: RerunSubject, base: KernelContext, id: string
   return { ...fact, used_count: row.n };
 }
 
-/** Documents that LATER decisions settled. A duplicate-payment probe must not see them as already paid. */
-function settledLater(db: Db, subject: RerunSubject): string[] {
+/**
+ * Bills a LATER payment settled. The duplicate-payment probe looks only at bills standing as PAID
+ * (`findPaidDuplicate`), and only `schedule_payment` can put a bill in that state (`runtime/post.ts`),
+ * so a later payment is the only thing that can make a bill read as paid when it was not.
+ *
+ * WHY only that: excluding every document any later decision happened to name let a one-cent credit
+ * memo booked a week afterwards erase a real DUPLICATE_PAYMENT block on re-performance.
+ */
+function paidLater(db: Db, subject: RerunSubject): string[] {
   const rows = db
     .prepare(
       `SELECT DISTINCT a.value ->> '$.doc_id' AS doc_id
        FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
-       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.posted_at > ?`,
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.posted_at > ?
+         AND json_extract(d.proposal_json, '$.kind') = 'schedule_payment'`,
     )
     .all(subject.posted_at) as { doc_id: string }[];
   return rows.map((row) => row.doc_id);

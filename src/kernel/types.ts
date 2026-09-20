@@ -60,6 +60,8 @@ export interface PolicyLite {
   function: string;
   status: "proposed" | "approved" | "retired";
   condition: Condition;
+  /** What the rule books: the kind of entry and the account the judgment amount goes to. Unreadable means null. */
+  action: { kind: string; account: string } | null;
   max_amount_cents?: number | null;
   approved_by?: string | null;
 }
@@ -96,6 +98,8 @@ export interface KernelContext {
   period: { id: string; status: "open" | "closing" | "locked" };
   fiscal_window: { from: string; to: string };
   preparer: string;
+  /** Router tier that prepared the entry: 0 is code, 1 and up are model tiers. Unknown is treated as a model tier. */
+  preparer_tier?: number;
   autonomy_level: AutonomyLevel;
   /** Absent on the proposal pass. Present on the post gate when someone approved. */
   approval?: ApprovalLite | null;

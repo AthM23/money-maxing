@@ -24,6 +24,16 @@ describe("control test: duplicate vendors", () => {
     expect(found[1]?.refs.party_ids).toEqual(["v3", "v4"]);
   });
 
+  it("finds remit details that are the same JSON written differently", () => {
+    const db = bareDb();
+    db.exec(`INSERT INTO party (id, kind, name, remit_to_json) VALUES
+      ('v7','vendor','Northwind','{"iban":"X9","bank":"First"}'),
+      ('v8','vendor','Southwind',' {"bank":"First", "iban":"X9"} ');`);
+    const found = run(db, "duplicate_vendor");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.refs.party_ids).toEqual(["v7", "v8"]);
+  });
+
   it("passes distinct vendors with distinct remit details", () => {
     const db = bareDb();
     db.exec(`INSERT INTO party (id, kind, name, remit_to_json) VALUES
@@ -63,6 +73,17 @@ describe("control test: entries after the period lock", () => {
     const found = run(db, "post_lock_entry");
     expect(found).toHaveLength(1);
     expect(found[0]?.refs).toMatchObject({ entry_id: "je_late", decision_id: "dec_x", period: "2026-07" });
+  });
+
+  it("raises every entry in a period locked with no lock time on file", () => {
+    const db = bareDb();
+    db.exec(`UPDATE period SET status = 'locked', locked_at = NULL WHERE id = '2026-07';
+      INSERT INTO gl_entry (id, period, date, source_decision_id, memo, posted_at) VALUES
+        ('je_whenever','2026-07','2026-07-10','dec_z','no lock time','2026-07-10T09:00:00Z');`);
+    const found = run(db, "post_lock_entry");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.detail).toContain("no lock time on file");
+    expect(found[0]?.refs).toMatchObject({ entry_id: "je_whenever", decision_id: "dec_z", period: "2026-07" });
   });
 
   it("passes while the period is still open", () => {
@@ -107,6 +128,18 @@ describe("control test: just under the line, and split transactions", () => {
     expect(found).toHaveLength(1);
     expect(found[0]?.refs).toMatchObject({ party_id: "p_split", decision_ids: ["dec_p1", "dec_p2", "dec_p3"] });
     expect(found[0]?.detail).toContain("total 60000 cents");
+  });
+
+  it("finds a split spread across two vendor rows for the one vendor", () => {
+    const db = bareDb();
+    db.exec(`INSERT INTO party (id, kind, name) VALUES ('v_a','vendor','Acme Supply Inc.'), ('v_b','vendor','ACME  supply llc');`);
+    for (const n of [1, 2]) insertPostedDecision(db, { id: `dec_a${n}`, amount_cents: 20_000, party_id: "v_a" });
+    for (const n of [1, 2]) insertPostedDecision(db, { id: `dec_b${n}`, amount_cents: 20_000, party_id: "v_b" });
+    const found = run(db, "split_transaction");
+    expect(found).toHaveLength(1);
+    expect(found[0]?.detail).toContain("total 80000 cents");
+    expect(found[0]?.refs.party_ids).toEqual(["v_a", "v_b"]);
+    expect(found[0]?.refs.decision_ids).toEqual(["dec_a1", "dec_a2", "dec_b1", "dec_b2"]);
   });
 
   it("passes small adjustments that do not add up, and a single large one", () => {

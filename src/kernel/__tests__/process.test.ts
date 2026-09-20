@@ -204,9 +204,15 @@ describe("P2 approval present when required", () => {
       judgment: [{ note: "goodwill sizing", confidence: "high" }],
     });
     const ctx = makeCtx({ ...world, approvers: [...world.approvers, approver("agent:controller", 5_000_000)] }, {
-      approval: agent,
+      approval: agent, preparer_tier: 0,
     });
     expect(statusOf(runKernel(small, ctx, "post_gate"), "P2")).toBe("pass");
+
+    // The same small entry reached by a model tier citing no policy and no fact is free inference: a person signs it.
+    const inferred = markOf(runKernel(small, { ...ctx, preparer_tier: 1 }, "post_gate"), "P2");
+    expect(inferred.status).toBe("fail");
+    expect(inferred.detail).toContain("free inference");
+    expect(markOf(runKernel(small, { ...ctx, preparer_tier: undefined }, "post_gate"), "P2").status).toBe("fail");
 
     const big = markOf(runKernel(materialMemo(), ctx, "post_gate"), "P2");
     expect(big.status).toBe("fail");

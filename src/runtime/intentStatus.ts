@@ -1,12 +1,18 @@
 import type { Clock } from "./config.js";
 import type { Db } from "./db.js";
+import { bankTxnAppliedCents } from "./kernelContext.js";
+import { getBankTxn, getDoc, safeJson } from "./lookups.js";
 
 export type IntentStatus = "open" | "waiting_on_human" | "resolved";
 
+/** The router's own record that nothing settled a case. Tier 0 means only code has tried so far. */
+export const UNSETTLED_ACTOR = "router:unsettled";
+
 /**
  * Where an intent stands, read from what actually happened to its decisions rather than from what any caller
- * believes. Resolved means the newest live decision took effect and nothing is parked or unanswered. Anything
- * attempted and not resolved belongs to a person, so a worker never spins on a case it cannot settle.
+ * believes. Resolved: the newest live decision took effect and nothing is parked or unanswered. Open: untouched, or
+ * only the code tier has tried, so a pass with model tiers can still settle it. Anything else belongs to a person:
+ * something is parked or asked, a tier refused or was blocked, or every model tier tried and none settled it.
  */
 export function intentStanding(db: Db, intentId: string): IntentStatus {
   const waiting = db
@@ -20,10 +26,49 @@ export function intentStanding(db: Db, intentId: string): IntentStatus {
     .get(intentId, intentId) as { parked: number; asking: number };
   if (waiting.parked > 0 || waiting.asking > 0) return "waiting_on_human";
   const newest = db
-    .prepare("SELECT posted_at FROM decision WHERE intent_id = ? AND mode = 'live' ORDER BY rowid DESC LIMIT 1")
-    .get(intentId) as { posted_at: string | null } | undefined;
+    .prepare("SELECT posted_at, actor, tier, kind FROM decision WHERE intent_id = ? AND mode = 'live' ORDER BY rowid DESC LIMIT 1")
+    .get(intentId) as { posted_at: string | null; actor: string; tier: number | null; kind: string } | undefined;
   if (!newest) return "open";
-  return newest.posted_at ? "resolved" : "waiting_on_human";
+  if (newest.posted_at) return afterPosting(db, intentId, newest.kind);
+  return newest.actor === UNSETTLED_ACTOR && (newest.tier ?? 0) === 0 ? "open" : "waiting_on_human";
+}
+
+interface EndCondition { bank_txn_applied?: string; docs_settled?: string[] }
+
+/**
+ * An intent closes when its end condition holds in the ledger, not when an entry posts: the bank line fully applied
+ * and the documents settled. The drift monitor writes the condition; where none was written it is read off the case
+ * file, which names the same bank line and documents. Cash applied with money still owed, or a credit for half the
+ * shortfall, leaves the case open, to be planned again from the ledger as it now stands. A dispute hold settles
+ * nothing by design: that case is with people. Only an intent with neither closes on its newest entry.
+ */
+function afterPosting(db: Db, intentId: string, newestKind: string): IntentStatus {
+  const end = endConditionOf(db, intentId);
+  if (!end || endConditionHolds(db, end)) return "resolved";
+  return newestKind === "dispute_hold" ? "waiting_on_human" : "open";
+}
+
+function endConditionOf(db: Db, intentId: string): EndCondition | null {
+  const row = db.prepare("SELECT end_condition_json, case_json FROM intent WHERE id = ?").get(intentId) as
+    { end_condition_json: string | null; case_json: string | null } | undefined;
+  if (row?.end_condition_json) return safeJson(row.end_condition_json) as EndCondition | null;
+  const c = row?.case_json ? (safeJson(row.case_json) as { bank_txn_id?: string; doc_ids?: string[] } | null) : null;
+  return c ? { bank_txn_applied: c.bank_txn_id, docs_settled: c.doc_ids ?? [] } : null;
+}
+
+function endConditionHolds(db: Db, end: EndCondition): boolean {
+  if (end.bank_txn_applied) {
+    const txn = getBankTxn(db, end.bank_txn_applied);
+    if (txn && bankTxnAppliedCents(db, txn.id) < Math.abs(txn.amount_cents)) return false;
+  }
+  return (end.docs_settled ?? []).every((id) => docSettled(db, id));
+}
+
+/** An invoice is settled at zero. A bill is settled once someone has taken a decision on it: approved, held, paid. */
+function docSettled(db: Db, id: string): boolean {
+  const bill = db.prepare("SELECT status FROM bill WHERE id = ?").get(id) as { status: string } | undefined;
+  if (bill) return bill.status !== "open";
+  return (getDoc(db, id)?.open_cents ?? 0) === 0;
 }
 
 /** Write the standing back to the intent. An abandoned intent stays abandoned. */

@@ -1,9 +1,10 @@
 import { CaseFile, HumanOutcome, Proposal, type AutonomyLevel } from "../contract/types.js";
 import { runCase } from "../agents/runCase.js";
 import type { Investigator } from "../agents/investigator.js";
-import type { Clock, RuntimeConfig } from "../runtime/config.js";
+import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { safeJson } from "../runtime/lookups.js";
+import { openDecision } from "../runtime/persist.js";
 import { compareOutcome, type OutcomeDiff } from "./compare.js";
 
 export interface ReplayOptions {
@@ -48,21 +49,28 @@ async function replayOne(db: Db, point: PointRow, opts: ReplayOptions): Promise<
   }
   ensureIntent(db, caseFile.data, point);
   const autonomy: AutonomyLevel = "shadow";
+  // Only what THIS pass decides is scored. An entry left over from an earlier replay says nothing about today's memory.
+  const before = (db.prepare("SELECT COALESCE(MAX(rowid), 0) AS n FROM decision").get() as { n: number }).n;
   const result = await runCase(db, caseFile.data, {
     mode: "replay", as_of: point.decided_at, autonomy_level: autonomy, investigators: opts.investigators, clock: opts.clock, config: opts.config,
   });
-  const decision = lastJudgmentDecision(db, caseFile.data.intent_id);
-  if (decision) db.prepare("UPDATE decision SET decision_point_id = ? WHERE id = ?").run(point.id, decision.id);
+  const decision = lastJudgmentDecision(db, caseFile.data.intent_id, before);
   const diff = compareOutcome(decision?.proposal ?? null, human);
   const triage = diff.agrees ? null : result.final_route === "ESCALATE" ? "context_missing" : "agent_wrong";
-  return { decision_point_id: point.id, kind: point.kind, decision_id: decision?.id ?? null, diff, triage };
+  // A pass that proposes nothing is still a result. It is recorded against the point, so that a rule retired since
+  // the last replay shows up as lost agreement instead of the old agreement standing for ever.
+  const decisionId = decision?.id ?? openDecision(db, opts.clock ?? systemClock, {
+    intent_id: caseFile.data.intent_id, function: caseFile.data.function, mode: "replay", actor: "replay:no_proposal", autonomy_level: "shadow", tier: result.tier_used,
+  });
+  db.prepare("UPDATE decision SET decision_point_id = ? WHERE id = ?").run(point.id, decisionId);
+  return { decision_point_id: point.id, kind: point.kind, decision_id: decisionId, diff, triage };
 }
 
-/** The decision that carries the judgment: the latest replay decision on the intent that is not the cash application. */
-function lastJudgmentDecision(db: Db, intentId: string): { id: string; proposal: Proposal } | null {
+/** The decision that carries the judgment: the latest one this pass made on the intent that is not the cash application. */
+function lastJudgmentDecision(db: Db, intentId: string, afterRowid: number): { id: string; proposal: Proposal } | null {
   const rows = db
-    .prepare("SELECT id, proposal_json FROM decision WHERE intent_id = ? AND mode = 'replay' AND proposal_json IS NOT NULL ORDER BY rowid DESC")
-    .all(intentId) as { id: string; proposal_json: string }[];
+    .prepare("SELECT id, proposal_json FROM decision WHERE intent_id = ? AND mode = 'replay' AND proposal_json IS NOT NULL AND rowid > ? ORDER BY rowid DESC")
+    .all(intentId, afterRowid) as { id: string; proposal_json: string }[];
   for (const row of rows) {
     const parsed = Proposal.safeParse(safeJson(row.proposal_json));
     if (parsed.success && parsed.data.kind !== "apply_payment") return { id: row.id, proposal: parsed.data };

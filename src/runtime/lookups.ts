@@ -64,14 +64,16 @@ export function countFactUses(db: Db, factId: string): number {
 
 export function getPolicy(db: Db, id: string): PolicyLite | undefined {
   const row = db
-    .prepare("SELECT id, function, status, condition_json, max_amount_cents, approved_by FROM policy WHERE id = ?")
+    .prepare("SELECT id, function, status, condition_json, action_json, max_amount_cents, approved_by FROM policy WHERE id = ?")
     .get(id) as
-    | { id: string; function: string; status: PolicyLite["status"]; condition_json: string; max_amount_cents: number | null; approved_by: string | null }
+    | { id: string; function: string; status: PolicyLite["status"]; condition_json: string; action_json: string; max_amount_cents: number | null; approved_by: string | null }
     | undefined;
   if (!row) return undefined;
   const condition = safeJson(row.condition_json) as Condition | null;
   if (!condition) return undefined;
-  return { id: row.id, function: row.function, status: row.status, condition, max_amount_cents: row.max_amount_cents, approved_by: row.approved_by };
+  const raw = safeJson(row.action_json) as { kind?: unknown; account?: unknown } | null;
+  const action = typeof raw?.kind === "string" && typeof raw.account === "string" ? { kind: raw.kind, account: raw.account } : null;
+  return { id: row.id, function: row.function, status: row.status, condition, action, max_amount_cents: row.max_amount_cents, approved_by: row.approved_by };
 }
 
 export function getApprover(db: Db, id: string): ApproverLite | undefined {

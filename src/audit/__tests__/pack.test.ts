@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { approveBillProposal, proposeAp } from "../../agents/ap/__tests__/helpers.js";
+import { apClock, seedAp } from "../../agents/ap/__tests__/seed.js";
 import type { Db } from "../../runtime/db.js";
 import { fixedClock } from "../../runtime/__tests__/seed.js";
 import { buildAuditPack } from "../pack.js";
@@ -51,6 +53,15 @@ describe("buildAuditPack", () => {
     expect(types).toContain("duplicate_vendor");
     expect(types).toContain("split_transaction");
     expect(raised.every((event) => event.period === "2026-07" && event.seed === "q3-review")).toBe(true);
+  });
+
+  it("re-performs a cleanly approved AP bill with no findings when the caller passes no configuration", () => {
+    const db = seedAp();
+    expect(proposeAp(db, approveBillProposal(db)).status).toBe("posted");
+    const pack = buildAuditPack(db, apClock, { period: "2026-07", seed: "ap-review", size: 5 });
+    expect(pack.summary.sampled).toBe(1);
+    expect(pack.reperformance[0]?.findings).toEqual([]);
+    expect(pack.summary.findings_total).toBe(0);
   });
 
   it("re-performs exactly the sampled decisions, and reports the clean share over them", () => {

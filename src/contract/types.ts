@@ -18,6 +18,8 @@ export type Route = z.infer<typeof Route>;
 
 export const PROPOSAL_KINDS = [
   "apply_payment", "credit_memo", "write_off", "customer_credit", "dispute_hold",
+  // ADDED: tax a customer was legally required to deduct at source. Settles the invoice against a tax receivable.
+  "tax_withholding",
   "approve_bill", "hold_bill", "schedule_payment", "bank_adjustment",
   "rev_recognition", "accrual", "amortization", "payroll_accrual", "no_action",
   // DECIDE: artifact kinds for forecast and reporting (board README, schema gaps).
@@ -25,6 +27,15 @@ export const PROPOSAL_KINDS = [
 ] as const;
 export const ProposalKind = z.enum(PROPOSAL_KINDS);
 export type ProposalKind = z.infer<typeof ProposalKind>;
+
+/**
+ * Kinds that settle part of an invoice with no cash moving. What they settle is a judgment amount whatever
+ * account it is booked to, and the entry must debit that amount outside the control accounts. One list, because
+ * the kernel, the ledger and the auditor all have to agree on it.
+ */
+export const NON_CASH_SETTLEMENT_KINDS: readonly ProposalKind[] = ["credit_memo", "write_off", "tax_withholding"];
+/** Kinds whose applications take an invoice's open balance down when they post. */
+export const REDUCES_INVOICE_KINDS: readonly ProposalKind[] = ["apply_payment", ...NON_CASH_SETTLEMENT_KINDS];
 
 export const EntryLine = z
   .object({

@@ -1,4 +1,4 @@
-import type { EntryLine, Mark, MarkClass, MarkStatus, Proposal } from "../contract/types.js";
+import { NON_CASH_SETTLEMENT_KINDS, type EntryLine, type Mark, type MarkClass, type MarkStatus, type Proposal } from "../contract/types.js";
 import type { DocLite, KernelContext } from "./types.js";
 
 /** Build one audit tick mark. Every check goes through here so the shape is uniform. */
@@ -61,7 +61,7 @@ export function linesOn(proposal: Proposal, account: string): EntryLine[] {
 }
 
 /** Kinds that reduce a receivable or a payable WITHOUT money moving. Whatever they apply is judgment, however it is booked. */
-const NON_CASH_REDUCING: ReadonlySet<string> = new Set(["credit_memo", "write_off", "customer_credit", "bank_adjustment"]);
+const NON_CASH_REDUCING: ReadonlySet<string> = new Set([...NON_CASH_SETTLEMENT_KINDS, "customer_credit", "bank_adjustment"]);
 
 /**
  * The judgment amount: what this entry moves outside the control accounts (credit memo, write-off, accrual).

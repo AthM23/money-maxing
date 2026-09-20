@@ -43,6 +43,21 @@ describe("J1 policy holds", () => {
     expect(statusOf(runKernel(memo({ policy_refs: ["pol:shortfall"] }), ctx, "proposal"), "J1")).toBe("pass");
   });
 
+  it("a valid rule that says something else is not cover: wrong kind, wrong account, wrong function or no action all fail", () => {
+    const cases: Array<[Partial<Parameters<typeof policy>[1] & object>, string]> = [
+      [{ action: { kind: "write_off", account: DEFERRED } }, "books write_off, the entry is credit_memo"],
+      [{ action: { kind: "credit_memo", account: "6150 Bank charges" } }, "books to 6150 Bank charges, the entry uses"],
+      [{ function: "ap" }, "is a rule for ap, the entry is ar"],
+      [{ action: null }, "has no readable action"],
+    ];
+    for (const [over, expected] of cases) {
+      const ctx = makeCtx({ ...world, policies: [policy("pol:other", over)] }, { features });
+      const mark = markOf(runKernel(memo({ policy_refs: ["pol:other"] }), ctx, "proposal"), "J1");
+      expect(mark.status).toBe("fail");
+      expect(mark.detail).toContain(expected);
+    }
+  });
+
   it("is n/a when no policy is cited", () => {
     expect(markOf(runKernel(memo(), makeCtx(world), "proposal"), "J1").detail).toMatch(/^n\/a:/);
   });

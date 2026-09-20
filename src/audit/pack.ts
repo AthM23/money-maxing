@@ -1,4 +1,5 @@
-import { DEFAULT_CONFIG, type Clock, type RuntimeConfig } from "../runtime/config.js";
+import { APP_CONFIG } from "../packs/index.js";
+import type { Clock, RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { emit } from "../runtime/events.js";
 import { runControlTests } from "./controls.js";
@@ -11,6 +12,7 @@ export interface PackInput {
   seed: string;
   /** Size of the random stratum. The must-test stratum is whatever the risk criteria catch. */
   size: number;
+  /** Defaults to the application's own configuration, packs and all. See `buildAuditPack`. */
   config?: RuntimeConfig;
 }
 
@@ -18,9 +20,13 @@ export interface PackInput {
  * The whole pack in one pass: draw the sample, re-perform every item in it, run the control tests,
  * and raise one event per finding. Everything in the result is JSON-serialisable, because the point
  * of the pack is that somebody else can re-run it from the seed and get the same thing back.
+ *
+ * The configuration defaults to APP_CONFIG, the one the rest of the application posts on: on the bare
+ * runtime defaults a function's pack checks are missing, and every AP entry then re-performs as an X2
+ * failure ("no pack checks are configured"), which buries the findings this pack exists to surface.
  */
 export function buildAuditPack(db: Db, clock: Clock, input: PackInput): AuditPack {
-  const config = input.config ?? DEFAULT_CONFIG;
+  const config = input.config ?? APP_CONFIG;
   const sample = drawSample(db, {
     period: input.period,
     seed: input.seed,

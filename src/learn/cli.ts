@@ -30,8 +30,13 @@ async function main(): Promise<number> {
   out(`harvested ${harvestLiveOutcomes(db).length} decision point(s) from entries people approved this month`);
   const approver = flagString(args, "approve-as");
   for (const d of compilePolicies(db, systemClock, fn)) {
-    out(`\ndraft: ${d.name}`);
-    out(`  backtest: matched ${d.backtest.n}, humans did exactly this ${d.backtest.agree}, other account ${d.backtest.account_outliers.length}, would have mis-cleared ${d.backtest.regressions.length}`);
+    if (d.unchanged) {
+      out(`\non file, unchanged: ${d.name}`);
+      continue;
+    }
+    out(`\ndraft: ${d.name}${d.supersedes ? ` (retires ${d.supersedes} when approved)` : ""}`);
+    out(`  on the history it was drafted from: matched ${d.backtest.n}, humans did exactly this ${d.backtest.agree}, other account ${d.backtest.account_outliers.length}, would have mis-cleared ${d.backtest.regressions.length}`);
+    out(`  leave-one-out: drafted without each case in turn, the rule still covers ${d.backtest.held_out_covered} of ${d.backtest.held_out_n}`);
     if (!d.policy_id) out(`  REFUSED: ${d.refused_reason ?? "no reason recorded"}`);
     else if (approver) out(`  ${d.policy_id}: ${JSON.stringify(approvePolicy(db, systemClock, d.policy_id, approver))}`);
     else out(`  ${d.policy_id}: proposed. Approve with: pnpm inbox ${dbPath} approve-policy ${d.policy_id} --as <approver id>`);

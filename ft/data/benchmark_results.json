@@ -12,5 +12,47 @@
     "ts": "21:25",
     "kind": "api",
     "model": "muse-spark-1.3"
+  },
+  "muse-hinted": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.767,
+    "field_f1": 0.957,
+    "held_out_n": 88,
+    "held_out_exact": 0.795,
+    "held_out_f1": 0.967,
+    "avg_latency_s": 6.71,
+    "est_cost_usd": 0.0,
+    "ts": "21:39",
+    "kind": "api",
+    "model": "muse-spark-1.3"
+  },
+  "base4b": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.0,
+    "field_f1": 0.084,
+    "held_out_n": 88,
+    "held_out_exact": 0.0,
+    "held_out_f1": 0.094,
+    "avg_latency_s": 6.43,
+    "est_cost_usd": 0.0,
+    "ts": "19:08",
+    "kind": "local",
+    "model": "Qwen/Qwen3-4B-Instruct-2507"
+  },
+  "ours": {
+    "n": 120,
+    "schema_valid": 1.0,
+    "exact": 0.692,
+    "field_f1": 0.96,
+    "held_out_n": 88,
+    "held_out_exact": 0.739,
+    "held_out_f1": 0.964,
+    "avg_latency_s": 6.33,
+    "est_cost_usd": 0.0,
+    "ts": "19:21",
+    "kind": "local+lora",
+    "model": "Qwen/Qwen3-4B-Instruct-2507+/home/asus/ft/out/run1/adapter"
   }
 }

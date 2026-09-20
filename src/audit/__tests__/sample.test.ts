@@ -62,6 +62,15 @@ describe("audit sample: risk-weighted and reproducible", () => {
     expect(sample.random.map((item) => item.decision_id)).toHaveLength(2);
   });
 
+  it("must-tests an auto-post whose model tier nobody recorded: unknown provenance is risk, not safety", () => {
+    const db = bareDb();
+    insertPostedDecision(db, { id: "dec_auto_null", amount_cents: 1_000, autonomy_level: "auto", tier: null });
+    insertPostedDecision(db, { id: "dec_auto_zero", amount_cents: 1_000, autonomy_level: "auto", tier: 0 });
+    const sample = drawSample(db, { ...base, seed: "q3-review", size: 1 });
+    expect(sample.must_test.map((item) => item.decision_id)).toEqual(["dec_auto_null"]);
+    expect(sample.must_test[0]?.reasons.join(" ")).toContain("no model tier recorded");
+  });
+
   it("must-test picks up an agent-approved decision and a judgment mark below materiality", () => {
     const db = bareDb();
     insertPostedDecision(db, { id: "dec_agent", amount_cents: 1_000 });
