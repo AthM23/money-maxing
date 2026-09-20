@@ -24,6 +24,8 @@ const ICONS = {
   search: [["M11 18a7 7 0 100-14 7 7 0 000 14z"], ["M20 20l-4-4"]],
   send: [["M4 12l16-8-6 16-3-7z"]],
   play: [["M7 4l13 8-13 8z"]],
+  // a small model on our own silicon: a chip with its core lit
+  chip: [["M7 7h10v10H7z"], ["M10 10h4v4h-4z", "accent"], ["M10 10h4v4h-4z"], ["M10 4v3"], ["M14 4v3"], ["M10 17v3"], ["M14 17v3"], ["M4 10h3"], ["M4 14h3"], ["M17 10h3"], ["M17 14h3"]],
 
   // the tools: one original drawing each
   // who owes what, and how late: three invoices ageing into a clock

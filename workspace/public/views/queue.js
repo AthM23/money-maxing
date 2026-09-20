@@ -54,13 +54,59 @@ async function submitAnswer(event, app, escalationId) {
 }
 
 function parkedCard(app, p) {
+  if (p.kind === "dispute_hold") return heldCard(app, p);
   return h("div", {},
     h("span", { class: "tag wait" }, "Approval"), h("p", { class: "lead" }, `${words(p.kind)} of ${money(p.amount_cents)} for ${p.party_id}`),
     h("p", { class: "muted" }, `Prepared by ${p.prepared_by.label}. ${p.controller_note ? `Controller agent: ${p.controller_note}` : ""}`),
+    reasoning(p),
     h("div", { class: "actions" },
       h("button", { class: "ghost", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
       h("button", { class: "ghost", on: { click: () => decide(app, p.decision_id, "rejected") } }, "Decline"),
       h("button", { class: "primary", on: { click: () => decide(app, p.decision_id, "approved") } }, "Approve")));
+}
+
+/** Why the entry was prepared, in the preparer's words, and the quotes it rests on. The kernel matched every quote to its source. */
+function reasoning(p) {
+  if (!p.why?.length && !p.evidence?.length) return null;
+  return h("div", { class: "why" }, p.why.map((w) => h("p", {}, w)),
+    p.evidence.length ? h("details", {}, h("summary", {}, `What it rests on (${p.evidence.length} quotes, each checked against its source)`),
+      h("ul", {}, p.evidence.map((e) => h("li", {}, h("b", {}, e.claim), h("blockquote", {}, `“${e.quote}”`), h("span", { class: "mono muted" }, e.trace_id))))) : null);
+}
+
+/**
+ * An amount an agent held as disputed. Nothing was booked, and what happens to it is a person's decision: leave it
+ * held, or decide it here, which is recorded as a question put to you and your answer.
+ */
+function heldCard(app, p) {
+  const form = h("form", { class: "answer", on: { submit: (e) => submitDecision(e, app, p.decision_id) } },
+    h("label", {}, "Decide it as", h("select", { name: "treatment" }, ["credit_memo", "write_off", "tax_withholding", "chase"].map((t) => h("option", { value: t }, TREATMENTS[t])))),
+    h("label", {}, "This decision is", h("select", { name: "uses" }, h("option", { value: "one_time" }, "for this case only"), h("option", { value: "standing" }, "standing, until the date below"))),
+    h("label", {}, "Until", h("input", { type: "date", name: "valid_to" })),
+    h("label", {}, "Rate %, if it is a rate", h("input", { type: "number", name: "pct", min: "0", max: "100", step: "0.01", placeholder: "e.g. 2" })),
+    h("label", { class: "wide" }, "In your words (kept as evidence)", h("textarea", { name: "text", rows: "2", required: true, minlength: "3" })),
+    h("div", { class: "actions wide" },
+      h("button", { class: "ghost", type: "button", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
+      h("button", { class: "ghost", type: "button", on: { click: () => decide(app, p.decision_id, "approved") } }, "Keep it held"),
+      h("button", { class: "primary", type: "submit" }, "Decide")));
+  return h("div", { class: "question" },
+    h("span", { class: "tag wait" }, "Held as disputed · your decision"),
+    h("p", { class: "lead" }, `${money(p.amount_cents)} from ${p.party_id} is held as disputed. Nothing has been booked.`),
+    h("p", { class: "muted" }, `Prepared by ${p.prepared_by.label}.`), reasoning(p), form);
+}
+
+async function submitDecision(event, app, decisionId) {
+  event.preventDefault();
+  const f = new FormData(event.target);
+  const treatment = f.get("treatment");
+  const pct = f.get("pct") ? Number(f.get("pct")) : undefined;
+  const payload = { decision_id: decisionId, as: app.viewer?.id, treatment, uses: f.get("uses"), text: f.get("text"), valid_to: f.get("valid_to") || undefined,
+    ...(pct === undefined ? {} : treatment === "tax_withholding" ? { pct_withheld: pct } : { pct_off: pct }) };
+  try {
+    const r = await act("decide", payload);
+    if (r.status !== "answered") return toast(`Not saved: ${r.status}${r.detail ? ` (${r.detail})` : ""}`, "bad");
+    toast(r.fact_status === "active" ? "Decided and remembered. The entry it calls for is prepared and waiting for approval." : "Decided.");
+    await app.refresh();
+  } catch (err) { toast(err.message, "bad"); }
 }
 
 async function decide(app, decisionId, outcome) {

@@ -4,16 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Money Maxer</title>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="canvas">
-    <header class="top">
-      <a class="logo" href="#overview" id="brand">Money Maxer</a>
-      <nav class="tabs" id="nav"></nav>
+  <div class="canvas shell">
+    <aside class="rail">
+      <a class="logo" href="/site" title="About Money Maxer"><img src="/logo.svg" alt="" width="34" height="34"><span id="brand">Money Maxer</span></a>
+      <nav class="railnav" id="nav"></nav>
       <div class="me" id="me"></div>
-    </header>
-    <main id="main"><p class="muted">Loading…</p></main>
+    </aside>
+    <div class="stage"><main id="main"><p class="muted">Loading…</p></main></div>
   </div>
   <aside id="drawer" class="drawer" hidden></aside>
   <script type="module" src="/app.js"></script>

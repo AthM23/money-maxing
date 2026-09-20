@@ -1,4 +1,6 @@
 import type { Db } from "../runtime/db.js";
+import { DECIDED_INSTEAD_OF_HELD } from "../contract/approvalNotes.js";
+import { UNSETTLED_ACTOR } from "../runtime/intentStatus.js";
 import { safeJson } from "../runtime/lookups.js";
 
 /**
@@ -44,9 +46,10 @@ export function buildFleet(db: Db, feedLimit = 60): FleetView {
     .prepare(
       `SELECT d.id, d.intent_id, d.actor, d.tier, d.kind, d.route, d.model_calls, d.cost_micros, d.latency_ms, d.posted_at, d.created_at, d.proposal_json,
               json_extract(i.case_json, '$.party_id') AS party
-       FROM decision d JOIN intent i ON i.id = d.intent_id WHERE d.mode = 'live' AND d.actor != 'seed' ORDER BY d.rowid`,
+       FROM decision d JOIN intent i ON i.id = d.intent_id WHERE d.mode = 'live' AND d.actor NOT IN ('seed', ?) ORDER BY d.rowid`,
     )
-    .all() as DecisionRow[];
+    // The router's own note that nothing settled a case is bookkeeping, not a turn anybody took.
+    .all(UNSETTLED_ACTOR) as DecisionRow[];
   const workers = new Map<string, WorkerRow>();
   const feed: FeedItem[] = [];
   for (const d of decisions) {
@@ -122,12 +125,17 @@ function feedOf(d: DecisionRow, worker: string, refusals: number, approved: bool
 function peopleFeed(db: Db): FeedItem[] {
   const rows = db
     .prepare(
-      `SELECT a.approved_at AS at, a.approver_id, a.outcome, d.intent_id, d.kind, d.proposal_json, json_extract(i.case_json, '$.party_id') AS party
+      `SELECT a.approved_at AS at, a.approver_id, a.outcome, a.note, d.intent_id, d.kind, d.proposal_json, json_extract(i.case_json, '$.party_id') AS party
        FROM approval a JOIN decision d ON d.id = a.decision_id JOIN intent i ON i.id = d.intent_id WHERE a.approver_kind = 'human' AND d.mode = 'live'`,
     )
-    .all() as { at: string; approver_id: string; outcome: string; intent_id: string; kind: string | null; proposal_json: string | null; party: string | null }[];
-  return rows.map((r) => ({ at: r.at, intent_id: r.intent_id, party: r.party, worker: r.approver_id, what: `${r.outcome === "approved" ? "approved" : "declined"} ${words(r.kind)}`,
-    amount_cents: amountOf(r.proposal_json), tone: r.outcome === "approved" ? "person" as const : "refused" as const }));
+    .all() as { at: string; approver_id: string; outcome: string; note: string | null; intent_id: string; kind: string | null; proposal_json: string | null; party: string | null }[];
+  return rows.map((r) => {
+    // A hold that a person decided instead of keeping is not a refusal: it is them taking the decision (see decideHold).
+    const decided = r.outcome === "rejected" && r.note?.startsWith(DECIDED_INSTEAD_OF_HELD) ? r.note.slice(DECIDED_INSTEAD_OF_HELD.length).trim() : null;
+    const what = decided ? `set the hold aside and decided it: ${words(decided)}` : `${r.outcome === "approved" ? "approved" : "declined"} ${words(r.kind)}`;
+    return { at: r.at, intent_id: r.intent_id, party: r.party, worker: r.approver_id, what, amount_cents: amountOf(r.proposal_json),
+      tone: r.outcome === "approved" || decided ? "person" as const : "refused" as const };
+  });
 }
 
 function answersFeed(db: Db): FeedItem[] {

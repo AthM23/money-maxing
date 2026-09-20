@@ -22,6 +22,7 @@
     "learn": "tsx src/learn/cli.ts",
     "rerun": "tsx src/learn/rerunCli.ts",
     "demo:scenario": "tsx src/demo/scenario/cli.ts",
+    "downstream": "tsx src/demo/downstream.ts",
     "state": "tsx src/readmodel/cli.ts",
     "workspace": "tsx --env-file-if-exists=.env workspace/server.ts",
     "mcp": "tsx workspace/mcp.ts",

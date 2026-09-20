@@ -19,8 +19,16 @@ export function listParkedDecisions(db: Db, intentId?: string): ParkedEntry[] {
   ).all(intentId ?? null, intentId ?? null) as (DecisionRow & { kind: string; intent_id: string })[];
   return rows.map((r) => ({
     decision_id: r.id, intent_id: r.intent_id, kind: r.kind, party_id: partyIdOf(r.proposal_json),
-    amount_cents: judgmentCentsOf(r.proposal_json), prepared_by: classifySettlement(db, r), controller_note: controllerNote(db, r.id),
+    amount_cents: judgmentCentsOf(r.proposal_json), prepared_by: classifySettlement(db, r), controller_note: controllerNote(db, r.id), ...reasoning(r.proposal_json),
   }));
+}
+
+function reasoning(proposalJson: string | null): Pick<ParkedEntry, "why" | "evidence"> {
+  const p = safeJson(proposalJson ?? "null") as { judgment?: { note?: string }[]; evidence?: { claim?: string; trace_id?: string; quote?: string }[] } | null;
+  return {
+    why: (p?.judgment ?? []).map((j) => j.note ?? "").filter(Boolean),
+    evidence: (p?.evidence ?? []).map((e) => ({ claim: e.claim ?? "", trace_id: e.trace_id ?? "", quote: e.quote ?? "" })),
+  };
 }
 
 /** The controller's most recent note on this decision, if an independent review ran before it parked. */

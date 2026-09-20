@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
+import { decideHeldAmount } from "../src/agents/decideHold.js";
 import { recordHumanAnswer } from "../src/agents/humanLoop.js";
 import { buildAuditPack } from "../src/audit/pack.js";
 import { rebuildLadder } from "../src/learn/autonomy.js";
@@ -28,6 +29,11 @@ const Answer = z.object({
   uses: z.enum(["one_time", "standing"]), valid_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   pct_off: z.number().min(0).max(100).optional(), pct_withheld: z.number().min(0).max(100).optional(),
 });
+const Decide = z.object({
+  decision_id: Id, as: Id, treatment: z.enum(["credit_memo", "write_off", "tax_withholding", "chase"]), text: z.string().min(3).max(1000),
+  uses: z.enum(["one_time", "standing"]), valid_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  pct_off: z.number().min(0).max(100).optional(), pct_withheld: z.number().min(0).max(100).optional(),
+});
 const FactAction = z.object({ fact_id: Id, as: Id, outcome: z.enum(["approved", "rejected"]) });
 const PolicyAction = z.object({ policy_id: Id, as: Id });
 const Run = z.object({ intent_id: Id.optional() });
@@ -45,6 +51,11 @@ export const ACTIONS: Record<string, Handler> = {
   answer: (db, body) => {
     const { escalation_id, as, ...answer } = parse(Answer, body);
     return recordHumanAnswer(db, escalation_id, as, answer, { config: APP_CONFIG });
+  },
+  // A hold an agent parked is a person's to decide: their decision is recorded as a question put to them and their answer.
+  decide: (db, body) => {
+    const { decision_id, as, ...answer } = parse(Decide, body);
+    return decideHeldAmount(db, decision_id, as, answer, { config: APP_CONFIG });
   },
   fact: (db, body) => {
     const f = parse(FactAction, body);

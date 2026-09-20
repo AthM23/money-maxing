@@ -92,6 +92,9 @@ export interface ParkedEntry {
   amount_cents: number;
   prepared_by: SettledBy;
   controller_note: string | null;
+  /** The preparer's own reasoning and the quotes it rested on, as stored in the proposal. */
+  why: string[];
+  evidence: { claim: string; trace_id: string; quote: string }[];
 }
 
 export interface OpenQuestion {

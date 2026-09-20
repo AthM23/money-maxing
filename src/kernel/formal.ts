@@ -98,6 +98,10 @@ export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
   if (NO_CASH_KINDS.has(proposal.kind) && cashLines.length > 0) {
     problems.push(`kind ${proposal.kind} must not touch the cash account ${ctx.control.cash_account}`);
   }
+  // Said in so many words because a model that gets only F3's arithmetic back sends the same lines again.
+  if (proposal.kind === "dispute_hold" && proposal.entries.length > 0) {
+    problems.push("a dispute_hold posts no entry: it only marks the amount as disputed and leaves the invoice open. Send it with entries empty");
+  }
   if (NON_CASH_SETTLEMENT_KINDS.includes(proposal.kind) && proposal.entries.length > 0) {
     const outside = proposal.entries.filter((l) => !isControlAccount(l.account, ctx));
     const debitOutside = sumDebits(outside);

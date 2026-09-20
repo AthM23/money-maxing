@@ -10,6 +10,7 @@ import { renderQueue } from "/views/queue.js";
 import { renderPolicies } from "/views/policies.js";
 import { renderFleet } from "/views/fleet.js";
 import { renderAsk } from "/views/ask.js";
+import { renderModel } from "/views/model.js";
 
 // One object holds what the page knows. Views read it and call `app.go` or `app.refresh`; nothing else is shared.
 export const app = {
@@ -58,6 +59,7 @@ const VIEWS = {
   queue: { label: "Input needed", icon: "inbox", render: renderQueue, count: (o) => Object.values(o.awaiting_you).reduce((n, list) => n + list.length, 0) },
   policies: { label: "Policies", icon: "book", render: renderPolicies },
   fleet: { label: "Agents", icon: "flow", render: renderFleet },
+  model: { label: "Model", icon: "chip", render: renderModel },
   case: { label: null, render: renderCase },
 };
 
@@ -85,13 +87,17 @@ function render() {
   Promise.resolve().then(() => view.render(app, o)).then((node) => main.replaceChildren(node)).catch((err) => main.replaceChildren(h("p", { class: "error" }, err.message)));
 }
 
+// The rail shows the sections in two groups: the books themselves, then the agents that keep them.
+const GROUPS = [["Books", ["overview", "run", "revenue", "close", "reports"]], ["Agents", ["ask", "queue", "fleet", "policies", "model"]]];
+
 function renderNav(o) {
-  const items = Object.entries(VIEWS).filter(([, v]) => v.label).map(([key, v]) => {
+  const button = (key) => {
+    const v = VIEWS[key];
     const n = v.count ? v.count(o) : 0;
     const active = app.route.view === key || (key === "run" && app.route.view === "case");
-    return h("button", { class: active ? "active" : "", on: { click: () => app.go(key) } }, icon(v.icon, 16), v.label, n > 0 ? h("span", { class: "count" }, n) : null);
-  });
-  document.getElementById("nav").replaceChildren(...items);
+    return h("button", { class: active ? "active" : "", on: { click: () => app.go(key) } }, icon(v.icon, 17), v.label, n > 0 ? h("span", { class: "count" }, n) : null);
+  };
+  document.getElementById("nav").replaceChildren(...GROUPS.flatMap(([title, keys]) => [h("p", { class: "railgroup" }, title), ...keys.map(button)]));
 }
 
 function renderMe(o) {

@@ -1,0 +1,33 @@
+{
+  "reader": "no reader",
+  "n": 100,
+  "settled_from_code": 0,
+  "applied_deduction_open": 0,
+  "left_for_judgment": 100,
+  "wrong_postings": 0,
+  "books_tied": true,
+  "avg_latency_ms": 0,
+  "refusal_reasons": {},
+  "by_family": {
+    "remit_ocr": {
+      "n": 42,
+      "settled": 0
+    },
+    "remit_plain": {
+      "n": 14,
+      "settled": 0
+    },
+    "remit_shortpay": {
+      "n": 20,
+      "settled": 0
+    },
+    "remit_terse": {
+      "n": 10,
+      "settled": 0
+    },
+    "remit_email": {
+      "n": 14,
+      "settled": 0
+    }
+  }
+}

@@ -183,6 +183,18 @@ describe("F3 control accounts stay tied", () => {
     expect(result.verdict).toBe("accept");
   });
 
+  it("refuses a dispute hold that carries ledger lines, and says what to send instead", () => {
+    const proposal = makeProposal({
+      kind: "dispute_hold",
+      applications: [{ doc_id: "INV-9001", amount_cents: 120_000 }],
+      entries: [line(EXPENSE, 120_000, 0), line(AR, 0, 120_000)],
+    });
+    const result = runKernel(proposal, makeCtx(world), "proposal");
+    expect(result.verdict).toBe("reject");
+    expect(markOf(result, "F8").detail).toContain("a dispute_hold posts no entry");
+    expect(markOf(result, "F8").detail).toContain("entries empty");
+  });
+
   it("still checks that a disputed amount fits the open balance", () => {
     const proposal = makeProposal({
       kind: "dispute_hold",

@@ -43,7 +43,7 @@ export function rerunDecision(db: Db, decisionId: string, config: RuntimeConfig 
 function kernelFindings(subject: RerunSubject, fresh: KernelResult, stored: KernelVerdict | null): Finding[] {
   const refs = { decision_id: subject.decision_id, entry_id: subject.entry_id ?? undefined };
   const out = fresh.failed.map((mark) =>
-    finding("kernel_disagrees", `${mark.cls}${mark.check} fails on re-performance: ${mark.detail}`, refs),
+    finding("kernel_disagrees", `${mark.check} fails on re-performance: ${mark.detail}`, refs),
   );
   if (out.length === 0 && stored !== null && stored !== fresh.verdict) {
     out.push(finding("kernel_disagrees", `re-performance returns ${fresh.verdict}, the workpaper on file says ${stored}`, refs));
