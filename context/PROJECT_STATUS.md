@@ -912,3 +912,42 @@ and four medium ones) are being fixed now by a separate builder and will be logg
   memory holds nothing that lets run 2 cheat; `tier` comes from the runtime, never the model; empty stored features
   cannot make J1 pass; no style violations.
 - `pnpm test` on a clean checkout of `cdb59cc` → 46 files, **450 passing**; typecheck clean.
+
+### 2026-09-19 22:17 ET — Maximor's whole site read; what it changes for the demo cases (Person A)
+
+Karan's worry after the judges' note: our cases may be generic (Kiteworks is global cash: many entities, currencies,
+banks and country rules, not one SaaS with one bank account). Full write-up with a source URL on every claim:
+`context/research/maximor-site-deep-read-2026-09-19.md` (38 pages read from the sitemap, all 13 blog posts, both
+case-study pages, 4 press pieces; `trust.maximor.ai` returned 403). What matters:
+
+- **Only Kiteworks and HiBid have case-study pages.** Rently, Invst and Dura are home-page tiles. Kiteworks: 10 legal
+  entities after 6 acquisitions, US/EMEA/APAC, **7 currencies, 66 accounts, 20+ bank relationships**, NetSuite, 20
+  accountants down to 5, entity-specific rules, currency translation and intercompany elimination, a daily cash view
+  by currency, entity and region. The "unnamed global cybersecurity company" in the press **is** Kiteworks: do not
+  count it twice. HiBid: cash by check, wire, ACH and **several payment processors**; collected vs AR vs in transit
+  worked out by hand in a 300 MB workbook; close from 3 weeks to 5 days.
+- **The 2% is our story 2 in their words:** the press says the remainder is escalated when an agent meets a decision
+  it has not seen before, and handled automatically the next time. The CEO's post says the system remembers the
+  answer so it never asks twice.
+- **Their own home-page widget is our loop** with names we can mirror exactly: `SHORT-PAY-01` (short ≤ $50 →
+  auto-close; −$38 posted and closed; −$495 awaiting the controller) → `v2` (≤ $50 **or ≤ 5% freight**). Their
+  close-assessment asks, word for word, about one payment covering several invoices and small short-pays.
+- **Their newest thinking is usage-based revenue for AI-native companies** (8 of 13 posts, all in the last six
+  weeks), and one post names **withholding tax deducted at source on cross-border cloud fees**.
+- **Cautions:** the 98% has two scopes (cash transactions at Kiteworks; all platform transactions in the press); the
+  automation-rate numbers differ page to page; do not say Dura has 30+ subsidiaries or 7→0 audit findings (that is an
+  unnamed roll-up); the CFO survey is October 2025 fieldwork republished.
+
+**Recommendation (lane A's view; the world is Atharv's call):** do not re-plumb the ledger for true multi-currency
+tonight. Get the Kiteworks *shape* with the least new logic:
+1. Seed labels, no new logic: 2-3 Northwind legal entities, 3-4 currencies and 6-8 named bank accounts on the bank
+   lines, so the console can show cash by currency, entity and region.
+2. Mirror the widget: a wire covering three invoices short by $38 closes on `SHORT-PAY-01`; one short by $495 goes to
+   the controller; approving it yields `SHORT-PAY-01 v2`. Lane A has all of this except the "or ≤ 5%" clause.
+3. One globally flavoured judgment case that generic demos never have: **a customer in a treaty country pays net of
+   withholding tax.** The reason is a certificate in the inbox; the treatment is a tax receivable, not a concession;
+   remembered as a standing fact, so next month it books from code. Lane A is building the kind, account and checks.
+4. Already built and Kiteworks-shaped: the parent paying for its subsidiary (the kernel refuses the party tie until a
+   payer fact exists), and a duplicate payment held as unapplied cash, visible as a balance.
+5. Realised FX only if there is time on both lanes: it needs currency and rate on invoices and bank lines (lane B) and
+   one deterministic kernel check (lane A).
