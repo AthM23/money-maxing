@@ -5,6 +5,7 @@ import { dbPath, openWorldDb, resetDb } from "../ledger/db.js";
 import { DEFAULT_SEED, generateWorld } from "./generate.js";
 import { seedLocal, writeStores } from "./local.js";
 import { ANSWER_KEY_PATH, WORLD_PATH } from "./paths.js";
+import { applySlackUserMap, slackUserMapFromEnv } from "./slackUsers.js";
 import { World } from "./world.js";
 
 const TARGETS = ["world", "local", "quickbooks", "gmail", "slack", "all"] as const;
@@ -46,6 +47,9 @@ async function main(): Promise<void> {
     const db = openWorldDb(path);
     const r = seedLocal(db, world);
     writeStores(world, DEFAULT_STORES_DIR);
+    const mapped = applySlackUserMap(db, world, slackUserMapFromEnv(world));
+    if (mapped.owners + mapped.approvers > 0) log(`local: real Slack ids on ${mapped.owners} account owners and ${mapped.approvers} approvers`);
+    else log("local: SLACK_USER_MAP / SLACK_DEFAULT_USER not set, so owners and approvers keep placeholder Slack ids and cannot be reached");
     log(`local: ${r.parties} parties, ${r.invoices} invoices, ${r.bills} bills, ${r.gl_entries} GL entries, ${r.decision_points} Q2 decision points → ${path}; stores → ${DEFAULT_STORES_DIR}`);
     db.close();
   }
@@ -62,9 +66,14 @@ async function main(): Promise<void> {
     log(`gmail: ${JSON.stringify(await seedGmail(world, { reset: args.reset, log }))}`);
   }
   if (wants("slack")) {
-    const { seedSlack } = await import("../connectors/slack.js");
+    const { seedSlack, slackUserMap } = await import("../connectors/slack.js");
     // Slack has no reset: a bot cannot delete other history, and seeding skips world ids already posted.
     log(`slack: ${JSON.stringify(await seedSlack(world, { log }))}`);
+    // people whose email matches a workspace member map themselves; the env fills in or overrides the rest
+    const db = openWorldDb(dbPath());
+    const mapped = applySlackUserMap(db, world, slackUserMapFromEnv(world, process.env, await slackUserMap(world)));
+    log(`slack: real Slack ids on ${mapped.owners} account owners and ${mapped.approvers} approvers`);
+    db.close();
   }
 }
 

@@ -9,7 +9,7 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~21:05 ET |
+| **Last updated** | 2026-09-19 ~21:20 ET |
 | **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
 | **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
@@ -509,3 +509,35 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   - HubSpot: the token is set, but no HubSpot connector exists yet (CRM is a local store). Not in Phase 1.
 - Commands: `pnpm seed --target=<world|local|quickbooks|gmail|slack|all> [--reset]` · `pnpm ingest [--live=gmail,slack]`
   · `pnpm skeleton [--live=gmail]` · `pnpm console`.
+
+### 2026-09-19 — Slack connector/seeder scope expansion
+
+- Supersedes the initial two-scope Slack setup for connector use. Newly implemented `src/connectors/slack.ts` needs channels:read, channels:history, channels:join, channels:manage, users:read, and users:read.email in addition to chat:write/im:write.
+- User explicitly approved all six additional scopes and reinstallation terms. Added them to Northwind Finance Ops, reinstalled in Northwind Systems, and saved the installed bot token to ignored `.env`. App-level Socket Mode token unchanged.
+- Automatic approval review rejected verification that would read messages/member data; used auth.test scope-only verification instead. No seeding or workspace-content read performed by this task.
+
+### 2026-09-19 ~21:20 ET — Slack seeding and live reads verified; Slack user mapping added (AthM23 + Claude Code session)
+
+- **Supersedes the "Slack reads and seeding" blocker in the 21:05 entry.** AthM23 added the six missing bot scopes
+  (`channels:read`, `channels:history`, `channels:join`, `channels:manage`, `users:read`, `users:read.email`) and
+  reinstalled the app. This also supersedes the 20:53 entry's "no additional history-reading scopes" and the line in
+  `SLACK_SETUP.md` saying the bot cannot read channel history: it now can, in public channels it has joined.
+- **Verified live:** `pnpm seed --target=slack` created `#finance`, `#deals`, `#cs-escalations` and posted the world's 5
+  messages; a re-run posted nothing (5 skipped). So message `metadata` posted by the bot **does** round-trip through
+  `conversations.history`, which the code had marked UNVERIFIED. `pnpm skeleton --live=gmail,slack` from a clean
+  database: Slack traces carry the world ids, the **world's** timestamps (Slack cannot backdate; the world time rides
+  in the metadata), the speaker and the original text, identical to the local store. Same 11 cases and routes as the
+  local run; AR tied. `pnpm test` → 27 files, **322 passing**.
+- **Landed:** `src/seed/slackUsers.ts`. Person A's transport DMs `party.owner_user` and finds an approver by
+  `approver.slack_user`; both held placeholders (`U_DANA`). They are now rewritten at seed time from `SLACK_USER_MAP`
+  (JSON, world person id → real Slack id), then an email match against the workspace, then `SLACK_DEFAULT_USER`.
+  `approver.id` stays the world id, because that is the identity the kernel checks. With neither variable set nothing
+  changes and the seeder says so.
+- **Found:** the workspace has one human member (`U0C3415MFJ6`, "Sam", admin) and nobody's email is `@northwind.test`,
+  so the email match maps no one. Applied once to the local database with that user as the default, to test: 13
+  account owners and 3 approvers. **Not persisted: `.env` was not edited, so the next `--reset` goes back to
+  placeholders.** Known consequence of one person holding every role: A's `approverFor` takes the first approver row
+  for a Slack id, which is the CFO ($100,000 limit).
+- **Blocked on a human (Atharv or Karan):** decide who plays which role and put it in `.env`, either
+  `SLACK_DEFAULT_USER=U0C3415MFJ6` or a `SLACK_USER_MAP`. Until then an escalation has nobody real to reach.
+  **Still untested:** a full escalation or approval round trip in Slack (needs A's runtime running and a model key).
