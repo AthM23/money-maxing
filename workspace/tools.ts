@@ -43,11 +43,12 @@ export const TOOLS = [
       const weeks = cashByWeek(db, period);
       return { title: `Cash received by week, ${period}`, summary: `${usd(weeks.reduce((n, w) => n + w.cents, 0))} landed across ${weeks.length} weeks.`, table: { columns: ["Week starting", "Cash received"], money_columns: [1], rows: weeks.map((w) => [w.week, w.cents]) }, source: "bank_txn" };
     } }),
-  tool({ name: "waiting_on_people", title: "Waiting on you", icon: "t_waiting", example: "What needs me?", input: None,
-    description: "Every case that is not settled: open, or waiting for a person's answer or approval, with the question.",
+  tool({ name: "waiting_on_people", title: "Not settled yet", icon: "t_waiting", example: "What is not settled yet?", input: None,
+    description: "Every case that is not settled, saying which are still being worked (open) and which are waiting for a person's answer or approval.",
     run: ({ db }) => {
       const rows = db.prepare("SELECT json_extract(case_json, '$.party_id') AS party, status, question FROM intent WHERE status != 'resolved' AND case_json IS NOT NULL ORDER BY created_at").all() as { party: string; status: string; question: string }[];
-      return { title: "What is not settled yet", summary: `${rows.length} case(s) are open or waiting for a person.`, table: { columns: ["Customer", "Status", "Question"], money_columns: [], rows: rows.map((r) => [r.party, r.status.replaceAll("_", " "), r.question]) }, source: "intent" };
+      const waiting = rows.filter((r) => r.status === "waiting_on_human").length;
+      return { title: "What is not settled yet", summary: `${rows.length - waiting} case(s) are open and still being worked; ${waiting} ${waiting === 1 ? "is" : "are"} waiting for a person.`, table: { columns: ["Customer", "Status", "Question"], money_columns: [], rows: rows.map((r) => [r.party, r.status.replaceAll("_", " "), r.question]) }, source: "intent" };
     } }),
   tool({ name: "explain_receipt", title: "Explain a receipt", icon: "t_receipt", example: "Why is Vossberg short?", input: z.object({ customer: z.string().min(2).max(80).describe("Customer name or id, or an invoice number") }),
     description: "How one customer's receipt was explained: the bank line, each book line with its account and who or what settled it, and what is still open.",
@@ -59,13 +60,13 @@ export const TOOLS = [
       return { title: "Who did what", summary: `${f.totals.model_calls} model calls costing ${usd(Math.round(f.totals.cost_micros / 10_000))}; the kernel refused ${f.totals.kernel_refusals} draft(s).`, source: "decision, decision_step, approval",
         table: { columns: ["Worker", "Turns", "Posted alone", "Parked", "Asked", "Refused by kernel", "Model calls", "Cost"], money_columns: [7], rows: f.workers.map((w) => [w.worker, w.turns, w.posted_alone, w.parked, w.asked, w.kernel_refusals, w.model_calls, Math.round(w.cost_micros / 10_000)]) } };
     } }),
-  tool({ name: "cash_forecast", title: "Cash forecast", icon: "t_forecast", example: "What does cash look like over the next weeks?", input: None,
-    description: "The 13-week cash forecast as last rebuilt: expected receipts and the running balance by week, and what it says it does not model.",
+  tool({ name: "cash_forecast", title: "Expected receipts", icon: "t_forecast", example: "What receipts do we expect over the next weeks?", input: None,
+    description: "Receipts expected by week from open invoices and scheduled billing, added to opening cash. Payments out are not modelled, so this is not a full cash forecast. Also lists what it says it does not model.",
     run: ({ db }) => {
       const f = forecastView(db);
-      if (!f.available) return { title: "Cash forecast", summary: "This database has no forecast. It is built by pnpm spine.", table: null, source: "forecast_line" };
-      return { title: `Cash forecast as of ${f.as_of}`, summary: f.not_modelled?.filter(Boolean).length ? `Not modelled, and said so: ${f.not_modelled.filter(Boolean).join("; ")}.` : "Everything on file is modelled.", source: "forecast_line",
-        table: { columns: ["Week", "Expected receipts", "Balance"], money_columns: [1, 2], rows: (f.weeks ?? []).map((w) => [w.week, w.inflow_cents, w.balance_cents]) } };
+      if (!f.available) return { title: "Expected receipts", summary: "This database has no forecast. It is built by pnpm spine.", table: null, source: "forecast_line" };
+      return { title: `Expected receipts as of ${String(f.as_of).split("/")[0]}`, summary: f.not_modelled?.filter(Boolean).length ? `Not modelled, and said so: ${f.not_modelled.filter(Boolean).join("; ")}.` : "Everything on file is modelled.", source: "forecast_line",
+        table: { columns: ["Week", "Expected receipts", "Opening cash + receipts"], money_columns: [1, 2], rows: (f.weeks ?? []).map((w) => [w.week, w.inflow_cents, w.balance_cents]) } };
     } }),
   tool({ name: "close_status", title: "Close status", icon: "t_close", example: "Can we close the month?", input: None,
     description: "The close checklist: each item is a test on the ledger, with its status and what a blocked item is waiting on.",

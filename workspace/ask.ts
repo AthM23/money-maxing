@@ -32,7 +32,7 @@ If no tool covers the question, say which reports you can build. The company is 
 const KEYWORDS: [RegExp, string][] = [
   [/why|short|explain|receipt|wire|invoice\s|inv-/, "explain_receipt"], [/ag(e)?ing|owe|outstanding|receivable|\bar\b/, "ar_ageing"], [/trial|\btb\b|ledger|balance sheet/, "trial_balance"],
   [/forecast|runway|next weeks?|13.week/, "cash_forecast"], [/close|lock|checklist|month.end/, "close_status"], [/revenue|schedule|contract|deferred/, "revenue_schedules"],
-  [/agent|model|cost|spend|refus|trace/, "agent_activity"], [/rule|polic|memory|learn|fact/, "policies_and_memory"], [/wait|need|approv|question|stuck|open/, "waiting_on_people"], [/cash|bank|came in|received/, "cash_received"],
+  [/agent|model|cost|spend|refus|trace/, "agent_activity"], [/rule|polic|memory|learn|fact/, "policies_and_memory"], [/wait|need|approv|question|stuck|open|settled/, "waiting_on_people"], [/cash|bank|came in|received/, "cash_received"],
 ];
 
 export async function ask(db: Db, question: string, period: string, model: AskModel): Promise<AskAnswer> {

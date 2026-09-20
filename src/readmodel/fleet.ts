@@ -30,7 +30,7 @@ export interface FeedItem {
   tone: "ok" | "refused" | "waiting" | "person";
 }
 
-export interface FleetView { workers: WorkerRow[]; feed: FeedItem[]; totals: { cost_micros: number; model_calls: number; tool_calls: number; kernel_refusals: number } }
+export interface FleetView { workers: WorkerRow[]; feed: FeedItem[]; totals: { cost_micros: number; model_calls: number; tool_calls: number; kernel_refusals: number; uncosted_turns: number } }
 
 interface DecisionRow {
   id: string; intent_id: string; actor: string; tier: number | null; kind: string | null; route: string | null; model_calls: number | null;
@@ -69,7 +69,18 @@ export function buildFleet(db: Db, feedLimit = 60): FleetView {
   feed.sort((a, b) => b.at.localeCompare(a.at));
   const rows = [...workers.values()];
   return { workers: rows, feed: feed.slice(0, feedLimit), totals: {
-    cost_micros: sum(rows, "cost_micros"), model_calls: sum(rows, "model_calls"), tool_calls: sum(rows, "tool_calls"), kernel_refusals: sum(rows, "kernel_refusals") } };
+    cost_micros: sum(rows, "cost_micros"), model_calls: sum(rows, "model_calls"), tool_calls: sum(rows, "tool_calls"), kernel_refusals: sum(rows, "kernel_refusals"), uncosted_turns: uncostedTurns(db) } };
+}
+
+/** Model turns that were cut off before reporting their usage. Their cost is on nobody's row, so every total is a floor. */
+function uncostedTurns(db: Db): number {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS n FROM decision d WHERE d.mode = 'live' AND d.tier >= 1 AND COALESCE(d.cost_micros, 0) = 0
+         AND EXISTS (SELECT 1 FROM decision_step s WHERE s.decision_id = d.id AND s.kind = 'route' AND json_extract(s.output_json, '$.outcome') = 'budget_exhausted')`,
+    )
+    .get() as { n: number };
+  return row.n;
 }
 
 function workerRow(workers: Map<string, WorkerRow>, d: DecisionRow): WorkerRow {

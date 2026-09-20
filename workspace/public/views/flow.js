@@ -5,6 +5,9 @@ import { evidencePanel } from "/views/evidence.js";
 
 const ENTRY = { apply_payment: "cash applied", write_off: "bank charges written off", fx_realized: "realized FX", credit_memo: "credit to the customer", tax_withholding: "tax withheld at source", unapplied_cash: "held as unapplied cash", dispute_hold: "held as disputed" };
 
+// An entry that did not post is named as an attempt, never as the thing it failed to do.
+const TRIED = { apply_payment: "tried to apply the cash", write_off: "tried a write-off", fx_realized: "tried realized FX", credit_memo: "tried a credit", tax_withholding: "tried withholding" };
+
 const LANE = {
   code: { icon: "code", label: "Code tier", tone: "green" }, model: { icon: "spark", label: "Model", tone: "violet" }, reader: { icon: "doc", label: "Document reader", tone: "blue" },
   controller: { icon: "shield", label: "Controller agent", tone: "amber" }, person: { icon: "user", label: "Person", tone: "coral" },
@@ -62,9 +65,10 @@ function turnNodes(spans) {
 function codeNode(run, previous) {
   const posted = run.filter((s) => s.outcome.startsWith("posted")).length;
   const resumed = run[0].actor === "router:resume";
-  const chips = run.filter((s) => s.kind && s.kind !== "no_action").map((s) => bubble(`${ENTRY[s.kind] ?? words(s.kind)} · ${s.outcome.startsWith("posted") ? "posted" : s.outcome}`, s.outcome.startsWith("posted") ? "green" : "coral", () => showEntry(s.decision_id)));
+  const chips = run.filter((s) => s.kind && s.kind !== "no_action").map((s) => bubble(s.outcome.startsWith("posted") ? `${ENTRY[s.kind] ?? words(s.kind)} · posted` : `${TRIED[s.kind] ?? words(s.kind)} · ${s.outcome}`, s.outcome.startsWith("posted") ? "green" : "coral", () => showEntry(s.decision_id)));
   for (const s of run) for (const st of s.steps.filter((x) => x.kind === "approval")) chips.push(bubble(st.title, st.status === "ok" ? "green" : "coral"));
-  const title = resumed ? "Prepared the entry the person's answer calls for" : posted ? `Posted ${posted} entr${posted === 1 ? "y" : "ies"} with no person involved` : "Nothing more it can settle from code";
+  const refused = run.some((s) => s.outcome.startsWith("refused"));
+  const title = resumed ? "Prepared the entry the person's answer calls for" : posted ? `Posted ${posted} entr${posted === 1 ? "y" : "ies"} with no person involved` : refused ? "Proposed an entry; the kernel refused it, so nothing posted" : "Nothing more it can settle from code";
   return { via: previous ? viaOf(previous.span) : "case opened", span: run.at(-1),
     el: node({ tone: "green", iconName: "code", type: resumed ? "Code · from the answer" : "Code tier", title, chips, foot: ["code", duration(run.reduce((n, s) => n + s.duration_ms, 0)), "$0"] }) };
 }
@@ -79,7 +83,7 @@ function agentNode(s, previous) {
   const side = refusals.length ? { via: "drafts", el: node({ tone: "coral", iconName: "shield", type: "Kernel", title: `Refused ${refusals.length} draft entr${refusals.length === 1 ? "y" : "ies"}`,
     chips: refusals.flatMap((r) => r.refused_on.map((m) => bubble(m.check, "coral", () => showCalls(s, "propose_entry (refused)", [r])))), foot: ["plain code", "nothing posted"] }) } : null;
   return { via: previous ? viaOf(previous.span) : null, span: s, side,
-    el: node({ tone: lane.tone, iconName: lane.icon, type: s.label, title: sentence(s), chips, foot: [s.model, duration(s.duration_ms), s.model_calls ? `${s.model_calls} calls` : null, s.cost_micros ? cost(s.cost_micros) : null] }) };
+    el: node({ tone: lane.tone, iconName: lane.icon, type: s.label, title: sentence(s), chips, foot: [s.model, duration(s.duration_ms), s.model_calls ? `${s.model_calls} calls` : null, !s.cost_recorded ? "cost not recorded (turn aborted)" : s.cost_micros ? cost(s.cost_micros) : null] }) };
 }
 
 function personNode(s) {

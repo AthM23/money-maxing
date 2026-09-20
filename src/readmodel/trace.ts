@@ -42,6 +42,8 @@ export interface TraceSpan {
   duration_ms: number;
   model_calls: number;
   cost_micros: number;
+  /** False when a model turn was cut off before it reported what it used: its cost is unknown, not zero. */
+  cost_recorded: boolean;
   steps: TraceStep[];
 }
 
@@ -50,7 +52,7 @@ export interface CaseTrace {
   started_at: string | null;
   ended_at: string | null;
   spans: TraceSpan[];
-  totals: { turns: number; tool_calls: number; model_calls: number; cost_micros: number; kernel_refusals: number; questions: number; approvals: number; posted: number };
+  totals: { turns: number; tool_calls: number; model_calls: number; cost_micros: number; uncosted_turns: number; kernel_refusals: number; questions: number; approvals: number; posted: number };
 }
 
 interface DecisionRow {
@@ -84,10 +86,22 @@ function decisionSpan(db: Db, d: DecisionRow): TraceSpan {
   const lane = laneOf(d.actor, d.tier);
   const end = [d.created_at, ...steps.map((s) => s.at)].sort().at(-1) ?? d.created_at;
   const ranFor = Math.max(d.latency_ms ?? 0, Date.parse(lastWorkAt(rows, d.created_at)) - Date.parse(d.created_at));
+  const outcome = refusedByKernel(db, d) ?? outcomeOf(d, rows, steps);
+  // A turn that was aborted never reports its usage, so the zero on its row is "unknown", and is shown as that.
+  const costRecorded = !(lane === "model" && (d.cost_micros ?? 0) === 0 && outcome.startsWith("ran out"));
   return {
-    decision_id: d.id, lane, actor: d.actor, label: labelOf(lane, d), model: modelOf(lane, d.actor), kind: d.kind, route: d.route, outcome: outcomeOf(d, rows, steps),
-    started_at: d.created_at, ended_at: end, duration_ms: ranFor, model_calls: d.model_calls ?? 0, cost_micros: d.cost_micros ?? 0, steps,
+    decision_id: d.id, lane, actor: d.actor, label: labelOf(lane, d), model: modelOf(lane, d.actor), kind: d.kind, route: d.route, outcome,
+    started_at: d.created_at, ended_at: end, duration_ms: ranFor, model_calls: d.model_calls ?? 0, cost_micros: d.cost_micros ?? 0, cost_recorded: costRecorded, steps,
   };
+}
+
+/** An entry code proposed and the kernel turned down is not "left open": say which checks refused it. */
+function refusedByKernel(db: Db, d: DecisionRow): string | null {
+  if (d.posted_at || d.route) return null;
+  const row = db.prepare("SELECT marks_json FROM workpaper WHERE decision_id = ? ORDER BY rowid DESC LIMIT 1").get(d.id) as { marks_json: string } | undefined;
+  const marks = (safeJson(row?.marks_json ?? "null") as { marks?: { check: string; status: string }[] } | null)?.marks ?? [];
+  const failed = marks.filter((m) => m.status === "fail").map((m) => m.check);
+  return failed.length ? `refused by the kernel: ${failed.join(", ")}` : null;
 }
 
 /** How long the turn itself ran: up to its last tool call or route, not up to a person's approval hours later. */
@@ -143,7 +157,7 @@ function answerSpans(db: Db, intentId: string): TraceSpan[] {
     const step: TraceStep = { at: e.answered_at, kind: "answer", title: `Answered by ${answer.answered_by ?? e.asked_user}`, detail: [scope, answer.text].filter(Boolean).join(" — "), status: "ok", latency_ms: null, refused_on: [], input: null, output: pretty(e.answer_json) };
     return {
       decision_id: null, lane: "person" as const, actor: answer.answered_by ?? e.asked_user, label: "A person's answer", model: "a person", kind: answer.treatment ?? null, route: null,
-      outcome: "answered", started_at: e.answered_at, ended_at: e.answered_at, duration_ms: 0, model_calls: 0, cost_micros: 0, steps: [step],
+      outcome: "answered", started_at: e.answered_at, ended_at: e.answered_at, duration_ms: 0, model_calls: 0, cost_micros: 0, cost_recorded: true, steps: [step],
     };
   });
 }
@@ -199,7 +213,7 @@ function totalsOf(spans: TraceSpan[]): CaseTrace["totals"] {
   const steps = spans.flatMap((s) => s.steps);
   return {
     turns: spans.length, tool_calls: steps.filter((s) => s.kind === "tool").length,
-    model_calls: spans.reduce((n, s) => n + s.model_calls, 0), cost_micros: spans.reduce((n, s) => n + s.cost_micros, 0),
+    model_calls: spans.reduce((n, s) => n + s.model_calls, 0), cost_micros: spans.reduce((n, s) => n + s.cost_micros, 0), uncosted_turns: spans.filter((s) => !s.cost_recorded).length,
     kernel_refusals: steps.filter((s) => s.kind === "proposal" && s.status === "refused").length,
     questions: steps.filter((s) => s.kind === "question" && s.status === "waiting").length,
     approvals: steps.filter((s) => s.kind === "approval").length, posted: steps.filter((s) => s.kind === "posted").length,

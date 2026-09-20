@@ -5,7 +5,7 @@ export async function renderFleet(app) {
   const f = await getJson("/api/fleet");
   return h("section", {},
     h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, "Agent trace"), h("p", { class: "muted" }, "Every turn is a row in the ledger's own database, so this is a record, not a log someone chose to keep."))),
-    h("div", { class: "stats" }, stat(f.totals.tool_calls, "lookups"), stat(f.totals.model_calls, "model calls"), stat(cost(f.totals.cost_micros), "model cost"), stat(f.totals.kernel_refusals, "drafts the kernel refused", f.totals.kernel_refusals ? "bad" : "")),
+    h("div", { class: "stats" }, stat(f.totals.tool_calls, "lookups"), stat(f.totals.model_calls, "model calls"), stat(`${cost(f.totals.cost_micros)}${f.totals.uncosted_turns ? "+" : ""}`, f.totals.uncosted_turns ? `model cost · ${f.totals.uncosted_turns} aborted turn(s) not costed` : "model cost"), stat(f.totals.kernel_refusals, "drafts the kernel refused", f.totals.kernel_refusals ? "bad" : "")),
     h("div", { class: "panel" }, h("h2", {}, "Who did what"), workers(f.workers)),
     h("div", { class: "panel" }, h("h2", {}, "As it happened"), h("ol", { class: "feed" }, f.feed.map((item) => feedRow(app, item)))));
 }

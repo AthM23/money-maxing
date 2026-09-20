@@ -8,7 +8,7 @@ const AREA = { "bank-rec": "Bank reconciliation", ar: "Accounts receivable", ap:
 export function renderClose(app) {
   const c = app.modules?.close;
   return h("section", {},
-    h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, c?.available ? `Close run · ${c.period}` : "Close run"), h("p", { class: "muted" }, "Each item is a test on the ledger, not a box someone ticks. A blocked item says what it is waiting on."))),
+    h("div", { class: "pagehead" }, h("div", {}, h("h1", {}, c?.available ? `Close run · ${c.period}` : "Close run"), h("p", { class: "muted" }, "Items are tests on the ledger, not boxes someone ticks. A blocked item says what it is waiting on, and one that is not built yet says so."))),
     !c?.available ? h("div", { class: "panel" }, h("p", { class: "muted" }, "This database has no close checklist. Run pnpm spine on a seeded world.")) :
       h("div", { class: "grid2 lean" }, h("div", { class: "panel center" }, ring(c.done, c.items.length), h("p", { class: "muted" }, "items that hold in the ledger today")), h("div", { class: "panel" }, checklist(app, c.items))),
     auditCard(app));

@@ -9,14 +9,15 @@ import { traceView } from "/views/traceview.js";
 export async function renderCase(app) {
   const v = await getJson(`/api/case?intent=${encodeURIComponent(app.route.id ?? "")}`);
   const r = v.receipt;
-  const short = r.shortfall_cents > 0 ? `${money(r.shortfall_cents)} short` : "paid in full";
+  // "Paid in full" is a statement about the invoice, so it needs the invoice to be settled, not just the amounts to match.
+  const short = r.shortfall_cents > 0 ? `${money(r.shortfall_cents)} short` : r.open_cents_now === 0 ? "paid in full" : "received in full, not applied yet";
   return h("section", {},
     h("div", { class: "pagehead" },
       h("div", {},
         h("button", { class: "back", on: { click: () => app.go("run") } }, "← Cash application"),
         h("h1", {}, r.party_name ?? r.party_id, " ", statusPill(r.status)),
         h("p", { class: "muted" }, `${r.doc_ids.join(", ") || "no invoice named"} · ${short}`))),
-    h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "One bank line, explained to the cent"), h("span", { class: "muted" }, "Click a book line for its evidence")), cashApplication(v)),
+    h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "The invoice, explained to the cent"), h("span", { class: "muted" }, "Click a book line for its evidence")), cashApplication(v), footing(v)),
     v.fx ? h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "Why it is short"), h("span", { class: "muted" }, `A matcher that sees one number calls the whole ${money(r.shortfall_cents)} a short-pay`)), split(v)) : null,
     ...r.open_questions.map((q) => h("div", { class: "panel ask" }, questionCard(app, q))),
     tracePanel(v));
@@ -48,18 +49,33 @@ function cashApplication(v) {
   return h("div", { class: "cashapp" }, bank, h("div", { class: "booklines" }, h("span", { class: "kick" }, "Book lines"), rows));
 }
 
-/** The shortfall as one bar in its causes. Only the last segment is a judgment; the rest is arithmetic. */
+/**
+ * The identity the page claims, checked here rather than asserted: what was invoiced, less everything that is not
+ * cash, is the cash that arrived. If it does not foot, the page says so in red instead of pretending.
+ */
+function footing(v) {
+  const r = v.receipt;
+  if (!r.expected_cents) return null;
+  const notCash = v.lines.filter((l) => l.kind !== "apply_payment").reduce((n, l) => n + l.amount_cents, 0);
+  const cash = v.lines.filter((l) => l.kind === "apply_payment").reduce((n, l) => n + l.amount_cents, 0);
+  const foots = r.expected_cents - notCash === cash && cash === r.received_cents;
+  if (cash === 0) return h("p", { class: "footing muted" }, `Invoiced ${money(r.expected_cents)}; ${money(r.received_cents)} arrived and has not been applied yet.`);
+  return h("p", { class: `footing ${foots ? "" : "bad"}` }, foots ? "✓ " : "✗ ", `Invoiced ${money(r.expected_cents)} − ${money(notCash)} in the lines below = ${money(r.expected_cents - notCash)}`, foots ? `, the ${money(r.received_cents)} that arrived.` : `, but ${money(r.received_cents)} arrived: this does not foot.`);
+}
+
+const SEGMENT = { write_off: ["fee", "code, from the bank's advice"], fx_realized: ["fx", "code, re-performed from two rates"] };
+
+/** The shortfall as one bar, one segment per book line that is not cash, each called what the ledger calls it. */
 function split(v) {
   const short = v.receipt.shortfall_cents;
-  const byKind = (k) => v.lines.filter((l) => l.kind === k).reduce((n, l) => n + l.amount_cents, 0);
-  const fee = byKind("write_off");
-  const fx = byKind("fx_realized");
-  const rest = Math.max(short - fee - fx, 0);
-  const segs = [["The bank's charges", fee, "fee", "code, from the bank's advice"], ["The rate moved", fx, "fx", "code, re-performed from two rates"], ["Held back by the customer", rest, "held", "the only judgment"]].filter((s) => s[1] > 0);
+  const segs = v.lines.filter((l) => l.kind !== "apply_payment" && l.amount_cents > 0).map((l) => {
+    const [cls, who] = SEGMENT[l.kind] ?? ["held", l.state === "posted" ? l.settled_by : l.state === "parked" ? "prepared, awaiting approval" : v.receipt.open_questions.length ? "a person has been asked" : "still unexplained"];
+    return [l.kind === "open" ? (v.receipt.open_questions.length ? "Not paid: a person has been asked" : "Still unexplained") : l.label, l.amount_cents, cls, who];
+  });
+  if (!segs.length || short <= 0) return h("p", { class: "muted" }, "Nothing is short on this receipt.");
   return h("div", {},
     h("div", { class: "splitbar" }, segs.map(([, cents, cls]) => h("div", { class: `seg ${cls}`, style: { flex: `${Math.max(cents / short, 0.06)}` } }, money(cents)))),
-    h("div", { class: "splitlegend" }, segs.map(([label, cents, cls, who]) => h("div", {}, h("span", { class: `dot ${cls}` }), h("b", {}, label), ` ${money(cents)} · `, h("span", { class: "muted" }, who)))),
-  );
+    h("div", { class: "splitlegend" }, segs.map(([label, cents, cls, who]) => h("div", {}, h("span", { class: `dot ${cls}` }), h("b", {}, label), ` ${money(cents)} · `, h("span", { class: "muted" }, who)))));
 }
 
 async function showEvidence(decisionId) {

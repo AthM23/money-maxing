@@ -11,7 +11,7 @@ export function renderRevenue(app) {
        h("div", { class: "panel" }, h("h2", {}, "Contracts"), table(rev.contracts))]);
 }
 
-/** Every schedule line summed by month. The month being closed is marked; what is before it is recognised, what is after is still to come. */
+/** Every schedule line summed by month, with the month being closed marked. This is what the schedules say, not what the ledger has recognised: that is on the trial balance. */
 function monthly(contracts, period) {
   const byMonth = new Map();
   for (const c of contracts) for (const l of c.lines) byMonth.set(l.period, (byMonth.get(l.period) ?? 0) + l.amount_cents);
@@ -31,7 +31,8 @@ function totals(contracts, period) {
   const lines = contracts.flatMap((c) => c.lines);
   const sum = (test) => lines.filter((l) => test(l.period)).reduce((n, l) => n + l.amount_cents, 0);
   const tile = (label, cents, note) => h("div", { class: "tile" }, h("span", { class: "tilelabel" }, label), h("div", { class: "tilevalue" }, h("b", {}, money(cents)), h("span", { class: "delta" }, note)));
-  return h("div", { class: "tiles" }, tile("Scheduled this month", sum((p) => p === period), period), tile("Recognised before it", sum((p) => p < period), "earlier months"), tile("Still to come", sum((p) => p > period), "deferred"));
+  return h("div", { class: "tiles" }, tile("Scheduled this month", sum((p) => p === period), period), tile("Scheduled before it", sum((p) => p < period), "earlier months"), tile("Scheduled after it", sum((p) => p > period), "later months"),
+    h("p", { class: "muted small" }, "From the schedules, not the ledger. What has actually been recognised is account 4000 on the trial balance."));
 }
 
 function table(contracts) {

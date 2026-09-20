@@ -178,3 +178,4 @@ details.marks ul { list-style: none; padding: 8px 0 0; display: grid; gap: 5px; 
 .receipt { display: flex; align-items: center; gap: 8px; font-size: 13.5px; background: var(--soft); border-radius: 10px; padding: 7px 12px; width: fit-content; max-width: 100%; flex-wrap: wrap; }
 .receipt .ok { width: 20px; height: 20px; border-radius: 50%; background: var(--green-bg); color: var(--green-ink); display: inline-flex; align-items: center; justify-content: center; }
 .tileicon svg { width: 26px; height: 26px; }
+.footing { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--green-bg); color: var(--green-ink); font-size: 14px; font-variant-numeric: tabular-nums; } .footing.bad { background: var(--coral-bg); color: var(--coral-ink); } .footing.muted { background: var(--soft); color: var(--mut); }

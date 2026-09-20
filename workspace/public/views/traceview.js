@@ -12,7 +12,7 @@ export function traceView(trace) {
   const t = trace.totals;
   return h("div", { class: "trace" },
     h("div", { class: "tracetotals" },
-      fact(t.turns, "turns"), fact(t.tool_calls, "lookups"), fact(t.model_calls, "model calls"), fact(cost(t.cost_micros), "model cost"),
+      fact(t.turns, "turns"), fact(t.tool_calls, "lookups"), fact(t.model_calls, "model calls"), fact(`${cost(t.cost_micros)}${t.uncosted_turns ? "+" : ""}`, t.uncosted_turns ? `model cost · ${t.uncosted_turns} aborted turn not costed` : "model cost"),
       fact(t.kernel_refusals, "drafts the kernel refused", t.kernel_refusals > 0 ? "bad" : ""), fact(t.questions, "questions to a person"), fact(t.posted, "entries posted")),
     waterfall(trace),
     h("div", { class: "spans" }, trace.spans.map((s, i) => spanCard(s, i))));
@@ -45,7 +45,7 @@ function spanCard(s, index) {
   const head = h("summary", {},
     h("span", { class: `dot ${s.lane}` }), h("b", {}, s.label), h("span", { class: "muted" }, ` · ${s.kind && s.kind !== "no_action" ? s.kind.replaceAll("_", " ") : LANE_NAMES[s.lane]}`),
     h("span", { class: `outcome ${toneOf(s.outcome)}` }, s.outcome),
-    h("span", { class: "spanmeta mono" }, clock(s.started_at), " · ", duration(s.duration_ms), s.model_calls ? ` · ${s.model_calls} model calls` : "", s.cost_micros ? ` · ${cost(s.cost_micros)}` : ""));
+    h("span", { class: "spanmeta mono" }, clock(s.started_at), " · ", duration(s.duration_ms), s.model_calls ? ` · ${s.model_calls} model calls` : "", !s.cost_recorded ? " · cost not recorded" : s.cost_micros ? ` · ${cost(s.cost_micros)}` : ""));
   return h("details", { class: "span", id: `span-${index}`, open }, head, h("ol", { class: "steps" }, s.steps.map(stepRow)));
 }
 

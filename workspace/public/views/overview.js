@@ -20,9 +20,9 @@ export function renderOverview(app, o) {
       h("div", { class: "panel" }, h("h2", {}, "Receipts this month"), gauge(cases)),
       h("div", { class: "panel" }, chartPanel(app)),
       h("div", { class: "tiles" },
-        tile("code", "Entries posted by code", sb.auto_posted, "no person involved", "up"),
+        tile("code", "Entries posted with no person involved", sb.auto_posted, "kernel-checked", "up"),
         tile("spark", "Model cost this month", cost(sb.cost_micros), `${sb.model_calls} model calls`, sb.cost_micros ? "flat" : "up"),
-        tile("shield", "Checks re-performed", `${sb.checkable_num}/${sb.checkable_den}`, o.books.tied ? "books tied to the cent" : "books do NOT tie", o.books.tied ? "up" : "down"))),
+        tile("shield", "Tick marks code could re-perform", `${sb.checkable_num}/${sb.checkable_den}`, sb.checkable_den ? `${Math.round((sb.checkable_num / sb.checkable_den) * 100)}% · the rest rest on a person` : "none yet", sb.checkable_num === sb.checkable_den ? "up" : "flat"))),
     h("div", { class: "grid2" },
       h("div", { class: "panel" }, h("h2", {}, "Ask the books"), h("p", { class: "muted" }, "Reports are built by code from the ledger. No model writes a number here."), askBox(app)),
       h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "Receipts"), h("button", { class: "link", on: { click: () => app.go("run") } }, "View all")), recent(app, cases))),
@@ -31,7 +31,7 @@ export function renderOverview(app, o) {
 
 /** A half ring in three parts: settled, waiting for a person, still open. */
 function gauge(cases) {
-  const parts = [["Settled", cases.filter((r) => r.status === "resolved").length, "#3fae52"], ["Awaiting you", cases.filter((r) => r.status === "waiting_on_human").length, "#f0645c"], ["Open", cases.filter((r) => r.status === "open").length, "#9db4ff"]];
+  const parts = [["Posted & closed", cases.filter((r) => r.status === "resolved").length, "#3fae52"], ["Awaiting you", cases.filter((r) => r.status === "waiting_on_human").length, "#f0645c"], ["Open", cases.filter((r) => r.status === "open").length, "#9db4ff"]];
   const total = Math.max(cases.length, 1);
   const R = 130, CX = 160, CY = 160, LEN = Math.PI * R;
   let offset = 0;
@@ -49,7 +49,7 @@ function gauge(cases) {
 
 function chartPanel(app) {
   const f = app.modules?.forecast;
-  if (f?.available && f.weeks.length > 1) return [h("div", { class: "panelhead" }, h("h2", {}, "13-week cash forecast"), h("span", { class: "chip" }, `as of ${f.as_of}`)), lineChart(f.weeks.map((w) => ({ label: w.week.slice(5), value: w.balance_cents }))), f.not_modelled?.length ? h("p", { class: "muted small" }, `Not modelled, and said so: ${f.not_modelled.filter(Boolean).join("; ") || "some contracts"}`) : null];
+  if (f?.available && f.weeks.length > 1) return [h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "Expected receipts, next weeks"), h("p", { class: "muted small" }, "Opening cash plus receipts expected from open invoices and scheduled billing. Payments out are not modelled.")), h("span", { class: "chip" }, `as of ${String(f.as_of).split("/")[0]}`)), lineChart(f.weeks.map((w) => ({ label: w.week.slice(5), value: w.balance_cents }))), f.not_modelled?.length ? h("p", { class: "muted small" }, `Not modelled, and said so: ${f.not_modelled.filter(Boolean).join("; ") || "some contracts"}`) : null];
   const weeks = app.modules?.reports.cash_by_week ?? [];
   return [h("div", { class: "panelhead" }, h("h2", {}, "Cash received by week"), h("span", { class: "chip" }, app.period)), lineChart(weeks.map((w) => ({ label: w.week.slice(5), value: w.cents })))];
 }
@@ -82,7 +82,7 @@ function tile(iconName, label, value, note, direction) {
   return h("div", { class: "tile" }, h("span", { class: "tilelabel" }, icon(iconName, 16), label), h("div", { class: "tilevalue" }, h("b", {}, value), h("span", { class: `delta ${direction}` }, note)));
 }
 
-const PROMPTS = ["AR ageing by customer", "What is waiting for a person?", "Cash received by week", "Show me the trial balance"];
+const PROMPTS = ["AR ageing by customer", "What is not settled yet?", "Cash received by week", "Show me the trial balance"];
 
 function askBox(app) {
   const input = h("input", { type: "text", placeholder: "Ask for a report…", "aria-label": "Ask the books" });
