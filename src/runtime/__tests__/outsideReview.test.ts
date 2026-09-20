@@ -85,3 +85,20 @@ describe("the auditor orders entries posted in the same millisecond", () => {
     expect(findings.map((f) => f.detail).join(" ")).toMatch(/exceed|open balance/);
   });
 });
+
+describe("a vendor payment cannot call itself accounts receivable", () => {
+  it("labelled ar it would skip the three-way match and the vendor checks; the kernel refuses the label, and the bill and the books are untouched", async () => {
+    const { apClock, BILL_ID, INTENT_ID, seedAp, VENDOR } = await import("../../agents/ap/__tests__/seed.js");
+    const { readControlTotals } = await import("../kernelContext.js");
+    const db = seedAp({ receipt_qtys: [] });
+    const before = [db.prepare("SELECT status, open_cents FROM bill WHERE id = ?").get(BILL_ID), readControlTotals(db)];
+    const r = proposeEntry(db, {
+      intent_id: INTENT_ID, function: "ar", kind: "schedule_payment", party_id: VENDOR, entry_date: "2026-07-12", applications: [{ doc_id: BILL_ID, amount_cents: 40000 }],
+      entries: [{ account: ACCOUNTS.ap, debit_cents: 40000, credit_cents: 0, memo: "Pay Acme" }, { account: ACCOUNTS.cash, debit_cents: 0, credit_cents: 40000, memo: "Pay Acme" }],
+      evidence: [], policy_refs: [], fact_refs: [], judgment: [],
+    }, { actor: "agent:ar:x", mode: "live", autonomy_level: "auto", tier: 1 }, { clock: apClock, config: APP_CONFIG });
+    expect(r.status).toBe("rejected");
+    expect(r.status === "rejected" ? r.failed.find((m) => m.check === "F8")?.detail : "").toContain("kind schedule_payment is an ap entry; it cannot be proposed as ar");
+    expect([db.prepare("SELECT status, open_cents FROM bill WHERE id = ?").get(BILL_ID), readControlTotals(db)]).toEqual(before);
+  });
+});

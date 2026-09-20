@@ -99,6 +99,16 @@ function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
 const INBOUND_KINDS: ReadonlySet<string> = new Set(["apply_payment", "customer_credit"]);
 const NO_CASH_KINDS: ReadonlySet<string> = new Set([...NON_CASH_SETTLEMENT_KINDS, "dispute_hold", "accrual", "payroll_accrual", "amortization", "rev_recognition"]);
 
+/**
+ * A kind of entry belongs to one function, and the checks a function's pack adds (three-way match, vendor bank
+ * details) are chosen by the function the proposal names. A vendor payment that calls itself accounts receivable
+ * would skip every one of them. Kinds not listed here are not bound.
+ */
+const KIND_FUNCTION: Partial<Record<Proposal["kind"], Proposal["function"]>> = {
+  apply_payment: "ar", credit_memo: "ar", write_off: "ar", customer_credit: "ar", dispute_hold: "ar", tax_withholding: "ar", fx_realized: "ar",
+  approve_bill: "ap", hold_bill: "ap", schedule_payment: "ap",
+};
+
 /** F8 — the entry has the shape its kind claims. A concession or write-off moves no cash; only a cash application does. */
 export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
   const refs = [proposal.intent_id];
@@ -107,6 +117,8 @@ export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
   if (NO_CASH_KINDS.has(proposal.kind) && cashLines.length > 0) {
     problems.push(`kind ${proposal.kind} must not touch the cash account ${ctx.control.cash_account}`);
   }
+  const owner = KIND_FUNCTION[proposal.kind];
+  if (owner && owner !== proposal.function) problems.push(`kind ${proposal.kind} is an ${owner} entry; it cannot be proposed as ${proposal.function}, where ${owner}'s own checks would not run`);
   // Said in so many words because a model that gets only F3's arithmetic back sends the same lines again.
   if (proposal.kind === "dispute_hold" && proposal.entries.length > 0) {
     problems.push("a dispute_hold posts no entry: it only marks the amount as disputed and leaves the invoice open. Send it with entries empty");
