@@ -334,7 +334,7 @@
     </div>
     <div class="rv d1">
       <table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">never-seen docs</th><th class="num">speed</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">never-seen docs</th><th class="num">speed per doc</th><th class="num">cost per 1M tokens</th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="foot-note" id="benchNote">Loading results…</p>
@@ -355,6 +355,21 @@
       <span><i style="background:#b06f2e"></i>no help, as-is</span>
     </div>
     <svg id="cmpChart" width="100%" height="360" viewBox="0 0 980 360" preserveAspectRatio="none" role="img" aria-label="Accuracy by model"></svg>
+    <p class="foot-note" style="margin:20px 0 10px"><b>And what a million generated tokens costs.</b> API rows are published prices; ours is measured all-in cost on our own hardware (electricity plus the machine over 3 years).</p>
+    <svg width="100%" height="150" viewBox="0 0 980 150" preserveAspectRatio="none" role="img" aria-label="Cost per million tokens">
+      <text x="318" y="26" text-anchor="end" font-size="14" fill="#444">Our model on the GX10</text>
+      <rect x="330" y="12" width="10" height="20" rx="3" fill="#6f8a00"/>
+      <text x="350" y="27" font-size="13.5" font-weight="700" fill="#101012">$0.40 measured</text>
+      <text x="318" y="62" text-anchor="end" font-size="14" fill="#444">Claude Haiku 4.5</text>
+      <rect x="330" y="48" width="120" height="20" rx="3" fill="#4a55b8"/>
+      <text x="460" y="63" font-size="13.5" font-weight="600" fill="#101012">$5</text>
+      <text x="318" y="98" text-anchor="end" font-size="14" fill="#444">Claude Sonnet 5</text>
+      <rect x="330" y="84" width="360" height="20" rx="3" fill="#4a55b8"/>
+      <text x="700" y="99" font-size="13.5" font-weight="600" fill="#101012">$15</text>
+      <text x="318" y="134" text-anchor="end" font-size="14" fill="#444">Claude Opus 5</text>
+      <rect x="330" y="120" width="600" height="20" rx="3" fill="#4a55b8"/>
+      <text x="940" y="135" font-size="13.5" font-weight="600" fill="#101012">$25</text>
+    </svg>
   </div>
   <div class="ctip" id="ctip"></div>
 </section>
@@ -476,6 +491,9 @@ const NAMES = {
   "tiny": "Qwen3-0.6B, tiny model",
   "haiku-hinted": "Claude Haiku 4.5, told the answer format",
   "haiku-bare": "Claude Haiku 4.5, no help",
+  "tuned06": "Our small model (Qwen3-0.6B, fine-tuned by us)",
+  "sonnet-hinted": "Claude Sonnet 5, told the answer format",
+  "opus-hinted": "Claude Opus 5, told the answer format",
 };
 const fallback = {
   "ours":{exact:0.700,f1:0.972,ho:0.977,lat:6.2,scorer:"v2"},
@@ -485,7 +503,35 @@ const fallback = {
   "tiny":{exact:0.0,f1:0.010,ho:0.014,lat:1.3,scorer:"v1"},
   "haiku-hinted":{exact:0.742,f1:0.962,ho:0.969,lat:null,scorer:"v2"},
   "haiku-bare":{exact:0.0,f1:0.106,ho:0.120,lat:null,scorer:"v2"},
+  "tuned06":{exact:0.717,f1:0.972,ho:0.977,lat:2.1,scorer:"v2"},
+  "sonnet-hinted":{exact:0.775,f1:0.976,ho:0.979,lat:null,scorer:"v2"},
+  "opus-hinted":{exact:0.775,f1:0.974,ho:0.979,lat:null,scorer:"v2"},
 };
+/* speed and cost, kept out of the accuracy JSONs. lat is effective seconds per document in each
+   system's normal serving mode: ours through our batching server on the GX10 (measured over 614
+   docs), Claude rows are Claude Code agent wall clock divided by documents answered (measured).
+   cost is dollars per million generated tokens: our rows are measured all-in on our own hardware
+   (electricity plus the machine over 3 years), Claude rows are published API output prices. */
+const EXTRA = {
+  "ours":{lat:1.2,cost:0.40},
+  "tuned06":{lat:2.1,cost:0.40},
+  "base4b":{lat:6.4,cost:0.40},
+  "tiny":{lat:1.3,cost:0.40},
+  "muse-hinted":{cost:null},
+  "muse":{cost:null},
+  "haiku-hinted":{lat:1.2,cost:5},
+  "haiku-bare":{cost:5},
+  "sonnet-hinted":{lat:2.7,cost:15},
+  "opus-hinted":{lat:1.7,cost:25},
+};
+function applyExtra(rows){
+  for(const [k,e] of Object.entries(EXTRA)){
+    if(!rows[k]) continue;
+    if(e.lat!=null) rows[k].lat=e.lat;
+    rows[k].cost=('cost' in e)?e.cost:null;
+  }
+  return rows;
+}
 const PROG = "Same model, same exam, same grader, before and after training: 6% accurate untrained, 97% after training.";
 function renderBench(rows, note){
   const tb=document.querySelector('#benchTable tbody'); tb.innerHTML='';
@@ -496,17 +542,20 @@ function renderBench(rows, note){
       const tr=document.createElement('tr'); if(k==='ours') tr.className='hero-row';
       tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
         <td class="num">${(r.f1*100).toFixed(1)}%</td><td class="num">${r.ho!=null?(r.ho*100).toFixed(1)+'%':'n/a'}</td>
-        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>`;
+        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>
+        <td class="num">${r.cost!=null?'$'+r.cost.toFixed(2):'n/a'}</td>`;
       tb.appendChild(tr);
     });
   document.getElementById('benchNote').textContent = note;
   document.getElementById('progNote').textContent = PROG;
   renderChart(rows);
 }
-renderBench(fallback, "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product.");
+renderBench(applyExtra({...fallback}), "120 test documents per model, same exam for everyone. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
-               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json','../ft/data/benchmark_results_v2.json'];
+               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json',
+               '../ft/data/benchmark_v2_sonnet.json','../ft/data/benchmark_v2_opus.json',
+               '../ft/data/benchmark_results_v2.json'];
   const rows={...fallback}; let anyV2=false;
   for(const url of files){
     try{
@@ -521,7 +570,7 @@ renderBench(fallback, "120 test documents per model, same exam for everyone. Per
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(rows, "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product.");
+  renderBench(applyExtra(rows), "120 test documents per model, same exam, same grading script. Perfect answers: the whole document exactly right, all or nothing. Accuracy: partial credit per field. Never-seen docs: accuracy on vendors and styles excluded from training. The near-zero rows are the point: same models, no training or help, so the jump IS the product. Speed per doc: each system's normal way of serving, ours through our batching server on the GX10, Claude timed as agent wall clock divided by documents answered. Cost per 1M tokens: ours is measured all-in on our own hardware (electricity plus the machine over 3 years), Claude rows are published API prices.");
 })();
 </script>
 </body>

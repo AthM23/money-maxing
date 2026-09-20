@@ -39,7 +39,9 @@ const CASE_HANDLERS: Readonly<Record<string, () => Outcome>> = {
  */
 export const kernelPackSut: SystemUnderTest = {
   name: "kernel-pack",
-  async runCase(c: CaseRow): Promise<CaseOutcome> {
+  async runCase(c: CaseRow, opts?: { baseline?: boolean }): Promise<CaseOutcome> {
+    // This adapter has no rules-disabled run. A report stamped "baseline" that it did not shape would be a false label.
+    if (opts?.baseline) throw new Error("--baseline is not implemented by the kernel-pack adapter: run it without the flag");
     const handler = CASE_HANDLERS[c.id];
     if (!handler) return { case_id: c.id, route: "NOT_RUN", cost_micros: 0, model_calls: 0 };
     try {

@@ -1,0 +1,22 @@
+{
+ "protocol": {
+  "scorer": "strict-v2",
+  "n": 120,
+  "note": "answers produced by claude-sonnet-5 subagents, graded by the same v2 scorer"
+ },
+ "models": {
+  "sonnet-hinted": {
+   "n": 120,
+   "schema_valid": 1.0,
+   "exact": 0.775,
+   "field_f1": 0.976,
+   "held_out_n": 88,
+   "held_out_exact": 0.807,
+   "held_out_f1": 0.979,
+   "avg_latency_s": null,
+   "est_cost_usd": null,
+   "kind": "api-agent",
+   "model": "claude-sonnet-5 via Claude Code agents"
+  }
+ }
+}

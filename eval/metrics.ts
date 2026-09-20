@@ -46,6 +46,8 @@ export interface Metrics {
   auto_clear_rate: Ratio;
   auto_clear_precision: Ratio;
   false_auto_posts: number;
+  /** AUTO results counted as correct on their route alone: the posted journal was never compared with the answer key. */
+  auto_posts_journal_unchecked: number;
   exception_recall: Ratio;
   cost_per_1000_usd: number | null;
   /** These three breakdowns span every graded (routed) case, NOT_RUN included — unlike the five
@@ -69,6 +71,7 @@ export function computeMetrics(rows: readonly CaseRow[], outcomes: ReadonlyMap<s
     auto_clear_rate: computeAutoClearRate(ran),
     auto_clear_precision: computeAutoClearPrecision(ran),
     false_auto_posts: graded.filter((g) => g.is_false_auto_post).length,
+    auto_posts_journal_unchecked: ran.filter((g) => g.actual_route === "AUTO" && outcomes.get(g.case_id)?.auto_posted_entry_matches_key === undefined).length,
     exception_recall: computeExceptionRecall(ran),
     cost_per_1000_usd: computeCostPer1000(outcomes, ran),
     accuracy_by_route: groupAccuracy(graded, (g) => g.expected_route),
