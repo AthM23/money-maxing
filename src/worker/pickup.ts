@@ -28,14 +28,15 @@ interface IntentRow { id: string; function: string; case_json: string }
  * not parse, or that names another intent, is handed to a person with the reason; it is never run on a guess.
  */
 export function pickOpenIntents(db: Db, filter: PickupFilter = {}): { ready: PickedIntent[]; skipped: SkippedIntent[] } {
-  const rows = db
+  const rows = (db
     .prepare(
-      `SELECT i.id, i.function, i.case_json FROM intent i
-       WHERE i.status = 'open' AND i.case_json IS NOT NULL AND i.owner != 'replay' AND (? IS NULL OR i.function = ?)
-         AND (? = 1 OR COALESCE((SELECT d.actor FROM decision d WHERE d.intent_id = i.id AND d.mode = 'live' ORDER BY d.rowid DESC LIMIT 1), '') != ?)
-       ORDER BY i.created_at, i.id LIMIT ?`,
+      `SELECT id, function, case_json FROM intent
+       WHERE status = 'open' AND case_json IS NOT NULL AND owner != 'replay' AND (? IS NULL OR function = ?)
+       ORDER BY created_at, id`,
     )
-    .all(filter.function ?? null, filter.function ?? null, filter.has_model_tiers ? 1 : 0, UNSETTLED_ACTOR, filter.limit ?? -1) as IntentRow[];
+    .all(filter.function ?? null, filter.function ?? null) as IntentRow[])
+    .filter((row) => filter.has_model_tiers || worthAnotherCodePass(db, row.id))
+    .slice(0, filter.limit ?? undefined);
   const ready: PickedIntent[] = [];
   const skipped: SkippedIntent[] = [];
   for (const row of rows) {
@@ -48,6 +49,25 @@ export function pickOpenIntents(db: Db, filter: PickupFilter = {}): { ready: Pic
     ready.push({ intent_id: row.id, function: row.function, case_file: withDocsSnapshot(db, row.id, problem) });
   }
   return { ready, skipped };
+}
+
+/**
+ * Code already tried this case and could not settle it. Trying again in code is only worth it if memory has
+ * changed since: a rule was approved, a fact became active, or a question was answered.
+ */
+function worthAnotherCodePass(db: Db, intentId: string): boolean {
+  const newest = db
+    .prepare("SELECT actor, created_at FROM decision WHERE intent_id = ? AND mode = 'live' ORDER BY rowid DESC LIMIT 1")
+    .get(intentId) as { actor: string; created_at: string } | undefined;
+  if (!newest || newest.actor !== UNSETTLED_ACTOR) return true;
+  const changed = db
+    .prepare(
+      `SELECT (SELECT COUNT(*) FROM policy WHERE status = 'approved' AND approved_at > ?)
+            + (SELECT COUNT(*) FROM fact WHERE status = 'active' AND learned_at > ?)
+            + (SELECT COUNT(*) FROM escalation WHERE answered_at > ?) AS n`,
+    )
+    .get(newest.created_at, newest.created_at, newest.created_at) as { n: number };
+  return changed.n > 0;
 }
 
 function problemWith(row: IntentRow): CaseFile | string {

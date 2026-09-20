@@ -70,6 +70,11 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     expect((await runOpenIntents(db, { investigators: [], clock: fixedClock })).worked).toEqual([]);
     expect(count(db, "SELECT COUNT(*) AS n FROM decision")).toBe(decisions);
 
+    // Memory changed: a rule that covers Initech's case was approved after code gave up, so code is worth another pass.
+    const later = { now: () => "2026-07-15T09:00:00.000Z" };
+    db.prepare("UPDATE policy SET approved_at = ? WHERE id = 'pol_wire_fee'").run(later.now());
+    expect((await runOpenIntents(db, { investigators: [], function: "ar", limit: 1, clock: later })).worked.map((w) => w.intent_id)).toEqual(["int_initech"]);
+
     const shrugs: Investigator = { name: "scripted", investigate: () => Promise.resolve({ outcome: "budget_exhausted", summary: "ran out of turns", places_looked: ["mail"] }) };
     const again = await runOpenIntents(db, { investigators: [shrugs], clock: fixedClock });
     expect(again.worked.map((w) => [w.intent_id, w.tier_used, w.status])).toEqual([["int_initech", 1, "waiting_on_human"], ["int_wayne", 1, "waiting_on_human"]]);
