@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ACCOUNTS } from "../contract/accounts.js";
 import { CaseFile, IsoDate, type Proposal } from "../contract/types.js";
 import { answerEscalation } from "../memory/escalations.js";
+import { ANSWER_TREATMENTS } from "./tools/write.js";
 import { approveFact, recordFactCandidate } from "../memory/facts.js";
 import { APP_CONFIG } from "../packs/index.js";
 import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
@@ -14,7 +15,7 @@ import { proposeEntry, type ProposeResult } from "../runtime/proposeEntry.js";
 
 /** What a person's answer boils down to. Buttons fill `treatment`; the free text is kept verbatim as evidence. */
 export const HumanAnswer = z.object({
-  treatment: z.enum(["credit_memo", "write_off", "tax_withholding", "dispute_hold", "chase"]),
+  treatment: z.enum(ANSWER_TREATMENTS),
   text: z.string().min(1),
   uses: z.enum(["standing", "one_time"]).default("one_time"),
   pct_off: z.number().min(0).max(100).optional(),

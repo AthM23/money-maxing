@@ -15,6 +15,9 @@ export const UNKNOWNS = [
   "shortfall_reason", "overpayment_treatment", "payer_identity", "remittance_allocation", "bill_validity", "vendor_bank_change", "other",
 ] as const;
 
+/** Same list as HumanAnswer.treatment in humanLoop.ts: what a person's click can turn into. */
+export const ANSWER_TREATMENTS = ["credit_memo", "write_off", "tax_withholding", "dispute_hold", "chase"] as const;
+
 export const EscalateInput = z.object({
   asked_user: z.string().min(1),
   party_id: z.string().min(1),
@@ -24,7 +27,11 @@ export const EscalateInput = z.object({
   what_happened: z.string().min(1),
   what_was_checked: z.array(z.object({ source: z.string(), query: z.string(), hits: z.number().int().nonnegative() })).min(1),
   what_is_unknown: z.string().min(1),
-  treatments: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).min(2).max(4),
+  /**
+   * The answers a person can give. The ids are the treatments the runtime knows how to book or hold; an invented
+   * id would be a button that does nothing. The label is a button, so it is short; the nuance goes in the question.
+   */
+  treatments: z.array(z.object({ id: z.enum(ANSWER_TREATMENTS), label: z.string().min(1).max(60) })).min(2).max(4),
 });
 
 const MIN_ESCALATION_TIER = 2;
@@ -69,7 +76,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
   },
   {
     name: "escalate", registry_name: "escalate", input: EscalateInput,
-    description: "Ask the one person who knows. Only after the search plan is exhausted. `predicate` is what you do not know, picked from the list; `decision_kind` is the kind of entry the answer would unlock; the sentence goes in `what_is_unknown`. If this was already asked, the stored answer comes back instead.",
+    description: "Ask the one person who knows. Only after the search plan is exhausted. `predicate` is what you do not know, picked from the list; `decision_kind` is the kind of entry the answer would unlock; the sentence goes in `what_is_unknown`. `treatments` are two to four buttons: each id is one of the fixed treatments (credit_memo = an agreed concession, write_off = we will not collect it, tax_withholding = tax deducted at source, dispute_hold = hold it open as disputed, chase = collect the balance) and each label is at most 60 characters. If this was already asked, the stored answer comes back instead.",
     run: (input, env) => {
       const q = EscalateInput.parse(input);
       // A person's time costs more than a stronger model's. The cheapest tier hands up instead of asking.
