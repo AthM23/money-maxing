@@ -703,7 +703,7 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   resolved as a union (B's `data/` and answer-key rules + C's `__pycache__/`). Re-measured after it: typecheck clean,
   365 passing, seed → skeleton → second pass unchanged. `ft/benchmark.py` and its F1 numbers were not run or checked here.
 
-### 2026-09-19 21:45 ET — Run 1 → learn → run 2 works end to end; audit pack and AP pack landed; one approval-gate hole closed (Person A)
+### 2026-09-19 21:35 ET — Run 1 → learn → run 2 works end to end; audit pack and AP pack landed; one approval-gate hole closed (Person A)
 
 - **The same month twice, only memory changed** (`src/learn/harvest.ts`, `carry.ts`, `scoreboard.ts`, test
   `src/learn/__tests__/cycle.test.ts`). Six customers short-pay a wire by a bank fee; nothing on file explains it.

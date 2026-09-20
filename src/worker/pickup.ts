@@ -1,5 +1,6 @@
 import { CaseFile } from "../contract/types.js";
 import type { Db } from "../runtime/db.js";
+import { UNSETTLED_ACTOR } from "../runtime/intentStatus.js";
 import { getDoc, safeJson } from "../runtime/lookups.js";
 
 export interface PickedIntent {
@@ -16,6 +17,8 @@ export interface SkippedIntent {
 export interface PickupFilter {
   function?: string;
   limit?: number;
+  /** True when this pass has model tiers. Without them, a case only code has already tried is not tried again. */
+  has_model_tiers?: boolean;
 }
 
 interface IntentRow { id: string; function: string; case_json: string }
@@ -27,11 +30,12 @@ interface IntentRow { id: string; function: string; case_json: string }
 export function pickOpenIntents(db: Db, filter: PickupFilter = {}): { ready: PickedIntent[]; skipped: SkippedIntent[] } {
   const rows = db
     .prepare(
-      `SELECT id, function, case_json FROM intent
-       WHERE status = 'open' AND case_json IS NOT NULL AND owner != 'replay' AND (? IS NULL OR function = ?)
-       ORDER BY created_at, id LIMIT ?`,
+      `SELECT i.id, i.function, i.case_json FROM intent i
+       WHERE i.status = 'open' AND i.case_json IS NOT NULL AND i.owner != 'replay' AND (? IS NULL OR i.function = ?)
+         AND (? = 1 OR COALESCE((SELECT d.actor FROM decision d WHERE d.intent_id = i.id AND d.mode = 'live' ORDER BY d.rowid DESC LIMIT 1), '') != ?)
+       ORDER BY i.created_at, i.id LIMIT ?`,
     )
-    .all(filter.function ?? null, filter.function ?? null, filter.limit ?? -1) as IntentRow[];
+    .all(filter.function ?? null, filter.function ?? null, filter.has_model_tiers ? 1 : 0, UNSETTLED_ACTOR, filter.limit ?? -1) as IntentRow[];
   const ready: PickedIntent[] = [];
   const skipped: SkippedIntent[] = [];
   for (const row of rows) {

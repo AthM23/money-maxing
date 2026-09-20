@@ -2,7 +2,7 @@ import { CaseFile, type Route } from "../contract/types.js";
 import type { AutonomySetting } from "../runtime/autonomy.js";
 import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
-import { settleIntent } from "../runtime/intentStatus.js";
+import { settleIntent, UNSETTLED_ACTOR } from "../runtime/intentStatus.js";
 import { openDecision, setRoute } from "../runtime/persist.js";
 import { APP_CONFIG, packFor, type Pack } from "../packs/index.js";
 import { routeTier0 } from "../router/route.js";
@@ -52,12 +52,16 @@ export async function runCase(db: Db, input: unknown, opts: RunCaseOptions): Pro
 }
 
 /**
- * Nothing settled the case. Say so on the record as its newest decision, so that it keeps waiting on a person with
- * the reasons attached, even after someone approves the cash application that parked alongside it.
+ * Nothing settled the case. Say so on the record as its newest decision, so that it never reads as done just
+ * because the cash application posted. The tier on the record is how far the attempt got: at tier 0 only code has
+ * tried and the case stays open for a pass with model tiers; past that, the agents are out of ideas and it is a
+ * person's. A function with no pack was never attempted at all, so it goes straight to a person.
  */
 function recordUnsettled(db: Db, clock: Clock, c: CaseFile, result: CaseResult): void {
+  const attempted = packFor(c.function) !== undefined;
   const id = openDecision(db, clock, {
-    intent_id: c.intent_id, function: c.function, mode: "live", actor: "router:unsettled", autonomy_level: "shadow", tier: result.tier_used,
+    intent_id: c.intent_id, function: c.function, mode: "live", actor: attempted ? UNSETTLED_ACTOR : "router:no_pack",
+    autonomy_level: "shadow", tier: result.tier_used,
   });
   db.prepare("INSERT INTO decision_step (decision_id, step_no, ts, kind, tier, output_json) VALUES (?, 1, ?, 'route', ?, ?)")
     .run(id, clock.now(), result.tier_used, JSON.stringify({ route: null, reason: "no tier reached a route", notes: result.notes }));

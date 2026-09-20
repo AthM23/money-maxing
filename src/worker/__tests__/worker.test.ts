@@ -53,14 +53,26 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     expect(t.ar_gl_cents).toBe(t.ar_subledger_cents);
   });
 
-  it("cash applied but the shortfall unexplained is not resolved: it waits on a person, with the reasons on record", async () => {
+  it("cash applied but the shortfall unexplained is not resolved: it stays open for a stronger pass, with the reasons on record", async () => {
     const db = world();
     earn(db, "apply_payment", "auto");
     const report = await runOpenIntents(db, { investigators: [], clock: fixedClock });
-    expect(report.worked.find((w) => w.intent_id === "int_initech")).toMatchObject({ routes: ["AUTO"], final_route: null, status: "waiting_on_human" });
-    expect(intentStatus(db, "int_initech")).toBe("waiting_on_human");
+    expect(report.worked.find((w) => w.intent_id === "int_initech")).toMatchObject({ routes: ["AUTO"], final_route: null, status: "open" });
     const step = db.prepare("SELECT s.output_json FROM decision_step s JOIN decision d ON d.id = s.decision_id WHERE d.intent_id = 'int_initech' AND d.actor = 'router:unsettled'").get() as { output_json: string };
     expect(step.output_json).toContain("no tier reached a route");
+  });
+
+  it("a code-only pass does not retry what code already tried; a pass with a model tier does, and when every tier fails it is a person's", async () => {
+    const db = world();
+    earn(db, "apply_payment", "auto");
+    await runOpenIntents(db, { investigators: [], clock: fixedClock });
+    const decisions = count(db, "SELECT COUNT(*) AS n FROM decision");
+    expect((await runOpenIntents(db, { investigators: [], clock: fixedClock })).worked).toEqual([]);
+    expect(count(db, "SELECT COUNT(*) AS n FROM decision")).toBe(decisions);
+
+    const shrugs: Investigator = { name: "scripted", investigate: () => Promise.resolve({ outcome: "budget_exhausted", summary: "ran out of turns", places_looked: ["mail"] }) };
+    const again = await runOpenIntents(db, { investigators: [shrugs], clock: fixedClock });
+    expect(again.worked.map((w) => [w.intent_id, w.tier_used, w.status])).toEqual([["int_initech", 1, "waiting_on_human"], ["int_wayne", 1, "waiting_on_human"]]);
   });
 
   it("approving the parked cash application does not resolve a case whose shortfall nobody explained", async () => {
@@ -68,7 +80,7 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     await runOpenIntents(db, { investigators: [], clock: fixedClock });
     const cash = db.prepare("SELECT id FROM decision WHERE intent_id = 'int_initech' AND kind = 'apply_payment'").get() as { id: string };
     expect(approveDecision(db, cash.id, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
-    expect(intentStatus(db, "int_initech")).toBe("waiting_on_human");
+    expect(intentStatus(db, "int_initech")).toBe("open");
   });
 
   it("keeps the document balances as they stood before anything posted", async () => {

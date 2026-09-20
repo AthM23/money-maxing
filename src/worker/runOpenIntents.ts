@@ -46,7 +46,7 @@ export interface WorkerReport {
  * kind of entry has earned. One failing case never stops the pass.
  */
 export async function runOpenIntents(db: Db, opts: WorkerOptions): Promise<WorkerReport> {
-  const { ready, skipped } = pickOpenIntents(db, { function: opts.function, limit: opts.limit });
+  const { ready, skipped } = pickOpenIntents(db, { function: opts.function, limit: opts.limit, has_model_tiers: opts.investigators.length > 0 });
   const worked: WorkedIntent[] = [];
   for (const intent of ready) {
     const result = await workOne(db, intent, opts);
