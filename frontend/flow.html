@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Money Maxer: the pipeline, live</title>
+<title>Money Maxer: the pipeline</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22%23101012%22%2F%3E%3Cpath%20d%3D%22M8%2023.5V11.5l7%207.5%208.6-10.4%22%20fill%3D%22none%22%20stroke%3D%22%23d9f24f%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%228.2%22%20r%3D%222.7%22%20fill%3D%22%23d9f24f%22%2F%3E%3C%2Fsvg%3E">
 <style>
   :root{--lime:#d9f24f;--ink:#101012;--paper:#f4f4f1;--mut:#5b5b57;--coral:#f0645c;--green:#3fae52;--line:#e8e8e3}
@@ -20,7 +20,8 @@
   .side-sec{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#9a9a94;font-weight:700;padding:16px 20px 8px}
   .src{display:flex;align-items:center;gap:11px;margin:2px 10px;padding:10px 12px;border-radius:12px;font-size:13.5px;font-weight:600;
        color:#3c3c38;opacity:.5;transition:opacity .4s,background .4s;text-decoration:none;cursor:pointer}
-  .src:hover{background:#ecece7}
+  a.src:hover{background:#ecece7}
+  div.src{cursor:default}
   .src small{display:block;font-weight:400;font-size:11px;color:#8a8a85;line-height:1.35;margin-top:1px}
   .src .st{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#d6d6d0;flex:0 0 auto;transition:background .4s}
   .src.on{opacity:1;background:var(--paper)}
@@ -104,54 +105,54 @@
     Money Maxer
   </a>
   <div class="side-sec">Connected sources</div>
-  <a class="src" href="/dashboard#run" id="s-bank">
+  <div class="src" id="s-bank">
     <svg class="ic" viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
     <span>Bank feeds<small>3 banks, 4 accounts, 6 countries</small></span><span class="st"></span>
-  </a>
-  <a class="src" href="/dashboard#queue" id="s-mail">
+  </div>
+  <div class="src" id="s-mail">
     <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7.5 8 6 8-6"/></svg>
     <span>Gmail<small>remittances, the outage note</small></span><span class="st"></span>
-  </a>
-  <a class="src" href="/dashboard#queue" id="s-slack">
+  </div>
+  <div class="src" id="s-slack">
     <svg class="ic" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 1 0-3.6 6.7L20 19.5l-.9-3.4a8 8 0 0 0 .9-4.6z"/></svg>
     <span>Slack<small>the outage thread, approvals</small></span><span class="st"></span>
-  </a>
-  <a class="src" href="/dashboard#policies" id="s-docs">
+  </div>
+  <div class="src" id="s-docs">
     <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
     <span>Contracts<small>credit terms, signatures</small></span><span class="st"></span>
-  </a>
+  </div>
   <div class="side-sec">Model</div>
   <a class="src on" style="opacity:1" href="/dashboard#model">
     <svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
     <span>Qwen3-4B, ours<small>fine-tuned on the GX10, serving live</small></span><span class="st" style="background:var(--green)"></span>
   </a>
   <div class="side-sec">Processes</div>
-  <a class="src" href="/dashboard#run" slim on" style="opacity:1">
+  <a class="src slim on" style="opacity:1" href="/dashboard#run">
     <svg class="ic" viewBox="0 0 24 24"><path d="M4 17V7l6 5 6-8v13"/><path d="M4 21h16"/></svg>
     <span>Cash application</span><span class="chip live">live</span>
   </a>
-  <a class="src" href="/dashboard#close" slim on" style="opacity:1">
+  <a class="src slim on" style="opacity:1" href="/dashboard#close">
     <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
     <span>Month-end accruals</span><span class="chip live">live</span>
   </a>
-  <a class="src" href="/dashboard#close" slim on" style="opacity:.55">
+  <a class="src slim on" style="opacity:1" href="/dashboard#close">
     <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>
     <span>Vendor bills</span><span class="chip">learns next</span>
   </a>
-  <a class="src" href="/dashboard#revenue" slim on" style="opacity:.55">
+  <a class="src slim on" style="opacity:1" href="/dashboard#revenue">
     <svg class="ic" viewBox="0 0 24 24"><path d="M4 19 10 12l4 3.5L20 8"/><path d="M15.5 8H20v4.5"/></svg>
     <span>Revenue</span><span class="chip">learns next</span>
   </a>
   <div class="side-sec">Always learning from</div>
-  <a class="src" href="/dashboard#queue" slim on" style="opacity:1">
+  <a class="src slim on" style="opacity:1" href="/dashboard#queue">
     <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1.2-3.5 3.8-5 7-5s5.8 1.5 7 5"/></svg>
     <span>Human answers</span>
   </a>
-  <a class="src" href="/dashboard#queue" slim on" style="opacity:1">
+  <a class="src slim on" style="opacity:1" href="/dashboard#queue">
     <svg class="ic" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.6"/><path d="M4 4v4.5H8.5"/></svg>
     <span>Corrections</span>
   </a>
-  <a class="src" href="/dashboard#policies" slim on" style="opacity:1">
+  <a class="src slim on" style="opacity:1" href="/dashboard#policies">
     <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-3.5L6 21z"/></svg>
     <span>Policies</span>
   </a>
@@ -162,7 +163,7 @@
     <button class="burger" onclick="document.getElementById('side').classList.toggle('hidden')" title="Toggle sources">
       <svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
-    <div><h1>The pipeline, live</h1><div class="sub" id="stageDesc">One click runs the month. Watch the agents hand the work forward.</div></div>
+    <div><h1>The pipeline</h1></div>
     <div class="steps">
       <span class="step" id="st0" onclick="stage(0)">01 Data</span><span class="step" id="st1" onclick="stage(1)">02 Reader</span>
       <span class="step" id="st2" onclick="stage(2)">03 Agents</span><span class="step" id="st3" onclick="stage(3)">04 Human</span><span class="step" id="st4" onclick="stage(4)">05 Loop</span>
@@ -224,8 +225,6 @@
     <span class="stat"><b>1.2 s</b>per document</span>
     <span class="stat"><b>$0.40</b>per 1M tokens, all-in</span>
     <span class="stat"><b>15 min</b>to retrain</span>
-    <span class="note">Our own benchmark: 3,000 generated documents, 18 customers, 5 vendors and 2 formats locked out of
-    training, one strict grader for every model including Claude. Our 0.6B and 4B lead every Claude tier on it.</span>
   </div>
 </div>
 
@@ -326,7 +325,7 @@ const DESC=[
  "The answer becomes a rule, corrections become training data, next month asks less."];
 function stage(n){
   for(let i=0;i<5;i++) $('st'+i).classList.toggle('on',i===n);
-  $('stageDesc').textContent=DESC[n];
+  const sd=$('stageDesc'); if(sd) sd.textContent=DESC[n];
 }
 
 let LIVE=null;
