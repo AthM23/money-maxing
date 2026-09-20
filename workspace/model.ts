@@ -28,7 +28,15 @@ const Manifest = z.object({
 const ReaderRun = z.object({
   reader: z.string(), n: z.number(), settled_from_code: z.number(), applied_deduction_open: z.number(), left_for_judgment: z.number(),
   wrong_postings: z.number(), books_tied: z.boolean(), avg_latency_ms: z.number(), refusal_reasons: z.record(z.string(), z.number()),
+  by_family: z.record(z.string(), z.object({ n: z.number(), settled: z.number() })).optional(),
 });
+/** The two smaller heads of lane C's benchmark: which open invoice a bank line pays, and which GL account a bill goes to. */
+const Matcher = z.object({
+  n_test_txns: z.number(), top1: z.number(), recall_at_3: z.number(), threshold_source: z.string(), n_cal_txns: z.number(),
+  test_auto_clear_coverage: z.number(), test_auto_clear_precision: z.number(), test_false_auto_clears: z.number(), n_train_pairs: z.number(),
+});
+const Coder = z.object({ n_test: z.number(), acc_all: z.number(), acc_seen_vendor: z.number(), n_seen: z.number(), acc_unseen_vendor: z.number(), n_unseen: z.number() });
+const SandboxDoc = z.object({ kind: z.string(), void: z.boolean().optional(), revised: z.boolean().optional(), model_parse_ok: z.boolean().optional() });
 
 /** How the adapter was trained. Read off `ft/train_lora.py`; nothing here is measured. */
 const RECIPE = {
@@ -96,8 +104,53 @@ function harness(root: string, problems: string[]): unknown {
   return rows.length ? { rows } : null;
 }
 
+/**
+ * A benchmark this team did not build: ciru-ai's Invoice Sandbox (cited in the track brief). Its own scorer wrote
+ * `score_output.txt`; `audit.json` is one row per PDF the model read. Both are read as they are.
+ */
+function external(root: string, problems: string[]): unknown {
+  const path = "ft/data/sandbox/score_output.txt";
+  const full = join(root, path);
+  if (!existsSync(full)) {
+    problems.push(`${path}: not in this checkout`);
+    return null;
+  }
+  const lines = readFileSync(full, "utf8").split(/\r?\n/).map((l) => l.trim());
+  const scores = new Map(lines.filter((l) => /^[a-z_]+,[-\d.]+$/.test(l)).map((l) => l.split(",") as [string, string]));
+  const scored = Number(scores.get("customers_scored")), exact = Number(scores.get("customers_exact"));
+  if (!Number.isFinite(scored) || !Number.isFinite(exact) || scored <= 0) {
+    problems.push(`${path}: the scorer's output does not state customers_scored and customers_exact`);
+    return null;
+  }
+  const missed = lines.slice(lines.indexOf("Mismatches:") + 2).filter((l) => /^[A-Z]\d+,/.test(l)).map((l) => l.split(",")).map(([customer, expected, actual, error]) => ({ customer, expected_usd: Number(expected), actual_usd: Number(actual), error_usd: Number(error) }));
+  const docs = read(root, "ft/data/sandbox/audit.json", z.array(SandboxDoc), problems);
+  const kinds: Record<string, number> = {};
+  for (const d of docs ?? []) kinds[d.kind] = (kinds[d.kind] ?? 0) + 1;
+  return { name: "ciru-ai Invoice Sandbox Benchmark", customers_scored: scored, customers_exact: exact, total_absolute_error_usd: Number(scores.get("total_absolute_error_usd") ?? NaN), missed,
+    documents: docs ? { n: docs.length, kinds, void: docs.filter((d) => d.void).length, revised: docs.filter((d) => d.revised).length, parsed: docs.filter((d) => d.model_parse_ok).length } : null };
+}
+
+/**
+ * Optional: a size and data ablation, if lane C has run one (`context/ABLATION_PLAN.md`). Same scorer and test slice as
+ * the headline, written by the same `ft/benchmark.py`. Contenders are named `size-<billions>b` (the base model's
+ * size, all of the training data) and `data-<percent>` (the 4B model on that share of the training rows). Absent,
+ * nothing is shown: a missing experiment is not advertised.
+ */
+function ablation(root: string, problems: string[]): unknown {
+  const path = "ft/data/ablation_v2.json";
+  if (!existsSync(join(root, path))) return null;
+  const file = read(root, path, Bench, problems);
+  if (!file) return null;
+  const pick = (pattern: RegExp): { x: number; key: string; field_f1: number; exact: number; held_out_f1: number | null }[] => Object.entries(file.models)
+    .flatMap(([key, m]) => { const hit = pattern.exec(key); return hit ? [{ x: Number(hit[1]), key, field_f1: m.field_f1, exact: m.exact, held_out_f1: m.held_out_f1 ?? null }] : []; })
+    .sort((a, b) => a.x - b.x);
+  const bySize = pick(/^size-([\d.]+)b$/), byData = pick(/^data-(\d+)$/);
+  return bySize.length + byData.length === 0 ? null : { scorer: file.protocol.scorer, n: file.protocol.n, by_size: bySize, by_data: byData };
+}
+
 /** `root` is the checkout the result files are read from; only a test passes another one. */
 export function modelView(root: string = ROOT): unknown {
   const problems: string[] = [];
-  return { recipe: RECIPE, data: read(root, "ft/data/manifest.json", Manifest, problems), extraction: extraction(root, problems), fresh: read(root, "ft/data/fresh_exam_result.json", Fresh, problems), harness: harness(root, problems), problems };
+  return { recipe: RECIPE, data: read(root, "ft/data/manifest.json", Manifest, problems), extraction: extraction(root, problems), fresh: read(root, "ft/data/fresh_exam_result.json", Fresh, problems), harness: harness(root, problems),
+    matcher: read(root, "ft/data/gbt_report_v2.json", Matcher, problems), coder: read(root, "ft/data/coding_report.json", Coder, problems), external: external(root, problems), ablation: ablation(root, problems), problems };
 }
