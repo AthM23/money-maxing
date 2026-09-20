@@ -2076,3 +2076,15 @@ Follow-up to the entry above, recorded because "nine connectors" is easy to over
 - Stated in three places so it cannot drift: the header comment of `src/connectors/registry.ts`, a "What the demo
   actually uses" section in `src/connectors/README.md` with a per-source table, and the `pnpm connectors` output
   itself, which now counts live-credentialed sources rather than live-capable ones.
+
+### 2026-09-20 ~07:12 ET — The "nine registered, two live" framing removed
+
+**Supersedes the ~07:05 entry above.** AthM23: the caveats were the wrong call. The connector registry's point is
+simply that you can connect your own sources; the qualifying counts made it read as a disclaimer.
+
+- Removed from all three places the 07:05 entry added them to: the header comment of `src/connectors/registry.ts`,
+  the "What the demo actually uses" section and per-source table in `src/connectors/README.md`, and the
+  `pnpm connectors` header and footer, which is back to `9 registered sources · 3 can be pulled live`.
+- The README now opens with "**Connect your own sources.**" and the registered list is one sentence.
+- Nothing about the code changed — registry, ingestion, tool derivation and the Linear example are as landed in
+  `3f0b088`. `pnpm test` → 94 files, **789 passing**; `pnpm typecheck` clean.

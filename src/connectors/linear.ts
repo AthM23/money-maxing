@@ -1,7 +1,6 @@
 /**
- * Linear, as the worked example of a connector added from outside the original six.
+ * Linear, as the worked example of connecting your own source.
  *
- * It is here to be read, not to carry the demo: it is the shortest honest answer to "can you connect anything?".
  * Everything a connector has to do is in this file and nothing else — shape the source's records as `RawItem`s, date
  * them with the source's own clock, and hint at the party. Registration in `registry.ts` is one entry; from there it
  * is ingested, versioned, searchable by the agent and visible in `pnpm connectors` with no further code.

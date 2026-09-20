@@ -13,12 +13,6 @@
  *
  * A connector never writes a table. It fetches, shapes and dates; `src/ingest/` is the only writer, so every source
  * gets the same idempotency, the same content hash and versioning, and the same three clocks for free.
- *
- * WHAT THE DEMO USES, so nobody reads this list as a bigger claim than it is: **Gmail and Slack, live.** Those are
- * the only two entries wired to a real external API today. Contracts, the policy memo, CRM and the bank feed are
- * local stores; the workbook is seeded and QuickBooks is a write-only mirror, so neither is even pulled. Linear is
- * registered and pulls nothing unless someone drops a store in — it is the worked example of adding a system, not
- * part of the demo. Nine registered sources, two live: say it that way round. `pnpm connectors` prints the state.
  */
 import { bankFile, contractFiles, localChat, localCrm, localMail, policyFiles } from "./local.js";
 import { localTickets } from "./linear.js";
