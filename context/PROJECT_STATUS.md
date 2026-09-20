@@ -2118,3 +2118,29 @@ Housekeeping, not a direction change. The local checkout had diverged: three con
 - **Still a human call, still untracked:** the Maximor revenue-recognition PDF in `context/research/`. Flagged in the
   09-19 ~23:40 entry; committing a sponsor's PDF is not a decision to make by default. Its notes are already in
   `research/storytelling/05-maximor-usage-revenue-playbook.md`, which is committed.
+
+
+### 2026-09-20 ~08:22 ET — Accepting an uploaded bill no longer stops the month; it is recorded, and only a person whose limit covers it may accept (Karan + Claude Code session)
+
+- **Found on a scratch copy of the demo month, after pulling `f1c4877`:** `bill_review` (and the Slack button from
+  `f1c4877`) set `bill.status = 'approved'` directly. In this ledger that status means the payable was booked by an
+  `approve_bill` entry through the kernel, and F3 ties approved bills to the AP control account **before every
+  proposal**. One Accept left AP at $0 in the ledger against $48,000 of approved bills, and from then on the kernel
+  refused every entry in the month: the CFO approving the $14,000 rent accrual came back `rejected` on F3, for good.
+  The accept also took any string as the approver (a made-up id worked) and left no record. The kernel itself held:
+  a $48,000 payment against that bill was refused, nothing was mis-posted.
+- **Now** (`src/agents/ap/uploadedBill.ts`, used by the web action and the Slack click): accepting records who and
+  when in a new additive table `bill_review` and **leaves the bill open**; rejecting voids it. The person must be on
+  the approval matrix and their limit must cover the bill (`UNKNOWN_APPROVER`, `OVER_APPROVER_LIMIT`, said in words on
+  the page and in Slack). The Slack click is bound with `approverFor`, like approvals. A reviewed bill leaves Input
+  needed and is not DM'd again; "What bills are open?" shows `open, accepted by <name>`.
+- **Measured** on a fresh copy of `runs/demo/start.db` through the real server: made-up person refused; Sam ($5,000)
+  refused on a $48,000 bill; the CFO's accept recorded; the rent accrual then **posted**. `pnpm test` → 95 files,
+  **795 passing**; typecheck clean. `src/agents/ap/__tests__/uploadedBill.test.ts` includes the old behaviour as a
+  test of why (a status set by hand → F3 refuses the next entry).
+- **Preet:** your copy and flow are unchanged; "accepted for the payment run, nothing posts" is still what it says.
+  Not built, and worth one sentence if asked: booking the payable for an accepted non-PO bill (an `approve_bill`
+  entry with an expense account) is the next step; today an accepted upload is a vouched-for open bill.
+- **AthM23:** `src/contract/schema.sql` gained one additive table (`bill_review`); your `trace.source` change from an
+  enum to a shape check with the gate in `ingest()` reads right to me, and `upload_bill` writes source `file`, which
+  is both registered and in the old enum, so existing months take uploads.

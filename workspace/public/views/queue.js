@@ -32,7 +32,7 @@ function billCard(app, b) {
 
 async function review(app, b, outcome) {
   const r = await act("bill_review", { bill_id: b.bill_id, as: app.viewer?.id ?? "U_CFO", outcome });
-  toast(r.status === "reviewed" ? (outcome === "approved" ? `${b.ref} accepted for the payment run.` : `${b.ref} rejected and voided.`) : "Already decided.");
+  toast(r.status === "reviewed" ? (outcome === "approved" ? `${b.ref} accepted for the payment run.` : `${b.ref} rejected and voided.`) : r.said ?? "Already decided.");
   app.refresh();
 }
 

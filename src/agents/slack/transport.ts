@@ -8,6 +8,7 @@ import { systemClock } from "../../runtime/config.js";
 import { getTrace } from "../../runtime/lookups.js";
 import { answerModal, approvalBlocks, escalationBlocks, factBlocks, type EscalationQuestion } from "./blocks.js";
 import { APP_CONFIG } from "../../packs/index.js";
+import { billReviewSaid, reviewUploadedBill } from "../ap/uploadedBill.js";
 
 interface Action { action_id: string; value: string }
 interface InteractiveBody {
@@ -102,16 +103,8 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     return;
   }
   if (body.type === "block_actions" && action && (action.action_id === "bill_accept" || action.action_id === "bill_reject")) {
-    const row = db.prepare("SELECT status FROM bill WHERE id = ?").get(action.value) as { status: string } | undefined;
-    let said: string;
-    if (!row) said = "No such bill.";
-    else if (row.status !== "open") said = `Already decided (${row.status}).`;
-    else {
-      const next = action.action_id === "bill_accept" ? "approved" : "void";
-      db.prepare("UPDATE bill SET status = ?, open_cents = CASE WHEN ? = 'void' THEN 0 ELSE open_cents END WHERE id = ?").run(next, next, action.value);
-      said = next === "approved" ? "Accepted for the payment run. Nothing posts to the ledger until a person runs it." : "Rejected and voided.";
-    }
-    await web.chat.postMessage({ channel: body.user.id, text: said } as never);
+    const result = reviewUploadedBill(db, systemClock, action.value, approverFor(db, body.user.id), action.action_id === "bill_accept" ? "approved" : "rejected");
+    await web.chat.postMessage({ channel: body.user.id, text: billReviewSaid(result) } as never);
     return;
   }
   if (body.type === "block_actions" && action && (action.action_id === "fact_approve" || action.action_id === "fact_reject")) {

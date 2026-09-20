@@ -146,6 +146,10 @@ CREATE TABLE IF NOT EXISTS blocked_attempt ( -- ADDED: BLOCK persists with the r
 CREATE TABLE IF NOT EXISTS approver (       -- ADDED: the approval matrix as data (from the policy memo)
   id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL, slack_user TEXT, limit_cents INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS bill_review (    -- ADDED: who accepted or rejected a bill filed from an upload. Accepting is not
+  bill_id TEXT PRIMARY KEY REFERENCES bill(id), outcome TEXT NOT NULL CHECK (outcome IN ('accepted','rejected')),  -- approval: bill.status moves only through the kernel
+  approver_id TEXT NOT NULL REFERENCES approver(id), reviewed_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS artifact (
   id TEXT PRIMARY KEY, decision_id TEXT NOT NULL REFERENCES decision(id), intent_id TEXT NOT NULL REFERENCES intent(id),
   function TEXT NOT NULL, system TEXT NOT NULL, external_id TEXT NOT NULL, kind TEXT NOT NULL,

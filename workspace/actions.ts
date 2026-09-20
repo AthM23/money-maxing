@@ -13,6 +13,7 @@ import { replay } from "../src/learn/replay.js";
 import { approveFact, rejectFact } from "../src/memory/facts.js";
 import { APP_CONFIG } from "../src/packs/index.js";
 import { approveDecision } from "../src/runtime/approve.js";
+import { billReviewSaid, reviewUploadedBill } from "../src/agents/ap/uploadedBill.js";
 import { systemClock } from "../src/runtime/config.js";
 import { openDb, type Db } from "../src/runtime/db.js";
 import { runOpenIntents } from "../src/worker/runOpenIntents.js";
@@ -81,17 +82,14 @@ export const ACTIONS: Record<string, Handler> = {
     const within_pct = hist.n ? Math.round(Math.abs(u.amount_cents - hist.avg_cents) / hist.avg_cents * 100) : null;
     return { status: "filed", bill_id: billId, vendor_id: slug, trace_id: traceId, history: { prior_bills: hist.n, avg_cents: Math.round(hist.avg_cents), within_pct } };
   },
-  // Accept or reject a bill that arrived as an upload. Accepting marks it approved for the payment run;
-  // rejecting voids it. Neither touches the ledger: posting stays behind the same gate as everything else.
+  // Accept or reject a bill that arrived as an upload, as a person on the approval matrix whose limit covers it.
+  // Accepting records who accepted and leaves the bill open (its status moves only through the kernel); rejecting voids it.
   bill_review: (db, body) => {
     const b = parse(BillReview, body);
-    if (!b.bill_id.startsWith("BILL-UP-")) throw new HttpError(400, "only uploaded bills are reviewed here");
-    const row = db.prepare("SELECT status FROM bill WHERE id = ?").get(b.bill_id) as { status: string } | undefined;
-    if (!row) throw new HttpError(404, "no such bill");
-    if (row.status !== "open") return { status: "already_decided", bill: row.status };
-    const next = b.outcome === "approved" ? "approved" : "void";
-    db.prepare("UPDATE bill SET status = ?, open_cents = CASE WHEN ? = 'void' THEN 0 ELSE open_cents END WHERE id = ?").run(next, next, b.bill_id);
-    return { status: "reviewed", bill_id: b.bill_id, now: next, by: b.as };
+    const result = reviewUploadedBill(db, systemClock, b.bill_id, b.as, b.outcome);
+    if (result.status === "not_an_upload") throw new HttpError(400, "only uploaded bills are reviewed here");
+    if (result.status === "not_found") throw new HttpError(404, "no such bill");
+    return { ...result, said: billReviewSaid(result) };
   },
   approve: (db, body) => {
     const a = parse(Approve, body);

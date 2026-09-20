@@ -50,7 +50,7 @@ export async function deskPass(db: Db, poster: Poster, clock: Clock, alreadyAske
     report.approvals_posted.push({ decision_id: parked.id, approver_id: approver.id });
   }
   if (poster.postBill) {
-    const bills = db.prepare("SELECT id, total_cents FROM bill WHERE status = 'open' AND id LIKE 'BILL-UP-%' ORDER BY bill_date").all() as { id: string; total_cents: number }[];
+    const bills = db.prepare("SELECT id, total_cents FROM bill WHERE status = 'open' AND id LIKE 'BILL-UP-%' AND NOT EXISTS (SELECT 1 FROM bill_review r WHERE r.bill_id = bill.id) ORDER BY bill_date").all() as { id: string; total_cents: number }[];
     for (const b of bills) {
       if (alreadyAsked.has(`bill:${b.id}`)) continue;
       const approver = chooseApprover(db, { id: b.id, actor: "upload", amount_cents: b.total_cents, answered_by: null });

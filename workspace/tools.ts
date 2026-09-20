@@ -37,7 +37,7 @@ export const TOOLS = [
   tool({ name: "open_bills", title: "Bills on file", icon: "t_close", example: "What bills are open?", input: None,
     description: "Vendor bills on file that have not been posted or paid, newest first, each with its evidence.",
     run: ({ db }) => {
-      const rows = db.prepare("SELECT b.id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents, b.status FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status NOT IN ('paid','void') ORDER BY b.bill_date DESC LIMIT 50")
+      const rows = db.prepare("SELECT b.id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents, CASE WHEN r.outcome = 'accepted' THEN 'open, accepted by ' || COALESCE(a.name, r.approver_id) ELSE b.status END AS status FROM bill b JOIN party p ON p.id = b.party_id LEFT JOIN bill_review r ON r.bill_id = b.id LEFT JOIN approver a ON a.id = r.approver_id WHERE b.status NOT IN ('paid','void') ORDER BY b.bill_date DESC LIMIT 50")
         .all() as { id: string; vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number; status: string }[];
       return { title: "Bills on file, not yet paid", summary: rows.length ? `${rows.length} open bill(s) totalling ${usd(rows.reduce((n, r) => n + r.total_cents, 0))}. Nothing posts until a person approves.` : "No open bills on file.",
         table: { columns: ["Vendor", "Ref", "Bill date", "Period", "Amount", "Status"], money_columns: [4], rows: rows.map((r) => [r.vendor, r.ref, r.bill_date, r.service_period, r.total_cents, r.status]) }, source: "bill, trace" };
