@@ -54,7 +54,7 @@ const CONTENDERS: { file: string; key: string; label: string; note: string; ours
   { file: "ft/data/benchmark_v2_haiku.json", key: "haiku-bare", label: "Claude Haiku 4.5", note: "same prompt as ours, no schema given" },
   { file: "ft/data/benchmark_v2_haiku.json", key: "haiku-hinted", label: "Claude Haiku 4.5 + schema", note: "the full JSON schema pasted into every prompt" },
   { file: "ft/data/benchmark_v2_sonnet.json", key: "sonnet-hinted", label: "Claude Sonnet 5 + schema", note: "the full JSON schema pasted into every prompt" },
-  { file: "ft/data/benchmark_v2_opus.json", key: "opus-hinted", label: "Claude Opus 5 + schema", note: "the full JSON schema pasted into every prompt" },
+  { file: "ft/data/benchmark_v2_opus48.json", key: "opus48-hinted", label: "Claude Opus 4.8 + schema", note: "the full JSON schema pasted into every prompt" },
   { file: "ft/data/benchmark_v2_fable.json", key: "fable-hinted", label: "Claude Fable 5 + schema", note: "the full JSON schema pasted into every prompt" },
   { file: "ft/data/benchmark_results_v2.json", key: "tuned06", label: "Qwen3-0.6B + our LoRA", note: "the same recipe on a model seven times smaller; no schema in the prompt", ours: true },
   { file: "ft/data/benchmark_results_v2.json", key: "ours", label: "Qwen3-4B + our LoRA", note: "no schema in the prompt: it learned the format", ours: true },

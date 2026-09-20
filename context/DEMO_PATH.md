@@ -40,8 +40,11 @@ Model page. Everything on it is read from result files in the repository, each w
   5 vendors appear in no training row; two document styles (OCR noise, a foreign layout) exist only in the test.
 - **Result (strict-v2 scorer, n=120):** field-F1 **0.061 → 0.972**; valid against the schema 0% → 100%; whole document
   exactly right 0% → 70%; **0.977 on customers it never saw**; 0.964 on 614 documents generated after training.
-- **Against a frontier API:** Haiku 4.5 with the same prompt: 0.106. Haiku with the whole schema pasted into every
-  prompt: 0.962, and it edges exact match (74.2% against 70.0%). Say that; it is on the page.
+- **Against frontier API models, the same 120 documents (slice checked by SHA-256):** Haiku 4.5 with the same prompt
+  as ours: 0.087. With the whole schema pasted into every prompt: Haiku 0.943, Sonnet 5 0.949, Fable 5 0.952,
+  Opus 4.8 0.958; whole document exactly right 60.8% to 66.7%. **Ours: 0.972 and 70.0%, with no schema in the prompt.**
+  If asked why the rows moved: Preet found at 05:17 that the first API exam had drifted off the slice (9 documents
+  overlapped), rebuilt it from the exact slice and re-ran all four. The Claude rows dropped 2 to 3 points; ours held.
 - **The chart that matters, "Inside the harness":** the same 200 remittances through our real kernel and ledger.
   Untouched Qwen settles 0. A deliberately wrong reader settles 0 and **posts nothing wrong**, because the kernel
   refuses every reading. **Ours settles 168 and leaves 32 deductions for judgment, which is exactly what perfect

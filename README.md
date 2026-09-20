@@ -118,7 +118,7 @@ memos have not earned the right to post alone. The auditor pack over that month:
 | Reader benchmark (`pnpm bench:reader`, n = 200 held-out remittances through the real kernel and ledger; files in `runs/reader-bench/`) | no reader (n = 100): 0 settled; Qwen3-4B untouched: 0 settled, all 200 readings refused by the kernel as not a valid reading; saboteur (deliberately wrong, not a model): 0 settled, 200 refused; **Qwen3-4B + our LoRA (20 Sep 01:15, on the GX10): 168 settled by code and 32 with cash applied and the claimed deduction left open, which is exactly what the oracle (the gold labels, not a model) reaches**. Wrong postings: 0 in every row, books tied in every row |
 | Lane B's spine on the seeded world (`pnpm spine`, no model key, scripted Initech stand-in) | revenue schedule v2 sums to $129,600, forecast v2, the CRM drift explained with nobody asked, 7 of 11 close checklist items done, AR and deferred revenue tied |
 | Edge-case corpus (`tests/cases.csv`, scored by route) | 20 of 110 routed cases run against the real system (`pnpm eval --sut kernel-pack`, 20 Sep 00:41): 16 routes match the corpus; 4 differ and all 4 are more conservative than the corpus asks (A-14 refused where AUTO was expected, B-01 and B-02 escalated where PROPOSE was expected, B-13 refused where BLOCK was expected); **0 false auto-posts**; 90 not run |
-| Test suite | 729 TypeScript tests in 82 files, all passing, typecheck clean (run 20 Sep, 03:18 EDT, model keys blanked); 4 Python scoring tests (00:23 EDT) |
+| Test suite | 770 TypeScript tests in 91 files, all passing, typecheck clean (run 20 Sep, 05:19 EDT, model keys blanked); 4 Python scoring tests (00:23 EDT) |
 
 The [19 September audit and decisions](context/AUDIT_2026-09-19.md) record the new safety fixes, remittance rehearsal, and remaining launch checks. The Initech, Wayne and withholding-tax rows are observations from 19 Sep on the earlier world; the main scene was run on real models on 20 Sep (above). The rest of the global July has only been run with stand-ins.
 
@@ -127,8 +127,10 @@ Lane C's fine-tune and benchmark (NorthwindBench: tasks, held-out entities and t
 n = 120 July documents, test slice pinned by SHA-256; `ft/data/benchmark_results_v2.json`): Qwen3-4B untouched
 **0.061** field-F1, 0% valid against the schema; Qwen3-4B + our LoRA **0.972** field-F1, 100% valid, 70.0% of
 documents exactly right, 0.977 on the 74 documents from customers it never saw; and 0.964 on 614 documents generated
-after training from a new seed (`ft/data/fresh_exam_result.json`). Claude Haiku 4.5 on the same slice: 0.106 with the
-same prompt, 0.962 with the whole schema pasted into every prompt, where it edges exact match (74.2% against 70.0%).
+after training from a new seed (`ft/data/fresh_exam_result.json`). Four Claude models took the same 120 documents
+(re-run 20 Sep, 05:17 EDT, slice checked by SHA-256; `ft/data/benchmark_v2_*.json`). Haiku 4.5 with the same prompt as
+ours: 0.087. With the whole schema pasted into every prompt: Haiku 4.5 0.943, Sonnet 5 0.949, Fable 5 0.952 and
+Opus 4.8 0.958, with 60.8% to 66.7% of documents exactly right. Ours is ahead on both with no schema in the prompt.
 Older figures in that file used a scorer its own audit withdrew. The workspace's **Model** page reads these files and
 shows each figure with its n. The fine-tuned model is a **document reader** whose readings code verifies. It does not
 make the judgment calls and does not decide whether a remembered answer applies, and the demo databases are built
