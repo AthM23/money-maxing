@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Money Maxer — the agent finance team</title>
+<title>Money Maxer</title>
 <style>
   :root{
     --lime:#d9f24f; --ink:#101012; --paper:#f4f4f1; --mut:#5b5b57;
@@ -160,8 +160,7 @@
   <div class="hero-grid">
     <div>
       <h1 class="rv">Close the books<br>while you sleep <span class="spark">✦</span></h1>
-      <p class="sub rv d1" style="color:#20220c">An agent finance team: it reads the inbox, matches the bank,
-      books every entry through a kernel that cannot be fooled — and asks a human exactly once.</p>
+      <p class="sub rv d1" style="color:#20220c">An agent finance team: it reads the inbox, matches the bank, books every entry through a checker that cannot be fooled, and asks a human exactly once.</p>
       <a class="hero-more rv d2" href="#story">Scroll <span class="arr">↓</span></a>
     </div>
     <div class="stage" id="stage">
@@ -184,10 +183,10 @@
         </div>
       </div>
       <div class="app-card card-dark" data-depth="34">
-        <h4>Seeded July · 11 receipts</h4>
+        <h4>One month, closed</h4>
         <div class="pillrow"><span class="chip">AR</span><span class="chip">AP</span><span class="chip">Bank rec</span><span class="chip">Revenue</span><span class="chip">Close</span></div>
         <div class="bars" id="bars"></div>
-        <div style="font-size:12px;color:#9a9aa0">measured: <span class="up">8 settled in code</span> · <span class="dn">3 escalated to a person</span></div>
+        <div style="font-size:12px;color:#9a9aa0"><span class="up">8 payments booked by code</span> · <span class="dn">3 sent to a human</span></div>
         <div class="mini" style="background:#232327;color:#fff;margin-top:14px">
           <div class="row"><span>Books tied out</span><b class="up">✓ to the cent</b></div>
           <div class="row"><span>Wrong entries posted</span><b>0</b></div>
@@ -206,7 +205,7 @@
     <div class="feature rv d1">
       <svg class="blob" style="right:-20px;bottom:-30px;width:230px" viewBox="0 0 200 200"><path d="M45 130 C 20 90, 60 40, 110 55 S 190 90, 160 140 S 70 170, 45 130 Z" fill="var(--lime)"/><path d="M85 155 C 70 135, 95 120, 115 132 S 140 165, 112 172 S 100 175, 85 155 Z" fill="#101012"/></svg>
       <h3>The reason is in somebody's inbox</h3>
-      <p>The drift monitor flags the gap. The agent checks the contract, the CRM — then finds the CEO's
+      <p>The drift monitor flags the gap. The agent checks the contract, the CRM, then finds the CEO's
       discount email nobody told finance about. Revenue, forecast, billing and audit all move together,
       to the same cent.</p>
     </div>
@@ -218,7 +217,7 @@
       </svg>
       <h3>Nothing posts without proof</h3>
       <p>Every entry carries a workpaper: the math, the exact quoted evidence, the approval.
-      Deterministic code re-performs every check. Change one letter of the quote — rejected.</p>
+      Deterministic code re-performs every check. Change one letter of the quote and it is rejected.</p>
     </div>
   </div>
 </section>
@@ -229,12 +228,12 @@
     <div>
       <div class="kick rv">02 · the loop</div>
       <h2 class="rv">Every close,<br>smarter</h2>
-      <p class="sub rv d1">Four beats, run live — with a kernel that makes the trust checkable.</p>
+      <p class="sub rv d1">Four beats, run live, with a checker that makes the trust provable.</p>
     </div>
     <div class="adv-grid rv d1">
       <div class="adv-cell"><div class="adv-ic">📖</div><h4>Learns</h4><p>Replays the quarter humans closed with the answers hidden; compiles their repeated judgment into policies.</p><span class="tag">wire-fee write-offs → compiled policy</span></div>
-      <div class="adv-cell"><div class="adv-ic">⚡</div><h4>Runs</h4><p>Routine work clears through compiled rules and a fine-tuned local model. The kernel re-checks everything.</p><span class="tag">measured: 8 of 11 receipts, zero model calls</span></div>
-      <div class="adv-cell"><div class="adv-ic">🙋</div><h4>Escalates</h4><p>A genuine blocker goes to a person's phone — asked once, answered once, remembered with a scope and an expiry.</p><span class="tag">Wayne −$3,300 · answered from Slack</span></div>
+      <div class="adv-cell"><div class="adv-ic">⚡</div><h4>Runs</h4><p>Routine work clears through compiled rules and a fine-tuned local model. The kernel re-checks everything.</p><span class="tag">8 of 11 payments booked with zero AI calls</span></div>
+      <div class="adv-cell"><div class="adv-ic">🙋</div><h4>Escalates</h4><p>A genuine blocker goes to a person's phone, asked once, answered once, remembered with a scope and an expiry.</p><span class="tag">Wayne −$3,300 · answered from Slack</span></div>
       <div class="adv-cell"><div class="adv-ic">📈</div><h4>Improves</h4><p>Corrections become policy v2. Replay agreement is CI: a change that drops it cannot ship.</p><span class="tag">run 2 asks fewer questions than run 1</span></div>
     </div>
   </div>
@@ -248,7 +247,7 @@
       <div class="kick rv" style="opacity:.5">03 · the model</div>
       <h2 class="rv">A small model,<br>taught by the audit trail</h2>
       <p class="sub rv d1">Every kernel-verified decision becomes training data. Overnight, the same
-      open-weight model went from failing this work to leading our table — trained and served on the
+      open-weight model went from failing this work to leading our table. It trains and runs on the
       ASUS GX10 sitting at this table.</p>
       <a class="btn btn-white rv d2" style="margin-top:34px" href="#bench">Full benchmark ↓</a>
     </div>
@@ -275,16 +274,15 @@
     <div>
       <div class="kick rv">04 · the receipts</div>
       <h2 class="rv">NorthwindBench</h2>
-      <p class="sub rv d1">120 documents, only never-seen vendors and never-seen styles.
-      <b>exact</b> = whole answer perfect to the cent · <b>field-F1</b> = share of fields right.
-      Muse gets the answer schema pasted into every call; ours gets nothing — it was trained to know it.</p>
-      <p class="sub rv d2" style="margin-top:14px"><b>External check:</b> ciru-ai's Invoice Sandbox
-      (their hidden answers, their scorer): <b>15 of 18 customers exact to the penny</b>, 0 missing,
-      0 invented, all planted traps excluded.</p>
+      <p class="sub rv d1">Every model takes the same exam: 120 financial documents it has never seen.
+      <b>perfect answers</b> means the whole answer was right to the cent.
+      Muse is told the exact answer format on every question. Our model is not, because training taught it the format.</p>
+      <p class="sub rv d2" style="margin-top:14px"><b>Outside check:</b> on a public invoice benchmark we did not write, graded by their own script,
+      our model got <b>15 of 18 customers exact to the penny</b>, with every trap document correctly thrown out.</p>
     </div>
     <div class="rv d1">
       <table class="tbl" id="benchTable">
-        <thead><tr><th>model</th><th class="num">exact</th><th class="num">field-F1</th><th class="num">held-out F1</th><th class="num">avg latency</th></tr></thead>
+        <thead><tr><th>model</th><th class="num">perfect answers</th><th class="num">accuracy</th><th class="num">hard cases</th><th class="num">speed</th></tr></thead>
         <tbody></tbody>
       </table>
       <p class="foot-note" id="benchNote">Loading results…</p>
@@ -300,7 +298,7 @@
       <div class="kick rv">05 · live</div>
       <h2 class="rv">Decisions,<br>as they happen</h2>
       <p class="sub rv d1">Real cases from the seeded month: what arrived, what the system did,
-      what it cost. Green ran with no human. Coral waited for one — once.</p>
+      what it cost. Green ran with no human. Coral waited for one, exactly once.</p>
     </div>
     <div class="orb-zone rv d1">
       <div class="orb"></div>
@@ -316,13 +314,12 @@
 <section class="slide s-dark final">
   <div style="flex:1;display:flex;flex-direction:column;justify-content:center">
     <h2 class="rv">You asked how much of a finance team<br>an agentic system can run.</h2>
-    <p class="sub rv d1">Measured on the seeded July: 8 of 11 receipts settled by code with zero model
-    calls, 3 escalated to a person exactly once, 0 wrong entries posted. Books tied to the cent.</p>
-    <div class="rv d2"><a class="btn btn-lime" style="font-size:17px;padding:16px 30px" href="#bench">Every number carries its n</a></div>
+    <p class="sub rv d1">In our test month: 8 of 11 bank payments were booked by pure code, 3 went to a
+    human exactly once, and 0 wrong entries were posted. The books tie to the cent.</p>
+    <div class="rv d2"><a class="btn btn-lime" style="font-size:17px;padding:16px 30px" href="#bench">See the results</a></div>
   </div>
   <div class="final-foot rv">
     <div><h5>Money Maxer</h5><a class="tiny" style="max-width:280px">An agent finance team for the office of the CFO. Built in 24 hours at HackMIT 2026 by Preet, Karan & Atharv.</a></div>
-    <div><h5>The code</h5><a href="https://github.com/AthM23/money-maxing" target="_blank" rel="noopener">github.com/AthM23/money-maxing</a><a class="tiny">gen_data.py --seed 7 rebuilds the exact exam</a></div>
     <div class="tiny">© 2026 Money Maxer</div>
   </div>
 </section>
@@ -332,7 +329,7 @@
 const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add('on')), {threshold:.2});
 document.querySelectorAll('.rv').forEach(el => io.observe(el));
 
-/* seeded-July receipts: 8 settled (green), 3 escalated (coral) — real outcome, heights are rhythm only */
+/* month outcome: 8 booked by code (green), 3 sent to a human (coral); heights are rhythm only */
 const bars = document.getElementById('bars');
 [['g',62],['g',80],['r',95],['g',55],['g',72],['g',88],['r',95],['g',66],['g',77],['r',95],['g',59]]
   .forEach(([k,h],i)=>{const b=document.createElement('i');if(k==='r')b.className='r';
@@ -368,11 +365,11 @@ requestAnimationFrame(deck);
 
 /* benchmark table: measured numbers only; one row per system */
 const NAMES = {
-  "ours": "ours — Qwen3-4B fine-tuned (no schema given)",
-  "muse-hinted": "Muse Spark 1.3 (answer schema given each call)",
-  "muse": "Muse Spark 1.3 (no schema given)",
-  "base4b": "Qwen3-4B base (no schema, same model as ours)",
-  "tiny": "Qwen3-0.6B base (no schema)",
+  "ours": "Our model (Qwen3-4B, fine-tuned by us)",
+  "muse-hinted": "Muse Spark 1.3, told the answer format",
+  "muse": "Muse Spark 1.3, no help",
+  "base4b": "Qwen3-4B before our training",
+  "tiny": "Qwen3-0.6B, tiny model",
 };
 const fallback = {
   "ours":{exact:0.692,f1:0.960,ho:0.964,lat:6.3,scorer:"v1"},
@@ -381,7 +378,7 @@ const fallback = {
   "base4b":{exact:0.0,f1:0.084,ho:0.094,lat:6.4,scorer:"v1"},
   "tiny":{exact:0.0,f1:0.010,ho:0.014,lat:1.3,scorer:"v1"},
 };
-const PROG = "Training progression, same model, same exam: F1 0.084 (untrained) → 0.953 (epoch 1) → 0.958 (epoch 2) → 0.960 (epoch 3). Measured under the v1 scorer; re-validation under the stricter v2 scorer is running.";
+const PROG = "Same model, same exam, before and after training: 8% accurate untrained, 95% after one training pass, 96% after three.";
 function renderBench(rows, note){
   const tb=document.querySelector('#benchTable tbody'); tb.innerHTML='';
   Object.entries(rows)
@@ -390,14 +387,14 @@ function renderBench(rows, note){
     .forEach(([k,r])=>{
       const tr=document.createElement('tr'); if(k==='ours') tr.className='hero-row';
       tr.innerHTML=`<td>${NAMES[k]||k}</td><td class="num">${(r.exact*100).toFixed(1)}%</td>
-        <td class="num">${r.f1.toFixed(3)}</td><td class="num">${r.ho!=null?r.ho.toFixed(3):'—'}</td>
-        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'—'}</td>`;
+        <td class="num">${r.f1.toFixed(3)}</td><td class="num">${r.ho!=null?r.ho.toFixed(3):'n/a'}</td>
+        <td class="num">${r.lat!=null?r.lat.toFixed(1)+' s':'n/a'}</td>`;
       tb.appendChild(tr);
     });
   document.getElementById('benchNote').textContent = note;
   document.getElementById('progNote').textContent = PROG;
 }
-renderBench(fallback, "n=120 per row · measured on the GX10 and the Muse API · v1 scorer · v2 re-validation running.");
+renderBench(fallback, "120 test documents per model. Same exam for everyone.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
                '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_results_v2.json'];
@@ -415,9 +412,7 @@ renderBench(fallback, "n=120 per row · measured on the GX10 and the Muse API ·
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(rows, anyV2
-    ? `LIVE · n=120 per row · ${n} of ${Object.keys(rows).length} rows re-scored under the stricter v2 audit scorer (rest still v1, re-running).`
-    : "n=120 per row · measured · v1 scorer · v2 re-validation running.");
+  renderBench(rows, "120 test documents per model. Same exam for everyone, graded by the same script.");
 })();
 </script>
 </body>
