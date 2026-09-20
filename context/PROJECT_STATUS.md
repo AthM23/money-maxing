@@ -2095,8 +2095,10 @@ Housekeeping, not a direction change. The local checkout had diverged: three con
 `origin/main` (Preet's pipeline page, the GX10 PDF-extraction endpoint, the reader upload panel, the 8B benchmark row).
 
 - **Rebased, not merged.** The two sides touched no file in common, so the rebase was clean and history stayed linear.
-  The connector commits are now `8e4eb5f`, `1ed3eff`, `5fe541f` — the ~06:50 and ~07:12 entries above cite their
-  pre-rebase hashes (`3f0b088`, `82e269a`, `27de3bf`); same content.
+  A second commit (`40c6a96`, uploads judged against the live policy list) landed on `origin/main` while this was
+  being written, so the rebase ran twice and the hashes moved twice. As pushed, the connector commits are `7c3cdaa`,
+  `923e242`, `8f953cd` and the fixture is `b805837`. The ~06:50 and ~07:12 entries above cite the pre-rebase hashes
+  (`3f0b088`, `82e269a`, `27de3bf`); same content, and on a branch that rebases, cite content rather than a hash.
 - **Verified on the combined tree, not on either side alone:** `pnpm typecheck` clean, `pnpm test` → 94 files,
   **789 passing**. Measured after the rebase, before the push.
 - **`fixtures/invoices/` checked in.** The Harborline Cloud July bill — `HLC-129884` — in four representations that
