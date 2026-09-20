@@ -5,7 +5,59 @@ Every beat below has been run end to end through the real harness in
 `src/demo/scenario/__tests__/rehearsal.test.ts` (no model call; scripted stand-ins play the model tiers and the
 document reader). The data is importable TypeScript, so nothing here has to be retyped.
 
-## The scenario in one paragraph
+## The main scene (added 00:06 ET, 20 Sep): one wire, $4,200 short for three reasons
+
+The team's agreed first proof (`TEAM_ROADMAP_2026-09-19.md`, `FIXTURE_INTL_PROPOSAL.md`, lane A's answers in
+`GATE1_ANSWERS_A.md`). **It runs end to end through the real harness**: `src/demo/scenario/mainScene.ts`, test
+`__tests__/mainScene.test.ts`, no model call.
+
+Vossberg Logistik GmbH (Hamburg; fictional) is invoiced **EUR 100,000.00**, booked at **1.1000** = USD 110,000.00. It
+pays **EUR 98,000.00**; the bank converts at **1.0800** and takes **USD 40.00**, so **USD 105,800.00** arrives. A
+matcher that sees one number calls the $4,200 a short-pay. There are three causes, and only one is a judgment:
+
+| Cause | USD | What it is | Who settles it | Entry |
+|---|---|---|---|---|
+| Cash that arrived | 105,800.00 | exact | code, posts alone | Dr 1000 / Cr 1200 |
+| The bank's fee | 40.00 | the bank's stated deduction, quoted from its advice | code, under `SHORT-PAY-01` tested on the fee alone | Dr 6150 / Cr 1200 |
+| The rate moved | 1,960.00 | EUR 98,000 × (1.1000 − 1.0800): arithmetic | code; kernel check **F9** re-performs it from the two FX records and the bank's cited advice | Dr **7100 Realized FX** / Cr 1200 |
+| The customer held back EUR 2,000 | 2,200.00 (at the booked rate; no FX realized on unpaid money) | **judgment**: Slack proves the outage; the contract says credits need an officer's written agreement; nobody gave it | one Slack question → the CFO answers "2% SLA credit, June to September service, this customer" → remembered with that scope and an end date | Dr 2400 / Cr 1200 after a person approves |
+
+Then, a week later, **the add-on invoice** (EUR 25,000.00; EUR 24,500.00 arrives at 1.0900 less USD 25.00): code books
+cash, fee and FX again, and prepares the 2% credit **from the remembered answer without asking anyone**; it parks only
+because $550 is over the $500 approval threshold. Another customer citing "the outage" gets nothing from Vossberg's
+answer. Running everything again posts nothing twice and asks nothing twice. The auditor re-performs every entry,
+the FX ones included, and finds nothing.
+
+What the kernel refuses here, each tested: the whole $4,200 called FX; the right FX amount hidden in misc expense; FX
+with the bank's advice not cited; FX booked twice on one receipt; (by design) FX on the unpaid EUR 2,000.
+
+### Atharv: seeding the main scene
+
+1. **Two new contract tables, already on `main`: `invoice_fx` and `bank_txn_fx`** (`src/contract/schema.sql`; do not
+   create `bank_txn_fx` in `schema-b.sql`). Rates are USD per unit × 1,000,000. `invoice.total_cents` / `open_cents`
+   stay **USD at the booked rate**; `bank_txn.amount_cents` is the USD deposited.
+2. **The bank's credit advice is the evidence** and must state, verbatim: the foreign amount (`98,000.00`), the rate
+   to four decimals (`1.0800`) and the fee (`40.00`). `bank_txn_fx.advice_trace_id` points at it. Copy the wording
+   from `mainScene.ts` (`ADVICE_320`, `ADVICE_321`).
+3. **Q2 history: three or more incoming-wire fee write-offs for this customer** to 6150, so the learned rule's
+   customer scope includes it. Without them the $40 has no rule and goes to a model, which parks.
+4. The customer's **remittance advice** (states EUR 100,000.00 less EUR 2,000.00 withheld re the outage), the **Slack
+   outage thread** (proves it happened, promises nothing), the **order form** with the 2% discretionary credit clause
+   needing an officer's written confirmation. Texts are in `mainScene.ts`.
+5. The drift monitor should open **one intent per receipt** as today (`shortfall_cents` = 420,000); the split is the
+   harness's job. `MAIN_CASES` shows the two case files it should produce.
+6. Optional, for a finance judge who asks about month end: an **unrealized remeasurement** of the open EUR invoice at
+   30 June (say at 1.0900: Dr 7150 Unrealized FX 1,000.00 / Cr 1200) **and its reversal on 1 July**, in the seeded
+   history. They net to zero, so July's tie-out is unchanged and realized FX still runs from the booked rate.
+7. UI for this scene: the receipt header in its original currency with both rates and their sources; **three causes,
+   four entries, one wire**; the question as it was asked; the remembered answer with its scope and end date.
+
+Not built, so not claimed: multi-currency books, translation of a subsidiary, FX gains (only a loss can be booked
+this way today), intercompany entries for a payment into the wrong Northwind entity's account, month-end
+remeasurement as an agent function (item 6 is seeded history only). Background reading on what global cash teams
+actually get wrong, with sources: `research/global-cash-pains-2026-09-20.md`.
+
+## The supporting cast: the global July in one paragraph
 
 Northwind Systems sells software worldwide and invoices in **US dollars** from **three legal entities** (Northwind
 Systems Inc, Ltd in London, Pte Ltd in Singapore) into **four bank accounts at three banks**. It is day 2 of July's

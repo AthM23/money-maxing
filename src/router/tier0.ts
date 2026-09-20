@@ -63,7 +63,9 @@ function planForeign(db: Db, c: CaseFile, f: ForeignParts, stillOpen: number, pr
   const evidence = f.advice_trace_id ? [{ claim: "the bank's credit advice for this receipt", trace_id: f.advice_trace_id }] : [];
   let unexplained = 0;
   if (feeDue > 0) {
-    const fee = fromPolicy(db, { ...c, shortfall_cents: feeDue }, notes, evidence);
+    // The fee is the bank's stated deduction, quoted as printed, never whatever is left over after the other causes.
+    const stated = (feeDue / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fee = fromPolicy(db, { ...c, shortfall_cents: feeDue }, notes, evidence.map((e) => ({ ...e, claim: "the fee the bank deducted, as its advice states it", quote: stated })));
     if (fee) { features[proposals.length] = caseFeatures({ ...c, shortfall_cents: feeDue }); proposals.push(fee); } else unexplained += feeDue;
   }
   if (fxDue > 0) proposals.push(realizedFx(c, f, fxDue, evidence));
