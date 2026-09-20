@@ -1,0 +1,33 @@
+{
+  "reader": "Qwen3-4B + our LoRA",
+  "n": 200,
+  "settled_from_code": 168,
+  "applied_deduction_open": 32,
+  "left_for_judgment": 0,
+  "wrong_postings": 0,
+  "books_tied": true,
+  "avg_latency_ms": 7144,
+  "refusal_reasons": {},
+  "by_family": {
+    "remit_ocr": {
+      "n": 81,
+      "settled": 81
+    },
+    "remit_plain": {
+      "n": 36,
+      "settled": 36
+    },
+    "remit_shortpay": {
+      "n": 32,
+      "settled": 0
+    },
+    "remit_terse": {
+      "n": 25,
+      "settled": 25
+    },
+    "remit_email": {
+      "n": 26,
+      "settled": 26
+    }
+  }
+}

@@ -1472,3 +1472,22 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   question from the prepared database. Open design question for after the demo: let the cheapest tier ask when code
   can verify from the step log that the search plan was completed.
 - `pnpm test` on the committed state alone (clean checkout of `6a857ac`) → 70 files, **663 passing**; typecheck clean.
+
+### 2026-09-20 ~00:50 ET — Lane C overnight results: reader bench rows measured, external benchmark passed, Muse re-validated (Preet + Claude Code session)
+
+- **`pnpm bench:reader` run with real models, per Person A's request** (n=200, held-out remittances, results in
+  `runs/reader-bench/`): **Qwen3-4B + our LoRA matches the oracle ceiling exactly** — 168 settled from code as
+  the customer directed, 32 short-pays cash-applied with the claimed deduction left open, 0 left for judgment,
+  **0 wrong postings**, books tied; every document family 100% (OCR 81/81, plain 36/36, terse 25/25, email 26/26).
+  **Qwen3-4B base matches the floor exactly**: all 200 readings refused by verification (doc_kind malformed),
+  all 200 left for a person, 0 wrong postings. Average read ~7.1 s (unoptimized transformers serving).
+- **External benchmark (ciru-ai Invoice Sandbox, their scorer untouched)**: 15/18 customers exact to the penny
+  (83.3%), 0 missing, 0 invented, $79,013 absolute error on the 3 misses; traps (void, duplicate scan,
+  superseded revision, statements) all correctly excluded. Artifacts in `ft/data/sandbox/`.
+- **Muse re-validated under the v2 audit scorer**: hinted exact 0.767 → 0.592, F1 0.957 → 0.942; bare F1 0.140
+  → 0.091. Our v2 rows (ours, base4b) re-running now on the GX10; v1 numbers stay quarantined per the audit
+  header in `ft/BENCHMARK.md` until then.
+- **Frontend** (`frontend/index.html`, standalone, no collision with `console/`): full-screen slide deck,
+  plain-language benchmark table that live-loads the results JSONs, renamed **Money Maxer** per Preet.
+- Blocked on humans: whether the withholding-tax/international remittance family goes into training data
+  (fixture gate), and whether the reader runs live or shadow in the demo (Person A's call).

@@ -1,0 +1,25 @@
+{
+  "reader": "smoke",
+  "n": 5,
+  "settled_from_code": 4,
+  "applied_deduction_open": 1,
+  "left_for_judgment": 0,
+  "wrong_postings": 0,
+  "books_tied": true,
+  "avg_latency_ms": 7419,
+  "refusal_reasons": {},
+  "by_family": {
+    "remit_ocr": {
+      "n": 2,
+      "settled": 2
+    },
+    "remit_plain": {
+      "n": 2,
+      "settled": 2
+    },
+    "remit_shortpay": {
+      "n": 1,
+      "settled": 0
+    }
+  }
+}
