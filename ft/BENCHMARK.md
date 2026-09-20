@@ -77,6 +77,23 @@ planted traps, hidden-answer grader — cited in the track doc) and report that 
 runs out, we say plainly: our benchmark is self-built, here is everything needed to re-run it
 (`gen_data.py --seed 7` reproduces the exact test set).
 
+## Results v1 (measured 2026-09-20 ~00:20, n=120 stratified test slice, GX10)
+
+| model | exact | field-F1 | held-out F1 | latency | cost |
+|---|---|---|---|---|---|
+| **Qwen3-4B + our LoRA (ep3)** | 0.692 | **0.960** | **0.964** | 6.3 s | $0 local |
+| ours ep2 | 0.700 | 0.958 | 0.957 | 6.3 s | $0 local |
+| Muse Spark 1.3 + schema hint | 0.767 | 0.957 | 0.967 | 6.7 s | API |
+| ours ep1 | 0.658 | 0.953 | 0.955 | 6.3 s | $0 local |
+| Muse Spark 1.3 bare | 0.000 | 0.140 | 0.155 | 8.1 s | API |
+| Qwen3-4B base bare | 0.000 | 0.084 | 0.094 | 6.4 s | $0 local |
+| Qwen3-0.6B bare | 0.000 | 0.010 | 0.014 | 1.3 s | $0 local |
+
+Readings: one epoch does most of the work (0.084 → 0.953); the fine-tune ties/beats Muse *without* the
+schema in the prompt; held-out ≈ overall for every row (no memorization signal); Muse keeps the edge on
+exact-match (0.767 vs 0.692) — reported, not hidden. Latency is unoptimized `transformers.generate`;
+serving-path numbers will differ and will be reported separately.
+
 ## Honest-numbers rule
 
 Every reported number carries its n. Unflattering rows (unseen-vendor coding at 38.9%, Muse bare at
