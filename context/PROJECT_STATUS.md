@@ -951,3 +951,47 @@ tonight. Get the Kiteworks *shape* with the least new logic:
    payer fact exists), and a duplicate payment held as unapplied cash, visible as a balance.
 5. Realised FX only if there is time on both lanes: it needs currency and rate on invoices and bank lines (lane B) and
    one deterministic kernel check (lane A).
+
+### 2026-09-19 22:52 ET — Demo story and documents proposed; withholding tax built and run on real models; review findings all closed (Person A)
+
+- **Two proposals for the team, from the read of Maximor's site:** `context/DEMO_STORY.md` ("The 2%": Learns → Runs →
+  the 2% in three kinds of not knowing → Improves → the auditor, each beat marked built or not built) and
+  `context/DEMO_DOCUMENTS.md` (what real bank lines, remittance advices and AP documents look like, and the cheap
+  changes to the seed: keep every id, rename the film-and-TV customers, label entities, currencies and bank accounts,
+  add remittance advice emails). Neither is agreed yet. Karan's framing of the judges' point: a workflow that exists
+  only for the demo loses; show pain real finance teams have, on realistic documents.
+- **On Preet's plain-language summary of the project:** right about the spine (detective, dumb checker, one question to
+  a person, remembered with scope) and about lane C. Two corrections for anything said on stage: the routine work is
+  done by **code** (exact matches and compiled rules: 8 of 11 receipts in the seeded July with no model call), not by
+  the small model; and the summary leaves out Learns, Improves, earned autonomy and the auditor, which are the beats
+  that match Maximor's own widget. "The fix ripples to future invoices and the forecast" is not built on lane A's
+  side (the event is emitted; nothing consumes it yet).
+- **Withholding tax deducted at source** (new kind `tax_withholding`, account 1350 Withholding tax receivable).
+  Not a short-pay and not a discount: the kernel (J4) refuses it on any other account and refuses 1350 under any
+  other kind. A person's answer can choose it and is remembered as a standing **rate** with an end date, so next
+  month's different amount books from code with no model and no question (tested). The demo world gains a Bengaluru
+  customer paying net of 10% TDS, with the remittance advice in the mailbox and the treatment in the policy memo.
+  Settlement kinds are now one list in the contract (`NON_CASH_SETTLEMENT_KINDS`, `REDUCES_INVOICE_KINDS`) used by
+  kernel, ledger, worker and audit pack. **Additive contract change: one proposal kind, one account.**
+- **Run on real models, twice.** First run: Haiku and then Sonnet both named it correctly on their own (kind, 1350,
+  the memo quoted verbatim) and were rejected by the kernel on mechanics, not accounting: the cash amount in
+  `applications`, a bank id used as a trace id, a bank line cited on an entry that moves no cash, the written memo
+  cited in `policy_refs`. Then the Sonnet call **hung for twenty minutes** and had to be killed. Fixes: the tool
+  descriptions now say what those four fields mean, and each model tier has a wall-clock limit (150, 240, 300 s)
+  after which the case moves up a tier or to a person. Second run: **Haiku alone, 20 turns, $0.065**: Dr 1350 / Cr
+  1200 for $1,800 against INV-1071, memo quoted, a judgment note explaining the inference, a standing fact candidate
+  at 10% (applies to nothing until a person approves it). Parked for a person, as it should be: over $500, and the
+  kind has no track record.
+- **Closed vocabularies after seeing real model output:** the question key (`predicate`, `decision_kind`) and now
+  the fact `predicate` are closed lists. Free text in either would let a rephrased question be asked twice or a newer
+  fact fail to supersede an older one.
+- **The rest of the second review is closed** (audit and AP, by a separate builder, every fix with a test that failed
+  first): duplicate bills one cent apart or with the period written with a day on it; re-performance now rebuilds
+  balances from the ledger instead of believing the case file's snapshot; a locked period with no lock time stays
+  locked; the audit pack runs with the app configuration; the independence fence is an allow-list; unknown-tier
+  auto-posts are must-test; remit details compared canonically.
+- Paid model spend by lane A tonight, all on Karan's key: about $0.75 (Initech $0.069 and $0.078, Wayne $0.21,
+  withholding tax $0.061 + a killed Sonnet call of unknown cost + $0.065, the accidental skeleton run about $0.13).
+- `pnpm test` → 48 files, **473 passing**; typecheck clean. **Still to do on lane A:** run the Slack desk live with a
+  person clicking; the improve beat and run 2 on the seeded world; README results and limitations. **Team:** the
+  Plume project must exist by 23:59 tonight.

@@ -40,7 +40,14 @@ export const FinishInput = z.object({
  * What the model may say a fact's value is. Typed on purpose: a free-form record in a tool schema makes the Agent SDK
  * drop the whole tool list without an error, and the model then invents tool calls in plain text.
  */
+/**
+ * What kind of thing was learned, as a closed list. A newer fact supersedes an older one for the same party and
+ * predicate, and the kernel reads two of these by name, so a sentence here would quietly break both.
+ */
+export const FACT_PREDICATES = ["concession_pct", "one_time_credit", "withholding_tax_pct", "payer_alias", "parent_pays", "other"] as const;
+
 export const FactCandidateToolInput = FactCandidate.extend({
+  predicate: z.enum(FACT_PREDICATES),
   value: z.object({
     pct_off: z.number().min(0).max(100).optional(),
     pct_withheld: z.number().min(0).max(100).optional(),
