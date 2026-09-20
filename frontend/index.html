@@ -261,8 +261,8 @@
         <circle cx="134" cy="11" r="5" fill="#101012"/><circle cx="198" cy="9" r="6" fill="#9db521" stroke="#101012" stroke-width="2"/>
       </svg>
       <div class="stat-inner">
-        <div class="k" style="color:#8f8f95">cost per routine decision</div>
-        <div class="v">$0.00 <span class="up" style="font-size:13px">measured · on-device</span></div>
+        <div class="k" style="color:#8f8f95">API fees per decision</div>
+        <div class="v">$0 <span class="up" style="font-size:13px">runs on our own GX10, no cloud service billed</span></div>
       </div>
     </div>
   </div>
@@ -394,7 +394,7 @@ function renderBench(rows, note){
   document.getElementById('benchNote').textContent = note;
   document.getElementById('progNote').textContent = PROG;
 }
-renderBench(fallback, "120 test documents per model. Same exam for everyone.");
+renderBench(fallback, "120 test documents per model, same exam for everyone. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
                '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_results_v2.json'];
@@ -412,7 +412,7 @@ renderBench(fallback, "120 test documents per model. Same exam for everyone.");
     }catch(_){}
   }
   const n=Object.values(rows).filter(r=>r.scorer==="v2").length;
-  renderBench(rows, "120 test documents per model. Same exam for everyone, graded by the same script.");
+  renderBench(rows, "120 test documents per model, same exam, same grading script. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
 })();
 </script>
 </body>
