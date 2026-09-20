@@ -746,6 +746,50 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   `content_hash` must be the sha256 of `payload_json` or every entry citing it reads as tampered in the audit pack.
 - `pnpm test` → 38 files, **373 passing**; typecheck clean. Not yet reviewed by the independent reviewer.
 
+### 2026-09-19 21:45 ET — Lanes A and B checked together with a local merge; one planner bug found and fixed; Slack tokens verified (Person A)
+
+- **Nothing on `main` was overwritten.** Karan asked for a check because three people and their agents push here.
+  History is linear with no forced update, every file from Person A's commits is intact, and the only file another
+  author touched outside their own lane is one added line in `.gitignore`. The check is now a script,
+  `scripts/prepush-check.sh` (fetch, refuse on rewritten history, list what others touched in the paths you own,
+  rebase, list deletions, typecheck, test, scan the outgoing commits for secrets). Run it before every push.
+- **Local merge of `main` + `origin/atharv-branch`, not pushed** (the merge to `main` is Atharv's call). Conflicts
+  were only the four append-style files (`.gitignore`, `package.json` scripts, this log, the judge note). The merged
+  tree typechecks and **433 of 433 tests pass**, the walking-skeleton tests included.
+- **The two halves run as one on the seeded world, in code, for $0:** `pnpm seed --target=local --reset` →
+  `pnpm skeleton` (6 of 11 July receipts clear by exact match) → `pnpm learn data/footnote.db --replay` (replay of
+  the six Q2 decisions: 0 agree; compile drafts "write off wire shortfalls up to $45 to bank charges", backtest 5 of
+  6 with the one other-account outlier shown) → a person approves it → replay again: 5 agree and the sixth is triaged
+  as human inconsistency, so `ar/write_off` earns auto on six covered decisions → `pnpm worker data/footnote.db
+  --code-only --retry`: the $35 and $25 wire shortfalls clear by the compiled rule with zero model calls.
+  **8 of 11 resolved, AR control 2,940,000 = subledger 2,940,000.** Still open, and rightly: Initech $1,200 (the
+  reason is in a CEO email: model tier), Wayne $3,300 (nothing explains it: ask the owner once), Globex (the parent
+  paid for the subsidiary: the kernel refuses the party tie until a payer fact exists).
+- **One semantic difference settled in B's favour.** An intent the code tier could not settle now stays `open`
+  (it was `waiting_on_human`), which is what the drift monitor's end conditions assume. It becomes a person's once
+  every model tier has tried, when something is parked or asked, or when the function has no pack. A code-only pass
+  retries such a case only if memory changed since (a rule approved, a fact activated, a question answered) or with
+  `--retry`.
+- **Planner bug found by this run, fixed.** A case that came round again re-planned the cash application from the
+  invoice's new balance and called the rest an overpayment. The kernel rejected it (F2: bank line already applied),
+  so nothing wrong posted, but the rejection stopped the rule-driven write-off queued behind it. The code tier now
+  plans from the ledger as it stands: cash already applied is never planned again, and a shortfall is adjusted only
+  if the ledger still shows exactly that amount open. Two old test fixtures whose numbers did not add up were made
+  consistent, and the worker now hands such a case file to a person.
+- **Ladder hole found by the independent reviewer (in progress), fixed:** replaying the same history twice doubled the
+  evidence, so three agreeing cases could read as six and reach auto. Each historical decision now counts once.
+- **Slack:** the bot and app tokens are in the local `.env` and verified read-only (`auth.test`: workspace
+  "Northwind Systems", bot `northwind_finance_ops`; the default recipient resolves). No message has been sent from
+  lane A yet.
+- **For Atharv, before or at the merge:** (1) the approver table has `controller:gpt` only; with no OpenAI key the
+  controller runs as `controller:claude`, which P3 refuses as "not on the authority list": please seed both rows
+  (limit 49,999). (2) The skeleton calls `runCase` with `autonomy_level: "auto"`; the worker uses `"earned"`, which
+  is what makes run 1 against run 2 mean something. Suggest the skeleton's dispatch calls `runOpenIntents`
+  (`src/worker/`) or passes `"earned"`. (3) `workpaper.marks_json` gained a `features` key. (4) `runCase` now settles
+  `intent.status` itself and records a `router:unsettled` decision when no tier reaches a route.
+- `pnpm test` → **378 passing** on `main`'s tree (the reviewer's scratch probes under `src/__review__/` are excluded
+  and never committed).
+
 ### 2026-09-19 ~21:50 ET — Lane B merge pushed to `main` on top of A's Phase 2; one more seam moved (AthM23 + Claude Code session)
 
 - `main` moved three times while the ~21:35 merge was being validated (`c930480` and `d76b963` from Lane C, then A's
