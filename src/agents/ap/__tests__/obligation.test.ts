@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeInvoiceNo, obligationKey } from "../obligation.js";
+import { normalizeInvoiceNo, normalizeServicePeriod, obligationKey } from "../obligation.js";
 import { approveBillProposal, decisionIdOf, findMark, marksOf, proposeAp } from "./helpers.js";
 import { addBill, addPo, addReceipt, BILL_ID, DEFAULT_PO_LINES, PO_ID, seedAp, VENDOR } from "./seed.js";
 
@@ -8,11 +8,18 @@ function p7(db: ReturnType<typeof seedAp>, result: ReturnType<typeof proposeAp>)
 }
 
 describe("AP obligation key", () => {
-  it("is vendor, service period and amount, plus the purchase order when there is one", () => {
-    const bill = { party_id: VENDOR, service_period: "2026-07", total_cents: 40000, po_id: null };
-    expect(obligationKey(bill)).toBe("acme|2026-07|40000");
-    expect(obligationKey({ ...bill, po_id: "PO-1" })).toBe("acme|2026-07|40000|PO-1");
-    expect(obligationKey({ ...bill, service_period: null })).toBe("acme|-|40000");
+  it("is vendor, service period and purchase order: the amount is compared with a tolerance, not keyed", () => {
+    const bill = { party_id: VENDOR, service_period: "2026-07", po_id: null };
+    expect(obligationKey(bill)).toBe("acme|2026-07|-");
+    expect(obligationKey({ ...bill, po_id: "PO-1" })).toBe("acme|2026-07|PO-1");
+    expect(obligationKey({ ...bill, service_period: null })).toBe("acme|-|-");
+  });
+
+  it("reads one service period through a day that was left on it", () => {
+    expect(normalizeServicePeriod("2026-07-01")).toBe("2026-07");
+    expect(normalizeServicePeriod("2026-07")).toBe("2026-07");
+    expect(normalizeServicePeriod(" 2026-07-31 ")).toBe("2026-07");
+    expect(normalizeServicePeriod(null)).toBe("-");
   });
 
   it("reads one invoice number through punctuation, case and leading zeros", () => {
@@ -33,6 +40,35 @@ describe("AP duplicate defence (P7)", () => {
     expect(mark?.detail).toContain("bill BILL-0 (ACME-0990)");
     expect(mark?.detail).toContain("already approved");
     expect(db.prepare("SELECT status FROM bill WHERE id = ?").get(BILL_ID)).toEqual({ status: "open" });
+  });
+
+  it("catches a re-numbered duplicate defeated by one cent: the amount is inside E4's own tolerance", () => {
+    const db = seedAp();
+    addBill(db, { id: "BILL-CENT", vendor_invoice_no: "ACME-0991", total_cents: 40001, po_id: PO_ID, status: "approved" });
+    const result = proposeAp(db, approveBillProposal(db));
+    expect(result.status).toBe("rejected");
+    expect(p7(db, result)?.status).toBe("fail");
+    expect(p7(db, result)?.detail).toContain("bill BILL-CENT (ACME-0991)");
+    expect(p7(db, result)?.detail).toContain("within 200 cents");
+  });
+
+  it("catches a duplicate whose service period is the same month written with a day on it", () => {
+    const db = seedAp();
+    addBill(db, {
+      id: "BILL-DAY", vendor_invoice_no: "ACME-0992", total_cents: 40000, po_id: PO_ID,
+      service_period: "2026-07-01", status: "approved",
+    });
+    const result = proposeAp(db, approveBillProposal(db));
+    expect(result.status).toBe("rejected");
+    expect(p7(db, result)?.detail).toContain("bill BILL-DAY (ACME-0992)");
+  });
+
+  it("leaves an amount well outside the tolerance to E4: a different charge is not a duplicate", () => {
+    const db = seedAp();
+    addBill(db, { id: "BILL-BIG", vendor_invoice_no: "ACME-3003", total_cents: 45000, po_id: PO_ID, status: "approved" });
+    const result = proposeAp(db, approveBillProposal(db));
+    expect(result).toMatchObject({ status: "posted" });
+    expect(p7(db, result)?.status).toBe("pass");
   });
 
   it("catches the same vendor invoice number on a second bill", () => {

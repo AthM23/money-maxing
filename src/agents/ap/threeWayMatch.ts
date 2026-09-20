@@ -20,11 +20,19 @@ export interface ThreeWayMatchOptions {
 /** Only the two kinds that let money out. Every other kind gets no mark from this check. */
 const MATCHED_KINDS: ReadonlySet<ProposalKind> = new Set<ProposalKind>(["approve_bill", "schedule_payment"]);
 
-export function threeWayMatchCheck(db: Db, opts: ThreeWayMatchOptions = {}): ExtraCheck {
-  const tol: Tolerance = {
+/**
+ * The band E4 tests a bill against. P7 reuses it (see `obligation.ts`), so a duplicate obligation
+ * cannot be split off by a cent that this check would have tolerated.
+ */
+export function matchTolerance(opts: ThreeWayMatchOptions = {}): Tolerance {
+  return {
     floor_cents: opts.tolerance_cents ?? DEFAULT_TOLERANCE.floor_cents,
     pct: opts.tolerance_pct ?? DEFAULT_TOLERANCE.pct,
   };
+}
+
+export function threeWayMatchCheck(db: Db, opts: ThreeWayMatchOptions = {}): ExtraCheck {
+  const tol = matchTolerance(opts);
   return (proposal) => {
     if (!MATCHED_KINDS.has(proposal.kind)) return [];
     const applied = appliedByDoc(proposal);

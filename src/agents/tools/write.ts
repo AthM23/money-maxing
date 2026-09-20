@@ -54,7 +54,7 @@ export const FactCandidateToolInput = FactCandidate.extend({
 export const WRITE_TOOL_SPECS: ToolSpec[] = [
   {
     name: "propose_entry", registry_name: "propose_entry", input: Proposal,
-    description: "Propose an accounting entry with evidence. A deterministic kernel re-checks it. On reject you get the failed marks; fix the cause, never the symptom.",
+    description: "Propose an accounting entry with evidence. A deterministic kernel re-checks it. `applications` lists, for each document this entry settles, the amount THIS entry takes off its open balance: for an entry that moves no cash it equals the debit outside the control accounts, not the cash that arrived. `evidence[].trace_id` is a trace id from a search or read_trace result, never a bank or invoice id. `bank_txn_id` belongs only on an entry that applies cash. `policy_refs` and `fact_refs` take ids of compiled rules and stored facts (from memory_facts); a written policy memo or a contract is a document, so cite it in `evidence` with a quote. On reject you get the failed marks; fix the cause, never the symptom.",
     run: (input, env) => compactResult(proposeEntry(env.db, input, {
       actor: env.actor, mode: env.mode, autonomy_level: env.autonomy_level, tier: env.tier, as_of: env.as_of,
       decision_id: env.decision_id, features: env.features, replay_docs: env.replay_docs,

@@ -1,6 +1,7 @@
 import type { KernelResult, KernelVerdict } from "../contract/types.js";
 import { runKernel } from "../kernel/index.js";
-import { DEFAULT_CONFIG, type RuntimeConfig } from "../runtime/config.js";
+import { APP_CONFIG } from "../packs/index.js";
+import type { RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { approvalOnFile, evidenceIntegrity, ledgerTieOut } from "./rerunChecks.js";
 import { buildRerunContext } from "./rerunContext.js";
@@ -13,8 +14,12 @@ import type { Finding, RerunResult } from "./types.js";
  * proposal, against the world as it stood before the entry posted (see `rerunContext`), then check in
  * code the three things the kernel cannot see afterwards — that the ledger still says what was
  * proposed, that the evidence still says what was quoted, and that the approval still holds.
+ *
+ * The configuration defaults to the application's own, so a function's pack checks are re-performed
+ * rather than reported missing: the auditor runs the same kernel the entry posted through, not a
+ * weaker one that fails everything it cannot see.
  */
-export function rerunDecision(db: Db, decisionId: string, config: RuntimeConfig = DEFAULT_CONFIG): RerunResult {
+export function rerunDecision(db: Db, decisionId: string, config: RuntimeConfig = APP_CONFIG): RerunResult {
   const subject = loadSubject(db, decisionId);
   if (!subject) return unreadable(db, decisionId);
   const { ctx, neutralised } = buildRerunContext(db, subject, config);

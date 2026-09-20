@@ -44,6 +44,25 @@ export function normaliseVendorName(name: string): string {
   return words.join(" ");
 }
 
+/**
+ * JSON compared by what it says, not by how it was typed: key order and whitespace are not
+ * differences, so the same bank details under two vendor rows collide the way they should.
+ * Text that does not parse is compared as itself rather than thrown away.
+ */
+export function canonicalJson(text: string): string {
+  const parsed = safeJson(text);
+  return parsed === null ? text.trim() : JSON.stringify(sortKeys(parsed));
+}
+
+function sortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value === null || typeof value !== "object") return value;
+  const source = value as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(source).sort()) out[key] = sortKeys(source[key]);
+  return out;
+}
+
 /** Group values by a key, keeping insertion order. Used wherever "these rows collide" is the finding. */
 export function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> {
   const out = new Map<string, T[]>();

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { ACCOUNTS } from "../../contract/accounts.js";
-import type { Proposal, ProposalKind } from "../../contract/types.js";
+import type { EntryLine, Proposal, ProposalKind } from "../../contract/types.js";
 import { approveDecision } from "../../runtime/approve.js";
 import { openDb, type Db } from "../../runtime/db.js";
 import { proposeEntry } from "../../runtime/proposeEntry.js";
@@ -96,8 +96,60 @@ export interface DecisionSpec {
   entry_date?: string;
   actor?: string;
   autonomy_level?: "auto" | "review" | "shadow";
+  /** Explicit null writes a NULL tier: a decision whose model tier nobody recorded. */
   tier?: number | null;
   kind?: ProposalKind;
+}
+
+export interface AppliedSpec {
+  id: string;
+  kind: ProposalKind;
+  party_id: string;
+  doc_id: string;
+  amount_cents: number;
+  posted_at: string;
+  entry_date?: string;
+  bank_txn_id?: string;
+  /** The proposal's function. 'ap' brings the AP pack's own checks into the re-performance. */
+  fn?: string;
+  debit_account?: string;
+  credit_account?: string;
+  intent_id?: string;
+}
+
+/**
+ * A posted decision that applies to one document, written straight to the rows with no kernel
+ * involved. That is the point: re-performance has to catch an entry that should never have got
+ * through, and an entry the kernel accepted is not that entry.
+ */
+export function insertPostedApplication(db: Db, spec: AppliedSpec): string {
+  const memo = `fixture ${spec.id}`;
+  const amount = spec.amount_cents;
+  const proposal = {
+    intent_id: spec.intent_id ?? "int_1", function: spec.fn ?? "ar", kind: spec.kind, party_id: spec.party_id,
+    entry_date: spec.entry_date ?? spec.posted_at.slice(0, 10),
+    ...(spec.bank_txn_id ? { bank_txn_id: spec.bank_txn_id } : {}),
+    applications: [{ doc_id: spec.doc_id, amount_cents: amount }],
+    entries: [
+      { account: spec.debit_account ?? ACCOUNTS.cash, debit_cents: amount, credit_cents: 0, memo },
+      { account: spec.credit_account ?? ACCOUNTS.ar, debit_cents: 0, credit_cents: amount, memo },
+    ],
+    evidence: [], policy_refs: [], fact_refs: [], judgment: [],
+  };
+  db.prepare(
+    `INSERT INTO decision (id, intent_id, function, mode, kind, proposal_json, actor, autonomy_level, tier, route, posted_at, created_at)
+     VALUES (?, ?, ?, 'live', ?, ?, 'agent:ar', 'auto', 2, 'AUTO', ?, ?)`,
+  ).run(spec.id, proposal.intent_id, proposal.function, spec.kind, JSON.stringify(proposal), spec.posted_at, spec.posted_at);
+  insertEntry(db, spec.id, proposal.entry_date, proposal.entries, spec.party_id);
+  return spec.id;
+}
+
+function insertEntry(db: Db, decisionId: string, entryDate: string, lines: EntryLine[], partyId: string): void {
+  const entryId = `je_${decisionId}`;
+  db.prepare("INSERT INTO gl_entry (id, period, date, source_decision_id, memo, posted_at) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(entryId, entryDate.slice(0, 7), entryDate, decisionId, `fixture ${decisionId}`, `${entryDate}T12:00:00Z`);
+  const insert = db.prepare("INSERT INTO gl_line (entry_id, line_no, account, debit_cents, credit_cents, party_id) VALUES (?, ?, ?, ?, ?, ?)");
+  lines.forEach((line, i) => { insert.run(entryId, i + 1, line.account, line.debit_cents, line.credit_cents, partyId); });
 }
 
 /** A bare database with one open period and one intent, for control tests that need no kernel. */
@@ -127,6 +179,6 @@ export function insertPostedDecision(db: Db, spec: DecisionSpec): string {
     `INSERT INTO decision (id, intent_id, function, mode, kind, proposal_json, actor, autonomy_level, tier, route, posted_at, created_at)
      VALUES (?, 'int_c', 'ar', 'live', ?, ?, ?, ?, ?, 'AUTO', ?, ?)`,
   ).run(spec.id, proposal.kind, JSON.stringify(proposal), spec.actor ?? "agent:ar", spec.autonomy_level ?? "review",
-    spec.tier ?? 0, "2026-07-16T12:00:00Z", "2026-07-15T12:00:00Z");
+    spec.tier === undefined ? 0 : spec.tier, "2026-07-16T12:00:00Z", "2026-07-15T12:00:00Z");
   return spec.id;
 }
