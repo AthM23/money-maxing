@@ -19,6 +19,28 @@
   .btn.lime{background:var(--lime);color:var(--ink)}
   main{padding:6px 44px 40px;max-width:1500px;margin:0 auto}
 
+  /* stage stepper + isometric stack, the "how it works" strip */
+  .hiw{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:center;background:#fff;border-radius:22px;
+       padding:24px 30px;margin-top:18px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
+  @media(max-width:1100px){.hiw{grid-template-columns:1fr}}
+  .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .step{font-size:12px;font-weight:700;border-radius:999px;padding:8px 14px;background:var(--paper);color:#8a8a85;
+        transition:all .35s;white-space:nowrap}
+  .step.on{background:var(--ink);color:var(--lime)}
+  .hiw h2{font-size:clamp(20px,2.2vw,28px);letter-spacing:-.02em;min-height:1.2em}
+  .hiw p{color:var(--mut);font-size:14.5px;line-height:1.55;margin-top:8px;min-height:3.2em}
+  .iso{position:relative;height:250px;display:flex;align-items:center;justify-content:center}
+  .layer{position:absolute;width:190px;height:190px;border-radius:22px;background:#fff;border:1.5px solid #e4e4df;
+         transform:rotate(45deg) scaleY(.577) translateY(240px);opacity:0;transition:transform .7s cubic-bezier(.3,.7,.3,1),opacity .7s;
+         box-shadow:0 18px 34px rgba(20,22,6,.10)}
+  .layer.show{opacity:1;transform:rotate(45deg) scaleY(.577) translateY(0)}
+  .layer .tag{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+              transform:scaleY(1.733) rotate(-45deg);font-size:12px;font-weight:700;color:#6b6b66;text-align:center;line-height:1.3}
+  .layer.top{border-color:var(--lime);box-shadow:0 0 0 2.5px var(--lime),0 18px 34px rgba(20,22,6,.12)}
+  .layer .orb{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--green);opacity:0;transition:opacity .4s}
+  .layer.show .orb{opacity:1;animation:blink 1.6s ease-in-out infinite}
+  @keyframes blink{50%{opacity:.35}}
+
   /* the board: four columns joined by connector rails */
   .board{display:grid;grid-template-columns:230px 1fr 330px;gap:26px;margin-top:18px}
   @media(max-width:1100px){.board{grid-template-columns:1fr}}
@@ -77,6 +99,28 @@
   <p class="sub">This is the real July from our demo company, replayed: every number below was measured on our own run,
   nothing is invented. Sources feed the Reader, the Reader feeds code, code posts what it can prove, one question goes
   to a person, the answer becomes a rule, and the auditor re-performs everything.</p>
+
+  <div class="hiw">
+    <div>
+      <div class="steps">
+        <span class="step" id="st0">01 · All the data</span>
+        <span class="step" id="st1">02 · Our own model</span>
+        <span class="step" id="st2">03 · Agents run it</span>
+        <span class="step" id="st3">04 · One human moment</span>
+        <span class="step" id="st4">05 · The loop</span>
+      </div>
+      <h2 id="hiwTitle">All data, one feed.</h2>
+      <p id="hiwText">Bank files, remittance emails, the Slack thread, the contract. Everything the month rests on, ingested into one place.</p>
+    </div>
+    <div class="iso">
+      <div class="layer" id="ly0" style="margin-top:120px"><div class="tag">bank + mail + chat<br>+ contracts</div></div>
+      <div class="layer" id="ly1" style="margin-top:40px"><div class="tag">Reader<br>our fine-tuned model</div></div>
+      <div class="layer" id="ly2" style="margin-top:-40px"><div class="tag">agents + kernel</div>
+        <span class="orb" style="left:14px;top:50%"></span><span class="orb" style="right:14px;top:50%"></span>
+        <span class="orb" style="left:50%;top:10px"></span><span class="orb" style="left:50%;bottom:10px"></span></div>
+      <div class="layer" id="ly3" style="margin-top:-120px"><div class="tag">books, audit-ready</div></div>
+    </div>
+  </div>
 
   <div class="board">
     <div class="col" id="srcCol">
@@ -145,6 +189,18 @@ function msg(who,txt,cls){
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
 function chip(id,text,cls){const c=$(id).querySelector('.chip')||$(id);c.textContent=text;c.className='chip '+cls;}
+const STAGES=[
+ ["All data, one feed.","Bank files, remittance emails, the Slack thread, the contract. Everything the month rests on, ingested into one place."],
+ ["Read by our own model.","Every document becomes a schema entry through the Qwen model we fine-tuned in 15 minutes on the GX10. Measured: 97.2% field accuracy at 1.2 seconds per document, ahead of every Claude tier on our benchmark."],
+ ["Agents run the work.","The code tier posts what it can prove for $0. The kernel re-performs every tick mark and refuses any draft whose evidence does not match its source."],
+ ["Your team steps in when it matters.","One question reaches the CFO, with everything already checked attached. The answer is recorded with a scope and an end date."],
+ ["Every close, smarter.","The answer becomes a standing rule. Corrections become training data, and the model retrains in 15 minutes. Next month asks less."]];
+function stage(n){
+  for(let i=0;i<5;i++) $('st'+i).classList.toggle('on',i===n);
+  $('hiwTitle').textContent=STAGES[n][0]; $('hiwText').textContent=STAGES[n][1];
+  const upto=[0,1,2,2,3][n];
+  for(let i=0;i<4;i++){const L=$('ly'+i);L.classList.toggle('show',i<=upto);L.classList.toggle('top',i===upto);}
+}
 function hot(id,on){$(id).classList.toggle('hot',on);$(id).classList.add('on');}
 function agent(id,state){const a=$(id);a.classList.add('on');a.classList.toggle('hot',state==='hot');}
 
@@ -154,6 +210,7 @@ async function play(){
   document.querySelectorAll('.card,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
   document.querySelectorAll('.chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
   $('msgs').innerHTML='';$('wire').style.width='0';
+  stage(0);
   await sleep(400);if(guard())return;
 
   // 1. sources light up
@@ -162,11 +219,13 @@ async function play(){
   await sleep(900);if(guard())return;
 
   // 2. reader
+  stage(1);
   agent('a-reader','hot');$('wire').style.width='12%';
   msg('Reader','Reading every document into the ledger schema. Our own model, trained on this company\'s paper: measured 97.2% field accuracy, 1.2 s per document, on the $3,000 box under the desk.');
   await sleep(2400);if(guard())return;agent('a-reader','on');
 
   // 3. preparer, code tier
+  stage(2);
   agent('a-prep','hot');$('wire').style.width='36%';
   msg('Preparer','Code matches receipts to invoices and drafts entries. No model needed for the routine ones.');
   await sleep(1600);if(guard())return;
@@ -192,6 +251,7 @@ async function play(){
   await sleep(2200);if(guard())return;
 
   // 5. human
+  stage(3);
   agent('a-check','on');agent('a-human','hot');$('wire').style.width='78%';
   msg('Checker','The contract says a credit needs an officer in writing. Nobody gave it. One question goes to the CFO, with everything that was checked attached.');
   await sleep(2000);if(guard())return;
@@ -205,6 +265,7 @@ async function play(){
   await sleep(2600);if(guard())return;hot('l-learn',false);agent('a-human','on');
 
   // 6. auditor
+  stage(4);
   agent('a-audit','hot');$('wire').style.width='100%';
   hot('l-audit',true);$('e9').classList.add('on');
   msg('Auditor','Re-performing every sampled entry with fresh eyes: 15 of 15 clean.');
