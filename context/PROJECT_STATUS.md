@@ -1605,3 +1605,26 @@ tonight. Get the Kiteworks *shape* with the least new logic:
 - **For Karan (runbook):** the between-judges reset is three commands, written up in `SEED_GLOBAL_JULY.md` under
   "Showing the same demo again"; `pnpm mirror` + `pnpm qbo:check` after the worker is a 20-second beat that shows the
   agents' entries inside a real accounting system. Proposed, not added to `DEMO_RUNBOOK.md` (lane A's file).
+
+### 2026-09-20 02:14 ET — Workspace: an Ask page run by an agent over one tool registry; visual fixes (Person A)
+
+- **Ask** is its own tab (Overview stays the landing, as Karan chose). `workspace/tools.ts` is **one registry of ten
+  read-only tools** over the books (AR ageing, trial balance, cash received, waiting on you, explain a receipt, what
+  the agents did, cash forecast, close status, revenue schedules, policies and memory) for three callers: the page's
+  code router, the page's agent, and the MCP server Karan plans to ship (not built: `@modelcontextprotocol/sdk` is
+  not a dependency yet; the registry is ready for a thin wrapper).
+- `workspace/ask.ts`: "Code only" matches a question to a tool by its words (free, instant). Agent mode runs Claude
+  through the SDK's tool runner (`client.beta.messages.toolRunner` with `betaZodTool`), model picked on the page:
+  Haiku 4.5 (default on the page, for speed) or Opus 5. **Measured, Haiku 4.5: 2.8 s, 2 turns, about 3,700 tokens**
+  for "Why did Vossberg pay us short?". Two paid test questions, about one cent in total.
+- **Found on the first real run and fixed:** the tool returned 10,580,000 cents and the model wrote "USD 10,580.00".
+  The model is now handed money already written out by code and told to copy it, markdown and guessing at causes are
+  forbidden, and the receipt tool states its own subtotals so nothing downstream adds anything up. Every table on the
+  page is still the tool's own result, so a wrong sentence can never change a number shown in a table.
+- To use the agent the server must see `ANTHROPIC_API_KEY` (it loads `.env`; a blank variable exported in the shell
+  wins over the file, and then the page says plainly that only "Code only" is available).
+- Also: a plain-language paragraph about the month on Overview (written by code); money with a direction (green plus
+  for in, red minus for out or missing); policies as a searchable, filterable list with version history, which reads
+  the same with three policies or three hundred; revenue scheduled by month as a chart; buttons on close items that
+  can be moved; explaining a receipt prefers the customer's unsettled case over their oldest.
+- `pnpm test` → 78 files, **716 passing**; typecheck clean. Pushed as `1e56484` and `0095bb5`.
