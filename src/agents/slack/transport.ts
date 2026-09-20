@@ -67,7 +67,7 @@ export async function startSlack(db: Db): Promise<{ postEscalation: typeof postE
     return res.ts;
   }
 
-  async function postBill(billId: string, approverSlackUser: string): Promise<string | undefined> {
+  async function postBill(billId: string, approverSlackUser: string, approverId: string): Promise<string | undefined> {
     const b = db.prepare(`SELECT b.id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents,
           (SELECT COUNT(*) FROM bill o WHERE o.party_id = b.party_id AND o.id <> b.id) AS prior,
           (SELECT AVG(o.total_cents) FROM bill o WHERE o.party_id = b.party_id AND o.id <> b.id) AS avg
@@ -79,8 +79,8 @@ export async function startSlack(db: Db): Promise<{ postEscalation: typeof postE
     const blocks = [
       { type: "section", text: { type: "mrkdwn", text: `*Uploaded bill to review*\n${b.vendor} sent *${b.ref}* for *${usd(b.total_cents)}*, dated ${b.bill_date}, period ${b.service_period}.\n${hist} Accepting queues it for the payment run; nothing posts to the ledger until then.` } },
       { type: "actions", elements: [
-        { type: "button", style: "primary", text: { type: "plain_text", text: "Accept the bill" }, action_id: "bill_accept", value: billId },
-        { type: "button", text: { type: "plain_text", text: "Reject" }, action_id: "bill_reject", value: billId },
+        { type: "button", style: "primary", text: { type: "plain_text", text: "Accept the bill" }, action_id: "bill_accept", value: `${billId}|${approverId}` },
+        { type: "button", text: { type: "plain_text", text: "Reject" }, action_id: "bill_reject", value: `${billId}|${approverId}` },
       ] },
     ];
     const res = await web.chat.postMessage({ channel: approverSlackUser, text: `Uploaded bill: ${b.vendor} ${b.ref}`, blocks: blocks as never });
@@ -103,7 +103,8 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     return;
   }
   if (body.type === "block_actions" && action && (action.action_id === "bill_accept" || action.action_id === "bill_reject")) {
-    const result = reviewUploadedBill(db, systemClock, action.value, approverFor(db, body.user.id), action.action_id === "bill_accept" ? "approved" : "rejected");
+    const [billId = action.value, asked] = action.value.split("|");
+    const result = reviewUploadedBill(db, systemClock, billId, approverFor(db, body.user.id, asked ?? null), action.action_id === "bill_accept" ? "approved" : "rejected");
     await web.chat.postMessage({ channel: body.user.id, text: billReviewSaid(result) } as never);
     return;
   }

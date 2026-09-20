@@ -12,7 +12,7 @@ export interface Poster {
   /** Something an agent proposes to remember. Optional, so a poster that cannot show it simply leaves it in the inbox. */
   postFact?(factId: string, approverSlackUser: string): Promise<string | undefined>;
   /** A bill uploaded on the pipeline page, waiting for accept or reject. Optional for the same reason. */
-  postBill?(billId: string, approverSlackUser: string): Promise<string | undefined>;
+  postBill?(billId: string, approverSlackUser: string, approverId: string): Promise<string | undefined>;
 }
 
 export interface DeskReport {
@@ -55,7 +55,7 @@ export async function deskPass(db: Db, poster: Poster, clock: Clock, alreadyAske
       if (alreadyAsked.has(`bill:${b.id}`)) continue;
       const approver = chooseApprover(db, { id: b.id, actor: "upload", amount_cents: b.total_cents, answered_by: null });
       if (!approver) { report.unroutable.push({ decision_id: b.id, reason: "no reachable approver for an uploaded bill" }); continue; }
-      if (!(await poster.postBill(b.id, approver.slack_user))) continue;
+      if (!(await poster.postBill(b.id, approver.slack_user, approver.id))) continue;
       alreadyAsked.add(`bill:${b.id}`);
       report.bills_posted.push({ bill_id: b.id, approver_id: approver.id });
     }
