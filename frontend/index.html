@@ -411,6 +411,8 @@ const NAMES = {
   "muse": "Muse Spark 1.3, no help",
   "base4b": "Qwen3-4B before our training",
   "tiny": "Qwen3-0.6B, tiny model",
+  "haiku-hinted": "Claude Haiku 4.5, told the answer format",
+  "haiku-bare": "Claude Haiku 4.5, no help",
 };
 const fallback = {
   "ours":{exact:0.692,f1:0.960,ho:0.964,lat:6.3,scorer:"v1"},
@@ -438,7 +440,7 @@ function renderBench(rows, note){
 renderBench(fallback, "120 test documents per model, same exam for everyone. A perfect answer means every field exact, down to key names and integer cents. Untrained models answer in their own style, so they earn partial credit on accuracy but zero perfect matches.");
 (async()=>{
   const files=['../ft/data/benchmark_results.json','../ft/data/benchmark_v2_api_bare.json',
-               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_results_v2.json'];
+               '../ft/data/benchmark_v2_api_hinted.json','../ft/data/benchmark_v2_haiku.json','../ft/data/benchmark_results_v2.json'];
   const rows={...fallback}; let anyV2=false;
   for(const url of files){
     try{

@@ -1,0 +1,35 @@
+{
+ "protocol": {
+  "scorer": "strict-v2",
+  "n": 120,
+  "note": "answers produced by claude-haiku-4-5 subagents, graded by the same v2 scorer"
+ },
+ "models": {
+  "haiku-bare": {
+   "n": 120,
+   "schema_valid": 0.0,
+   "exact": 0.0,
+   "field_f1": 0.106,
+   "held_out_n": 88,
+   "held_out_exact": 0.0,
+   "held_out_f1": 0.12,
+   "avg_latency_s": null,
+   "est_cost_usd": null,
+   "kind": "api-agent",
+   "model": "claude-haiku-4-5 via Claude Code agents"
+  },
+  "haiku-hinted": {
+   "n": 120,
+   "schema_valid": 0.967,
+   "exact": 0.742,
+   "field_f1": 0.962,
+   "held_out_n": 88,
+   "held_out_exact": 0.761,
+   "held_out_f1": 0.969,
+   "avg_latency_s": null,
+   "est_cost_usd": null,
+   "kind": "api-agent",
+   "model": "claude-haiku-4-5 via Claude Code agents"
+  }
+ }
+}
