@@ -3,6 +3,7 @@ import type { AutonomySetting } from "../runtime/autonomy.js";
 import { systemClock, type Clock, type RuntimeConfig } from "../runtime/config.js";
 import type { Db } from "../runtime/db.js";
 import { settleIntent, UNSETTLED_ACTOR } from "../runtime/intentStatus.js";
+import { safeJson } from "../runtime/lookups.js";
 import { openDecision, setRoute } from "../runtime/persist.js";
 import { APP_CONFIG, packFor, type Pack } from "../packs/index.js";
 import { routeTier0 } from "../router/route.js";
@@ -75,7 +76,7 @@ async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<Case
     return { status: "done", routes: t0.routes, final_route: t0.routes.at(-1) ?? null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
   }
   let last: CaseResult | null = null;
-  const notes = [...t0.notes, ...(opts.extra_notes ?? [])];
+  const notes = [...t0.notes, ...priorReviewNotes(db, c.intent_id), ...(opts.extra_notes ?? [])];
   const pack = packFor(c.function);
   // No pack, no agent: a case is never worked on another function's instructions.
   const investigators = pack ? opts.investigators : [];
@@ -86,6 +87,26 @@ async function runTiers(db: Db, c: CaseFile, opts: RunCaseOptions): Promise<Case
     if (last.report) notes.push(`tier ${i + 1} (${investigator.name}) stopped: ${last.report.outcome}. ${last.report.summary}`);
   }
   return last ?? { status: "done", routes: t0.routes, final_route: null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
+}
+
+/**
+ * What an independent reviewer already said about an earlier draft on this case. Whoever prepares the next draft
+ * starts from those concerns, whenever the case comes round, instead of repeating the draft that was declined.
+ */
+function priorReviewNotes(db: Db, intentId: string): string[] {
+  const rows = db
+    .prepare(
+      `SELECT s.output_json FROM decision_step s JOIN decision d ON d.id = s.decision_id
+       WHERE d.intent_id = ? AND d.mode = 'live' AND s.tool LIKE 'controller:%'
+         AND EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.approver_kind = 'controller_agent' AND a.outcome = 'rejected')
+       ORDER BY d.rowid, s.step_no`,
+    )
+    .all(intentId) as { output_json: string | null }[];
+  return rows.flatMap((row) => {
+    const verdict = row.output_json ? (safeJson(row.output_json) as { note?: string; concerns?: string[] } | null) : null;
+    if (!verdict?.note) return [];
+    return [`An independent controller declined an earlier draft: ${verdict.note}`, ...(verdict.concerns ?? []).map((c) => `Concern: ${c}`)];
+  });
 }
 
 async function runTier(
