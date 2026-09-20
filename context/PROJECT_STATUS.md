@@ -1686,3 +1686,45 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   (`frontend/index.html`: the nav logo, a "Dashboard" link and an inline favicon, nothing else).
 - `context/JUDGE_QA.md`: the hard questions, answered as the code stands now.
 - `pnpm test` → 85 files, **735 passing**; typecheck clean.
+
+### 2026-09-20 04:23 ET — An outside review's 15 findings checked against HEAD and 11 closed; Ask remembers and hands off; Model page and marketing page (Person A)
+
+- **The review Karan pasted (Cursor) was current, not old**: it names `src/mirror/reset.ts` (landed 02:01). Its "488
+  tests, 11 of 110" came from our own stale `tests/RESULTS.md`, now brought up to date. A read-only agent reproduced
+  13 of the 15 findings at HEAD with probes (2 partly). **Closed tonight, each with a test that fails without the fix:**
+  - an agent can only propose under the case it was assigned; a customer-scoped rule is tested on the customer whose
+    invoice the entry touches; a rule-backed entry cannot exceed the shortfall the rule was tested on (reproduced
+    first: an agent on Initech's $30 case AUTO-posted a $450 write-off on Wayne's invoice under earned autonomy);
+  - a fee and an FX gain are never netted into a small short-pay (code tier guard + kernel check **F10**);
+  - a remembered answer does not post alone once the person it came from, or the same thread, has written again
+    (`src/memory/laterWord.ts`, J2 marks it judgment, the entry parks);
+  - cash is tied net to the bank line; a live entry cannot attach to a replay decision; a "corrected" approval is
+    refused instead of posting the original; the auditor orders same-millisecond postings by rowid;
+  - an AR or AP kind cannot be proposed under the other function; a payment needs an approved bill and is sized by
+    what it pays, so materiality and the approver's limit bind on it;
+  - replay opens no question and writes no fact; a Slack click is signed by the person who was asked, never by the
+    most senior person a shared Slack user stands for; `ft/export.ts` reads the real bank columns; the eval reports
+    AUTO results whose journal went unchecked and refuses a baseline it cannot run.
+- **Still open, all in lane B's files, for Atharv (not fixed by lane A because they touch live connectors):**
+  (4) `src/connectors/gmail.ts:146-149` takes a mail's id from the sender-controlled `X-Footnote-Id` header and both
+  clocks from the `Date` header, and `src/connectors/slack.ts:123-137` believes `footnote_seed` metadata: a forged
+  mail can arrive as version 2 of the CEO's mail. Fix sketch: `internalDate` as recorded_time; honour the header or
+  metadata only for mail and messages provably ours. (8) `src/drift/invoiceVsCash.ts:49-54` keeps a case's stored
+  amounts after a bank line is restated (fails closed for cash; the brief handed to a model is wrong). (13)
+  `src/seed/quickbooks.ts:171-197`: `seed --reset` deletes or deactivates QuickBooks records it adopted, because the
+  manifest does not store whether a record was created or adopted. (9) replay testing a rule approved later is the
+  backtest's design and is disclosed in the README.
+- **Ask**: the page sends the last six turns, so a follow-up means something, and being asked to do something gets a
+  button to where a person does it (or the free code-tier run), never a write. Checked on Haiku: 3.3 s, about half a
+  cent.
+- **Model page**: all of lane C's research, read from its files: the matcher, the GL coder, the reader by kind of
+  document inside the harness, the outside benchmark (ciru-ai sandbox, 15 of 18 exact), Preet's seen-customer exam.
+  `context/ABLATION_PLAN.md` is a turnkey size and data ablation; the page draws both curves once
+  `ft/data/ablation_v2.json` exists.
+- **Marketing page** (Karan's asks): line icons instead of emoji, in-page links that scroll (the slides are sticky),
+  "Open the dashboard" as the nav's button, and four captions aligned with the demo month's measured numbers.
+- **The demo path was re-run end to end through the workspace API after all of the above**: decide → fact active →
+  credit memo posted → Run the code tier prepares the add-on's credit from memory with 0 model calls → audit 15 of 15
+  clean, 5 findings with one character changed.
+- `pnpm test` → 88 files, **752 passing**; typecheck clean. Pushed through `2354a3c`, rebased twice onto Preet's pushes
+  (`0c3db9c`, `d9eac18`) with nothing overwritten.
