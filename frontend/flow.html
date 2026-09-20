@@ -497,7 +497,10 @@ async function runDoc(){
         body:JSON.stringify({vendor:f.vendor,ref:String(f.ref),bill_date:f.date,period:(f.period||'').slice(0,7)||undefined,amount_cents:f.amount_cents,terms_days:f.terms_days,raw:raw.slice(0,6000)})});
       const fj=await fr.json();
       if(fj.status==='filed'){
+        const hgh=fj.history||{};
         msg('System',`Filed into the company's books as ${fj.bill_id}, with the document kept as evidence. It is now waiting in Input needed on the dashboard, where you accept or reject it. <span class="chip live">written to the books</span>`);
+        if(hgh.prior_bills) msg('Checker',`Triage: ${hgh.prior_bills} prior bill(s) from this vendor averaging ${fmt(hgh.avg_cents)}. This one is ${hgh.within_pct}% from that average, so it is ${hgh.within_pct<=10?'routed as routine':'flagged as unusual for the approver'}. <span class="chip live">history, live</span>`);
+        else msg('Checker','Triage: first bill from this vendor. No history to lean on, so a person decides, and each approval builds the record the route needs to earn autonomy.');
         card.querySelector('.chip').textContent='in the books';card.querySelector('.chip').className='chip live';
       } else if(fj.status==='duplicate'){
         msg('System',`Already on file as ${fj.bill_id}: the books take a bill once.`);

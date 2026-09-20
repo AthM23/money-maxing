@@ -21,6 +21,9 @@ function billCard(app, b) {
   return h("div", { class: "question" },
     h("span", { class: "tag wait" }, "Uploaded bill"),
     h("p", { class: "lead" }, `${b.vendor} sent bill ${b.ref} for ${money(b.total_cents)}, dated ${b.bill_date}, period ${b.service_period}. It arrived through the pipeline and is on file with the document as evidence.`),
+    h("p", { class: "muted" }, b.prior_bills
+      ? `${b.prior_bills} prior bill(s) from this vendor averaging ${money(b.avg_cents)}: ${Math.abs(b.total_cents - b.avg_cents) <= b.avg_cents * 0.1 ? "this one is in the usual range." : "this one is out of their usual range, look twice."}`
+      : "First bill from this vendor: no history to lean on, so a person decides."),
     h("p", { class: "muted" }, "Accepting queues it for the payment run. Nothing posts to the ledger until then."),
     h("div", { class: "row" },
       h("button", { class: "primary", on: { click: () => review(app, b, "approved") } }, "Accept the bill"),

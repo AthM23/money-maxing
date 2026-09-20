@@ -57,7 +57,12 @@ export const ACTIONS: Record<string, Handler> = {
   // itself as evidence, the bill open and unposted. Nothing touches the ledger until a person approves it.
   upload_bill: (db, body) => {
     const u = parse(UploadBill, body);
-    const slug = "up_" + u.vendor.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+    // Entity resolution: a bill from "Harborline Cloud, Inc." is the vendor already on file as Harborline Cloud.
+    const norm = (x: string): string => x.toLowerCase().replace(/[^a-z0-9]+/g, "");
+    const mine = norm(u.vendor);
+    const known = (db.prepare("SELECT id, name FROM party WHERE kind = 'vendor'").all() as { id: string; name: string }[])
+      .find((p) => { const theirs = norm(p.name); return theirs.length >= 6 && (mine.startsWith(theirs) || theirs.startsWith(mine)); });
+    const slug = known?.id ?? "up_" + u.vendor.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
     const billId = "BILL-UP-" + u.ref.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 40);
     if (db.prepare("SELECT 1 FROM bill WHERE id = ?").get(billId)) return { status: "duplicate", bill_id: billId };
     const traceId = "tr_upload_" + billId;
@@ -72,7 +77,9 @@ export const ACTIONS: Record<string, Handler> = {
       db.prepare("INSERT INTO bill (id, party_id, po_id, vendor_invoice_no, bill_date, due_date, service_period, total_cents, open_cents, status, trace_id) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 'open', ?)")
         .run(billId, slug, u.ref, u.bill_date, due, (u.period ?? u.bill_date.slice(0, 7)).slice(0, 18), u.amount_cents, u.amount_cents, traceId);
     })();
-    return { status: "filed", bill_id: billId, vendor_id: slug, trace_id: traceId };
+    const hist = db.prepare("SELECT COUNT(*) AS n, COALESCE(AVG(total_cents), 0) AS avg_cents FROM bill WHERE party_id = ? AND id <> ?").get(slug, billId) as { n: number; avg_cents: number };
+    const within_pct = hist.n ? Math.round(Math.abs(u.amount_cents - hist.avg_cents) / hist.avg_cents * 100) : null;
+    return { status: "filed", bill_id: billId, vendor_id: slug, trace_id: traceId, history: { prior_bills: hist.n, avg_cents: Math.round(hist.avg_cents), within_pct } };
   },
   // Accept or reject a bill that arrived as an upload. Accepting marks it approved for the payment run;
   // rejecting voids it. Neither touches the ledger: posting stays behind the same gate as everything else.

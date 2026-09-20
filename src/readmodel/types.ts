@@ -233,6 +233,9 @@ export interface UploadedBill {
   bill_date: string;
   service_period: string;
   total_cents: number;
+  /** Prior bills from the same vendor, and how far this amount sits from their average: the triage context an approver needs. */
+  prior_bills: number;
+  avg_cents: number | null;
 }
 
 export interface AuditSummaryView {

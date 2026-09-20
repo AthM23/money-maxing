@@ -19,9 +19,12 @@ export function buildAwaitingYou(db: Db): AwaitingYou {
 
 /** Bills filed from the pipeline page (id BILL-UP-…) still waiting for a person to accept or reject them. */
 function uploadedBills(db: Db): UploadedBill[] {
-  const rows = db.prepare("SELECT b.id AS bill_id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status = 'open' AND b.id LIKE 'BILL-UP-%' ORDER BY b.bill_date DESC")
-    .all() as { bill_id: string; vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number }[];
-  return rows;
+  const rows = db.prepare(`SELECT b.id AS bill_id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents,
+        (SELECT COUNT(*) FROM bill o WHERE o.party_id = b.party_id AND o.id <> b.id) AS prior_bills,
+        (SELECT AVG(o.total_cents) FROM bill o WHERE o.party_id = b.party_id AND o.id <> b.id) AS avg_cents
+      FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status = 'open' AND b.id LIKE 'BILL-UP-%' ORDER BY b.bill_date DESC`)
+    .all() as { bill_id: string; vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number; prior_bills: number; avg_cents: number | null }[];
+  return rows.map((r) => ({ ...r, avg_cents: r.avg_cents === null ? null : Math.round(r.avg_cents) }));
 }
 
 function openQuestions(db: Db): OpenQuestion[] {
