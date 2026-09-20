@@ -33,7 +33,7 @@ base Qwen3-4B F1 0.084 → **+LoRA 0.960** (held-out 0.964, schema-valid 100%) �
 progression 0.953/0.958/0.960 by epoch · Qwen3-0.6B floor 0.010. n=120 stratified, held-out entities
 and never-seen template families included.
 
-## Lane A's side of this interface (added by Person A, 2026-09-19 23:42 ET)
+## Lane A's side of this interface (added by Person A, 2026-09-19 23:40 ET)
 
 Wired. `FT_ENDPOINT_URL` alone switches it on (`src/reader/openaiCompat.ts`; 30 s limit, then the case goes on
 without the reading). The model is used as a **remittance reader**, one step before the code tier, when the drift
