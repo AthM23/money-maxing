@@ -33,6 +33,10 @@ export function questionCard(app, item) {
     form);
 }
 
+function partyName(app, id) {
+  return app.overview?.receipts.find((r) => r.party_id === id)?.party_name ?? id;
+}
+
 function nameOf(app, id) {
   const person = app.overview?.people.find((p) => p.id === id);
   return person ? `${person.name.replace(/\s*\(.*\)$/, "")}, ${person.role.replaceAll("_", " ")}` : id;
@@ -53,14 +57,15 @@ async function submitAnswer(event, app, escalationId) {
   } catch (err) { toast(err.message, "bad"); }
 }
 
-function parkedCard(app, p) {
-  if (p.kind === "dispute_hold") return heldCard(app, p);
+/** `here` is true on the case's own page, where a button back to the case would go nowhere. */
+export function parkedCard(app, p, here = false) {
+  if (p.kind === "dispute_hold") return heldCard(app, p, here);
   return h("div", {},
-    h("span", { class: "tag wait" }, "Approval"), h("p", { class: "lead" }, `${words(p.kind)} of ${money(p.amount_cents)} for ${p.party_id}`),
+    h("span", { class: "tag wait" }, "Approval"), h("p", { class: "lead" }, `${words(p.kind)} of ${money(p.amount_cents)} for ${partyName(app, p.party_id)}`),
     h("p", { class: "muted" }, `Prepared by ${p.prepared_by.label}. ${p.controller_note ? `Controller agent: ${p.controller_note}` : ""}`),
     reasoning(p),
     h("div", { class: "actions" },
-      h("button", { class: "ghost", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
+      here ? null : h("button", { class: "ghost", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
       h("button", { class: "ghost", on: { click: () => decide(app, p.decision_id, "rejected") } }, "Decline"),
       h("button", { class: "primary", on: { click: () => decide(app, p.decision_id, "approved") } }, "Approve")));
 }
@@ -69,7 +74,7 @@ function parkedCard(app, p) {
 function reasoning(p) {
   if (!p.why?.length && !p.evidence?.length) return null;
   return h("div", { class: "why" }, p.why.map((w) => h("p", {}, w)),
-    p.evidence.length ? h("details", {}, h("summary", {}, `What it rests on (${p.evidence.length} quotes, each checked against its source)`),
+    p.evidence.length ? h("details", {}, h("summary", {}, `What it rests on (${p.evidence.length} quote${p.evidence.length === 1 ? "" : "s"}, checked character by character against the source)`),
       h("ul", {}, p.evidence.map((e) => h("li", {}, h("b", {}, e.claim), h("blockquote", {}, `“${e.quote}”`), h("span", { class: "mono muted" }, e.trace_id))))) : null);
 }
 
@@ -77,7 +82,7 @@ function reasoning(p) {
  * An amount an agent held as disputed. Nothing was booked, and what happens to it is a person's decision: leave it
  * held, or decide it here, which is recorded as a question put to you and your answer.
  */
-function heldCard(app, p) {
+function heldCard(app, p, here) {
   const form = h("form", { class: "answer", on: { submit: (e) => submitDecision(e, app, p.decision_id) } },
     h("label", {}, "Decide it as", h("select", { name: "treatment" }, ["credit_memo", "write_off", "tax_withholding", "chase"].map((t) => h("option", { value: t }, TREATMENTS[t])))),
     h("label", {}, "This decision is", h("select", { name: "uses" }, h("option", { value: "one_time" }, "for this case only"), h("option", { value: "standing" }, "standing, until the date below"))),
@@ -85,12 +90,12 @@ function heldCard(app, p) {
     h("label", {}, "Rate %, if it is a rate", h("input", { type: "number", name: "pct", min: "0", max: "100", step: "0.01", placeholder: "e.g. 2" })),
     h("label", { class: "wide" }, "In your words (kept as evidence)", h("textarea", { name: "text", rows: "2", required: true, minlength: "3" })),
     h("div", { class: "actions wide" },
-      h("button", { class: "ghost", type: "button", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
+      here ? null : h("button", { class: "ghost", type: "button", on: { click: () => app.go("case", p.intent_id) } }, "Open the case"),
       h("button", { class: "ghost", type: "button", on: { click: () => decide(app, p.decision_id, "approved") } }, "Keep it held"),
       h("button", { class: "primary", type: "submit" }, "Decide")));
   return h("div", { class: "question" },
     h("span", { class: "tag wait" }, "Held as disputed · your decision"),
-    h("p", { class: "lead" }, `${money(p.amount_cents)} from ${p.party_id} is held as disputed. Nothing has been booked.`),
+    h("p", { class: "lead" }, `${money(p.amount_cents)} from ${partyName(app, p.party_id)} is held as disputed. Nothing has been booked.`),
     h("p", { class: "muted" }, `Prepared by ${p.prepared_by.label}.`), reasoning(p), form);
 }
 

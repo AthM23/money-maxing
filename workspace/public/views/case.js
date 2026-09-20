@@ -1,7 +1,7 @@
-import { getJson, h, money, pill, plain, rate, statusPill } from "/dom.js";
+import { flow, getJson, h, money, pill, plain, rate, statusPill, words } from "/dom.js";
 import { openDrawer } from "/app.js";
 import { evidencePanel } from "/views/evidence.js";
-import { questionCard } from "/views/queue.js";
+import { parkedCard, questionCard } from "/views/queue.js";
 import { flowView } from "/views/flow.js";
 import { traceView } from "/views/traceview.js";
 
@@ -20,7 +20,23 @@ export async function renderCase(app) {
     h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "The invoice, explained to the cent"), h("span", { class: "muted" }, "Click a book line for its evidence")), cashApplication(v), footing(v)),
     v.fx ? h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "Why it is short"), h("span", { class: "muted" }, `A matcher that sees one number calls the whole ${money(r.shortfall_cents)} a short-pay`)), split(v)) : null,
     ...r.open_questions.map((q) => h("div", { class: "panel ask" }, questionCard(app, q))),
-    tracePanel(v));
+    ...waitingHere(app, r).map((p) => h("div", { class: "panel ask" }, parkedCard(app, p, true))),
+    otherBooks(v.ripple), tracePanel(v));
+}
+
+/** What is parked on this case, with the preparer's reasoning, so it can be approved or decided without leaving the page. */
+function waitingHere(app, r) {
+  return (app.overview?.awaiting_you.parked_entries ?? []).filter((p) => p.intent_id === r.intent_id);
+}
+
+const BOOKS = { ar: "Receivables", revenue: "Revenue", forecast: "Forecast", close: "Close", mirror: "QuickBooks", drift: "CRM against the schedule" };
+
+/** One transaction, every book: what each of the other functions did when this case's entries posted, or that it looked and left things alone. */
+function otherBooks(rows) {
+  if (!rows?.length) return null;
+  return h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("div", {}, h("h2", {}, "What it touched in the other books"), h("p", { class: "muted" }, "Each function reacts to the posted entry on its own, in code. One that looked and changed nothing says so."))),
+    h("div", { class: "ripple" }, rows.map((x) => h("div", { class: "ripplerow" }, h("span", { class: `chip ${x.function === "ar" ? "code" : ""}` }, BOOKS[x.function] ?? words(x.function)),
+      h("span", {}, x.summary), h("b", { class: "num" }, x.delta_cents ? flow(Math.abs(x.delta_cents), x.delta_cents > 0 ? "in" : "out") : "")))));
 }
 
 let traceMode = "flow";

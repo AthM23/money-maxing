@@ -8,6 +8,7 @@ import { buildWorkpaper } from "../src/readmodel/workpaper.js";
 import type { Db } from "../src/runtime/db.js";
 import { readControlTotals } from "../src/runtime/kernelContext.js";
 import { getTrace, safeJson } from "../src/runtime/lookups.js";
+import { rippleView } from "./ripple.js";
 import { TOOLS, type BookTool } from "./tools.js";
 
 /** Everything the first screen needs, in one read. */
@@ -60,7 +61,7 @@ export function caseView(db: Db, intentId: string): unknown {
   const parked = receipt.parked.reduce((n, p) => n + p.amount_cents, 0);
   const unexplained = receipt.open_cents_now - parked;
   if (unexplained > 0) lines.push({ decision_id: null, kind: "open", label: receipt.open_questions.length > 0 ? "Not paid by the customer: a person has been asked" : "Not yet explained", account: null, amount_cents: unexplained, fx_note: null, state: "open", settled_by: receipt.open_questions.length > 0 ? "awaiting a person" : "open" });
-  return { receipt, fx: fx ?? null, invoice_fx: booked, lines, trace: buildCaseTrace(db, intentId) };
+  return { receipt, fx: fx ?? null, invoice_fx: booked, lines, trace: buildCaseTrace(db, intentId), ripple: rippleView(db, intentId) };
 }
 
 interface Fx { currency: string; foreign_amount_cents: number; rate_ppm: number; fee_cents: number }

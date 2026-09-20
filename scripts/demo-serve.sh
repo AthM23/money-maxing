@@ -28,8 +28,8 @@ done
 sleep 2
 WAITING=$(sqlite3 "$OUT/live.db" "SELECT COUNT(*) FROM decision d WHERE d.mode='live' AND d.route='PROPOSE' AND d.posted_at IS NULL AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id)")
 cat <<NEXT
-The demo:      http://localhost:4320   ($OUT/live.db, reset from start.db; $WAITING item(s) waiting for a person)
-From nothing:  http://localhost:4321   ($OUT/fresh.db)
+The demo:      http://localhost:4320/dashboard   (marketing page at /; $OUT/live.db, reset from start.db; $WAITING item(s) waiting for a person)
+From nothing:  http://localhost:4321/dashboard   ($OUT/fresh.db)
 Reset:         scripts/demo-serve.sh   (again; about three seconds)
 Stop:          pkill -f "workspace/server.ts $OUT/"
 NEXT

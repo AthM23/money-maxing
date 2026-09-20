@@ -2,15 +2,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { flagInt, parseArgs, warn } from "../src/cli/flags.js";
+import { flagInt, flagString, parseArgs, warn } from "../src/cli/flags.js";
 import { openDb, type Db } from "../src/runtime/db.js";
 import { ACTIONS } from "./actions.js";
 import { assertSameOrigin, HttpError, readJson, sendJson, sendStatic } from "./http.js";
 import { modelView } from "./model.js";
 import { arAgeing, cashByWeek, closeView, forecastView, revenueView, trialBalance } from "./modules.js";
+import { afterLedgerMoved, MOVES_THE_LEDGER, storesFor } from "./ripple.js";
 import { caseView, fleetView, overview, workpaperView } from "./views.js";
 
-const USAGE = "usage: pnpm workspace <db> [--port 4320]";
+const USAGE = "usage: pnpm workspace <db> [--port 4320] [--stores <dir>]";
 const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), "public");
 const BRAND = process.env.FOOTNOTE_BRAND ?? "Money Maxer";
 const SITE = join(dirname(fileURLToPath(import.meta.url)), "..", "frontend", "index.html");
@@ -31,12 +32,13 @@ function main(): void {
   const db = openDb(dbPath);
   const port = flagInt(args, "port") ?? 4320;
   if (process.env.MARKETING_URL && !marketingUrl()) warn("MARKETING_URL is not an http(s) address; the logo will open the local marketing page instead");
-  createServer((req, res) => void handle(db, req, res)).listen(port, "127.0.0.1", () => {
-    process.stdout.write(`${BRAND} workspace: http://localhost:${port}  (db ${dbPath})\n`);
+  const stores = storesFor(dbPath, flagString(args, "stores"));
+  createServer((req, res) => void handle(db, stores, req, res)).listen(port, "127.0.0.1", () => {
+    process.stdout.write(`${BRAND}: http://localhost:${port}/dashboard  (marketing page at /; db ${dbPath}; other books ${stores ? `refresh from ${stores}` : "not refreshed: no stores folder"})\n`);
   });
 }
 
-async function handle(db: Db, req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handle(db: Db, stores: string | null, req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (req.method === "GET") return get(db, url, res);
@@ -44,7 +46,11 @@ async function handle(db: Db, req: IncomingMessage, res: ServerResponse): Promis
       assertSameOrigin(req);
       const action = ACTIONS[url.pathname.slice("/api/do/".length)];
       if (!action) throw new HttpError(404, "no such action");
-      return sendJson(res, 200, await action(db, await readJson(req)));
+      const name = url.pathname.slice("/api/do/".length);
+      const result = await action(db, await readJson(req));
+      // The entry is in; now the other books react to it. Their outcome rides along, it never replaces the action's.
+      const other_books = MOVES_THE_LEDGER.has(name) ? await afterLedgerMoved(db, stores) : undefined;
+      return sendJson(res, 200, other_books && typeof result === "object" && result !== null ? { ...result, other_books } : result);
     }
     throw new HttpError(405, "method not allowed");
   } catch (err) {
@@ -61,21 +67,23 @@ function get(db: Db, url: URL, res: ServerResponse): void {
   if (url.pathname === "/api/modules") return sendJson(res, 200, modules(db, url.searchParams.get("period") ?? ""));
   if (url.pathname === "/api/case") return found(res, caseView(db, url.searchParams.get("intent") ?? ""));
   if (url.pathname === "/api/workpaper") return found(res, workpaperView(db, url.searchParams.get("decision") ?? ""));
-  if (url.pathname === "/site") return site(res);
+  // One address for both: the marketing page at the root, the workspace at /dashboard. Its scripts and styles keep their root paths.
+  if (url.pathname === "/" || url.pathname === "/site") return site(res);
+  if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") return sendStatic(res, PUBLIC, "/index.html");
   if (url.pathname.startsWith("/api/")) throw new HttpError(404, "not found");
   sendStatic(res, PUBLIC, url.pathname);
 }
 
-/** Where the logo leads: the marketing page. Deployed, that is MARKETING_URL; on this machine it is the file in `frontend/`. */
+/** The root, and where the logo leads: the marketing page. Deployed elsewhere, that is MARKETING_URL; here it is the file in `frontend/`. */
 function site(res: ServerResponse): void {
-  const deployed = marketingUrl();
-  if (deployed) {
-    res.writeHead(302, { location: deployed });
+  const elsewhere = marketingUrl();
+  const location = elsewhere ?? (existsSync(SITE) ? null : "/dashboard");
+  if (location) {
+    res.writeHead(302, { location });
     res.end();
     return;
   }
-  if (!existsSync(SITE)) throw new HttpError(404, "no marketing page in this checkout");
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": SITE_CSP, "x-content-type-options": "nosniff" });
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "content-security-policy": SITE_CSP, "x-content-type-options": "nosniff" });
   res.end(readFileSync(SITE));
 }
 
