@@ -57,7 +57,7 @@ def canon(s):
 results = []
 for r in test:
     pred = canon(gen(r["messages"])); gold = canon(r["messages"][-1]["content"])
-    results.append({"decision_id": r["meta"]["decision_id"], "held_out_party": r["meta"].get("held_out_party", False),
+    results.append({"id": r["meta"].get("decision_id") or r["meta"].get("entity", "?"), "held_out_party": r["meta"].get("held_out_party", False),
                     "exact": pred is not None and pred == gold, "parse_ok": pred is not None})
 n = len(results); ho = [r for r in results if r["held_out_party"]]
 summary = {
