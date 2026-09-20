@@ -1,6 +1,6 @@
 # Documents for the demo: what real ones look like, and what to change in the seed
 
-Status: **proposal from Person A, 2026-09-19 22:26 ET**, for lane B's generator (`src/seed/generate.ts`,
+Status: **proposal from Person A, 2026-09-19 22:23 ET**, for lane B's generator (`src/seed/generate.ts`,
 `world/northwind.json`). Companion to `DEMO_STORY.md`. The judges' point: fake data is fine, unrealistic data is not,
 and a workflow that exists only for the demo shows. Everything below is cheap: text and labels, no new logic, ids stay.
 
