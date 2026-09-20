@@ -28,7 +28,7 @@ const COVERED_SQL = `(d.tier = 0 OR json_array_length(json_extract(d.proposal_js
 
 /**
  * Two kinds of evidence, one row each. Replay of closed periods: did the agent's entry match what the humans had
- * booked. The live month: did a person approve or reject the entry the agent proposed. Replays of points cut from
+ * booked, counted once per historical decision however many times it has been replayed (the latest replay stands). The live month: did a person approve or reject the entry the agent proposed. Replays of points cut from
  * the live month are left out, or the same case would count twice; entries that only carry out a person's own
  * answer (router:resume) are not the agent's proposal and are left out too.
  */
@@ -38,6 +38,7 @@ const EVIDENCE_SQL = `
          CASE WHEN ${COVERED_SQL} THEN 1 ELSE 0 END AS covered
   FROM replay_result r JOIN decision_point p ON p.id = r.decision_point_id JOIN decision d ON d.id = r.decision_id
   WHERE substr(p.id, 1, ${LIVE_POINT_PREFIX.length}) != '${LIVE_POINT_PREFIX}'
+    AND r.rowid = (SELECT MAX(r2.rowid) FROM replay_result r2 WHERE r2.decision_point_id = r.decision_point_id)
   UNION ALL
   SELECT d.function, d.kind, CASE WHEN a.outcome = 'approved' THEN 1 ELSE 0 END, CASE WHEN ${COVERED_SQL} THEN 1 ELSE 0 END
   FROM approval a JOIN decision d ON d.id = a.decision_id

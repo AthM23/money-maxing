@@ -64,17 +64,19 @@ describe("asked once: the answer becomes evidence, a scoped fact, and the entry"
 
     db.exec(`INSERT INTO invoice (id, party_id, issue_date, due_date, total_cents, open_cents, status) VALUES ('INV-1090','wayne','2026-08-01','2026-08-31',3300000,3300000,'open');
              INSERT INTO period (id, status) VALUES ('2026-08','open');
+             INSERT INTO bank_txn (id, posted_date, amount_cents, descriptor, method, party_id) VALUES ('BTX-10','2026-08-16',2970000,'ACH WAYNE ENT','ach','wayne');
              INSERT INTO intent (id, function, question, owner, status, created_at) VALUES ('int_10','ar','Wayne short again','ar','open','2026-08-16T09:00:00Z');
              UPDATE gl_line SET debit_cents = debit_cents + 3300000 WHERE entry_id = 'je_open' AND line_no = 1;
              UPDATE gl_line SET credit_cents = credit_cents + 3300000 WHERE entry_id = 'je_open' AND line_no = 2;`);
-    const august = { ...wayne, intent_id: "int_10", entry_date: "2026-08-16", bank_txn_id: undefined, doc_ids: ["INV-1090"], received_cents: 0 };
+    const august = { ...wayne, intent_id: "int_10", entry_date: "2026-08-16", bank_txn_id: "BTX-10", doc_ids: ["INV-1090"] };
     const again = await runCase(db, august, { ...opts, investigators: [asksTheOwner] });
     expect(again.notes.join(" ")).toMatch(/not used: (date|one_time_used)/);
     expect(again.final_route).toBe("ESCALATE");
     const questions = db.prepare("SELECT question_json FROM escalation ORDER BY asked_at, rowid").all() as { question_json: string }[];
     expect(questions).toHaveLength(2);
     expect(questions[1]!.question_json).toContain("prior_answer");
-    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1090'").get()).toEqual({ open_cents: 3300000 });
+    // August's cash is applied; the shortfall is left alone until the owner answers again.
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1090'").get()).toEqual({ open_cents: 330000 });
   });
 
   it("an answer from someone who was not asked and has no authority is refused, and nothing is remembered", async () => {

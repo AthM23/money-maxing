@@ -71,7 +71,7 @@ function visibleBankTxn(db: Db, id: string, meta: ContextMeta): ReturnType<typeo
 }
 
 /** Cents of a bank line already applied by decisions that took effect. A bank line cannot be spent twice. */
-function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
+export function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
   const row = db
     .prepare(
       `SELECT COALESCE(SUM(a.value ->> '$.amount_cents'), 0) AS n

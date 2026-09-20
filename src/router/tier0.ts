@@ -4,6 +4,7 @@ import { evaluateCondition } from "../kernel/index.js";
 import type { Condition } from "../kernel/types.js";
 import { applicableFacts } from "../memory/applicability.js";
 import type { Db } from "../runtime/db.js";
+import { bankTxnAppliedCents } from "../runtime/kernelContext.js";
 import { safeJson } from "../runtime/lookups.js";
 
 /** Tier 0 builds proposals in code from an exact match, an active fact or an approved policy. No model call. */
@@ -17,21 +18,47 @@ export interface Tier0Plan {
 export function planTier0(db: Db, c: CaseFile, asOf?: string): Tier0Plan {
   const notes: string[] = [];
   const proposals: Proposal[] = [];
-  if (c.received_cents > 0 && c.bank_txn_id) proposals.push(cashApplication(db, c));
+  const replaying = asOf !== undefined;
+  const cashToApply = replaying ? c.received_cents : cashStillToApply(db, c, notes);
+  if (cashToApply > 0 && c.bank_txn_id) proposals.push(cashApplication(db, c, replaying));
   if (c.shortfall_cents <= 0) return { proposals, unexplained_cents: 0, notes };
 
+  const stillOpen = replaying ? c.shortfall_cents : shortfallStillOpen(db, c, cashToApply);
+  if (stillOpen <= 0) return { proposals, unexplained_cents: 0, notes };
+  if (stillOpen !== c.shortfall_cents) {
+    notes.push(`${stillOpen} cents are still open on ${c.doc_ids.join(", ")}, the case file says ${c.shortfall_cents}: something else has adjusted these documents`);
+    return { proposals, unexplained_cents: stillOpen, notes };
+  }
   const adjustment = fromFact(db, c, notes, asOf) ?? fromPolicy(db, c, notes);
   if (adjustment) proposals.push(adjustment);
   return { proposals, unexplained_cents: adjustment ? 0 : c.shortfall_cents, notes };
 }
 
+/**
+ * A case can come round again: after a person's answer, after a rule is approved, after a failed pass. The plan is
+ * made from the ledger as it stands, so money that has already been applied is never applied twice.
+ */
+function cashStillToApply(db: Db, c: CaseFile, notes: string[]): number {
+  if (!c.bank_txn_id || c.received_cents <= 0) return 0;
+  const applied = bankTxnAppliedCents(db, c.bank_txn_id);
+  if (applied === 0) return c.received_cents;
+  if (applied < c.received_cents) notes.push(`bank line ${c.bank_txn_id}: ${applied} of ${c.received_cents} cents already applied by another entry; the rest is left for a person`);
+  return 0;
+}
+
+/** What the documents will still owe once the cash in hand has landed. */
+function shortfallStillOpen(db: Db, c: CaseFile, cashToApply: number): number {
+  const open = c.doc_ids.reduce((n, id) => n + liveOpenBalance(db, id), 0);
+  return open - Math.min(cashToApply, open);
+}
+
 /** Apply what arrived, oldest document first. Arithmetic in code; the kernel re-checks it anyway. */
-function cashApplication(db: Db, c: CaseFile): Proposal {
+function cashApplication(db: Db, c: CaseFile, replaying: boolean): Proposal {
   let left = c.received_cents;
   const applications: Proposal["applications"] = [];
   for (const docId of c.doc_ids) {
     if (left <= 0) break;
-    const amount = Math.min(left, openBalance(db, c, docId));
+    const amount = Math.min(left, replaying ? snapshotBalance(db, c, docId) : liveOpenBalance(db, docId));
     if (amount > 0) applications.push({ doc_id: docId, amount_cents: amount });
     left -= amount;
   }
@@ -47,9 +74,11 @@ function cashApplication(db: Db, c: CaseFile): Proposal {
 }
 
 /** In replay the balance comes from the case snapshot: today's ledger already shows the invoice settled. */
-function openBalance(db: Db, c: CaseFile, docId: string): number {
-  const snap = c.docs_snapshot?.find((d) => d.id === docId);
-  if (snap) return snap.open_cents;
+function snapshotBalance(db: Db, c: CaseFile, docId: string): number {
+  return c.docs_snapshot?.find((d) => d.id === docId)?.open_cents ?? liveOpenBalance(db, docId);
+}
+
+function liveOpenBalance(db: Db, docId: string): number {
   const doc = db.prepare("SELECT open_cents FROM invoice WHERE id = ?").get(docId) as { open_cents: number } | undefined;
   return doc?.open_cents ?? 0;
 }

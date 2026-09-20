@@ -75,6 +75,10 @@ function problemWith(row: IntentRow): CaseFile | string {
   if (!parsed.success) return `case file does not parse: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`;
   if (parsed.data.intent_id !== row.id) return `case file names intent ${parsed.data.intent_id}, not ${row.id}`;
   if (parsed.data.function !== row.function) return `case file is for ${parsed.data.function}, the intent is for ${row.function}`;
+  const c = parsed.data;
+  if (c.expected_cents - c.received_cents !== c.shortfall_cents) {
+    return `case file does not add up: expected ${c.expected_cents} minus received ${c.received_cents} is not the stated shortfall ${c.shortfall_cents}`;
+  }
   return parsed.data;
 }
 
