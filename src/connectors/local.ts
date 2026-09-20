@@ -7,7 +7,7 @@ import type { ChatPayload, Connector, MailPayload, RawItem } from "./types.js";
  * Local stores behind the same trace shapes as the live systems (written by `writeStores`). The roadmap's rule:
  * local first, live swapped in behind the same names. A missing store yields nothing rather than an error.
  */
-export const DEFAULT_STORES_DIR = "data/stores";
+export const DEFAULT_STORES_DIR = process.env.FOOTNOTE_STORES || "data/stores";
 
 function readJson<T>(path: string): T | null {
   return existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as T) : null;
@@ -111,6 +111,12 @@ export function policyFiles(dir: string): Connector {
 }
 
 const BANK_HEADER = "external_id,posted_date,amount,descriptor,method,recorded_time,running_balance";
+/**
+ * The wide file a multi-account, multi-currency bank feed sends: the same seven columns, then which account, and for
+ * a converted receipt what the bank did. `amount` is always the USD that landed. Conversion has its own control
+ * total: foreign amount x rate, less the fee, must be `amount` to the cent, or the whole file is refused.
+ */
+export const BANK_HEADER_WIDE = `${BANK_HEADER},account,entity,currency,foreign_amount,fx_rate,fee,advice_ref`;
 
 /**
  * The bank feed is a file (Phase 0 decision 3). Structure is validated before content, and the whole file is
@@ -118,21 +124,29 @@ const BANK_HEADER = "external_id,posted_date,amount,descriptor,method,recorded_t
  * corpus F-01), amounts parse to integer cents without a float (F-07), and the running balance is the control
  * total: previous balance plus the line equals the printed balance, line by line (F-04).
  */
-export function bankFile(dir: string, account = "operating"): Connector {
+export function bankFile(dir: string, account?: string): Connector {
   return {
     name: "bank-file",
     async pull() {
-      const path = join(dir, "bank", `${account}.csv`);
-      if (!existsSync(path)) return [];
-      return parseBankCsv(readFileSync(path, "utf8"), `${account}.csv`);
+      const folder = join(dir, "bank");
+      if (!existsSync(folder)) return [];
+      // one file per bank account, each with its own running balance; a named account reads only its own file
+      const files = account ? [`${account}.csv`].filter((f) => existsSync(join(folder, f))) : readdirSync(folder).filter((f) => f.endsWith(".csv")).sort();
+      const items = files.flatMap((f) => parseBankCsv(readFileSync(join(folder, f), "utf8"), f));
+      const seen = new Set<string>();
+      for (const i of items) {
+        if (seen.has(i.external_id)) throw new Error(`REFUSE bank files: ${i.external_id} appears in more than one account file`);
+        seen.add(i.external_id);
+      }
+      return items;
     },
   };
 }
 
 export function parseBankCsv(text: string, label = "bank file"): RawItem[] {
   const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim() !== "");
-  if (lines[0] !== BANK_HEADER) throw new Error(`REFUSE ${label}: unexpected header`);
-  const width = BANK_HEADER.split(",").length;
+  if (lines[0] !== BANK_HEADER && lines[0] !== BANK_HEADER_WIDE) throw new Error(`REFUSE ${label}: unexpected header`);
+  const width = lines[0]!.split(",").length;
   let balance: number | null = null;
   const ids = new Set<string>();
   return lines.slice(1).map((line, i): RawItem => {
@@ -149,13 +163,47 @@ export function parseBankCsv(text: string, label = "bank file"): RawItem[] {
     if (balance !== null && balance + cents !== printed) throw new Error(`REFUSE ${label}: row ${i + 2} breaks the running balance (${balance} + ${cents} is not ${printed})`);
     balance = printed;
     if (!IsoDate.safeParse(posted).success) throw new Error(`REFUSE ${label}: row ${i + 2} posted_date is not a valid YYYY-MM-DD`);
+    const wide = f.length > 7 ? wideFields(f.slice(7) as WideFields, cents, label, i + 2) : undefined;
     return {
       source: "bank", kind: "bank_line", external_id: id, event_time: `${posted}T00:00:00Z`, recorded_time: recorded,
-      payload: { posted_date: posted, amount_cents: cents, amount, descriptor, method },
+      payload: { posted_date: posted, amount_cents: cents, amount, descriptor, method, ...wide?.payload },
       party_hint: { text: descriptor },
-      bank_txn: { id, posted_date: posted, amount_cents: cents, descriptor, method },
+      bank_txn: { id, posted_date: posted, amount_cents: cents, descriptor, method, ...(wide ? { label: wide.label, fx: wide.fx } : {}) },
     };
   });
+}
+
+type WideFields = [account: string, entity: string, currency: string, foreign: string, rate: string, fee: string, advice: string];
+type BankTxn = NonNullable<RawItem["bank_txn"]>;
+
+/** The wide file's extra columns. A USD line leaves the conversion columns empty; a converted one must fill and tie them. */
+function wideFields(f: WideFields, cents: number, label: string, row: number): { payload: Record<string, string>; label: NonNullable<BankTxn["label"]>; fx: BankTxn["fx"] } {
+  const [account, entity, currency, foreign, rate, fee, advice] = f;
+  if (!account || !/^[A-Z]{3}$/.test(currency)) throw new Error(`REFUSE ${label}: row ${row} needs an account and a three-letter currency`);
+  const base = { account, entity, currency };
+  const lbl = { account_id: account, entity_id: entity || null, currency };
+  if (currency === "USD") {
+    if (foreign || rate || fee) throw new Error(`REFUSE ${label}: row ${row} is USD but carries conversion fields`);
+    return { payload: base, label: lbl, fx: undefined };
+  }
+  const foreignCents = toCents(foreign, label, row);
+  const feeCents = toCents(fee || "0.00", label, row);
+  const m = /^(\d+)\.(\d{4,6})$/.exec(rate);
+  if (!m) throw new Error(`REFUSE ${label}: row ${row} fx_rate "${rate}" is not a plain decimal with four to six places`);
+  const ratePpm = Number(m[1]) * 1_000_000 + Number(m[2]!.padEnd(6, "0"));
+  if (convert(foreignCents, ratePpm) - feeCents !== cents) {
+    throw new Error(`REFUSE ${label}: row ${row} conversion does not tie (${foreign} x ${rate} less ${fee || "0.00"} is not ${cents} cents)`);
+  }
+  return {
+    payload: { ...base, foreign_amount: foreign, fx_rate: rate, fee: fee || "0.00", ...(advice ? { advice_ref: advice } : {}) },
+    label: lbl,
+    fx: { currency, foreign_amount_cents: foreignCents, rate_ppm: ratePpm, fee_cents: feeCents, advice_ref: advice || null },
+  };
+}
+
+/** Foreign cents times a rate in parts per million, rounded half up, in integers throughout (corpus F-07). */
+export function convert(foreignCents: number, ratePpm: number): number {
+  return Number((BigInt(foreignCents) * BigInt(ratePpm) + 500_000n) / 1_000_000n);
 }
 
 function toCents(s: string, label: string, row: number): number {

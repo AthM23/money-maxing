@@ -21,6 +21,10 @@ export const WorldParty = z.object({
   /** Vendors: bank details as last paid. */
   remit_to: z.object({ bank: z.string(), routing: z.string(), account_last4: z.string() }).optional(),
   default_expense_account: z.string().optional(),
+  /** ISO 3166 alpha-2. A label for the console's cash strip; no logic reads it. */
+  country: z.string().length(2).optional(),
+  /** Which legal entity of ours bills this customer: a key of `World.entities`. A label, like `country`. */
+  billed_by: z.string().optional(),
 });
 export type WorldParty = z.infer<typeof WorldParty>;
 
@@ -37,15 +41,24 @@ export type WorldPerson = z.infer<typeof WorldPerson>;
 export const WorldContract = z.object({
   id: z.string().min(1), party_id: z.string().min(1), start_date: IsoDate, end_date: IsoDate,
   value_cents: NonNegCents,
-  terms: z.object({ monthly_cents: NonNegCents, billing: z.literal("monthly"), payment_terms_days: z.number().int(), method: z.enum(["ach", "wire"]) }),
+  /** `monthly_cents` and `value_cents` are USD. A contract priced in another currency says so here and in its text. */
+  terms: z.object({
+    monthly_cents: NonNegCents, billing: z.literal("monthly"), payment_terms_days: z.number().int(), method: z.enum(["ach", "wire"]),
+    currency: z.string().length(3).optional(), foreign_monthly_cents: NonNegCents.optional(),
+  }),
   text: z.string().min(1),
   recorded_time: IsoTs,
 });
 export type WorldContract = z.infer<typeof WorldContract>;
 
+/** Rates are USD per one unit of the foreign currency, times 1,000,000: 1.1000 is 1100000. No float touches a rate. */
+const RatePpm = z.number().int().positive();
+
 export const WorldInvoice = z.object({
   id: z.string().min(1), party_id: z.string().min(1), contract_id: z.string().min(1),
   issue_date: IsoDate, due_date: IsoDate, total_cents: NonNegCents,
+  /** Billed in a foreign currency. `total_cents` stays USD at the booked rate, so the AR control account still ties. */
+  fx: z.object({ currency: z.string().length(3), foreign_total_cents: NonNegCents, booked_rate_ppm: RatePpm }).optional(),
 });
 export type WorldInvoice = z.infer<typeof WorldInvoice>;
 
@@ -69,6 +82,14 @@ export const WorldBankTxn = z.object({
   id: z.string().min(1), posted_date: IsoDate, amount_cents: Cents, descriptor: z.string().min(1),
   method: z.enum(["ach", "wire", "check", "card", "other"]), recorded_time: IsoTs,
   history: HistorySettlement.optional(),
+  /** Which of our bank accounts: a key of `World.bank.accounts`. Absent in a one-account world. */
+  account: z.string().optional(),
+  /** A receipt the bank converted. `amount_cents` is the USD that landed: foreign x rate, less the fee. */
+  fx: z.object({
+    currency: z.string().length(3), foreign_amount_cents: NonNegCents, rate_ppm: RatePpm, fee_cents: NonNegCents,
+    /** `World.mail` id of the bank's credit advice, which states the foreign amount, the rate and the fee. */
+    advice_mail_id: z.string().min(1),
+  }).optional(),
 });
 export type WorldBankTxn = z.infer<typeof WorldBankTxn>;
 
@@ -94,6 +115,9 @@ export const WorldFile = z.object({
   sections: z.array(z.object({ slug: z.string(), heading: z.string(), text: z.string() })),
 });
 
+export const WorldEntity = z.object({ id: z.string().min(1), name: z.string().min(1), country: z.string().length(2) });
+export const WorldBankAccount = z.object({ id: z.string().min(1), entity: z.string().min(1), label: z.string().min(1), opening_balance_cents: Cents });
+
 export const World = z.object({
   meta: z.object({ seed: z.number().int(), company: z.string(), version: z.number().int(), live_period: z.string(), history_periods: z.array(z.string()) }),
   periods: z.array(z.object({ id: z.string(), status: z.enum(["open", "closing", "locked"]) })),
@@ -102,7 +126,10 @@ export const World = z.object({
   contracts: z.array(WorldContract),
   invoices: z.array(WorldInvoice),
   bills: z.array(WorldBill),
-  bank: z.object({ account: z.string(), opening_balance_cents: Cents, txns: z.array(WorldBankTxn) }),
+  /** Our legal entities. Labels only: the ledger is one set of books in USD. Absent in a one-entity world. */
+  entities: z.array(WorldEntity).optional(),
+  /** `accounts` absent: one account named `account`, one bank file. Present: one file per account, every txn names its own. */
+  bank: z.object({ account: z.string(), opening_balance_cents: Cents, accounts: z.array(WorldBankAccount).optional(), txns: z.array(WorldBankTxn) }),
   mail: z.array(WorldMail),
   chat: z.array(WorldChat),
   crm: z.object({ deals: z.array(WorldDeal), notes: z.array(WorldCrmNote) }),
@@ -118,5 +145,7 @@ export interface AnswerKeyItem {
   doc_ids: string[];
   shortfall_cents: number;
   explained_by?: string;
+  /** A shortfall with more than one cause, in USD cents. The parts sum to `shortfall_cents`. */
+  causes?: { fx_loss_cents: number; bank_fee_cents: number; withheld_cents: number };
   expected: string;
 }

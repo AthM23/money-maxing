@@ -16,7 +16,13 @@ export interface RawItem {
   /** Hints for entity resolution, tried in order: explicit id, email addresses, free text (bank descriptor). */
   party_hint?: { party_id?: string; emails?: string[]; text?: string };
   /** Bank lines only: ingestion also writes the `bank_txn` row the ledger tools read. */
-  bank_txn?: { id: string; posted_date: string; amount_cents: number; descriptor: string; method: string };
+  bank_txn?: {
+    id: string; posted_date: string; amount_cents: number; descriptor: string; method: string;
+    /** Which of our accounts the line landed in, when the file says (the wide bank file). */
+    label?: { account_id: string; entity_id: string | null; currency: string };
+    /** A receipt the bank converted: what the file states, already checked against the USD amount. */
+    fx?: { currency: string; foreign_amount_cents: number; rate_ppm: number; fee_cents: number; advice_ref: string | null };
+  };
 }
 
 export interface Connector {

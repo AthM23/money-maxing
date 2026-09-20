@@ -57,10 +57,10 @@ function compareOne(db: Db, clock: Clock, txn: UnmatchedBankTxn): DriftFinding {
   const caseFile = CaseFile.parse({
     intent_id: intentId, function: "ar", party_id, entry_date: txn.posted_date, bank_txn_id: txn.id,
     doc_ids: docs.map((d) => d.id), expected_cents: expected, received_cents: received, shortfall_cents: shortfall,
-    method: methodOf(txn.method), trace_ids: [...(txn.trace_id ? [txn.trace_id] : []), ...(remittance ? [remittance.trace_id] : [])], remittance, matching_issue,
+    method: methodOf(txn.method), trace_ids: [...(txn.trace_id ? [txn.trace_id] : []), ...(remittance ? [remittance.trace_id] : []), ...bankAdvice(db, txn.id)], remittance, matching_issue,
   });
   db.prepare("INSERT INTO intent (id, function, question, owner, status, end_condition_json, case_json, created_at) VALUES (?, 'ar', ?, 'ar', 'open', ?, ?, ?)")
-    .run(intentId, question(kind, txn, docs, shortfall, payerLabel(db, txn, party_id)), JSON.stringify({ bank_txn_applied: txn.id, docs_settled: docs.map((d) => d.id) }), JSON.stringify(caseFile), clock.now());
+    .run(intentId, question(kind, txn, docs, shortfall, payerLabel(db, txn, party_id), matching_issue), JSON.stringify({ bank_txn_applied: txn.id, docs_settled: docs.map((d) => d.id) }), JSON.stringify(caseFile), clock.now());
   db.prepare("INSERT INTO drift_case (dedupe_key, comparator, intent_id, delta_cents, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)")
     .run(dedupeKey, COMPARATOR, intentId, shortfall, clock.now(), clock.now());
 
@@ -120,6 +120,12 @@ function candidateDocs(db: Db, txn: UnmatchedBankTxn): { party_id: string; docs:
   return { party_id: payer, docs: [] };
 }
 
+/** A converted receipt comes with the bank's credit advice. The case carries it, so whoever works the case starts from the bank's own words. */
+function bankAdvice(db: Db, bankTxnId: string): string[] {
+  const row = db.prepare("SELECT f.advice_trace_id AS id FROM bank_txn_fx f JOIN trace t ON t.id = f.advice_trace_id WHERE f.bank_txn_id = ?").get(bankTxnId) as { id: string } | undefined;
+  return row ? [row.id] : [];
+}
+
 /** A single invoice, or a unique exact subset. A search limit means unresolved, never first-match wins. */
 function covering(open: InvoiceRow[], cents: number): InvoiceRow[] {
   if (open.length === 1) return open;
@@ -147,8 +153,10 @@ function explainingFact(db: Db, c: CaseFile): string | undefined {
   return undefined;
 }
 
-function question(kind: DriftKind, txn: UnmatchedBankTxn, docs: InvoiceRow[], shortfall: number, party: string): string {
+function question(kind: DriftKind, txn: UnmatchedBankTxn, docs: InvoiceRow[], shortfall: number, party: string, matchingIssue?: string): string {
   const ids = docs.map((d) => d.id).join(", ");
+  // Open invoices exist, but which ones the money is for could not be settled in code. That is not "no open invoice".
+  if (matchingIssue) return `Allocate the ${usd(txn.unapplied_cents)} deposit from ${party}: ${matchingIssue}`;
   switch (kind) {
     case "exact": return `Apply ${usd(txn.unapplied_cents)} from ${party} to ${ids}`;
     case "short_pay": return `Resolve the ${usd(shortfall)} shortfall on ${ids}`;

@@ -3,39 +3,43 @@ import { dirname } from "node:path";
 import { DEFAULT_STORES_DIR } from "../connectors/local.js";
 import { dbPath, openWorldDb, resetDb } from "../ledger/db.js";
 import { DEFAULT_SEED, generateWorld } from "./generate.js";
+import { generateGlobalJuly } from "./globalJuly.js";
 import { seedLocal, writeStores } from "./local.js";
-import { ANSWER_KEY_PATH, WORLD_PATH } from "./paths.js";
+import { WORLDS, worldName, type WorldName } from "./paths.js";
 import { applySlackUserMap, slackUserMapFromEnv } from "./slackUsers.js";
 import { World } from "./world.js";
 
 const TARGETS = ["world", "local", "quickbooks", "gmail", "slack", "all"] as const;
 type Target = (typeof TARGETS)[number];
 
-interface Args { target: Target; reset: boolean; seed: number }
+interface Args { target: Target; reset: boolean; seed: number; world: WorldName }
 
 function parseArgs(argv: string[]): Args {
   const get = (name: string): string | undefined => argv.find((a) => a.startsWith(`--${name}=`))?.split("=")[1];
   const target = (get("target") ?? "local") as Target;
   if (!TARGETS.includes(target)) throw new Error(`--target must be one of ${TARGETS.join(", ")}`);
-  return { target, reset: argv.includes("--reset"), seed: Number(get("seed") ?? DEFAULT_SEED) };
+  return { target, reset: argv.includes("--reset"), seed: Number(get("seed") ?? DEFAULT_SEED), world: worldName(argv) };
 }
 
 const log = (s: string): void => { process.stdout.write(`${s}\n`); };
 
 /** Regenerate only when asked (target world) or missing: the committed file is the canonical world. */
 function loadWorld(args: Args): World {
-  if (args.target === "world" || !existsSync(WORLD_PATH)) {
-    const { world, answerKey } = generateWorld(args.seed);
-    mkdirSync(dirname(WORLD_PATH), { recursive: true });
-    writeFileSync(WORLD_PATH, `${JSON.stringify(world, null, 2)}\n`);
-    writeFileSync(ANSWER_KEY_PATH, `${JSON.stringify(answerKey, null, 2)}\n`);
-    log(`wrote ${WORLD_PATH} (seed ${args.seed}) and ${ANSWER_KEY_PATH} (gitignored)`);
+  const { path, answer_key } = WORLDS[args.world];
+  if (args.target === "world" || !existsSync(path)) {
+    const { world, answerKey } = args.world === "global-july" ? generateGlobalJuly() : generateWorld(args.seed);
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, `${JSON.stringify(world, null, 2)}
+`);
+    writeFileSync(answer_key, `${JSON.stringify(answerKey, null, 2)}
+`);
+    log(`wrote ${path}${args.world === "northwind" ? ` (seed ${args.seed})` : ""} and ${answer_key} (gitignored)`);
     return world;
   }
-  return World.parse(JSON.parse(readFileSync(WORLD_PATH, "utf8")));
+  return World.parse(JSON.parse(readFileSync(path, "utf8")));
 }
 
-/** `pnpm seed --target=<world|local|quickbooks|gmail|slack|all> [--reset] [--seed=N]` */
+/** `pnpm seed --target=<world|local|quickbooks|gmail|slack|all> [--world=northwind|global-july] [--reset] [--seed=N]` */
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const world = loadWorld(args);

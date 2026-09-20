@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACCOUNTS } from "../contract/accounts.js";
 import { CaseFile, HumanOutcome } from "../contract/types.js";
+import { BANK_HEADER_WIDE } from "../connectors/local.js";
 import { traceId } from "../ingest/ids.js";
 import { SEED_ACCOUNTS } from "../ledger/accounts.js";
 import type { Db } from "../ledger/db.js";
@@ -31,9 +32,10 @@ export function seedLocal(db: Db, world: World): SeedLocalResult {
     const seededAt = new Date().toISOString();
     const note = (kind: string, id: string): void => { manifest.run(`${kind}:${id}`, kind, id, seededAt); };
 
-    for (const p of world.periods) db.prepare("INSERT INTO period (id, status, locked_at) VALUES (?, ?, ?)").run(p.id, p.status, p.status === "locked" ? `${p.id}-28T23:59:59Z` : null);
+    for (const p of world.periods) db.prepare("INSERT INTO period (id, status, locked_at) VALUES (?, ?, ?)").run(p.id, p.status, p.status === "locked" ? lockedAt(p.id) : null);
     seedApprovers(db, world);
     result.parties = seedParties(db, world, note);
+    seedLabels(db, world);
 
     db.prepare("INSERT INTO intent (id, function, question, owner, status, created_at, closed_at) VALUES (?, 'close', 'Seeded history: Q2 as the humans closed it', 'seed', 'resolved', ?, ?)").run(SEED_INTENT_ID, SEED_TS, SEED_TS);
     db.prepare("INSERT INTO decision (id, intent_id, function, mode, kind, actor, autonomy_level, created_at) VALUES (?, ?, 'close', 'live', 'no_action', 'seed', 'auto', ?)").run(SEED_DECISION_ID, SEED_INTENT_ID, SEED_TS);
@@ -49,6 +51,11 @@ export function seedLocal(db: Db, world: World): SeedLocalResult {
       const open = inv.total_cents - (settled.get(inv.id) ?? 0);
       db.prepare("INSERT INTO invoice (id, party_id, contract_id, issue_date, due_date, total_cents, open_cents, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
         .run(inv.id, inv.party_id, inv.contract_id, inv.issue_date, inv.due_date, inv.total_cents, open, open === 0 ? "paid" : "open");
+      // A foreign-currency invoice is booked in USD at its rate; the foreign side sits beside it for the kernel's FX check.
+      if (inv.fx) {
+        db.prepare("INSERT INTO invoice_fx (invoice_id, currency, foreign_total_cents, booked_rate_ppm) VALUES (?, ?, ?, ?)")
+          .run(inv.id, inv.fx.currency, inv.fx.foreign_total_cents, inv.fx.booked_rate_ppm);
+      }
       post(`inv_${inv.id}`, inv.issue_date, `Invoice ${inv.id}`, inv.party_id, [[ACCOUNTS.ar, inv.total_cents, 0], [ACCOUNTS.deferred_revenue, 0, inv.total_cents]]);
       if (world.meta.history_periods.includes(inv.issue_date.slice(0, 7))) {
         post(`rev_${inv.id}`, monthEnd(inv.issue_date), `Revenue recognised ${inv.id}`, inv.party_id, [[ACCOUNTS.deferred_revenue, inv.total_cents, 0], [ACCOUNTS.subscription_revenue, 0, inv.total_cents]]);
@@ -97,6 +104,17 @@ function seedParties(db: Db, world: World, note: (kind: string, id: string) => v
     note("party", p.id);
   }
   return ordered.length;
+}
+
+/** Entities, bank accounts and customer countries: labels for the console's cash strip. A one-entity world has none. */
+function seedLabels(db: Db, world: World): void {
+  for (const e of world.entities ?? []) db.prepare("INSERT INTO entity (id, name, country) VALUES (?, ?, ?)").run(e.id, e.name, e.country);
+  for (const a of world.bank.accounts ?? []) {
+    db.prepare("INSERT INTO bank_account (id, entity_id, label, opening_balance_cents) VALUES (?, ?, ?, ?)").run(a.id, a.entity, a.label, a.opening_balance_cents);
+  }
+  for (const p of world.parties) {
+    if (p.country || p.billed_by) db.prepare("INSERT INTO party_profile (party_id, country, billed_by) VALUES (?, ?, ?)").run(p.id, p.country ?? null, p.billed_by ?? null);
+  }
 }
 
 /** Cents settled per document by the seeded history, write-offs included. */
@@ -163,6 +181,13 @@ function invoiceOf(world: World, id: string | undefined): WorldInvoice {
   return inv;
 }
 
+/** A month is locked once its close is done: the evening of the 6th of the next month, after the month-end entries. */
+function lockedAt(period: string): string {
+  const d = new Date(`${period}-01T22:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() + 1, 6);
+  return d.toISOString().replace(".000Z", "Z");
+}
+
 function monthEnd(iso: string): string {
   const d = new Date(`${iso.slice(0, 7)}-01T00:00:00Z`);
   d.setUTCMonth(d.getUTCMonth() + 1, 0);
@@ -177,13 +202,19 @@ export function writeStores(world: World, dir: string): void {
   rmSync(dir, { recursive: true, force: true });
   for (const sub of ["bank", "contracts", "files"]) mkdirSync(join(dir, sub), { recursive: true });
 
-  let balance = world.bank.opening_balance_cents;
-  const rows = world.bank.txns.map((t) => {
-    balance += t.amount_cents;
-    return [t.id, t.posted_date, decimal(t.amount_cents), csvField(t.descriptor), t.method, t.recorded_time, decimal(balance)].join(",");
-  });
-  writeFileSync(join(dir, "bank", `${world.bank.account}.csv`),
-    ["external_id,posted_date,amount,descriptor,method,recorded_time,running_balance", ...rows].join("\n") + "\n");
+  if (world.bank.accounts) writeAccountFiles(world, dir);
+  else {
+    let balance = world.bank.opening_balance_cents;
+    const rows = world.bank.txns.map((t) => {
+      balance += t.amount_cents;
+      return [t.id, t.posted_date, decimal(t.amount_cents), csvField(t.descriptor), t.method, t.recorded_time, decimal(balance)].join(",");
+    });
+    writeFileSync(join(dir, "bank", `${world.bank.account}.csv`),
+      ["external_id,posted_date,amount,descriptor,method,recorded_time,running_balance", ...rows].join("\n") + "\n");
+  }
+  // Which world these stores hold, and its seeded ids: a live mailbox or workspace shared with another world is
+  // filtered to this one (src/connectors/index.ts).
+  writeFileSync(join(dir, "world.json"), JSON.stringify({ company: world.meta.company, seed: world.meta.seed, horizon: `${world.periods.map((p) => p.id).sort().at(-1)}-31T23:59:59Z`, mail_ids: world.mail.map((m) => m.id), mail_keys: world.mail.map((m) => `${m.date}|${m.from.toLowerCase()}|${m.subject}`), chat_ids: world.chat.map((c) => c.id) }, null, 2));
 
   const names = new Map(world.people.map((p) => [p.id, p.name]));
   writeFileSync(join(dir, "mail.json"), JSON.stringify(world.mail, null, 2));
@@ -193,6 +224,27 @@ export function writeStores(world: World, dir: string): void {
     writeFileSync(join(dir, "contracts", `${c.id}.md`), `---\ncontract_id: ${c.id}\nparty_id: ${c.party_id}\nrecorded_time: ${c.recorded_time}\n---\n${c.text}\n`);
   }
   for (const f of world.files) writeFileSync(join(dir, "files", `${f.id}.json`), JSON.stringify(f, null, 2));
+}
+
+/** One wide file per bank account, each with its own running balance: the control total is per account, as a bank sends it. */
+function writeAccountFiles(world: World, dir: string): void {
+  for (const account of world.bank.accounts!) {
+    let balance = account.opening_balance_cents;
+    const rows = world.bank.txns.filter((t) => t.account === account.id).map((t) => {
+      balance += t.amount_cents;
+      const fx = t.fx ? [t.fx.currency, decimal(t.fx.foreign_amount_cents), rate(t.fx.rate_ppm), decimal(t.fx.fee_cents), t.fx.advice_mail_id] : ["USD", "", "", "", ""];
+      return [t.id, t.posted_date, decimal(t.amount_cents), csvField(t.descriptor), t.method, t.recorded_time, decimal(balance), account.id, account.entity, ...fx].join(",");
+    });
+    writeFileSync(join(dir, "bank", `${account.id}.csv`), [BANK_HEADER_WIDE, ...rows].join("\n") + "\n");
+  }
+  const stray = world.bank.txns.filter((t) => !world.bank.accounts!.some((a) => a.id === t.account));
+  if (stray.length > 0) throw new Error(`world bank lines name no known account: ${stray.map((t) => t.id).join(", ")}`);
+}
+
+/** Parts per million to a four-place rate, by string arithmetic: 1080000 is "1.0800". */
+export function rate(ppm: number): string {
+  const s = String(ppm).padStart(7, "0");
+  return `${s.slice(0, -6)}.${s.slice(-6, -2)}${s.slice(-2) === "00" ? "" : s.slice(-2)}`;
 }
 
 /** Integer cents to a decimal string, by string arithmetic. No float touches a money path (corpus F-07). */

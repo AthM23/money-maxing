@@ -1,5 +1,6 @@
 import type { Db } from "../ledger/db.js";
 import { qboEscape, type QboClient, type QboEntity } from "../connectors/qboClient.js";
+import { decimal, rate } from "./local.js";
 import type { World, WorldInvoice, WorldParty } from "./world.js";
 
 /**
@@ -155,7 +156,11 @@ function partyBody(p: WorldParty): Record<string, unknown> {
 
 function invoiceBody(inv: WorldInvoice, customerId: string, itemId: string): Record<string, unknown> {
   const amount = centsToQboAmount(inv.total_cents);
+  // Gate 1, decision 5: the sandbox company stays single-currency (multicurrency cannot be switched off again), so a
+  // foreign-currency invoice is mirrored at its USD booked amount with the foreign side stated in words.
+  const foreign = inv.fx ? `${inv.fx.currency} ${decimal(inv.fx.foreign_total_cents)} at ${rate(inv.fx.booked_rate_ppm)}` : null;
   return {
+    ...(foreign ? { CustomerMemo: { value: `Invoiced in ${inv.fx!.currency}: ${foreign} = USD ${decimal(inv.total_cents)}` } } : {}),
     // UNVERIFIED: a supplied DocNumber is honoured even when the company's "custom transaction numbers" setting is off
     DocNumber: inv.id,
     PrivateNote: `fn:${inv.id}`,
@@ -165,7 +170,7 @@ function invoiceBody(inv: WorldInvoice, customerId: string, itemId: string): Rec
     Line: [{
       DetailType: "SalesItemLineDetail",
       Amount: amount,
-      Description: `${QBO_ITEM_NAME} ${inv.issue_date.slice(0, 7)} (contract ${inv.contract_id})`,
+      Description: `${QBO_ITEM_NAME} ${inv.issue_date.slice(0, 7)} (contract ${inv.contract_id})${foreign ? `, ${foreign}` : ""}`,
       // UNVERIFIED: no TaxCodeRef. A US sandbox company with automated sales tax may want TaxCodeRef {value: "NON"} here.
       SalesItemLineDetail: { ItemRef: { value: itemId }, Qty: 1, UnitPrice: amount },
     }],

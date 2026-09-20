@@ -88,6 +88,53 @@ function boardPeriod(db: Db, worldDate: string | null): string | null {
   });
 }
 
+/**
+ * Cash received in the period, by our entity, bank account and the customer's country. Labels from the bank file and
+ * the seed (src/ledger/schema-b.sql); a one-entity world has none and the strip stays hidden. Converted receipts show
+ * the foreign amount beside the USD that landed.
+ */
+function cashStrip(db: Db, period: string | null): Row | null {
+  if (!period || !hasTable(db, "bank_txn_label")) return null;
+  const lines = rows(
+    db, "bank_txn",
+    `SELECT b.id, b.amount_cents, l.account_id, a.label AS account_label, e.name AS entity, p.country,
+            f.currency, f.foreign_amount_cents, f.rate_ppm, f.fee_cents
+     FROM bank_txn b JOIN bank_txn_label l ON l.bank_txn_id = b.id
+     LEFT JOIN bank_account a ON a.id = l.account_id LEFT JOIN entity e ON e.id = l.entity_id
+     LEFT JOIN party_profile p ON p.party_id = b.party_id LEFT JOIN bank_txn_fx f ON f.bank_txn_id = b.id
+     WHERE b.amount_cents > 0 AND substr(b.posted_date, 1, 7) = ?`,
+    period,
+  );
+  if (lines.length === 0) return null;
+  const group = (key: (r: Row) => string): Array<{ key: string; cents: number; receipts: number }> => {
+    const out = new Map<string, { key: string; cents: number; receipts: number }>();
+    for (const r of lines) {
+      const k = key(r);
+      const g = out.get(k) ?? { key: k, cents: 0, receipts: 0 };
+      g.cents += r.amount_cents as number;
+      g.receipts++;
+      out.set(k, g);
+    }
+    return [...out.values()].sort((a, b) => b.cents - a.cents);
+  };
+  return {
+    period,
+    by_entity: group((r) => (r.entity as string | null) ?? "unlabelled"),
+    by_account: group((r) => (r.account_label as string | null) ?? (r.account_id as string)),
+    by_country: group((r) => (r.country as string | null) ?? "unknown"),
+    converted: lines.filter((r) => r.currency).map((r) => ({ bank_txn_id: r.id, currency: r.currency, foreign_amount_cents: r.foreign_amount_cents, rate_ppm: r.rate_ppm, fee_cents: r.fee_cents, amount_cents: r.amount_cents })),
+  };
+}
+
+/** The foreign side of a case, when there is one: the invoice as billed and the receipt as the bank converted it. */
+function fxFor(db: Db, caseFile: { bank_txn_id?: string; doc_ids?: string[] } | null): Row | null {
+  if (!caseFile || !hasTable(db, "bank_txn_fx")) return null;
+  const receipt = caseFile.bank_txn_id ? rows(db, "bank_txn_fx", "SELECT * FROM bank_txn_fx WHERE bank_txn_id = ?", caseFile.bank_txn_id)[0] : undefined;
+  const ids = caseFile.doc_ids ?? [];
+  const invoices = ids.length ? rows(db, "invoice_fx", `SELECT * FROM invoice_fx WHERE invoice_id IN (${placeholders(ids.length)})`, ...ids) : [];
+  return receipt || invoices.length ? { receipt: receipt ?? null, invoices } : null;
+}
+
 function boards(db: Db): Row {
   const worldDate = safe<string | null>(null, () => worldToday(db));
   const period = boardPeriod(db, worldDate);
@@ -95,6 +142,7 @@ function boards(db: Db): Row {
   const latest = hasTable(db, "forecast_version") ? safe(undefined, () => getForecast(db)) : undefined;
   return {
     world_date: worldDate,
+    cash: safe<Row | null>(null, () => cashStrip(db, period)),
     period: period ? safe(null, () => db.prepare("SELECT id, status, locked_at FROM period WHERE id = ?").get(period) ?? null) : null,
     checklist,
     forecast: {
@@ -268,6 +316,7 @@ function intentDetail(db: Db, id: string): unknown {
       ? rows(db, "mirror_log", `SELECT decision_id, system, kind, external_id, status, detail, mirrored_at FROM mirror_log WHERE decision_id IN (${placeholders(decisionIds.length)}) ORDER BY mirrored_at, rowid`, ...decisionIds)
       : [],
     drift: driftFor(db, id, ripple),
+    fx: safe<Row | null>(null, () => fxFor(db, caseFile as { bank_txn_id?: string; doc_ids?: string[] } | null)),
   };
 }
 

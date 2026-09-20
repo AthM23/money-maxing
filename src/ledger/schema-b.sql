@@ -83,3 +83,35 @@ CREATE TABLE IF NOT EXISTS ripple (
   event_id INTEGER, created_at TEXT NOT NULL,
   UNIQUE (intent_id, function, kind, ref)
 );
+
+-- ───────────── the global July: labels for the console's cash strip. No kernel check and no agent tool reads them.
+
+CREATE TABLE IF NOT EXISTS entity (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, country TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS bank_account (
+  id TEXT PRIMARY KEY, entity_id TEXT NOT NULL REFERENCES entity(id), label TEXT NOT NULL, opening_balance_cents INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS party_profile (
+  party_id TEXT PRIMARY KEY REFERENCES party(id), country TEXT, billed_by TEXT REFERENCES entity(id)
+);
+-- which of our accounts a bank line landed in. Written by ingestion from the bank file's own columns.
+CREATE TABLE IF NOT EXISTS bank_txn_label (
+  bank_txn_id TEXT PRIMARY KEY REFERENCES bank_txn(id), account_id TEXT NOT NULL, entity_id TEXT, currency TEXT NOT NULL DEFAULT 'USD'
+);
+
+-- The FX data contract, column for column as lane A wrote it in context/GATE1_ANSWERS_A.md. Lane A is adding both tables
+-- to src/contract/schema.sql because the kernel context reads them; the contract schema runs first, so once they are
+-- there these two statements do nothing and should be deleted. They are here only so lane B can seed before that lands.
+CREATE TABLE IF NOT EXISTS invoice_fx (
+  invoice_id TEXT PRIMARY KEY REFERENCES invoice(id), currency TEXT NOT NULL,
+  foreign_total_cents INTEGER NOT NULL,
+  booked_rate_ppm INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS bank_txn_fx (
+  bank_txn_id TEXT PRIMARY KEY REFERENCES bank_txn(id), currency TEXT NOT NULL,
+  foreign_amount_cents INTEGER NOT NULL,
+  rate_ppm INTEGER NOT NULL,
+  fee_cents INTEGER NOT NULL DEFAULT 0,
+  advice_trace_id TEXT
+);

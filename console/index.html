@@ -117,6 +117,7 @@
   <div class="stats" id="stats">loading…</div>
 </header>
 <main>
+  <section id="cash-section" style="display:none"><h2 id="cash-title">Cash received</h2><div id="cash"></div></section>
   <div class="row3">
     <section><h2>Drift board · intents</h2><div class="board" id="intents"></div></section>
     <section><h2 id="close-title">Close checklist</h2><div class="board" id="close"></div></section>
@@ -151,6 +152,28 @@ function put(id, html) {
 }
 
 // ───────────── main page
+
+// Foreign amounts and rates are printed from integers, like money: no float touches either.
+const rate = (ppm) => { const s = String(int(ppm)).padStart(7, "0"); return s.slice(0, -6) + "." + s.slice(-6, -2); };
+const foreign = (cur, c) => esc(cur) + " " + digits(c);
+
+function renderCash(c) {
+  document.getElementById("cash-section").style.display = c ? "" : "none";
+  if (!c) return;
+  put("cash-title", `Cash received · ${esc(c.period)} · by entity, bank account and customer country`);
+  const col = (title, groups) => `<div><div class="kv">${title}</div>${groups.map((g) => `<div class="kv"><b>${money(g.cents)}</b> ${esc(g.key)} <span style="opacity:.6">· ${int(g.receipts)}</span></div>`).join("")}</div>`;
+  const converted = (c.converted || []).map((x) => `<div class="kv"><b>${esc(x.bank_txn_id)}</b> ${foreign(x.currency, x.foreign_amount_cents)} at ${rate(x.rate_ppm)}, less ${money(x.fee_cents)} bank charges = <b>${money(x.amount_cents)}</b></div>`).join("");
+  put("cash", `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px">${col("Entity", c.by_entity)}${col("Bank account", c.by_account)}${col("Customer country", c.by_country)}` +
+    `<div><div class="kv">Converted by the bank</div>${converted || '<div class="kv">none</div>'}</div></div>`);
+}
+
+function renderFx(fx) {
+  if (!fx) return "";
+  const inv = (fx.invoices || []).map((i) => `${esc(i.invoice_id)} billed <b>${foreign(i.currency, i.foreign_total_cents)}</b>, booked at <b>${rate(i.booked_rate_ppm)}</b>`).join(" · ");
+  const r = fx.receipt;
+  const got = r ? `received <b>${foreign(r.currency, r.foreign_amount_cents)}</b>, bank applied <b>${rate(r.rate_ppm)}</b>, charges <b>${money(r.fee_cents)}</b>` : "";
+  return `<div class="kv" style="margin:-8px 0 12px">${[inv, got].filter(Boolean).join(" · ")}</div>`;
+}
 
 function renderStats(m) {
   const tied = m.ar_gl_cents === m.ar_subledger_cents;
@@ -240,6 +263,7 @@ async function refresh() {
   renderStats(s.summary);
   renderIntents(s.intents || []);
   renderClose(s.boards || {});
+  renderCash((s.boards || {}).cash);
   renderForecast((s.boards || {}).forecast);
   put("events", (s.events || []).map((e) => `<div><span class="ts">#${int(e.id)} ${esc(String(e.ts).slice(11, 19))}</span> <span class="t">${esc(e.topic)}</span> ${esc(e.from_function)} ${esc(JSON.stringify(e.payload).slice(0, 220))}</div>`).join("") || '<div class="empty">Bus is empty.</div>');
   renderTrialBalance(s.trial_balance || []);
@@ -447,6 +471,7 @@ async function showIntent(id, scroll) {
   put("detail",
     `<div style="font-size:17px"><span class="tag">${esc(d.intent.function)}</span><b>${esc(d.intent.question)}</b> <span class="pill ${esc(d.intent.status)}">${esc(d.intent.status)}</span></div>` +
     `<div class="kv" style="margin:4px 0 12px">${caseLine} · ${esc(d.intent.id)} · opened ${when(d.intent.created_at)}${d.intent.closed_at ? " · closed " + when(d.intent.closed_at) : ""}</div>` +
+    renderFx(d.fx) +
     renderLanes(d) +
     (d.modifications.length ? `<h3>Revenue schedule, before and after<small>monthly amounts in dollars; changed months highlighted</small></h3>${d.modifications.map(renderSchedule).join("")}` : "") +
     (d.forecasts.length ? `<h3>13-week forecast, weekly change<small>inflows per week, this version against the one it replaced</small></h3>${d.forecasts.map(renderForecastDelta).join("")}` : "") +

@@ -76,6 +76,7 @@ function ingestOne(db: Db, clock: Clock, resolver: Resolver, item: RawItem, resu
   if (item.bank_txn) {
     bankTxnId = item.bank_txn.id;
     writeBankTxn(db, item.bank_txn, partyId, id, latest !== undefined);
+    writeBankExtras(db, item.bank_txn);
     if (!latest) result.bank_txns++;
   }
   const base = { trace_id: id, source: item.source, kind: item.kind, external_id: item.external_id, party_id: partyId, bank_txn_id: bankTxnId, version };
@@ -98,4 +99,21 @@ function writeBankTxn(db: Db, t: NonNullable<RawItem["bank_txn"]>, partyId: stri
   }
   db.prepare("INSERT INTO bank_txn (id, posted_date, amount_cents, descriptor, method, party_id, trace_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
     .run(t.id, t.posted_date, t.amount_cents, t.descriptor, t.method, partyId, trace);
+}
+
+/**
+ * What a wide bank file says beyond the line itself: which account it landed in, and what the bank converted. The
+ * advice is named by its mail id, so its trace id is known before the mailbox has been read (ids are a pure function).
+ */
+function writeBankExtras(db: Db, t: NonNullable<RawItem["bank_txn"]>): void {
+  if (t.label) {
+    db.prepare(
+      "INSERT INTO bank_txn_label (bank_txn_id, account_id, entity_id, currency) VALUES (?, ?, ?, ?) ON CONFLICT(bank_txn_id) DO UPDATE SET account_id = excluded.account_id, entity_id = excluded.entity_id, currency = excluded.currency",
+    ).run(t.id, t.label.account_id, t.label.entity_id, t.label.currency);
+  }
+  if (t.fx) {
+    db.prepare(
+      "INSERT INTO bank_txn_fx (bank_txn_id, currency, foreign_amount_cents, rate_ppm, fee_cents, advice_trace_id) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(bank_txn_id) DO UPDATE SET currency = excluded.currency, foreign_amount_cents = excluded.foreign_amount_cents, rate_ppm = excluded.rate_ppm, fee_cents = excluded.fee_cents, advice_trace_id = excluded.advice_trace_id",
+    ).run(t.id, t.fx.currency, t.fx.foreign_amount_cents, t.fx.rate_ppm, t.fx.fee_cents, t.fx.advice_ref ? traceId("gmail", t.fx.advice_ref) : null);
+  }
 }

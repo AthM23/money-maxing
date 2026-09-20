@@ -1,0 +1,1666 @@
+{
+  "meta": {
+    "seed": 0,
+    "company": "Northwind Systems",
+    "version": 1,
+    "live_period": "2026-07",
+    "history_periods": [
+      "2026-04",
+      "2026-05",
+      "2026-06"
+    ]
+  },
+  "periods": [
+    {
+      "id": "2026-04",
+      "status": "locked"
+    },
+    {
+      "id": "2026-05",
+      "status": "locked"
+    },
+    {
+      "id": "2026-06",
+      "status": "locked"
+    },
+    {
+      "id": "2026-07",
+      "status": "open"
+    },
+    {
+      "id": "2026-08",
+      "status": "open"
+    }
+  ],
+  "people": [
+    {
+      "id": "U_CEO",
+      "name": "Morgan Hale",
+      "role": "ceo",
+      "email": "morgan.hale@northwind.test"
+    },
+    {
+      "id": "U_CFO",
+      "name": "Alex Moreau",
+      "role": "cfo",
+      "email": "alex.moreau@northwind.test",
+      "limit_cents": 100000000
+    },
+    {
+      "id": "U_CTRL",
+      "name": "Priya Raman",
+      "role": "controller",
+      "email": "priya.raman@northwind.test",
+      "limit_cents": 10000000
+    },
+    {
+      "id": "U_SAM",
+      "name": "Sam Okafor",
+      "role": "account_owner",
+      "email": "sam.okafor@northwind.test",
+      "limit_cents": 500000
+    },
+    {
+      "id": "U_DANA",
+      "name": "Dana Reyes",
+      "role": "account_owner",
+      "email": "dana.reyes@northwind.test",
+      "limit_cents": 500000
+    }
+  ],
+  "parties": [
+    {
+      "id": "pallister",
+      "kind": "customer",
+      "name": "Pallister Manufacturing Inc",
+      "owner": "U_DANA",
+      "aliases": [
+        "PALLISTER MFG INC",
+        "Pallister Manufacturing Inc",
+        "pallistermfg.test",
+        "Pallister"
+      ],
+      "email_domain": "pallistermfg.test",
+      "country": "US",
+      "billed_by": "inc"
+    },
+    {
+      "id": "tessellate",
+      "kind": "customer",
+      "name": "Tessellate Software Inc",
+      "owner": "U_DANA",
+      "aliases": [
+        "TESSELLATE SOFTWARE",
+        "Tessellate Software Inc",
+        "tessellate.test",
+        "Tessellate"
+      ],
+      "email_domain": "tessellate.test",
+      "country": "US",
+      "billed_by": "inc"
+    },
+    {
+      "id": "ostrander",
+      "kind": "customer",
+      "name": "Ostrander Imports BV",
+      "owner": "U_SAM",
+      "aliases": [
+        "OSTRANDER IMPORTS BV",
+        "Ostrander Imports BV",
+        "ostranderimports.test",
+        "Ostrander"
+      ],
+      "email_domain": "ostranderimports.test",
+      "country": "NL",
+      "billed_by": "ltd"
+    },
+    {
+      "id": "ardent",
+      "kind": "customer",
+      "name": "Ardent Aerospace GmbH",
+      "owner": "U_SAM",
+      "aliases": [
+        "ARDENT AEROSPACE GMBH",
+        "Ardent Aerospace GmbH",
+        "ardentaerospace.test",
+        "Ardent"
+      ],
+      "email_domain": "ardentaerospace.test",
+      "country": "DE",
+      "billed_by": "ltd"
+    },
+    {
+      "id": "fernhill",
+      "kind": "customer",
+      "name": "Fernhill Foods Ltd",
+      "owner": "U_SAM",
+      "aliases": [
+        "FERNHILL FOODS LTD",
+        "Fernhill Foods Ltd",
+        "fernhillfoods.test",
+        "Fernhill"
+      ],
+      "email_domain": "fernhillfoods.test",
+      "country": "IE",
+      "billed_by": "ltd"
+    },
+    {
+      "id": "halvorsen",
+      "kind": "customer",
+      "name": "Halvorsen Freight Systems",
+      "owner": "U_DANA",
+      "aliases": [
+        "HALVORSEN FREIGHT SYS",
+        "Halvorsen Freight Systems",
+        "halvorsenfreight.test",
+        "Halvorsen"
+      ],
+      "email_domain": "halvorsenfreight.test",
+      "country": "US",
+      "billed_by": "inc"
+    },
+    {
+      "id": "meridian",
+      "kind": "customer",
+      "name": "Meridian Infotech Pvt Ltd",
+      "owner": "U_SAM",
+      "aliases": [
+        "MERIDIAN INFOTECH PVT LTD",
+        "Meridian Infotech Pvt Ltd",
+        "meridianinfotech.test",
+        "Meridian"
+      ],
+      "email_domain": "meridianinfotech.test",
+      "country": "IN",
+      "billed_by": "pte"
+    },
+    {
+      "id": "brightwater",
+      "kind": "customer",
+      "name": "Brightwater Health Partners",
+      "owner": "U_SAM",
+      "aliases": [
+        "BRIGHTWATER HEALTH",
+        "Brightwater Health Partners",
+        "brightwaterhealth.test",
+        "Brightwater"
+      ],
+      "email_domain": "brightwaterhealth.test",
+      "country": "US",
+      "billed_by": "inc"
+    },
+    {
+      "id": "kestrel-group",
+      "kind": "customer",
+      "name": "Kestrel Group Holdings plc",
+      "owner": "U_DANA",
+      "aliases": [
+        "KESTREL GROUP HOLDINGS PLC",
+        "Kestrel Group Holdings plc",
+        "kestrelgroup.test"
+      ],
+      "email_domain": "kestrelgroup.test",
+      "country": "GB",
+      "billed_by": "ltd"
+    },
+    {
+      "id": "kestrel-analytics",
+      "kind": "customer",
+      "name": "Kestrel Analytics Ltd",
+      "parent_id": "kestrel-group",
+      "owner": "U_DANA",
+      "aliases": [
+        "KESTREL ANALYTICS LTD",
+        "Kestrel Analytics Ltd",
+        "kestrelanalytics.test"
+      ],
+      "email_domain": "kestrelanalytics.test",
+      "country": "GB",
+      "billed_by": "ltd"
+    },
+    {
+      "id": "castellan",
+      "kind": "customer",
+      "name": "Castellan Biotech AG",
+      "owner": "U_SAM",
+      "aliases": [
+        "CASTELLAN BIOTECH AG",
+        "Castellan Biotech AG",
+        "castellanbiotech.test",
+        "Castellan"
+      ],
+      "email_domain": "castellanbiotech.test",
+      "country": "CH",
+      "billed_by": "ltd"
+    },
+    {
+      "id": "lumen",
+      "kind": "customer",
+      "name": "Lumen Retail Group",
+      "owner": "U_DANA",
+      "aliases": [
+        "LUMEN RETAIL GRP",
+        "Lumen Retail Group",
+        "lumenretail.test",
+        "Lumen"
+      ],
+      "email_domain": "lumenretail.test",
+      "country": "US",
+      "billed_by": "inc"
+    },
+    {
+      "id": "aldenhoven",
+      "kind": "customer",
+      "name": "Aldenhoven Logistik GmbH",
+      "owner": "U_SAM",
+      "aliases": [
+        "ALDENHOVEN LOGISTIK GMBH",
+        "Aldenhoven Logistik GmbH",
+        "aldenhoven-logistik.test",
+        "Aldenhoven"
+      ],
+      "email_domain": "aldenhoven-logistik.test",
+      "country": "DE",
+      "billed_by": "inc"
+    },
+    {
+      "id": "unidentified",
+      "kind": "other",
+      "name": "Unidentified payer",
+      "aliases": []
+    }
+  ],
+  "contracts": [
+    {
+      "id": "CTR-pallister-2026",
+      "party_id": "pallister",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 10200000,
+      "terms": {
+        "monthly_cents": 850000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Order form - Pallister Manufacturing Inc\n\nBetween Northwind Systems Inc and Pallister Manufacturing Inc, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 8,500.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by ACH to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-tessellate-2026",
+      "party_id": "tessellate",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 1500000,
+      "terms": {
+        "monthly_cents": 125000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Order form - Tessellate Software Inc\n\nBetween Northwind Systems Inc and Tessellate Software Inc, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 1,250.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by ACH to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-ostrander-2026",
+      "party_id": "ostrander",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 8760000,
+      "terms": {
+        "monthly_cents": 730000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form - Ostrander Imports BV\n\nBetween Northwind Systems Ltd and Ostrander Imports BV, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 7,300.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-ardent-2026",
+      "party_id": "ardent",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 30000000,
+      "terms": {
+        "monthly_cents": 2500000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form - Ardent Aerospace GmbH\n\nBetween Northwind Systems Ltd and Ardent Aerospace GmbH, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 25,000.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-fernhill-2026",
+      "party_id": "fernhill",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 24000000,
+      "terms": {
+        "monthly_cents": 2000000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form - Fernhill Foods Ltd\n\nBetween Northwind Systems Ltd and Fernhill Foods Ltd, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 20,000.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-halvorsen-2026",
+      "party_id": "halvorsen",
+      "start_date": "2025-07-01",
+      "end_date": "2027-06-30",
+      "value_cents": 14400000,
+      "terms": {
+        "monthly_cents": 1200000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Order form NW-HAL-2025\n\nPlatform fee USD 12,000 per month, billed monthly in advance, net 30. Term 1 July 2025 to 30 June 2027. Section 4: no discount or credit is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-07-01T00:00:00Z"
+    },
+    {
+      "id": "CTR-meridian-2026",
+      "party_id": "meridian",
+      "start_date": "2026-01-01",
+      "end_date": "2027-12-31",
+      "value_cents": 21600000,
+      "terms": {
+        "monthly_cents": 1800000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form NW-MER-2026 (Northwind Systems Pte Ltd)\n\nPlatform fee USD 18,000 per month, billed monthly in advance, net 30, payable in US dollars. Term 1 January 2026 to 31 December 2027. Fees are exclusive of taxes; where the customer is required by law to withhold tax it shall provide the official certificate within 60 days.",
+      "recorded_time": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "CTR-brightwater-2026",
+      "party_id": "brightwater",
+      "start_date": "2025-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 39600000,
+      "terms": {
+        "monthly_cents": 3300000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Order form NW-BWH-2025\n\nPlatform fee USD 33,000 per month, billed monthly in advance, net 30. Section 4: service credits are at Northwind's discretion and are effective only when confirmed in writing by an officer of Northwind.",
+      "recorded_time": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "CTR-kestrel-analytics-2026",
+      "party_id": "kestrel-analytics",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 18000000,
+      "terms": {
+        "monthly_cents": 1500000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form - Kestrel Analytics Ltd\n\nBetween Northwind Systems Ltd and Kestrel Analytics Ltd, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 15,000.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-castellan-2026",
+      "party_id": "castellan",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 3000000,
+      "terms": {
+        "monthly_cents": 250000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form - Castellan Biotech AG\n\nBetween Northwind Systems Ltd and Castellan Biotech AG, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 2,500.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-lumen-2026",
+      "party_id": "lumen",
+      "start_date": "2026-01-01",
+      "end_date": "2026-12-31",
+      "value_cents": 7440000,
+      "terms": {
+        "monthly_cents": 620000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "ach"
+      },
+      "text": "# Order form - Lumen Retail Group\n\nBetween Northwind Systems Inc and Lumen Retail Group, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nPlatform subscription USD 6,200.00 per month, invoiced monthly in advance on the first day of each month, payable in US dollars.\n\n## 2. Payment\nNet 30 days from the invoice date by ACH to the account shown on the invoice. Invoices are payable in full without set-off or deduction; bank charges are for the account of the payer.\n\n## 3. Term\n2026-01-01 to 2026-12-31, renewing for successive twelve-month terms unless either party gives sixty days notice.\n\n## 4. Credits and changes to fees\nNo discount, credit or change to the fees is effective unless agreed in writing by an officer of Northwind.",
+      "recorded_time": "2025-12-16T16:00:00Z"
+    },
+    {
+      "id": "CTR-aldenhoven-2024",
+      "party_id": "aldenhoven",
+      "start_date": "2024-01-01",
+      "end_date": "2026-06-30",
+      "value_cents": 330000000,
+      "terms": {
+        "monthly_cents": 11000000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire"
+      },
+      "text": "# Order form NW-ALD-2024, as amended by Amendment No. 2 - Aldenhoven Logistik GmbH\n\nBetween Northwind Systems, Inc. (Delaware) and Aldenhoven Logistik GmbH, Duesseldorf, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nUntil 30 June 2026: platform subscription USD 110,000.00 per month. Amendment No. 2, effective 1 July 2026, at Customer's request: fees are denominated and invoiced in euro. Platform subscription EUR 100,000.00 per month; EU data residency add-on EUR 15,000.00 per month (order form NW-ALD-2026-DR). Invoiced monthly in advance on the first day of each month.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction. All bank charges and currency conversion costs on the Customer's side are for the Customer's account.\n\n## 3. Taxes\nFees are exclusive of VAT. The services are supplied to a business established in Germany and the reverse charge applies (Article 196 of Directive 2006/112/EC); Customer accounts for VAT. No tax is to be withheld from payments.\n\n## 4. Service levels (Exhibit B)\nMonthly availability commitment: 99.9%. If availability of a service in a calendar month is below 99.9%, Customer may claim a service credit of 2% of that month's fees for the affected service; below 99.0%, 5%. A claim must be made in writing within 30 days after the end of the month. Northwind validates each claim against its own availability records. A service credit is effective only when confirmed in writing by an officer of Northwind and is issued as a credit note against a later invoice. Customer may not deduct a claimed credit from a payment. Service credits are Customer's sole remedy for unavailability.\n\n## 5. Term\n1 January 2024 to 31 December 2026, renewing for successive twelve-month terms unless either party gives ninety days notice.",
+      "recorded_time": "2023-12-12T16:00:00Z"
+    },
+    {
+      "id": "CTR-aldenhoven-2026",
+      "party_id": "aldenhoven",
+      "start_date": "2026-07-01",
+      "end_date": "2026-12-31",
+      "value_cents": 66000000,
+      "terms": {
+        "monthly_cents": 11000000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire",
+        "currency": "EUR",
+        "foreign_monthly_cents": 10000000
+      },
+      "text": "# Order form NW-ALD-2024, as amended by Amendment No. 2 - Aldenhoven Logistik GmbH\n\nBetween Northwind Systems, Inc. (Delaware) and Aldenhoven Logistik GmbH, Duesseldorf, under the Northwind Master Subscription Agreement.\n\n## 1. Fees\nUntil 30 June 2026: platform subscription USD 110,000.00 per month. Amendment No. 2, effective 1 July 2026, at Customer's request: fees are denominated and invoiced in euro. Platform subscription EUR 100,000.00 per month; EU data residency add-on EUR 15,000.00 per month (order form NW-ALD-2026-DR). Invoiced monthly in advance on the first day of each month.\n\n## 2. Payment\nNet 30 days from the invoice date by wire transfer to the account shown on the invoice. Invoices are payable in full without set-off or deduction. All bank charges and currency conversion costs on the Customer's side are for the Customer's account.\n\n## 3. Taxes\nFees are exclusive of VAT. The services are supplied to a business established in Germany and the reverse charge applies (Article 196 of Directive 2006/112/EC); Customer accounts for VAT. No tax is to be withheld from payments.\n\n## 4. Service levels (Exhibit B)\nMonthly availability commitment: 99.9%. If availability of a service in a calendar month is below 99.9%, Customer may claim a service credit of 2% of that month's fees for the affected service; below 99.0%, 5%. A claim must be made in writing within 30 days after the end of the month. Northwind validates each claim against its own availability records. A service credit is effective only when confirmed in writing by an officer of Northwind and is issued as a credit note against a later invoice. Customer may not deduct a claimed credit from a payment. Service credits are Customer's sole remedy for unavailability.\n\n## 5. Term\n1 January 2024 to 31 December 2026, renewing for successive twelve-month terms unless either party gives ninety days notice.",
+      "recorded_time": "2026-06-12T16:00:00Z"
+    },
+    {
+      "id": "CTR-aldenhoven-addon-2026",
+      "party_id": "aldenhoven",
+      "start_date": "2026-07-01",
+      "end_date": "2026-12-31",
+      "value_cents": 9900000,
+      "terms": {
+        "monthly_cents": 1650000,
+        "billing": "monthly",
+        "payment_terms_days": 30,
+        "method": "wire",
+        "currency": "EUR",
+        "foreign_monthly_cents": 1500000
+      },
+      "text": "# Order form NW-ALD-2026-DR - EU data residency add-on - Aldenhoven Logistik GmbH\n\nAn additional order form under order form NW-ALD-2024 as amended. All of its terms apply, including section 2 (payment without deduction) and section 4 (service levels, Exhibit B).\n\n## 1. Fees\nEU data residency add-on EUR 15,000.00 per month, invoiced monthly in advance in euro, from 1 July 2026.\n\n## 2. Term\n1 July 2026 to 31 December 2026, co-terminous with order form NW-ALD-2024.",
+      "recorded_time": "2026-06-12T16:05:00Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "INV-2401",
+      "party_id": "ostrander",
+      "contract_id": "CTR-ostrander-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-2402",
+      "party_id": "ardent",
+      "contract_id": "CTR-ardent-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-2403",
+      "party_id": "fernhill",
+      "contract_id": "CTR-fernhill-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 2000000
+    },
+    {
+      "id": "INV-2404",
+      "party_id": "aldenhoven",
+      "contract_id": "CTR-aldenhoven-2024",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 11000000
+    },
+    {
+      "id": "INV-2501",
+      "party_id": "ostrander",
+      "contract_id": "CTR-ostrander-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-2502",
+      "party_id": "ardent",
+      "contract_id": "CTR-ardent-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-2503",
+      "party_id": "fernhill",
+      "contract_id": "CTR-fernhill-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 2000000
+    },
+    {
+      "id": "INV-2504",
+      "party_id": "aldenhoven",
+      "contract_id": "CTR-aldenhoven-2024",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 11000000
+    },
+    {
+      "id": "INV-2601",
+      "party_id": "ostrander",
+      "contract_id": "CTR-ostrander-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-2602",
+      "party_id": "ardent",
+      "contract_id": "CTR-ardent-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-2603",
+      "party_id": "fernhill",
+      "contract_id": "CTR-fernhill-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 2000000
+    },
+    {
+      "id": "INV-2604",
+      "party_id": "aldenhoven",
+      "contract_id": "CTR-aldenhoven-2024",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 11000000
+    },
+    {
+      "id": "INV-3101",
+      "party_id": "pallister",
+      "contract_id": "CTR-pallister-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 850000
+    },
+    {
+      "id": "INV-3111",
+      "party_id": "tessellate",
+      "contract_id": "CTR-tessellate-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 500000
+    },
+    {
+      "id": "INV-3112",
+      "party_id": "tessellate",
+      "contract_id": "CTR-tessellate-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 250000
+    },
+    {
+      "id": "INV-3113",
+      "party_id": "tessellate",
+      "contract_id": "CTR-tessellate-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 125000
+    },
+    {
+      "id": "INV-3121",
+      "party_id": "ostrander",
+      "contract_id": "CTR-ostrander-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 730000
+    },
+    {
+      "id": "INV-3131",
+      "party_id": "ardent",
+      "contract_id": "CTR-ardent-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 2500000
+    },
+    {
+      "id": "INV-3141",
+      "party_id": "halvorsen",
+      "contract_id": "CTR-halvorsen-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1200000
+    },
+    {
+      "id": "INV-3151",
+      "party_id": "meridian",
+      "contract_id": "CTR-meridian-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1800000
+    },
+    {
+      "id": "INV-3161",
+      "party_id": "brightwater",
+      "contract_id": "CTR-brightwater-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 3300000
+    },
+    {
+      "id": "INV-3171",
+      "party_id": "kestrel-analytics",
+      "contract_id": "CTR-kestrel-analytics-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1500000
+    },
+    {
+      "id": "INV-3181",
+      "party_id": "castellan",
+      "contract_id": "CTR-castellan-2026",
+      "issue_date": "2026-04-01",
+      "due_date": "2026-05-01",
+      "total_cents": 300000
+    },
+    {
+      "id": "INV-3182",
+      "party_id": "castellan",
+      "contract_id": "CTR-castellan-2026",
+      "issue_date": "2026-05-01",
+      "due_date": "2026-05-31",
+      "total_cents": 300000
+    },
+    {
+      "id": "INV-3183",
+      "party_id": "castellan",
+      "contract_id": "CTR-castellan-2026",
+      "issue_date": "2026-06-01",
+      "due_date": "2026-07-01",
+      "total_cents": 549498
+    },
+    {
+      "id": "INV-3184",
+      "party_id": "castellan",
+      "contract_id": "CTR-castellan-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 250000
+    },
+    {
+      "id": "INV-3191",
+      "party_id": "lumen",
+      "contract_id": "CTR-lumen-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 620000
+    },
+    {
+      "id": "INV-3201",
+      "party_id": "fernhill",
+      "contract_id": "CTR-fernhill-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 2000000
+    },
+    {
+      "id": "INV-3211",
+      "party_id": "aldenhoven",
+      "contract_id": "CTR-aldenhoven-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 11000000,
+      "fx": {
+        "currency": "EUR",
+        "foreign_total_cents": 10000000,
+        "booked_rate_ppm": 1100000
+      }
+    },
+    {
+      "id": "INV-3212",
+      "party_id": "aldenhoven",
+      "contract_id": "CTR-aldenhoven-addon-2026",
+      "issue_date": "2026-07-01",
+      "due_date": "2026-07-31",
+      "total_cents": 1650000,
+      "fx": {
+        "currency": "EUR",
+        "foreign_total_cents": 1500000,
+        "booked_rate_ppm": 1100000
+      }
+    }
+  ],
+  "bills": [],
+  "entities": [
+    {
+      "id": "inc",
+      "name": "Northwind Systems Inc",
+      "country": "US"
+    },
+    {
+      "id": "ltd",
+      "name": "Northwind Systems Ltd",
+      "country": "GB"
+    },
+    {
+      "id": "pte",
+      "name": "Northwind Systems Pte Ltd",
+      "country": "SG"
+    }
+  ],
+  "bank": {
+    "account": "jpm_operating",
+    "opening_balance_cents": 0,
+    "accounts": [
+      {
+        "id": "jpm_operating",
+        "entity": "inc",
+        "label": "JPMorgan Chase USD operating ··4417",
+        "opening_balance_cents": 0
+      },
+      {
+        "id": "jpm_lockbox",
+        "entity": "inc",
+        "label": "JPMorgan Chase USD lockbox ··4425",
+        "opening_balance_cents": 0
+      },
+      {
+        "id": "hsbc_uk",
+        "entity": "ltd",
+        "label": "HSBC UK USD ··0193",
+        "opening_balance_cents": 0
+      },
+      {
+        "id": "dbs_sg",
+        "entity": "pte",
+        "label": "DBS Singapore USD ··8834",
+        "opening_balance_cents": 0
+      }
+    ],
+    "txns": [
+      {
+        "id": "BTX-200",
+        "posted_date": "2026-04-01",
+        "amount_cents": 500000000,
+        "descriptor": "BOOK TRANSFER CREDIT B/O NORTHWIND SYSTEMS INC FUNDING",
+        "method": "wire",
+        "recorded_time": "2026-04-01T13:00:00Z",
+        "history": {
+          "doc_kind": "equity",
+          "applied_cents": 500000000
+        },
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-201",
+        "posted_date": "2026-04-14",
+        "amount_cents": 728500,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026041400599638 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2401 CHGS:SHA INTERMEDIARY DED USD 15.00",
+        "method": "wire",
+        "recorded_time": "2026-04-14T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2401",
+          "applied_cents": 728500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 1500,
+            "decided_at": "2026-04-14T15:00:00Z"
+          }
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-204",
+        "posted_date": "2026-04-16",
+        "amount_cents": 10997500,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026041600623395 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OBI:INV-2404 CHGS:SHA INTERMEDIARY DED USD 25.00",
+        "method": "wire",
+        "recorded_time": "2026-04-16T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2404",
+          "applied_cents": 10997500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 2500,
+            "decided_at": "2026-04-16T15:00:00Z"
+          }
+        },
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-203",
+        "posted_date": "2026-04-17",
+        "amount_cents": 2000000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026041700615476 ORG:FERNHILL FOODS LTD CORK OBI:INV-2403 CHGS:OUR",
+        "method": "wire",
+        "recorded_time": "2026-04-17T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2403",
+          "applied_cents": 2000000
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-202",
+        "posted_date": "2026-04-20",
+        "amount_cents": 2497500,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026042000607557 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2402 CHGS:SHA INTERMEDIARY DED USD 25.00",
+        "method": "wire",
+        "recorded_time": "2026-04-20T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2402",
+          "applied_cents": 2497500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 2500,
+            "decided_at": "2026-04-20T15:00:00Z"
+          }
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-205",
+        "posted_date": "2026-05-15",
+        "amount_cents": 726500,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051500631314 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2501 CHGS:SHA INTERMEDIARY DED USD 35.00",
+        "method": "wire",
+        "recorded_time": "2026-05-15T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2501",
+          "applied_cents": 726500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 3500,
+            "decided_at": "2026-05-15T15:00:00Z"
+          }
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-206",
+        "posted_date": "2026-05-17",
+        "amount_cents": 2500000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051700639233 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2502 CHGS:OUR",
+        "method": "wire",
+        "recorded_time": "2026-05-17T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2502",
+          "applied_cents": 2500000
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-208",
+        "posted_date": "2026-05-18",
+        "amount_cents": 10996000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051800655071 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OBI:INV-2504 CHGS:SHA INTERMEDIARY DED USD 40.00",
+        "method": "wire",
+        "recorded_time": "2026-05-18T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2504",
+          "applied_cents": 10996000,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 4000,
+            "decided_at": "2026-05-18T15:00:00Z"
+          }
+        },
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-207",
+        "posted_date": "2026-05-19",
+        "amount_cents": 1998000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026051900647152 ORG:FERNHILL FOODS LTD CORK OBI:INV-2503 CHGS:SHA INTERMEDIARY DED USD 20.00",
+        "method": "wire",
+        "recorded_time": "2026-05-19T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2503",
+          "applied_cents": 1998000,
+          "write_off": {
+            "account": "6990",
+            "amount_cents": 2000,
+            "decided_at": "2026-05-19T15:00:00Z"
+          }
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-210",
+        "posted_date": "2026-06-16",
+        "amount_cents": 2495500,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061600670909 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-2602 CHGS:SHA INTERMEDIARY DED USD 45.00",
+        "method": "wire",
+        "recorded_time": "2026-06-16T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2602",
+          "applied_cents": 2495500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 4500,
+            "decided_at": "2026-06-16T15:00:00Z"
+          }
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-209",
+        "posted_date": "2026-06-17",
+        "amount_cents": 730000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061700662990 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-2601 CHGS:OUR",
+        "method": "wire",
+        "recorded_time": "2026-06-17T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2601",
+          "applied_cents": 730000
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-212",
+        "posted_date": "2026-06-17",
+        "amount_cents": 10996500,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061700686747 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OBI:INV-2604 CHGS:SHA INTERMEDIARY DED USD 35.00",
+        "method": "wire",
+        "recorded_time": "2026-06-17T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2604",
+          "applied_cents": 10996500,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 3500,
+            "decided_at": "2026-06-17T15:00:00Z"
+          }
+        },
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-211",
+        "posted_date": "2026-06-18",
+        "amount_cents": 1999000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026061800678828 ORG:FERNHILL FOODS LTD CORK OBI:INV-2603 CHGS:SHA INTERMEDIARY DED USD 10.00",
+        "method": "wire",
+        "recorded_time": "2026-06-18T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-2603",
+          "applied_cents": 1999000,
+          "write_off": {
+            "account": "6150",
+            "amount_cents": 1000,
+            "decided_at": "2026-06-18T15:00:00Z"
+          }
+        },
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-300",
+        "posted_date": "2026-07-03",
+        "amount_cents": 620000,
+        "descriptor": "ORIG CO NAME:LUMEN RETAIL GRP CO ENTRY DESCR:PAYABLES SEC:CCD TRACE#:021000021187310 IND NAME:NORTHWIND SYSTEMS INC RMR*IV*INV-3191**6200.00",
+        "method": "ach",
+        "recorded_time": "2026-07-03T10:00:00Z",
+        "history": {
+          "doc_kind": "invoice",
+          "doc_id": "INV-3191",
+          "applied_cents": 620000
+        },
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-305",
+        "posted_date": "2026-07-12",
+        "amount_cents": 1080000,
+        "descriptor": "ORIG CO NAME:HALVORSEN FREIGHT SYS CO ENTRY DESCR:VENDOR PMT SEC:CCD TRACE#:091000019920455 RMR*IV*INV-3141**10800.00",
+        "method": "ach",
+        "recorded_time": "2026-07-12T10:00:00Z",
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-301",
+        "posted_date": "2026-07-14",
+        "amount_cents": 850000,
+        "descriptor": "ORIG CO NAME:PALLISTER MFG INC ORIG ID:9215550143 CO ENTRY DESCR:PAYABLES SEC:CCD TRACE#:021000028841207 IND NAME:NORTHWIND SYSTEMS INC RMR*IV*INV-3101**8500.00",
+        "method": "ach",
+        "recorded_time": "2026-07-14T10:00:00Z",
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-302",
+        "posted_date": "2026-07-15",
+        "amount_cents": 875000,
+        "descriptor": "ORIG CO NAME:TESSELLATE SOFTWARE CO ENTRY DESCR:AP BATCH SEC:CTX TRACE#:121000248830117 RMR*IV*INV-3111**5000.00 RMR*IV*INV-3112**2500.00 RMR*IV*INV-3113**1250.00",
+        "method": "ach",
+        "recorded_time": "2026-07-15T10:00:00Z",
+        "account": "jpm_lockbox"
+      },
+      {
+        "id": "BTX-308",
+        "posted_date": "2026-07-15",
+        "amount_cents": 1500000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026071500390744 ORG:KESTREL GROUP HOLDINGS PLC LONDON OBI:TREASURY PAYMENT ON BEHALF OF SUBSIDIARY",
+        "method": "wire",
+        "recorded_time": "2026-07-15T10:00:00Z",
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-311",
+        "posted_date": "2026-07-15",
+        "amount_cents": 10580000,
+        "descriptor": "WIRE TYPE:FX IN TRN:2026071500482913 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OGB:COMMERZBANK AG OBI:INV-3211 ZAHLUNGSAVIS 1500048117 ORIG AMT EUR 98,000.00 RATE 1.0800 CHGS USD 40.00",
+        "method": "wire",
+        "recorded_time": "2026-07-15T10:00:00Z",
+        "account": "jpm_operating",
+        "fx": {
+          "currency": "EUR",
+          "foreign_amount_cents": 9800000,
+          "rate_ppm": 1080000,
+          "fee_cents": 4000,
+          "advice_mail_id": "gj-m-advice-BTX-311"
+        }
+      },
+      {
+        "id": "BTX-303",
+        "posted_date": "2026-07-16",
+        "amount_cents": 726200,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026071600418832 ORG:OSTRANDER IMPORTS BV ROTTERDAM OBI:INV-3121 JULY PLATFORM FEE CHGS:SHA INTERMEDIARY DED USD 38.00",
+        "method": "wire",
+        "recorded_time": "2026-07-16T10:00:00Z",
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-307",
+        "posted_date": "2026-07-16",
+        "amount_cents": 2970000,
+        "descriptor": "ORIG CO NAME:BRIGHTWATER HEALTH CO ENTRY DESCR:PAYABLES SEC:CCD TRACE#:071000013345512 IND NAME:NORTHWIND SYS",
+        "method": "ach",
+        "recorded_time": "2026-07-16T10:00:00Z",
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-304",
+        "posted_date": "2026-07-17",
+        "amount_cents": 2494000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026071700511207 ORG:ARDENT AEROSPACE GMBH MUENCHEN OBI:INV-3131 CHGS:BEN CORRESPONDENT DED USD 60.00",
+        "method": "wire",
+        "recorded_time": "2026-07-17T10:00:00Z",
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-306",
+        "posted_date": "2026-07-17",
+        "amount_cents": 1620000,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026071700660019 ORG:MERIDIAN INFOTECH PVT LTD BENGALURU OBI:INV-3151 NET OF TDS",
+        "method": "wire",
+        "recorded_time": "2026-07-17T10:00:00Z",
+        "account": "dbs_sg"
+      },
+      {
+        "id": "BTX-309",
+        "posted_date": "2026-07-18",
+        "amount_cents": 849498,
+        "descriptor": "WIRE TYPE:INTL IN TRN:2026071800712250 ORG:CASTELLAN BIOTECH AG BASEL OBI:PAYMENT PER REMITTANCE ADVICE",
+        "method": "wire",
+        "recorded_time": "2026-07-18T10:00:00Z",
+        "account": "hsbc_uk"
+      },
+      {
+        "id": "BTX-310",
+        "posted_date": "2026-07-21",
+        "amount_cents": 620000,
+        "descriptor": "ORIG CO NAME:LUMEN RETAIL GRP CO ENTRY DESCR:PAYABLES SEC:CCD TRACE#:021000021199043 IND NAME:NORTHWIND SYSTEMS INC",
+        "method": "ach",
+        "recorded_time": "2026-07-21T10:00:00Z",
+        "account": "jpm_operating"
+      },
+      {
+        "id": "BTX-312",
+        "posted_date": "2026-07-22",
+        "amount_cents": 1591450,
+        "descriptor": "WIRE TYPE:FX IN TRN:2026072200517740 ORG:ALDENHOVEN LOGISTIK GMBH DUESSELDORF OGB:COMMERZBANK AG OBI:INV-3212 ZAHLUNGSAVIS 1500048562 ORIG AMT EUR 14,700.00 RATE 1.0850 CHGS USD 35.00",
+        "method": "wire",
+        "recorded_time": "2026-07-22T10:00:00Z",
+        "account": "jpm_operating",
+        "fx": {
+          "currency": "EUR",
+          "foreign_amount_cents": 1470000,
+          "rate_ppm": 1085000,
+          "fee_cents": 3500,
+          "advice_mail_id": "gj-m-advice-BTX-312"
+        }
+      }
+    ]
+  },
+  "mail": [
+    {
+      "id": "gj-m-halvorsen-1",
+      "thread_id": "gj-t-halvorsen-pricing",
+      "date": "2026-06-26T14:12:00Z",
+      "from": "pat.lindqvist@halvorsenfreight.test",
+      "to": [
+        "morgan.hale@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Renewal pricing",
+      "body": "Morgan, good to talk today. As discussed, the May outage cost us two days of dispatch reporting and my board wants to see that reflected before we sign the renewal. Can you confirm the discount in writing so I can get the order form through? Pat Lindqvist, CFO, Halvorsen Freight Systems",
+      "party_id": "halvorsen"
+    },
+    {
+      "id": "gj-m-halvorsen-2",
+      "thread_id": "gj-t-halvorsen-pricing",
+      "date": "2026-06-28T15:04:00Z",
+      "from": "morgan.hale@northwind.test",
+      "to": [
+        "pat.lindqvist@halvorsenfreight.test"
+      ],
+      "cc": [],
+      "subject": "Re: Renewal pricing",
+      "body": "Hi Pat, Confirming what we discussed: Halvorsen gets 10% off the platform fee through renewal on 2027-06-30. Billing will not catch up for a cycle or two, so invoices may still show the list price. Pay the net amount and we will true it up on our side. Thanks, Morgan Hale, CEO",
+      "party_id": "halvorsen"
+    },
+    {
+      "id": "gj-m-kestrel-1",
+      "thread_id": "gj-t-kestrel-1",
+      "date": "2026-06-30T09:40:00Z",
+      "from": "ap@kestrelanalytics.test",
+      "to": [
+        "ar-emea@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Change of paying entity from July",
+      "body": "Hello, following our treasury centralisation, invoices addressed to Kestrel Analytics Ltd will be paid by our parent company, Kestrel Group Holdings plc, starting with the July invoice. Payments will show KESTREL GROUP HOLDINGS PLC as the originator. Invoice addressing does not change. Kestrel Analytics Accounts Payable",
+      "party_id": "kestrel-analytics"
+    },
+    {
+      "id": "gj-m-noise-3",
+      "thread_id": "gj-t-noise-3",
+      "date": "2026-07-01T07:30:00Z",
+      "from": "statements@jpmorgan-access.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Your June statements are available",
+      "body": "Statements for your accounts ending 4417 and 4425 for the period ending 30 June 2026 are available in online banking."
+    },
+    {
+      "id": "gj-m-noise-2",
+      "thread_id": "gj-t-noise-2",
+      "date": "2026-07-02T09:00:00Z",
+      "from": "ap@halvorsenfreight.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Invoice INV-3141",
+      "body": "We have INV-3141 in our queue for the 12 July run.",
+      "party_id": "halvorsen"
+    },
+    {
+      "id": "gj-m-noise-4",
+      "thread_id": "gj-t-noise-4",
+      "date": "2026-07-02T13:00:00Z",
+      "from": "priya.raman@northwind.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "July close calendar",
+      "body": "Cash and AR by working day 3, accruals by working day 4, flux review on working day 5. Open reconciling items to me by end of day 2."
+    },
+    {
+      "id": "gj-m-noise-1",
+      "thread_id": "gj-t-noise-1",
+      "date": "2026-07-05T08:00:00Z",
+      "from": "events@saasconf.test",
+      "to": [
+        "morgan.hale@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Early bird discount ends Friday",
+      "body": "Get 20% off your conference pass through Friday."
+    },
+    {
+      "id": "gj-m-aldenhoven-1",
+      "thread_id": "gj-t-aldenhoven-sla",
+      "date": "2026-07-09T08:20:00Z",
+      "from": "j.brandt@aldenhoven-logistik.test",
+      "to": [
+        "sam.okafor@northwind.test"
+      ],
+      "cc": [
+        "kreditoren@aldenhoven-logistik.test"
+      ],
+      "subject": "SLA claim - outage 8 July",
+      "body": "Hello Sam,\n\nYesterday's outage took our dispatch boards down for the whole early shift in Duisburg and Venlo, 06:12 to 12:52 UTC by your own status page. That is 6 hours 40 minutes, which puts July below 99.9% whatever happens for the rest of the month.\n\nPlease treat this email as our written claim under Exhibit B for the 2% service credit on the July fees. Our accounts payable team will take the 2% off the July invoices when they pay them.\n\nRegards,\nJonas Brandt\nHead of IT Operations, Aldenhoven Logistik GmbH",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-m-aldenhoven-2",
+      "thread_id": "gj-t-aldenhoven-sla",
+      "date": "2026-07-09T15:45:00Z",
+      "from": "sam.okafor@northwind.test",
+      "to": [
+        "j.brandt@aldenhoven-logistik.test"
+      ],
+      "cc": [],
+      "subject": "Re: SLA claim - outage 8 July",
+      "body": "Hi Jonas,\n\nUnderstood, and sorry again for yesterday. I have logged your claim and passed it to our finance team. I cannot confirm a credit myself: under Exhibit B a credit has to be validated against the month's availability and confirmed by one of our officers, and it is then issued as a credit note rather than deducted from a payment. I will come back to you as soon as I have an answer.\n\nSam Okafor\nNorthwind Systems",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-m-noise-5",
+      "thread_id": "gj-t-noise-5",
+      "date": "2026-07-10T09:15:00Z",
+      "from": "ap@pallistermfg.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Updated remit-to confirmation",
+      "body": "We have your remit-to details on file for JPMorgan Chase, account ending 4417. No change requested. Pallister Manufacturing AP",
+      "party_id": "pallister"
+    },
+    {
+      "id": "gj-m-noise-6",
+      "thread_id": "gj-t-noise-6",
+      "date": "2026-07-13T11:10:00Z",
+      "from": "kreditoren@aldenhoven-logistik.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Invoice INV-3211 and INV-3212 received",
+      "body": "We confirm receipt of invoices INV-3211 and INV-3212 dated 1 July 2026. Both are scheduled in our payment runs of 14 and 21 July.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-m-avis-BTX-311",
+      "thread_id": "gj-t-avis-BTX-311",
+      "date": "2026-07-14T14:40:00Z",
+      "from": "kreditoren@aldenhoven-logistik.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Zahlungsavis / Payment advice 1500048117 - Aldenhoven Logistik GmbH",
+      "body": "Aldenhoven Logistik GmbH - Kreditorenbuchhaltung / Accounts Payable\nZahlungsavis / Payment advice no. 1500048117\nPayment date: 2026-07-14   Value date: 2026-07-15   Payment method: SEPA/foreign wire, EUR   Our vendor no.: 300417\n\nInvoice      Invoice date   Gross EUR      Deduction EUR   Net EUR\nINV-3211     2026-07-01     100,000.00      2,000.00        98,000.00\n\nDeduction: EUR 2,000.00, reason: service credit 2% under Exhibit B (SLA), platform outage 8 July 2026, our claim of 9 July 2026.\nTotal paid: EUR 98,000.00\n\nQueries: kreditoren@aldenhoven-logistik.test. This advice was generated automatically.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-m-advice-BTX-311",
+      "thread_id": "gj-t-advice-BTX-311",
+      "date": "2026-07-15T09:05:00Z",
+      "from": "wire.advices@jpmorgan-access.test",
+      "to": [
+        "treasury@northwind.test"
+      ],
+      "cc": [
+        "ar@northwind.test"
+      ],
+      "subject": "Incoming wire credit advice - TRN 2026071500482913 - USD 105,800.00",
+      "body": "INCOMING FUNDS TRANSFER - CREDIT ADVICE\n\nBeneficiary: NORTHWIND SYSTEMS INC\nAccount credited: USD operating account ending 4417\nValue date: 2026-07-15\nTransaction reference (TRN): 2026071500482913\n\nOrdering customer: ALDENHOVEN LOGISTIK GMBH, DUESSELDORF, DE\nOrdering institution: COMMERZBANK AG, DUESSELDORF (COBADEFFXXX)\nRemittance information: INV-3211 ZAHLUNGSAVIS 1500048117\nDetails of charges: SHA\n\nInstructed amount: EUR 98,000.00\nExchange rate applied: 1.0800 USD per EUR\nUSD equivalent: USD 105,840.00\nCharges deducted (incoming international wire and currency conversion): USD 40.00\nNet amount credited: USD 105,800.00\n\nThe payment was received in a currency other than that of the beneficiary account and was converted at the bank's rate on the value date.\nThis advice is for information. It is not a statement of account.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-m-brightwater-1",
+      "thread_id": "gj-t-brightwater-1",
+      "date": "2026-07-16T13:05:00Z",
+      "from": "ap-inquiries@brightwaterhealth.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice: payment 07/16/2026",
+      "body": "Payment amount USD 29,700.00 by ACH, trace 071000013345512. Invoice INV-3161, gross 33,000.00, deduction 3,300.00, reason code 07 (service credit per account team), net 29,700.00. Questions: ap-inquiries@brightwaterhealth.test",
+      "party_id": "brightwater"
+    },
+    {
+      "id": "gj-m-meridian-1",
+      "thread_id": "gj-t-meridian-1",
+      "date": "2026-07-17T06:30:00Z",
+      "from": "accounts.payable@meridianinfotech.test",
+      "to": [
+        "ar-apac@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Remittance advice: INV-3151",
+      "body": "Dear Northwind AR team, we have remitted USD 16,200.00 today against invoice INV-3151 for USD 18,000.00. As required under Section 195 of the Income-tax Act, tax has been deducted at source at 10% (USD 1,800.00) and deposited with the Government of India. Form 16A for the quarter will follow by 15 August. Regards, Accounts Payable, Meridian Infotech Pvt Ltd",
+      "party_id": "meridian"
+    },
+    {
+      "id": "gj-m-castellan-1",
+      "thread_id": "gj-t-castellan-1",
+      "date": "2026-07-17T15:20:00Z",
+      "from": "kreditoren@castellanbiotech.test",
+      "to": [
+        "ar-emea@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Zahlungsavis / payment advice",
+      "body": "2026-07-18 WIRE RMT76314 CASTELLAN BIOTECH AG USD 8,494.98 INV-3182:3,000.00 INV-3183:5,494.98",
+      "party_id": "castellan"
+    },
+    {
+      "id": "gj-m-noise-7",
+      "thread_id": "gj-t-noise-7",
+      "date": "2026-07-20T16:05:00Z",
+      "from": "ap@fernhillfoods.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "July invoice INV-3201",
+      "body": "INV-3201 is approved and will be paid in our month-end run on 31 July. Fernhill Foods Accounts Payable",
+      "party_id": "fernhill"
+    },
+    {
+      "id": "gj-m-avis-BTX-312",
+      "thread_id": "gj-t-avis-BTX-312",
+      "date": "2026-07-21T14:40:00Z",
+      "from": "kreditoren@aldenhoven-logistik.test",
+      "to": [
+        "ar@northwind.test"
+      ],
+      "cc": [],
+      "subject": "Zahlungsavis / Payment advice 1500048562 - Aldenhoven Logistik GmbH",
+      "body": "Aldenhoven Logistik GmbH - Kreditorenbuchhaltung / Accounts Payable\nZahlungsavis / Payment advice no. 1500048562\nPayment date: 2026-07-21   Value date: 2026-07-22   Payment method: SEPA/foreign wire, EUR   Our vendor no.: 300417\n\nInvoice      Invoice date   Gross EUR      Deduction EUR   Net EUR\nINV-3212     2026-07-01      15,000.00        300.00        14,700.00\n\nDeduction: EUR 300.00, reason: service credit 2% under Exhibit B (SLA), platform outage 8 July 2026, our claim of 9 July 2026.\nTotal paid: EUR 14,700.00\n\nQueries: kreditoren@aldenhoven-logistik.test. This advice was generated automatically.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-m-advice-BTX-312",
+      "thread_id": "gj-t-advice-BTX-312",
+      "date": "2026-07-22T09:05:00Z",
+      "from": "wire.advices@jpmorgan-access.test",
+      "to": [
+        "treasury@northwind.test"
+      ],
+      "cc": [
+        "ar@northwind.test"
+      ],
+      "subject": "Incoming wire credit advice - TRN 2026072200517740 - USD 15,914.50",
+      "body": "INCOMING FUNDS TRANSFER - CREDIT ADVICE\n\nBeneficiary: NORTHWIND SYSTEMS INC\nAccount credited: USD operating account ending 4417\nValue date: 2026-07-22\nTransaction reference (TRN): 2026072200517740\n\nOrdering customer: ALDENHOVEN LOGISTIK GMBH, DUESSELDORF, DE\nOrdering institution: COMMERZBANK AG, DUESSELDORF (COBADEFFXXX)\nRemittance information: INV-3212 ZAHLUNGSAVIS 1500048562\nDetails of charges: SHA\n\nInstructed amount: EUR 14,700.00\nExchange rate applied: 1.0850 USD per EUR\nUSD equivalent: USD 15,949.50\nCharges deducted (incoming international wire and currency conversion): USD 35.00\nNet amount credited: USD 15,914.50\n\nThe payment was received in a currency other than that of the beneficiary account and was converted at the bank's rate on the value date.\nThis advice is for information. It is not a statement of account.",
+      "party_id": "aldenhoven"
+    }
+  ],
+  "chat": [
+    {
+      "id": "gj-c-a1",
+      "channel": "cs-escalations",
+      "user": "U_SAM",
+      "ts": "2026-06-18T16:00:00Z",
+      "text": "Brightwater's SSO rollout failed again this morning. Their CIO is not happy. I am on a call with them at 3.",
+      "party_id": "brightwater"
+    },
+    {
+      "id": "gj-c-1",
+      "channel": "cs-escalations",
+      "user": "U_SAM",
+      "ts": "2026-07-08T06:31:00Z",
+      "text": "INC-2291: EU-central ingestion is down since 06:12 UTC. Aldenhoven's dispatch boards are blank and their early shift is on paper. Engineering is on it.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-c-2",
+      "channel": "cs-escalations",
+      "user": "U_SAM",
+      "ts": "2026-07-08T13:05:00Z",
+      "text": "INC-2291 resolved at 12:52 UTC. 6 hours 40 minutes in total for EU-central. Status page updated, postmortem by Friday.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-c-3",
+      "channel": "cs-escalations",
+      "user": "U_SAM",
+      "ts": "2026-07-09T15:50:00Z",
+      "text": "Aldenhoven have filed an SLA claim for the 2% and say their AP will just deduct it from the July invoices. I told Jonas I cannot confirm a credit. Who signs these off?",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-c-4",
+      "channel": "cs-escalations",
+      "user": "U_CTRL",
+      "ts": "2026-07-09T16:20:00Z",
+      "text": "Exhibit B credits need an officer, so Alex. Nothing is approved for Aldenhoven yet. If they short-pay before it is, AR holds the difference as disputed and we do not write it off.",
+      "party_id": "aldenhoven"
+    },
+    {
+      "id": "gj-c-5",
+      "channel": "finance",
+      "user": "U_CTRL",
+      "ts": "2026-07-01T14:00:00Z",
+      "text": "July invoices are out, including the first two in euro for Aldenhoven, booked at 1.1000. We still have no EUR account, so their wires will be converted by JPMorgan on the way in."
+    }
+  ],
+  "crm": {
+    "deals": [
+      {
+        "id": "DEAL-CTR-pallister-2026",
+        "party_id": "pallister",
+        "name": "Pallister Manufacturing Inc 2026 subscription",
+        "amount_cents": 10200000,
+        "close_date": "2025-12-16",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-tessellate-2026",
+        "party_id": "tessellate",
+        "name": "Tessellate Software Inc 2026 subscription",
+        "amount_cents": 1500000,
+        "close_date": "2025-12-16",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-ostrander-2026",
+        "party_id": "ostrander",
+        "name": "Ostrander Imports BV 2026 subscription",
+        "amount_cents": 8760000,
+        "close_date": "2025-12-16",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-ardent-2026",
+        "party_id": "ardent",
+        "name": "Ardent Aerospace GmbH 2026 subscription",
+        "amount_cents": 30000000,
+        "close_date": "2025-12-16",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-fernhill-2026",
+        "party_id": "fernhill",
+        "name": "Fernhill Foods Ltd 2026 subscription",
+        "amount_cents": 24000000,
+        "close_date": "2025-12-16",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-halvorsen-2026",
+        "party_id": "halvorsen",
+        "name": "Halvorsen Freight Systems 2025 subscription",
+        "amount_cents": 14400000,
+        "close_date": "2025-07-01",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-07-01T00:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-meridian-2026",
+        "party_id": "meridian",
+        "name": "Meridian Infotech Pvt Ltd 2026 subscription",
+        "amount_cents": 21600000,
+        "close_date": "2026-01-01",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2026-01-01T00:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-brightwater-2026",
+        "party_id": "brightwater",
+        "name": "Brightwater Health Partners 2025 subscription",
+        "amount_cents": 39600000,
+        "close_date": "2025-01-01",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-01-01T00:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-kestrel-analytics-2026",
+        "party_id": "kestrel-analytics",
+        "name": "Kestrel Analytics Ltd 2026 subscription",
+        "amount_cents": 18000000,
+        "close_date": "2025-12-16",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-castellan-2026",
+        "party_id": "castellan",
+        "name": "Castellan Biotech AG 2026 subscription",
+        "amount_cents": 3000000,
+        "close_date": "2025-12-16",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-lumen-2026",
+        "party_id": "lumen",
+        "name": "Lumen Retail Group 2026 subscription",
+        "amount_cents": 7440000,
+        "close_date": "2025-12-16",
+        "owner": "U_DANA",
+        "stage": "closedwon",
+        "recorded_time": "2025-12-16T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-aldenhoven-2024",
+        "party_id": "aldenhoven",
+        "name": "Aldenhoven Logistik GmbH 2024 subscription",
+        "amount_cents": 330000000,
+        "close_date": "2023-12-12",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2023-12-12T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-aldenhoven-2026",
+        "party_id": "aldenhoven",
+        "name": "Aldenhoven Logistik GmbH 2026 subscription",
+        "amount_cents": 66000000,
+        "close_date": "2026-06-12",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2026-06-12T16:00:00Z"
+      },
+      {
+        "id": "DEAL-CTR-aldenhoven-addon-2026",
+        "party_id": "aldenhoven",
+        "name": "Aldenhoven Logistik GmbH 2026 subscription",
+        "amount_cents": 9900000,
+        "close_date": "2026-06-12",
+        "owner": "U_SAM",
+        "stage": "closedwon",
+        "recorded_time": "2026-06-12T16:05:00Z"
+      }
+    ],
+    "notes": [
+      {
+        "id": "GJ-N-1",
+        "party_id": "aldenhoven",
+        "ts": "2026-06-12T16:30:00Z",
+        "author": "U_SAM",
+        "text": "Amendment No. 2 signed. Aldenhoven moves to euro pricing from 1 July: EUR 100,000 platform (was USD 110,000) plus the EUR 15,000 data residency add-on. Their treasury will pay by euro wire."
+      },
+      {
+        "id": "GJ-N-2",
+        "party_id": "aldenhoven",
+        "ts": "2026-07-09T16:00:00Z",
+        "author": "U_SAM",
+        "text": "Jonas Brandt filed an Exhibit B claim for the 8 July outage (INC-2291). Not confirmed by us. Passed to finance."
+      },
+      {
+        "id": "GJ-N-3",
+        "party_id": "kestrel-analytics",
+        "ts": "2026-06-30T10:00:00Z",
+        "author": "U_DANA",
+        "text": "Kestrel is centralising treasury under Kestrel Group Holdings. The contracting entity stays Kestrel Analytics Ltd."
+      }
+    ]
+  },
+  "files": [
+    {
+      "id": "policy-memo",
+      "kind": "policy_memo",
+      "title": "Northwind accounting policy memo FY2026",
+      "recorded_time": "2026-01-02T00:00:00Z",
+      "sections": [
+        {
+          "slug": "approval",
+          "heading": "1. Approval",
+          "text": "Adjustments of USD 500 or more require approval by a person in the approval matrix. Account owners may approve customer credits up to USD 5,000; the controller up to USD 100,000."
+        },
+        {
+          "slug": "concessions",
+          "heading": "2. Price concessions",
+          "text": "Price concessions on subscriptions still being delivered reduce deferred revenue (2400)."
+        },
+        {
+          "slug": "bank-charges",
+          "heading": "3. Bank charges on international wires",
+          "text": "Charges deducted by intermediary banks on international wires are written off to bank charges (6150) only under an approved rule; otherwise ask."
+        },
+        {
+          "slug": "withholding-tax",
+          "heading": "4. Tax withheld at source",
+          "text": "Tax deducted at source by a customer under local law is not a discount and not an expense: settle it against the invoice to Withholding tax receivable (1350), and obtain the withholding certificate so the credit can be claimed."
+        },
+        {
+          "slug": "paying-entity",
+          "heading": "5. Payments from another legal entity",
+          "text": "A customer may pay from another legal entity only once that entity is confirmed in writing and recorded."
+        },
+        {
+          "slug": "foreign-currency",
+          "heading": "6. Foreign-currency receivables",
+          "text": "An invoice in a foreign currency is recorded in US dollars at the exchange rate on the invoice date. When it is paid, the difference between that rate and the rate the bank applied to the receipt is a realised exchange gain or loss (7100). It is arithmetic on the bank's own advice, not a concession, and it is never netted against a customer's deduction. Foreign-currency receivables still open at month end are remeasured at the closing rate."
+        },
+        {
+          "slug": "customer-deductions",
+          "heading": "7. Customer deductions and service credits",
+          "text": "A deduction is not accepted because a customer took it. A service credit is due only under the customer's service level exhibit: claimed in writing, validated against our availability records, confirmed in writing by an officer, and issued as a credit note. Until then the unpaid amount stays open on the invoice as disputed. It is not written off and it is not booked as a discount."
+        }
+      ]
+    }
+  ]
+}
