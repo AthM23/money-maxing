@@ -3,186 +3,196 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Money Maxer: the whole run, end to end</title>
+<title>Money Maxer: the pipeline, live</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22%23101012%22%2F%3E%3Cpath%20d%3D%22M8%2023.5V11.5l7%207.5%208.6-10.4%22%20fill%3D%22none%22%20stroke%3D%22%23d9f24f%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Ccircle%20cx%3D%2224%22%20cy%3D%228.2%22%20r%3D%222.7%22%20fill%3D%22%23d9f24f%22%2F%3E%3C%2Fsvg%3E">
 <style>
-  :root{--lime:#d9f24f;--ink:#101012;--paper:#f4f4f1;--mut:#5b5b57;--coral:#f0645c;--green:#3fae52;--indigo:#4a55b8}
+  :root{--lime:#d9f24f;--ink:#101012;--paper:#f4f4f1;--mut:#5b5b57;--coral:#f0645c;--green:#3fae52;--line:#e8e8e3}
   *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--ink);color:var(--ink);-webkit-font-smoothing:antialiased;min-height:100vh}
-  header{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:20px 48px;z-index:100}
-  .logo{font-weight:800;font-size:20px;letter-spacing:-.03em;display:flex;align-items:center;gap:10px;background:#fff;border-radius:999px;padding:7px 20px 7px 8px;box-shadow:0 8px 30px rgba(0,0,0,.14)}
-  .logo svg{display:block;border-radius:9px}
-  .kick{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;opacity:.55;margin-bottom:18px}
-  h1{font-size:clamp(36px,4.6vw,64px);letter-spacing:-.02em;line-height:1.02;font-weight:700}
-  .sub{color:var(--mut);font-size:18px;margin-top:16px;max-width:720px;line-height:1.65}
-  .btn{border:0;cursor:pointer;font-size:15px;font-weight:600;border-radius:999px;padding:14px 26px;background:var(--ink);color:#fff;transition:transform .18s,box-shadow .18s;display:inline-flex;align-items:center;gap:8px}
-  .btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.2)}
-  .btn.lime{background:var(--lime);color:var(--ink)}
-  .sheet{background:var(--paper);border-radius:44px 44px 0 0;box-shadow:0 -28px 70px rgba(0,0,0,.28);margin-top:96px;min-height:calc(100vh - 96px)}
-  main{padding:56px 72px 60px;max-width:1560px;margin:0 auto}
-  @media(max-width:900px){main{padding:44px 22px 40px}header{padding:20px 22px}}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;background:var(--paper);color:var(--ink);
+       -webkit-font-smoothing:antialiased;height:100vh;display:flex;overflow:hidden}
+  svg.ic{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
 
-  /* stage stepper + isometric stack, the "how it works" strip */
-  .hiw{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:center;background:#fff;border-radius:32px;
-       padding:24px 30px;margin-top:18px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
-  @media(max-width:1100px){.hiw{grid-template-columns:1fr}}
-  .steps{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
-  .step{font-size:12px;font-weight:700;border-radius:999px;padding:8px 14px;background:var(--paper);color:#8a8a85;
-        transition:all .35s;white-space:nowrap}
-  .step.on{background:var(--ink);color:var(--lime)}
-  .hiw h2{font-size:clamp(20px,2.2vw,28px);letter-spacing:-.02em;min-height:1.2em}
-  .hiw p{color:var(--mut);font-size:14.5px;line-height:1.55;margin-top:8px;min-height:3.2em}
-  .iso{position:relative;height:250px;display:flex;align-items:center;justify-content:center}
-  .layer{position:absolute;width:190px;height:190px;border-radius:22px;background:#fff;border:1.5px solid #e4e4df;
-         transform:rotate(45deg) scaleY(.577) translateY(240px);opacity:0;transition:transform .7s cubic-bezier(.3,.7,.3,1),opacity .7s;
-         box-shadow:0 18px 34px rgba(20,22,6,.10)}
-  .layer.show{opacity:1;transform:rotate(45deg) scaleY(.577) translateY(0)}
-  .layer .tag{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-              transform:scaleY(1.733) rotate(-45deg);font-size:12px;font-weight:700;color:#6b6b66;text-align:center;line-height:1.3;
-              opacity:0;transition:opacity .4s}
-  .layer.top .tag{opacity:1}
-  .layer.top{border-color:var(--lime);box-shadow:0 0 0 2.5px var(--lime),0 18px 34px rgba(20,22,6,.12)}
-  .layer .orb{position:absolute;width:11px;height:11px;border-radius:50%;background:var(--green);opacity:0;transition:opacity .4s}
-  .layer.show .orb{opacity:1;animation:blink 1.6s ease-in-out infinite}
-  @keyframes blink{50%{opacity:.35}}
+  /* ---------- sidebar, same language as the dashboard ---------- */
+  aside{width:248px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;
+        transition:margin-left .35s cubic-bezier(.4,0,.2,1);flex:0 0 auto}
+  aside.hidden{margin-left:-248px}
+  .side-head{display:flex;align-items:center;gap:10px;padding:20px 20px 14px;font-weight:800;font-size:17px;letter-spacing:-.02em}
+  .side-sec{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#9a9a94;font-weight:700;padding:16px 20px 8px}
+  .src{display:flex;align-items:center;gap:11px;margin:2px 10px;padding:10px 12px;border-radius:12px;font-size:13.5px;font-weight:600;
+       color:#3c3c38;opacity:.5;transition:opacity .4s,background .4s}
+  .src small{display:block;font-weight:400;font-size:11px;color:#8a8a85;line-height:1.35;margin-top:1px}
+  .src .st{margin-left:auto;width:8px;height:8px;border-radius:50%;background:#d6d6d0;flex:0 0 auto;transition:background .4s}
+  .src.on{opacity:1;background:var(--paper)}
+  .src.on .st{background:var(--green)}
+  .side-foot{margin-top:auto;padding:16px 20px;border-top:1px solid var(--line);font-size:11.5px;color:#8a8a85;line-height:1.5}
 
-  /* the board: four columns joined by connector rails */
-  .board{display:grid;grid-template-columns:230px 1fr 330px;gap:26px;margin-top:18px}
-  @media(max-width:1100px){.board{grid-template-columns:1fr}}
-  .col h3{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:#8a8a85;margin-bottom:12px}
+  /* ---------- main ---------- */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;padding:18px 26px 16px;gap:14px;overflow:hidden}
+  .topbar{display:flex;align-items:center;gap:14px}
+  .burger{border:1px solid var(--line);background:#fff;border-radius:10px;width:34px;height:34px;display:flex;align-items:center;
+          justify-content:center;cursor:pointer;color:#555}
+  .topbar h1{font-size:19px;letter-spacing:-.02em;font-weight:800}
+  .topbar .sub{font-size:12.5px;color:var(--mut);margin-top:1px}
+  .steps{display:flex;gap:6px;margin-left:auto}
+  .step{font-size:11px;font-weight:700;border-radius:999px;padding:7px 12px;background:#fff;border:1px solid var(--line);
+        color:#9a9a94;transition:all .3s;white-space:nowrap}
+  .step.on{background:var(--ink);border-color:var(--ink);color:var(--lime)}
+  .runbtn{border:0;cursor:pointer;font-size:13.5px;font-weight:700;border-radius:999px;padding:10px 20px;background:var(--ink);
+          color:#fff;transition:transform .15s;display:flex;align-items:center;gap:7px}
+  .runbtn:hover{transform:translateY(-1px)}
+  .runbtn .tri{width:0;height:0;border-left:7px solid var(--lime);border-top:5px solid transparent;border-bottom:5px solid transparent}
 
-  .card{background:#fff;border-radius:20px;padding:14px 16px;margin-bottom:12px;box-shadow:0 6px 24px rgba(0,0,0,.06);
-        opacity:.38;transform:translateY(6px);transition:opacity .5s,transform .5s,box-shadow .5s;position:relative}
-  .card.on{opacity:1;transform:none}
-  .card.hot{box-shadow:0 0 0 2.5px var(--lime),0 10px 30px rgba(0,0,0,.10)}
-  .card b{font-size:14.5px;display:flex;align-items:center;gap:8px}
-  .card small{display:block;color:var(--mut);font-size:12.5px;margin-top:4px;line-height:1.45}
-  .chip{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;border-radius:999px;padding:4px 10px;margin-top:8px;
-        background:#eee;color:#666;text-transform:uppercase;transition:background .4s,color .4s}
+  /* ---------- the pipeline, the hero ---------- */
+  .pipe{background:#fff;border-radius:20px;border:1px solid var(--line);padding:22px 34px 18px;flex:0 0 auto}
+  .pipe-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+  .pipe-head b{font-size:14px;letter-spacing:-.01em}
+  .pipe-head span{font-size:12.5px;color:var(--mut)}
+  .agents{display:flex;justify-content:space-between;align-items:flex-start;position:relative;padding:0 8px}
+  .agents::before{content:"";position:absolute;left:60px;right:60px;top:24px;height:2px;background:var(--line);border-radius:2px}
+  .agents .wire{position:absolute;left:60px;top:24px;height:2px;width:0;background:var(--ink);border-radius:2px;
+                transition:width .8s cubic-bezier(.4,0,.2,1)}
+  .agent{position:relative;z-index:1;text-align:center;width:130px}
+  .agent .dot{width:48px;height:48px;border-radius:14px;background:var(--paper);border:1.5px solid var(--line);display:flex;
+              align-items:center;justify-content:center;margin:0 auto 9px;transition:all .35s;color:#6b6b66}
+  .agent .dot svg.ic{width:20px;height:20px}
+  .agent.on .dot{border-color:var(--ink);background:#fff;color:var(--ink)}
+  .agent.hot .dot{background:var(--lime);border-color:var(--ink);color:var(--ink);transform:scale(1.12);
+                  box-shadow:0 6px 18px rgba(20,22,6,.16)}
+  .agent b{font-size:13px}
+  .agent small{display:block;font-size:10.5px;color:#8a8a85;line-height:1.35;margin-top:2px}
+
+  /* ---------- feed and books ---------- */
+  .grid{display:grid;grid-template-columns:1fr 320px;gap:14px;flex:1;min-height:0}
+  .msgs{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px 18px;overflow-y:auto;min-height:0}
+  .msg{display:flex;gap:10px;align-items:flex-start;margin-bottom:9px;opacity:0;transform:translateY(8px);
+       transition:opacity .4s,transform .4s;font-size:13px;line-height:1.5}
+  .msg.on{opacity:1;transform:none}
+  .msg .who{flex:0 0 78px;font-weight:700;font-size:11px;padding-top:4px;color:#6b6b66;text-transform:uppercase;letter-spacing:.04em}
+  .msg .txt{background:var(--paper);border-radius:11px;padding:8px 12px}
+  .msg.human .txt{background:var(--ink);color:#fff}
+  .msg.reject .txt{border:1.5px solid var(--coral);background:#fff}
+  .books{display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0}
+  .bcard{background:#fff;border:1px solid var(--line);border-radius:16px;padding:12px 14px;opacity:.45;transition:opacity .4s,box-shadow .4s;flex:0 0 auto}
+  .bcard.on{opacity:1}
+  .bcard.hot{box-shadow:0 0 0 2px var(--lime)}
+  .bcard b{font-size:13px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .chip{font-size:9.5px;font-weight:700;letter-spacing:.05em;border-radius:999px;padding:3px 9px;background:#eee;color:#777;
+        text-transform:uppercase;transition:background .4s,color .4s;white-space:nowrap}
   .chip.live{background:var(--lime);color:var(--ink)}
   .chip.wait{background:#ffe3e0;color:#b03a33}
   .chip.done{background:#dff2e2;color:#1e7a34}
-  .chip.ink{background:var(--ink);color:#fff}
-
-  /* the agent lane */
-  .lane{background:#fff;border-radius:32px;padding:22px 26px;box-shadow:0 10px 34px rgba(0,0,0,.07)}
-  .agents{display:flex;justify-content:space-between;align-items:flex-start;position:relative;padding:6px 6px 2px}
-  .agents::before{content:"";position:absolute;left:52px;right:52px;top:27px;height:2.5px;background:#e6e6e1;border-radius:2px}
-  .agents .wire{position:absolute;left:52px;top:27px;height:2.5px;width:0;background:var(--ink);border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
-  .agent{position:relative;z-index:1;text-align:center;width:120px}
-  .agent .dot{width:44px;height:44px;border-radius:50%;background:var(--paper);border:2.5px solid #e2e2dd;display:flex;align-items:center;justify-content:center;font-size:19px;margin:0 auto 8px;transition:all .35s}
-  .agent.on .dot{border-color:var(--ink);background:#fff}
-  .agent.hot .dot{background:var(--lime);border-color:var(--ink);transform:scale(1.16)}
-  .agent b{font-size:13.5px}
-  .agent small{display:block;font-size:11px;color:#8a8a85;line-height:1.35;margin-top:3px}
-  .msgs{margin-top:20px;background:var(--paper);border-radius:16px;padding:14px 16px;height:330px;overflow-y:auto}
-  .msg{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s;font-size:13.5px;line-height:1.5}
-  .msg.on{opacity:1;transform:none}
-  .msg .who{flex:0 0 92px;font-weight:700;font-size:12px;padding-top:2px}
-  .msg .txt{background:#fff;border-radius:12px;padding:9px 13px;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-  .msg.human .txt{background:var(--ink);color:#fff}
-  .msg.reject .txt{border:1.5px solid var(--coral)}
-  .msg .txt .amt{font-weight:700;font-variant-numeric:tabular-nums}
-
-  /* ledger column */
-  .entry{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:7px 0;border-top:1px solid #efefeb;opacity:0;transition:opacity .45s}
+  .entry{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 0 0;color:#3c3c38;opacity:0;transition:opacity .4s}
   .entry.on{opacity:1}
   .entry .num{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
-  .foot{margin-top:26px;background:var(--ink);color:#fff;border-radius:28px;padding:20px 26px;display:flex;gap:34px;flex-wrap:wrap;align-items:center}
-  .foot .stat b{font-size:22px;display:block;color:var(--lime)}
-  .foot .stat small{font-size:12px;color:#b7b7bd}
-  .foot .note{font-size:12.5px;color:#b7b7bd;max-width:420px;line-height:1.5}
+
+  /* ---------- stat bar ---------- */
+  .statbar{background:var(--ink);color:#fff;border-radius:16px;padding:12px 22px;display:flex;gap:30px;align-items:center;flex:0 0 auto}
+  .statbar .stat b{font-size:16px;color:var(--lime);margin-right:6px}
+  .statbar .stat{font-size:11.5px;color:#b7b7bd;white-space:nowrap}
+  .statbar .note{font-size:11px;color:#8f8f96;line-height:1.45;margin-left:auto;max-width:520px}
+  @media(max-width:1150px){.grid{grid-template-columns:1fr}.books{flex-direction:row;flex-wrap:wrap}.statbar .note{display:none}}
 </style>
 </head>
 <body>
-<header>
-  <a class="logo" href="index.html" style="text-decoration:none;color:var(--ink)"><svg width="30" height="30" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>Money Maxer</a>
-  <button class="btn lime" id="replay" onclick="play()">Run July again</button>
-</header>
-<div class="sheet">
-<main>
-  <div class="kick">the whole run · live replay</div>
-  <h1>One click. The agents do the month.</h1>
-  <p class="sub">This is the real July from our demo company, replayed: every number below was measured on our own run,
-  nothing is invented. Sources feed the Reader, the Reader feeds code, code posts what it can prove, one question goes
-  to a person, the answer becomes a rule, and the auditor re-performs everything.</p>
 
-  <div class="hiw">
-    <div>
-      <div class="steps">
-        <span class="step" id="st0">01 · All the data</span>
-        <span class="step" id="st1">02 · Our own model</span>
-        <span class="step" id="st2">03 · Agents run it</span>
-        <span class="step" id="st3">04 · One human moment</span>
-        <span class="step" id="st4">05 · The loop</span>
-      </div>
-      <h2 id="hiwTitle">All data, one feed.</h2>
-      <p id="hiwText">Bank files, remittance emails, the Slack thread, the contract. Everything the month rests on, ingested into one place.</p>
+<aside id="side">
+  <div class="side-head">
+    <svg width="28" height="28" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#101012"/><path d="M8 23.5V11.5l7 7.5 8.6-10.4" fill="none" stroke="#d9f24f" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="8.2" r="2.7" fill="#d9f24f"/></svg>
+    Money Maxer
+  </div>
+  <div class="side-sec">Connected sources</div>
+  <div class="src" id="s-bank">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M3 9.5 12 4l9 5.5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/></svg>
+    <span>Bank feeds<small>3 banks, 4 accounts, 6 countries</small></span><span class="st"></span>
+  </div>
+  <div class="src" id="s-mail">
+    <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7.5 8 6 8-6"/></svg>
+    <span>Gmail<small>remittances, the outage note</small></span><span class="st"></span>
+  </div>
+  <div class="src" id="s-slack">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 1 0-3.6 6.7L20 19.5l-.9-3.4a8 8 0 0 0 .9-4.6z"/></svg>
+    <span>Slack<small>the outage thread, approvals</small></span><span class="st"></span>
+  </div>
+  <div class="src" id="s-docs">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/></svg>
+    <span>Contracts<small>credit terms, signatures</small></span><span class="st"></span>
+  </div>
+  <div class="side-sec">Model</div>
+  <div class="src on" style="opacity:1">
+    <svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 2v2M15 2v2M9 20v2M15 20v2M2 9h2M2 15h2M20 9h2M20 15h2"/></svg>
+    <span>Qwen3-4B, ours<small>fine-tuned on the GX10, serving live</small></span><span class="st" style="background:var(--green)"></span>
+  </div>
+  <div class="side-foot">Fictional company, simulated July. Every figure on this screen was measured on our own runs.</div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="burger" onclick="document.getElementById('side').classList.toggle('hidden')" title="Toggle sources">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
+    <div><h1>The pipeline, live</h1><div class="sub" id="stageDesc">One click runs the month. Watch the agents hand the work forward.</div></div>
+    <div class="steps">
+      <span class="step" id="st0">01 Data</span><span class="step" id="st1">02 Reader</span>
+      <span class="step" id="st2">03 Agents</span><span class="step" id="st3">04 Human</span><span class="step" id="st4">05 Loop</span>
     </div>
-    <div class="iso">
-      <div class="layer" id="ly0" style="margin-top:120px"><div class="tag">bank + mail + chat<br>+ contracts</div></div>
-      <div class="layer" id="ly1" style="margin-top:40px"><div class="tag">Reader<br>our fine-tuned model</div></div>
-      <div class="layer" id="ly2" style="margin-top:-40px"><div class="tag">agents + kernel</div>
-        <span class="orb" style="left:14px;top:50%"></span><span class="orb" style="right:14px;top:50%"></span>
-        <span class="orb" style="left:50%;top:10px"></span><span class="orb" style="left:50%;bottom:10px"></span></div>
-      <div class="layer" id="ly3" style="margin-top:-120px"><div class="tag">books, audit-ready</div></div>
+    <button class="runbtn" onclick="play()"><span class="tri"></span>Run July</button>
+  </div>
+
+  <div class="pipe">
+    <div class="pipe-head"><b>Agent pipeline</b><span>each handoff is recorded, checked and priced</span></div>
+    <div class="agents">
+      <div class="wire" id="wire"></div>
+      <div class="agent" id="a-reader">
+        <div class="dot"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5.5C10 4 7.5 3.5 4 3.8v14.7c3.5-.3 6 .2 8 1.7 2-1.5 4.5-2 8-1.7V3.8c-3.5-.3-6 .2-8 1.7z"/><path d="M12 5.5v14.7"/></svg></div>
+        <b>Reader</b><small>our fine-tuned Qwen<br>on the GX10</small>
+      </div>
+      <div class="agent" id="a-prep">
+        <div class="dot"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 7h8"/><path d="M8 11.5h.01M12 11.5h.01M16 11.5h.01M8 15h.01M12 15h.01M16 15h.01"/></svg></div>
+        <b>Preparer</b><small>the code tier,<br>$0 per entry</small>
+      </div>
+      <div class="agent" id="a-check">
+        <div class="dot"><svg class="ic" viewBox="0 0 24 24"><path d="M12 3 5 5.5v6c0 4.4 3 7.8 7 9.5 4-1.7 7-5.1 7-9.5v-6z"/><path d="m9 11.5 2.2 2.2L15.5 9"/></svg></div>
+        <b>Checker</b><small>the kernel, refuses<br>unproven drafts</small>
+      </div>
+      <div class="agent" id="a-human">
+        <div class="dot"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1.2-3.5 3.8-5 7-5s5.8 1.5 7 5"/></svg></div>
+        <b>Human</b><small>asked once,<br>remembered</small>
+      </div>
+      <div class="agent" id="a-audit">
+        <div class="dot"><svg class="ic" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5.5 5.5"/></svg></div>
+        <b>Auditor</b><small>re-performs,<br>trusts nobody</small>
+      </div>
     </div>
   </div>
 
-  <div class="board">
-    <div class="col" id="srcCol">
-      <h3>Connected sources</h3>
-      <div class="card" id="s-bank"><b>🏦 Bank feeds</b><small>3 banks, 4 accounts, 6 countries. 12 customer payments in July.</small><span class="chip">idle</span></div>
-      <div class="card" id="s-mail"><b>✉️ Gmail</b><small>Remittance emails and the customer's note about the June outage.</small><span class="chip">idle</span></div>
-      <div class="card" id="s-slack"><b>💬 Slack</b><small>The thread that proves the outage, and where the CFO answers.</small><span class="chip">idle</span></div>
-      <div class="card" id="s-docs"><b>📄 Contracts</b><small>The Vossberg contract: a credit needs an officer in writing.</small><span class="chip">idle</span></div>
-    </div>
-
-    <div class="lane">
-      <div class="agents">
-        <div class="wire" id="wire"></div>
-        <div class="agent" id="a-reader"><div class="dot">📖</div><b>Reader</b><small>our fine-tuned Qwen on the GX10</small></div>
-        <div class="agent" id="a-prep"><div class="dot">🧮</div><b>Preparer</b><small>the code tier</small></div>
-        <div class="agent" id="a-check"><div class="dot">🛡️</div><b>Checker</b><small>the kernel</small></div>
-        <div class="agent" id="a-human"><div class="dot">🧑‍💼</div><b>Human</b><small>asked once, remembered</small></div>
-        <div class="agent" id="a-audit"><div class="dot">🔍</div><b>Auditor</b><small>re-performs, trusts nobody</small></div>
-      </div>
-      <div class="msgs" id="msgs"></div>
-    </div>
-
-    <div class="col">
-      <h3>The books, live</h3>
-      <div class="card" id="l-code"><b>Posted by code alone</b>
-        <div class="entry" id="e1"><span>14 ledger entries, 12 receipts</span><span class="num">$0.00 model cost</span></div>
-        <div class="entry" id="e2"><span>Receivables tied to open invoices</span><span class="num">to the cent</span></div>
-        <span class="chip" id="c-code">waiting</span></div>
-      <div class="card" id="l-voss"><b>Vossberg wire, $4,200 short</b>
+  <div class="grid">
+    <div class="msgs" id="msgs"></div>
+    <div class="books">
+      <div class="bcard" id="l-code"><b>Posted by code alone <span class="chip">waiting</span></b>
+        <div class="entry" id="e1"><span>14 entries, 12 receipts</span><span class="num">$0.00 model cost</span></div>
+        <div class="entry" id="e2"><span>Receivables tied to invoices</span><span class="num">to the cent</span></div></div>
+      <div class="bcard" id="l-voss"><b>Vossberg wire, $4,200 short <span class="chip">waiting</span></b>
         <div class="entry" id="e3"><span>Bank fee, learned rule</span><span class="num">$40.00</span></div>
         <div class="entry" id="e4"><span>Rate movement, recomputed</span><span class="num">$1,960.00</span></div>
-        <div class="entry" id="e5"><span>Held back by the customer</span><span class="num">$2,200.00</span></div>
-        <span class="chip" id="c-voss">waiting</span></div>
-      <div class="card" id="l-learn"><b>What it learned</b>
-        <div class="entry" id="e6"><span>SHORT-PAY-01: small wire shortfalls</span><span class="num">approved</span></div>
-        <div class="entry" id="e7"><span>Standing 2% credit, to Sep 30</span><span class="num">said once</span></div>
-        <div class="entry" id="e8"><span>Next invoice: $550 credit prepared</span><span class="num">0 questions</span></div>
-        <span class="chip" id="c-learn">waiting</span></div>
-      <div class="card" id="l-audit"><b>Audit pack</b>
-        <div class="entry" id="e9"><span>Entries re-performed independently</span><span class="num">15/15 clean</span></div>
-        <div class="entry" id="e10"><span>One digit tampered in one advice</span><span class="num">5 findings</span></div>
-        <span class="chip" id="c-audit">waiting</span></div>
+        <div class="entry" id="e5"><span>Held back by the customer</span><span class="num">$2,200.00</span></div></div>
+      <div class="bcard" id="l-learn"><b>What it learned <span class="chip">waiting</span></b>
+        <div class="entry" id="e6"><span>SHORT-PAY-01, small shortfalls</span><span class="num">approved</span></div>
+        <div class="entry" id="e7"><span>Standing 2% credit to Sep 30</span><span class="num">said once</span></div>
+        <div class="entry" id="e8"><span>Next invoice: $550 credit</span><span class="num">0 questions</span></div></div>
+      <div class="bcard" id="l-audit"><b>Audit pack <span class="chip">waiting</span></b>
+        <div class="entry" id="e9"><span>Entries re-performed</span><span class="num">15/15 clean</span></div>
+        <div class="entry" id="e10"><span>One tampered digit</span><span class="num">5 findings</span></div></div>
     </div>
   </div>
 
-  <div class="foot">
-    <div class="stat"><b>97.2%</b><small>our Reader's field accuracy, measured</small></div>
-    <div class="stat"><b>1.2 s</b><small>per document, batched on the GX10</small></div>
-    <div class="stat"><b>$0.40</b><small>per million tokens, all-in on our hardware</small></div>
-    <div class="stat"><b>15 min</b><small>to retrain on new corrections</small></div>
-    <div class="note">How we know: we built our own benchmark. 3,000 generated finance documents, 18 customers, 5 vendors
-    and 2 whole document styles locked out of training, one strict grading script for every model including Claude.
-    Our 0.6B and 4B lead every Claude tier on it, and the grader and answers are in the repo for anyone to re-run.</div>
+  <div class="statbar">
+    <span class="stat"><b>97.2%</b>field accuracy, measured</span>
+    <span class="stat"><b>1.2 s</b>per document</span>
+    <span class="stat"><b>$0.40</b>per 1M tokens, all-in</span>
+    <span class="stat"><b>15 min</b>to retrain</span>
+    <span class="note">Our own benchmark: 3,000 generated documents, 18 customers, 5 vendors and 2 formats locked out of
+    training, one strict grader for every model including Claude. Our 0.6B and 4B lead every Claude tier on it.</span>
   </div>
-</main>
 </div>
 
 <script>
@@ -196,43 +206,39 @@ function msg(who,txt,cls){
   $('msgs').appendChild(d);requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('on')));
   $('msgs').scrollTop=$('msgs').scrollHeight;
 }
-function chip(id,text,cls){const c=$(id).querySelector('.chip')||$(id);c.textContent=text;c.className='chip '+cls;}
-const STAGES=[
- ["All data, one feed.","Bank files, remittance emails, the Slack thread, the contract. Everything the month rests on, ingested into one place."],
- ["Read by our own model.","Every document becomes a schema entry through the Qwen model we fine-tuned in 15 minutes on the GX10. Measured: 97.2% field accuracy at 1.2 seconds per document, ahead of every Claude tier on our benchmark."],
- ["Agents run the work.","The code tier posts what it can prove for $0. The kernel re-performs every tick mark and refuses any draft whose evidence does not match its source."],
- ["Your team steps in when it matters.","One question reaches the CFO, with everything already checked attached. The answer is recorded with a scope and an end date."],
- ["Every close, smarter.","The answer becomes a standing rule. Corrections become training data, and the model retrains in 15 minutes. Next month asks less."]];
-function stage(n){
-  for(let i=0;i<5;i++) $('st'+i).classList.toggle('on',i===n);
-  $('hiwTitle').textContent=STAGES[n][0]; $('hiwText').textContent=STAGES[n][1];
-  const upto=[0,1,2,2,3][n];
-  for(let i=0;i<4;i++){const L=$('ly'+i);L.classList.toggle('show',i<=upto);L.classList.toggle('top',i===upto);}
-}
+function chip(id,text,cls){const c=$(id).querySelector('.chip');c.textContent=text;c.className='chip '+cls;}
 function hot(id,on){$(id).classList.toggle('hot',on);$(id).classList.add('on');}
 function agent(id,state){const a=$(id);a.classList.add('on');a.classList.toggle('hot',state==='hot');}
+const DESC=[
+ "All the data in one feed: bank files, mail, chat and contracts.",
+ "Our own model reads every document into the schema: 97.2% accuracy, 1.2 s per doc, measured.",
+ "The code tier posts what it can prove for $0; the kernel re-performs every tick mark.",
+ "One question reaches the CFO with everything already checked. The answer is remembered.",
+ "The answer becomes a rule, corrections become training data, next month asks less."];
+function stage(n){
+  for(let i=0;i<5;i++) $('st'+i).classList.toggle('on',i===n);
+  $('stageDesc').textContent=DESC[n];
+}
 
 async function play(){
   const my=++runId;
   const guard=()=>my!==runId;
-  document.querySelectorAll('.card,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
-  document.querySelectorAll('.chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
+  document.querySelectorAll('.bcard,.agent,.entry').forEach(x=>x.classList.remove('on','hot'));
+  document.querySelectorAll('.bcard .chip').forEach(c=>{c.textContent='waiting';c.className='chip';});
+  document.querySelectorAll('.src').forEach(s=>{if(s.id) s.classList.remove('on');});
   $('msgs').innerHTML='';$('wire').style.width='0';
   stage(0);
   await sleep(400);if(guard())return;
 
-  // 1. sources light up
-  for(const s of ['s-bank','s-mail','s-slack','s-docs']){hot(s,true);chip(s,'connected','live');await sleep(260);if(guard())return;hot(s,false);}
+  for(const s of ['s-bank','s-mail','s-slack','s-docs']){$(s).classList.add('on');await sleep(240);if(guard())return;}
   msg('Sources','July arrives: 12 bank receipts, the remittance emails, the Slack thread, the contract.');
   await sleep(900);if(guard())return;
 
-  // 2. reader
   stage(1);
   agent('a-reader','hot');$('wire').style.width='12%';
   msg('Reader','Reading every document into the ledger schema. Our own model, trained on this company\'s paper: measured 97.2% field accuracy, 1.2 s per document, on the $3,000 box under the desk.');
   await sleep(2400);if(guard())return;agent('a-reader','on');
 
-  // 3. preparer, code tier
   stage(2);
   agent('a-prep','hot');$('wire').style.width='36%';
   msg('Preparer','Code matches receipts to invoices and drafts entries. No model needed for the routine ones.');
@@ -241,7 +247,6 @@ async function play(){
   msg('Preparer','14 entries posted across 12 receipts. Model calls: 0. Cost: $0.');
   await sleep(2000);if(guard())return;hot('l-code',false);agent('a-prep','on');
 
-  // 4. the hard case
   agent('a-check','hot');$('wire').style.width='58%';
   hot('l-voss',true);
   msg('Checker','Vossberg wired EUR 98,000 at 1.08 less a $40 fee: $105,800 against a $110,000 invoice. $4,200 is unexplained.');
@@ -253,12 +258,11 @@ async function play(){
   msg('Preparer','$1,960 is the exchange rate moving between invoice and payment. The kernel recomputes it from the two rates and the bank\'s advice. Believed from nobody, recomputed.');
   await sleep(2400);if(guard())return;
   $('e5').classList.add('on');chip('l-voss','2,200 open','wait');
-  msg('Checker','$2,200 left. A model reads the policy memo, the contract, Slack and the email: the customer held back 2% over the June outage.',null);
+  msg('Checker','$2,200 left. A model reads the policy memo, the contract, Slack and the email: the customer held back 2% over the June outage.');
   await sleep(2200);if(guard())return;
   msg('Checker','First draft REFUSED: a quote did not match its source character for character. Second draft rests on six verified quotes.','reject');
   await sleep(2200);if(guard())return;
 
-  // 5. human
   stage(3);
   agent('a-check','on');agent('a-human','hot');$('wire').style.width='78%';
   msg('Checker','The contract says a credit needs an officer in writing. Nobody gave it. One question goes to the CFO, with everything that was checked attached.');
@@ -272,13 +276,12 @@ async function play(){
   msg('Preparer','A week later the add-on invoice arrives short the same 2%. The $550 credit is prepared from the remembered answer. Nobody is asked. It waits for one click only because credit memos have not yet earned the right to post alone.');
   await sleep(2600);if(guard())return;hot('l-learn',false);agent('a-human','on');
 
-  // 6. auditor
   stage(4);
   agent('a-audit','hot');$('wire').style.width='100%';
   hot('l-audit',true);$('e9').classList.add('on');
   msg('Auditor','Re-performing every sampled entry with fresh eyes: 15 of 15 clean.');
   await sleep(2000);if(guard())return;
-  $('e10').classList.add('on');chip('c-audit','tamper caught','done');chip('l-audit','tamper caught','done');
+  $('e10').classList.add('on');chip('l-audit','tamper caught','done');
   msg('Auditor','Change one digit in one bank advice and 5 findings fire: the evidence no longer hashes and the kernel disagrees. Nothing posts on trust.');
   await sleep(2200);if(guard())return;hot('l-audit',false);agent('a-audit','on');
 
