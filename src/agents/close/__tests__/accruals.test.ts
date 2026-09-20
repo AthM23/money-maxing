@@ -4,6 +4,7 @@ import type { Proposal } from "../../../contract/types.js";
 import { seedPayablesSide } from "../../../demo/scenario/payables.js";
 import { seedGlobalJuly } from "../../../demo/scenario/world.js";
 import { APP_CONFIG } from "../../../packs/index.js";
+import { rerunDecision } from "../../../audit/rerun.js";
 import { approveDecision } from "../../../runtime/approve.js";
 import { openDb, type Db } from "../../../runtime/db.js";
 import { readControlTotals } from "../../../runtime/kernelContext.js";
@@ -60,6 +61,8 @@ describe("accruals: an expense nobody has billed yet is found from the ledger, e
     const lines = db.prepare("SELECT l.account, l.debit_cents, l.credit_cents FROM gl_line l JOIN gl_entry e ON e.id = l.entry_id WHERE e.source_decision_id = ? ORDER BY l.line_no").all(rent.id);
     expect(lines).toEqual([{ account: "6400", debit_cents: 1_400_000, credit_cents: 0 }, { account: "2200", debit_cents: 0, credit_cents: 1_400_000 }]);
     expect(unbilledExpenses(db, "2026-07").map((u) => u.party_id)).toEqual(["harborline"]);
+    // The auditor re-performs it as of its posting: the accrual's own booking is not "already booked" against itself.
+    expect(rerunDecision(db, rent.id).findings).toEqual([]);
   });
 
   it("the kernel refuses an accrual twice, an accrual that is a number from nowhere, and one for a vendor with no history", async () => {
