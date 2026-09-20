@@ -24,7 +24,7 @@ export async function renderModel() {
 }
 
 function hero(x) {
-  const base = x?.rows.find((r) => r.key === "base4b"), ours = x?.rows.find((r) => r.ours);
+  const base = x?.rows.find((r) => r.key === "base4b"), ours = x?.rows.find((r) => r.key === "ours");
   if (!base || !ours) return null;
   const fact = (label, from, to) => h("div", { class: "fact" }, h("b", {}, `${from} → ${to}`), h("span", {}, label));
   return h("div", { class: "darkhero modelhero" },
@@ -46,7 +46,7 @@ function extraction(x) {
   if (!x) return h("div", { class: "panel" }, h("h2", {}, "Reading documents into the schema"), h("p", { class: "muted" }, "No benchmark result file in this checkout."));
   return h("div", { class: "panel" }, h("div", { class: "panelhead" }, h("h2", {}, "Reading documents into the schema"), h("span", { class: "chip" }, `n = ${x.n} · ${x.scorer}`)),
     METRICS.map(([key, label, show]) => h("div", { class: "metric" }, h("p", { class: "metricname" }, label),
-      x.rows.map((r) => bar(r.label, r[key] ?? 0, show(r[key] ?? 0), r.ours ? "ours" : r.key.startsWith("haiku") ? "api" : "base", r.note)))),
+      x.rows.map((r) => bar(r.label, r[key] ?? 0, show(r[key] ?? 0), r.ours ? "ours" : /haiku|sonnet|opus|fable/.test(r.key) ? "api" : "base", r.note)))),
     h("div", { class: "mlegend" }, h("span", {}, h("i", { class: "msw base" }), "open model, untouched"), h("span", {}, h("i", { class: "msw api" }), "frontier API model"), h("span", {}, h("i", { class: "msw ours" }), "ours")));
 }
 
@@ -124,7 +124,7 @@ const usd = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD
 const fact = (value, label) => h("div", { class: "fact" }, h("b", {}, value), h("span", {}, label));
 
 function generalises(m) {
-  const f = m.fresh?.result, ours = m.extraction?.rows.find((r) => r.ours);
+  const f = m.fresh?.result, ours = m.extraction?.rows.find((r) => r.key === "ours");
   const tile = (label, value, note) => h("div", { class: "tile" }, h("span", { class: "tilelabel" }, label), h("div", { class: "tilevalue" }, h("b", {}, value)), h("span", { class: "muted small" }, note));
   const seen = m.seen?.result;
   return h("div", { class: "tiles four" },
@@ -136,8 +136,11 @@ function generalises(m) {
 }
 
 function notes(m) {
-  const x = m.extraction, ours = x?.rows.find((r) => r.ours), hinted = x?.rows.find((r) => r.key === "haiku-hinted");
-  const lines = [m.data?.honesty_note ? `The data is ${m.data.honesty_note}.` : null, x?.api_note ? `Haiku rows: ${x.api_note}. No latency or cost was recorded for them.` : null,
+  const x = m.extraction, ours = x?.rows.find((r) => r.key === "ours"), hinted = x?.rows.find((r) => r.key === "haiku-hinted"), small = x?.rows.find((r) => r.key === "tuned06");
+  const best = x?.rows.filter((r) => /sonnet|opus|fable/.test(r.key)).sort((a, b) => b.field_f1 - a.field_f1)[0];
+  const lines = [m.data?.honesty_note ? `The data is ${m.data.honesty_note}.` : null, x?.api_note ? `Claude rows: ${x.api_note}. No latency or cost was recorded for them.` : null,
+    small && ours ? `The same recipe on Qwen3-0.6B reaches ${small.field_f1.toFixed(3)} field-F1 and ${pct(small.exact)} exact, against ${ours.field_f1.toFixed(3)} and ${pct(ours.exact)} for the 4B: the format is learnable by a model seven times smaller.` : null,
+    best && ours ? `The strongest frontier row, ${best.label}, reaches ${best.field_f1.toFixed(3)} and ${pct(best.exact)} exact with the schema in every prompt; ours is at ${ours.field_f1.toFixed(3)} and ${pct(ours.exact)} with none, on a box we own.` : null,
     ours && hinted && hinted.exact > ours.exact ? `Given the whole schema in every prompt, Haiku edges exact match (${pct(hinted.exact)} against ${pct(ours.exact)}). Ours gets there with no schema in the prompt, on hardware we own.` : null,
     ours?.avg_latency_s ? `The ${ours.avg_latency_s} s a document in the benchmark is unbatched generation; the throughput above is the batched server.` : null, ...m.problems.map((p) => `Not shown: ${p}`)].filter(Boolean);
   return h("div", { class: "panel" }, h("h2", {}, "Read this honestly"), h("ul", { class: "plain" }, lines.map((l) => h("li", {}, l))));
