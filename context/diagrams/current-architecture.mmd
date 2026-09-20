@@ -1,0 +1,234 @@
+flowchart LR
+
+  subgraph N_SG0["0 · Sources and ingestion"]
+    direction TB
+    N_BANK[/"Bank feed"/]
+    N_MAIL[/"Gmail"/]
+    N_SLACK[/"Slack"/]
+    N_DOCS[/"Contracts · policy memo<br/>close workbook"/]
+    N_CRM[/"CRM notes and owners"/]
+    N_CANON["Canonicalise<br/>integer cents · content hash<br/>idempotent on source and id"]
+    N_TRACE[("trace · the as-of store<br/>event_time · recorded_time<br/>every quote resolves here")]
+    N_BANK --> N_CANON
+    N_MAIL --> N_CANON
+    N_SLACK --> N_CANON
+    N_DOCS --> N_CANON
+    N_CRM --> N_CANON
+    N_CANON --> N_TRACE
+  end
+
+  subgraph N_SG1["1 · Drift monitor"]
+    direction TB
+    N_DRIFT{{"Comparators in code<br/>invoice vs cash<br/>CRM vs revenue schedule<br/>an active fact suppresses<br/>an expected difference"}}
+    N_INTENT[("intent<br/>one open question<br/>per difference")]
+    N_DRIFT --> N_INTENT
+  end
+
+  subgraph N_SG2["2 · Document reader"]
+    direction TB
+    N_RCLIENT["Reader client<br/>one request per document · no tools<br/>hard time limit · a refusal, a timeout<br/>or a non-JSON reply comes back<br/>with its reason"]
+    N_FT["Fine-tuned small model<br/>Qwen3-4B + our LoRA<br/>reads the remittance advice<br/>built and checked in the band below"]
+    N_VERIFY{{"Code judges the reading<br/>total equals the bank line<br/>invoices open and this customer<br/>amounts in the customer own words<br/>a failed reading is dropped"}}
+    N_RCLIENT --> N_FT -- "a reading, never a posting" --> N_VERIFY
+  end
+
+  subgraph N_SG3["3 · Router and investigation"]
+    direction TB
+    N_T0{{"Tier 0 · code<br/>an approved rule or an active fact"}}
+    N_T1["Tier 1 · claude-haiku-4-5"]
+    N_T2["Tier 2 · claude-sonnet-5"]
+    N_T3["Tier 3 · claude-opus-5"]
+    N_TOOLS["Read-only tools<br/>mail.search · chat.search<br/>contracts.find_clause · crm.notes<br/>policy_memo.lookup · workbook.lookup<br/>mail.get_thread · ledger.open_invoices<br/>bank.get_transaction · crm.owner<br/>memory.facts"]
+    N_EARNED{{"A tier may ask a person only<br/>once its own record shows<br/>it searched every place first"}}
+    N_T0 -- "unexplained" --> N_T1
+    N_T1 -- "rejected or empty" --> N_T2
+    N_T2 -- "rejected or empty" --> N_T3
+    N_T1 --> N_TOOLS
+    N_T2 --> N_TOOLS
+    N_T3 --> N_TOOLS
+    N_TOOLS --> N_EARNED
+  end
+
+  subgraph N_SG4["4 · The one write path"]
+    direction TB
+    N_PROPOSE["propose_entry<br/>a proposal plus a workpaper:<br/>a tick mark per figure,<br/>a quote per claim<br/><br/>the whole write surface:<br/>propose_entry · escalate<br/>record_fact_candidate · finish"]
+  end
+
+  subgraph N_SG5["5 · The kernel · pure code"]
+    direction TB
+    N_KF{{"F · footed<br/>F1 debits equal credits<br/>F2 applications fit<br/>F3 control accounts tie to subledgers<br/>F7 integer cents<br/>F8 entry shape fits the kind<br/>F9 realized FX re-performed<br/>F10 write-off equals the bank fee"}}
+    N_KE{{"E · agreed to source<br/>E1 every trace resolves<br/>E2 every quote is exact<br/>E3 documents tie to the party<br/>E5 an odd account needs evidence<br/>E_REMIT the remittance agrees"}}
+    N_KP{{"P · approved by<br/>P1 preparer is not the approver<br/>P2 a valid approval is on record<br/>P3 approver has the authority<br/>P4 no unanswered escalation<br/>P5 period open<br/>P6 an accrual states its reversal<br/>P9 dates in the window"}}
+    N_KJ{{"J · per policy<br/>J1 the policy is a rule for this entry<br/>J2 the fact is in scope<br/>J3 residual judgment stands as a mark<br/>J4 the account the CoA permits"}}
+    N_BLOCKS{{"Hard blocks · hold even on approval<br/>duplicate payment<br/>preparer equals approver<br/>period locked<br/>rule above approver authority<br/>vendor bank details changed<br/>approver over limit"}}
+    N_APPR{{"Approval needed when<br/>the kind has not earned auto,<br/>the amount is material,<br/>or a mark came back judgment"}}
+    N_KF --> N_KE --> N_KP --> N_KJ --> N_BLOCKS --> N_APPR
+  end
+
+  subgraph N_SG6["6 · Routes, review and the post gate"]
+    direction TB
+    N_AUTO(("AUTO"))
+    N_PROP(("PROPOSE"))
+    N_ESC(("ESCALATE"))
+    N_REF(("REFUSE"))
+    N_BLK(("BLOCK"))
+    N_CTRL["Controller<br/>a different model family<br/>one revision loop"]
+    N_POST{{"Post gate<br/>the kernel runs a second time,<br/>on the world as it stands now"}}
+    N_PROP --> N_CTRL --> N_POST
+    N_AUTO --> N_POST
+  end
+
+  subgraph N_SG7["7 · The books and what reacts"]
+    direction TB
+    N_LEDGER[("Double-entry ledger<br/>gl_entry · gl_line · period")]
+    N_QBO[/"QuickBooks<br/>one-way mirror"/]
+    N_BUS[("Event bus<br/>payment applied · credit memo<br/>posted · entry posted")]
+    N_REV["Revenue schedules"]
+    N_FC["13-week cash forecast"]
+    N_CLOSE["Close checklist"]
+    N_RIPPLE[("ripple · what this entry<br/>touched in the other books")]
+    N_LEDGER ==> N_QBO
+    N_LEDGER --> N_BUS
+    N_BUS --> N_REV
+    N_BUS --> N_FC
+    N_BUS --> N_CLOSE
+    N_BUS --> N_RIPPLE
+  end
+
+  subgraph N_SG8["8 · The human loop and memory"]
+    direction TB
+    N_PERSON(["The person the agents report to<br/>Slack, or the workspace"])
+    N_ANSWER["Answer a question<br/>decide a held amount<br/>approve an entry"]
+    N_FACT[("fact<br/>scope · valid_from · valid_to<br/>learned_at · approved_by")]
+    N_APPLY{{"Code decides a fact applies<br/>date · kind · party<br/>one-time use · amount ceiling"}}
+    N_PERSON --> N_ANSWER --> N_FACT --> N_APPLY
+  end
+
+  subgraph N_SG9["9 · Learning"]
+    direction TB
+    N_REPLAY["Replay a closed period<br/>with the human entries hidden<br/>agreement scored in code"]
+    N_COMPILE["Compile repeated judgment<br/>into a rule, and backtest it"]
+    N_APPROVE(["A person approves the rule"])
+    N_LADDER[("Autonomy ladder<br/>per kind of entry<br/>shadow → review → auto")]
+    N_REPLAY --> N_COMPILE --> N_APPROVE --> N_LADDER
+  end
+
+  subgraph N_SG10["10 · Defence and the CFO seat"]
+    direction TB
+    N_AUDIT["Auditor pack<br/>re-performs a sample as of<br/>its posting date, re-hashes<br/>its evidence, ties to the ledger"]
+    N_FENCE{{"Auditor fence · an allow-list<br/>no preparer memory<br/>no write tools"}}
+    N_WS["Workspace<br/>Overview · Cash · Revenue · Close<br/>Reports · Ask · Input needed<br/>Agents · Policies · Model"]
+    N_ASK["Ask<br/>the model picks the tool,<br/>code computes the number"]
+    N_MCP["MCP server<br/>the same read-only tools"]
+    N_AUDIT --> N_FENCE
+    N_WS --> N_ASK
+    N_WS --> N_MCP
+  end
+
+  subgraph N_SGM["Model layer · how the reader in stage 2 is made, served and checked"]
+    direction LR
+
+    subgraph N_SGM0["M0 · Data"]
+      direction TB
+      N_MGEN["Generated finance documents<br/>remittances · vendor bills<br/>contract clauses"]
+      N_MSPLIT["Split by month<br/>train · calibrate · test"]
+      N_MHELD["Held out of training<br/>whole customers and vendors<br/>whole template families"]
+      N_MGEN --> N_MSPLIT --> N_MHELD
+    end
+
+    subgraph N_SGM1["M1 · Training"]
+      direction TB
+      N_MTRAIN["LoRA adapter on Qwen3-4B<br/>every linear layer<br/>trained on one local box"]
+      N_MGBT["Gradient-boosted baseline<br/>the floor the model must beat<br/>threshold frozen on calibrate"]
+    end
+
+    subgraph N_SGM2["M2 · Serving"]
+      direction TB
+      N_MSERVE["OpenAI-compatible endpoint<br/>batched · local · no per-call cost"]
+      N_MSWITCH{{"One environment variable<br/>switches the reader on<br/>past a time limit the case<br/>goes on without the reading"}}
+      N_MSERVE --> N_MSWITCH
+    end
+
+    subgraph N_SGM3["M3 · Document benchmark"]
+      direction TB
+      N_MPROTO["Fixed protocol<br/>scorer version · prompt condition<br/>n · test slice pinned by hash"]
+      N_MCONT["Contenders on the same slice<br/>base open weights<br/>base plus our adapter<br/>a frontier API model"]
+      N_MMETRIC["Graded by code<br/>schema-valid · field-F1<br/>exact match · held-out split"]
+      N_MPROTO --> N_MCONT --> N_MMETRIC
+    end
+
+    subgraph N_SGM4["M4 · System benchmark"]
+      direction TB
+      N_MHB["The same held-out remittances<br/>through the real kernel and ledger<br/>the same checks as stages 2 and 5"]
+      N_MROWS["Compared across readers<br/>none · base · ours · a saboteur<br/>and gold labels as the ceiling"]
+      N_MSCORE["Scored on what the books did<br/>settled by code · left for a person<br/>wrong postings · books tied"]
+      N_MHB --> N_MROWS --> N_MSCORE
+    end
+
+    N_MHELD --> N_MTRAIN
+    N_MHELD --> N_MGBT
+    N_MTRAIN --> N_MSERVE
+    N_MSWITCH --> N_MPROTO
+    N_MMETRIC -. "a document score" .-> N_MHB
+  end
+
+  N_TRACE --> N_DRIFT
+  N_INTENT -- "payment names no invoice" --> N_FT
+  N_VERIFY -- "the invoices it pays" --> N_T0
+  N_INTENT ==> N_T0
+
+  N_EARNED ==> N_PROPOSE
+  N_T0 == "a plan in code" ==> N_PROPOSE
+  N_PROPOSE == "the only door to the ledger" ==> N_KF
+
+  N_APPR -- "earned auto" --> N_AUTO
+  N_APPR -- "needs a person" --> N_PROP
+  N_BLOCKS -- "a block rule fires" --> N_BLK
+  N_KE -- "a mark fails" --> N_REF
+  N_EARNED -- "escalate" --> N_ESC
+
+  N_POST ==> N_LEDGER
+  N_PROP --> N_PERSON
+  N_ESC --> N_PERSON
+  N_LEDGER --> N_AUDIT
+  N_LEDGER --> N_WS
+  N_WS -. "where the person acts" .-> N_PERSON
+
+  N_ANSWER == "code prepares the entry" ==> N_PROPOSE
+  N_APPLY -. "applied next time, by code" .-> N_T0
+  N_LEDGER -. "closed decisions" .-> N_REPLAY
+  N_COMPILE -. "an approved rule" .-> N_T0
+  N_LADDER -. "the level each kind runs at" .-> N_T0
+
+  N_MSWITCH == "the adapter the reader calls" ==> N_FT
+
+classDef src fill:#e7eefc,stroke:#3b5bab,color:#0b1b40
+classDef code fill:#e3f5e6,stroke:#2e7d46,color:#0c2e16
+classDef model fill:#efe6fb,stroke:#6b3fb3,color:#25104a
+classDef human fill:#fdebd3,stroke:#c0720f,color:#3f2503
+classDef store fill:#fff6cf,stroke:#a88a06,color:#352c00
+classDef gate fill:#ffffff,stroke:#b3261e,stroke-width:3px,color:#3b0906
+classDef learn fill:#dbf3f3,stroke:#16787a,color:#062b2c
+classDef ext fill:#f1f1f1,stroke:#666666,color:#1a1a1a
+classDef rAuto fill:#2e7d46,stroke:#14401f,color:#ffffff
+classDef rPropose fill:#2f62c9,stroke:#15306b,color:#ffffff
+classDef rEscalate fill:#d9822b,stroke:#6e3d0c,color:#ffffff
+classDef rRefuse fill:#6b6b6b,stroke:#2b2b2b,color:#ffffff
+classDef rBlock fill:#b3261e,stroke:#5c0f0b,color:#ffffff
+classDef stretch fill:#fafafa,stroke:#999999,stroke-dasharray:6 4,color:#444444
+
+class N_BANK,N_MAIL,N_SLACK,N_DOCS,N_CRM src
+class N_CANON,N_PROPOSE,N_REV,N_FC,N_CLOSE,N_AUDIT,N_WS,N_ASK,N_MCP code
+class N_FT,N_RCLIENT,N_T1,N_T2,N_T3,N_TOOLS,N_CTRL,N_MTRAIN,N_MSERVE model
+class N_PERSON,N_APPROVE,N_ANSWER human
+class N_TRACE,N_INTENT,N_LEDGER,N_FACT,N_RIPPLE,N_BUS store
+class N_DRIFT,N_VERIFY,N_T0,N_KF,N_KE,N_KP,N_KJ,N_BLOCKS,N_APPR,N_POST,N_EARNED,N_APPLY,N_FENCE,N_MSWITCH gate
+class N_REPLAY,N_COMPILE,N_LADDER learn
+class N_MGEN,N_MSPLIT,N_MHELD src
+class N_MGBT,N_MPROTO,N_MCONT,N_MMETRIC,N_MHB,N_MROWS,N_MSCORE learn
+class N_QBO ext
+class N_AUTO rAuto
+class N_PROP rPropose
+class N_ESC rEscalate
+class N_REF rRefuse
+class N_BLK rBlock
