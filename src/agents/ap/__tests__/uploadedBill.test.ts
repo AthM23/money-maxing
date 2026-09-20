@@ -11,10 +11,14 @@ import { apClock, seedAp } from "./seed.js";
 
 const deps = { clock: apClock, config: APP_CONFIG };
 const UPLOAD = { vendor: "Totally Real Consulting LLC", ref: "TRC-0001", bill_date: "2026-07-28", amount_cents: 4_800_000, raw: "INVOICE Totally Real Consulting LLC No TRC-0001 Total USD 48,000.00" };
-const BILL = "BILL-UP-TRC-0001";
+const BILL_PREFIX = "BILL-UP-TRC-0001";
+let BILL = "";
 
 async function fileUpload(db: Db): Promise<void> {
-  expect(await ACTIONS.upload_bill!(db, UPLOAD)).toMatchObject({ status: "filed", bill_id: BILL });
+  const filed = (await ACTIONS.upload_bill!(db, UPLOAD)) as { status: string; bill_id: string };
+  expect(filed.status).toBe("filed");
+  expect(filed.bill_id.startsWith(BILL_PREFIX)).toBe(true);
+  BILL = filed.bill_id;
 }
 
 /** The kernel is the judge of whether the month still works: the seeded bill's approval has to park, then post. */

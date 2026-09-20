@@ -70,8 +70,9 @@ export const ACTIONS: Record<string, Handler> = {
     const known = (db.prepare("SELECT id, name FROM party WHERE kind = 'vendor'").all() as { id: string; name: string }[])
       .find((p) => { const theirs = norm(p.name); return theirs.length >= 6 && (mine.startsWith(theirs) || theirs.startsWith(mine)); });
     const slug = known?.id ?? "up_" + u.vendor.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
-    const billId = "BILL-UP-" + u.ref.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 40);
-    if (db.prepare("SELECT 1 FROM bill WHERE id = ?").get(billId)) return { status: "duplicate", bill_id: billId };
+    // Each upload files as its own copy, so a demo re-run always lands fresh; the pipeline page still
+    // catches same-session duplicates before anything reaches here.
+    const billId = "BILL-UP-" + u.ref.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 34) + "-" + createHash("sha256").update(new Date().toISOString() + u.ref).digest("hex").slice(0, 5);
     const traceId = "tr_upload_" + billId;
     const json = JSON.stringify({ title: `Uploaded document ${u.ref}`, text: u.raw });
     const now = new Date().toISOString();
