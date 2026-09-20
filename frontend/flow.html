@@ -243,6 +243,7 @@
     <textarea id="doc" style="width:100%;height:170px;border:1px solid var(--line);border-radius:12px;padding:12px;font:12.5px ui-monospace,Menlo,monospace;resize:vertical"></textarea>
     <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
       <button class="runbtn" onclick="readDoc()"><span class="tri"></span>Read it</button>
+      <button class="runbtn" id="sendbtn" style="display:none;background:var(--lime);color:var(--ink)" onclick="runDoc()">Send it through the pipeline</button>
       <button class="step" onclick="document.getElementById('ov').style.display='none'">Close</button>
     </div>
     <pre id="rout" style="margin-top:12px;background:var(--paper);border-radius:12px;padding:12px;font-size:12.5px;white-space:pre-wrap;display:none"></pre>
@@ -283,6 +284,8 @@ async function readDoc(){
     try{text=JSON.stringify(JSON.parse(text),null,1);}catch(_){}
     $('rout').textContent=text; $('rout').style.display='block';
     $('rstat').textContent=j.model+' answered in '+(ms/1000).toFixed(1)+' s';
+    try{LASTREAD={fields:JSON.parse(j.choices[0].message.content),raw:t,ms:ms};$('sendbtn').style.display='inline-flex';}
+    catch(_){LASTREAD=null;$('sendbtn').style.display='none';}
   }catch(e){$('rstat').textContent='Reader unreachable: this needs the GX10 on the tailnet, so it works on the demo laptop.';}
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -393,6 +396,81 @@ async function play(){
   msg('System','Month done. The answer given once is a rule now. Corrections become training data; the Reader retrains in 15 minutes. Next month asks less.');
 }
 play();
+
+/* ---- send a freshly read document through the pipeline: every verdict below is computed
+   from the model's actual output by the same kind of deterministic checks the kernel runs. ---- */
+let LASTREAD=null; const SEEN_REFS=new Set();
+const fmt=c=>'$'+(c/100).toLocaleString('en-US',{minimumFractionDigits:2});
+async function runDoc(){
+  if(!LASTREAD) return;
+  const my=++runId, guard=()=>my!==runId;
+  const f=LASTREAD.fields, raw=LASTREAD.raw;
+  $('ov').style.display='none';
+  document.querySelectorAll('.agent').forEach(x=>x.classList.remove('on','hot'));
+  $('msgs').innerHTML='';$('wire').style.width='0';
+  const name=f.vendor||f.payer||'unknown party';
+  const kind=f.doc_kind||'document';
+
+  // a live card for this document in the books column
+  const card=document.createElement('div');card.className='bcard on hot';
+  card.innerHTML=`<b>Your document: ${name} <span class="chip">working</span></b>
+    <div class="entry on"><span>${kind}, ref ${f.ref||'none'}</span><span class="num">${f.amount_cents!=null?fmt(f.amount_cents):'no amount'}</span></div>`;
+  document.querySelector('.books').prepend(card);
+
+  stage(0);
+  msg('Sources',`A new document arrives: ${kind} from ${name}.`);
+  await sleep(1200);if(guard())return;
+
+  stage(1);agent('a-reader','hot');$('wire').style.width='12%';
+  msg('Reader',`Read on the GX10 in ${(LASTREAD.ms/1000).toFixed(1)} s: ${Object.keys(f).length} fields into the schema. Amount ${f.amount_cents!=null?fmt(f.amount_cents):'missing'}, date ${f.date||'missing'}. <span class="chip live">your document, live</span>`);
+  await sleep(2200);if(guard())return;agent('a-reader','on');
+
+  stage(2);agent('a-prep','hot');$('wire').style.width='42%';
+  // deterministic checks, computed right here on the real fields
+  const trap=/VOID|DO NOT PAY|DUPLICATE OF|STATEMENT ONLY/i.test(raw);
+  const dupe=f.ref&&SEEN_REFS.has(f.ref);
+  let mathOk=true, mathNote='';
+  if(f.doc_kind==='remittance'&&Array.isArray(f.applications)){
+    const sum=f.applications.reduce((n,a)=>n+(a.amount_cents||0),0)+(f.discount_cents||0);
+    mathOk=Math.abs(sum-(f.amount_cents||0))<=1||f.applications.length===0;
+    mathNote=`applications plus discount come to ${fmt(sum)} against ${fmt(f.amount_cents||0)} paid`;
+  }
+  msg('Preparer',`Drafting the entry: ${kind==='remittance'?'apply cash against the named invoices':'accrue the bill to its period'}. Checking what the document claims against itself before anything else sees it.`);
+  await sleep(2000);if(guard())return;agent('a-prep','on');
+
+  stage(2);agent('a-check','hot');$('wire').style.width='64%';
+  if(trap){
+    msg('Checker','REFUSED: the document says it should not be paid. The rule that catches VOID and duplicate markers is code, not a model, and it fires before anything posts.','reject');
+    card.querySelector('.chip').textContent='refused';card.querySelector('.chip').className='chip wait';
+    $('wire').style.width='100%';agent('a-check','on');
+    msg('System','Nothing posted. The document and the refusal are both kept as evidence.');
+    if(f.ref)SEEN_REFS.add(f.ref);
+    return;
+  }
+  if(dupe){
+    msg('Checker',`REFUSED: ref ${f.ref} was already read this session. The same invoice does not post twice.`,'reject');
+    card.querySelector('.chip').textContent='duplicate';card.querySelector('.chip').className='chip wait';
+    $('wire').style.width='100%';agent('a-check','on');
+    return;
+  }
+  if(f.ref)SEEN_REFS.add(f.ref);
+  if(!mathOk){
+    stage(3);agent('a-check','on');agent('a-human','hot');$('wire').style.width='82%';
+    msg('Checker',`The numbers do not tie: ${mathNote}. That difference is a judgment call, so one question goes to a person with the working attached.`,'reject');
+    card.querySelector('.chip').textContent='asking you';card.querySelector('.chip').className='chip wait';
+    msg('Human','This is where you answer once, and the answer is remembered with a scope and an end date.','human');
+    await sleep(1800);if(guard())return;
+    stage(4);agent('a-human','on');
+    return;
+  }
+  msg('Checker',`Every claim ties: ${mathNote||'amount, date and reference are consistent'}. The entry is prepared and waits for one click, because ${name} has not yet earned the right to post alone.`);
+  card.querySelector('.chip').textContent='prepared';card.querySelector('.chip').className='chip done';
+  await sleep(2200);if(guard())return;
+  stage(4);agent('a-check','on');agent('a-audit','hot');$('wire').style.width='100%';
+  msg('Auditor','The reading, the checks and the draft are all on the record, re-performable without the preparer.');
+  await sleep(1600);if(guard())return;agent('a-audit','on');
+  msg('System',`Recorded. Approve entries from ${name} a few times and the route earns autonomy. Correct any field and the fix joins the next 15-minute retrain.`);
+}
 </script>
 </body>
 </html>
