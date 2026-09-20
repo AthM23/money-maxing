@@ -63,6 +63,19 @@ async def chat(body: dict):
     await queue.put({**body, "future": fut})
     return await fut
 
+@app.post("/v1/extract")
+def extract(body: dict):
+    # PDF text extraction next to the model: the pipeline page uploads a PDF, we hand back its text layer.
+    import base64, io
+    from pypdf import PdfReader
+    try:
+        pdf = base64.b64decode(body.get("pdf_b64", ""))
+        rd = PdfReader(io.BytesIO(pdf))
+        text = "\n".join((p.extract_text() or "") for p in rd.pages[:6]).strip()
+        return {"text": text[:6000], "pages": len(rd.pages), "empty": not text}
+    except Exception as e:
+        return {"error": str(e)[:200]}
+
 @app.get("/health")
 def health(): return {"ok": True, "batching": a.max_batch}
 
