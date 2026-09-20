@@ -272,6 +272,32 @@ _Nothing yet. Log failed approaches here with the reason, so nobody re-runs them
 - In progress, Person A: kernel checks with pass and fail fixtures, eval harness for `tests/cases.csv`, then the
   `propose_entry` runtime. No API keys are needed for these.
 
+### 2026-09-19 ~20:00 ET — Third builder joins; ASUS GX10 checked out; local fine-tune lane proposed (Preet + Claude Code session)
+
+- **Preet is the third builder.** ROADMAP's two-person re-cut is superseded on one point: a lane C is
+  proposed in [`research/gx10-finetune-plan.md`](./research/gx10-finetune-plan.md) — Preet takes the
+  fine-tune/eval-data items out of A's overnight (trace export, rejection-sampling filter, GBT baseline,
+  LoRA SFT, shadow eval, serving, cost/latency numbers). A and B lanes otherwise unchanged. **Proposed,
+  needs A+B sign-off.**
+- **Hardware: ASUS Ascent GX10 checked out from the ASUS booth** (GB10 Grace Blackwell, 128 GB unified,
+  aarch64, DGX OS). This supersedes "Team machine has NO NVIDIA GPU" in
+  `research/architecture-briefs/fine-tuning.md` and removes the hosted-LoRA route (Together/Modal) entirely:
+  the open-weight SFT trains and serves locally. Everything else in that brief stands (GBT primary, task (e)
+  extraction target, shadow-only, routes stay rules).
+- Access: Tailscale mesh is up — Preet's MacBook `100.119.234.32`, GX10 `100.73.102.120`
+  (`gx10-d56e`, MagicDNS `gx10-d56e.tail800199.ts.net`). The GX10 has **no keyboard**; all work goes over
+  SSH from the Mac. Username `asus`; key-based auth being set up. Tailscale SSH not enabled.
+- Cloned https://github.com/karpathy/autoresearch beside the repo as reference for sheet 20 loop D
+  (still cut 1st; unchanged).
+- Added [`research/winner-patterns-2026.md`](./research/winner-patterns-2026.md): web-researched synthesis
+  of 2023-2026 winners at HackMIT/TreeHacks/CalHacks/PennApps/HackHarvard, distilled to demo lessons —
+  judge-interactive live moment, delete flaky features, name the built-vs-bought split, trust-layer framing,
+  track stacking. Feeds B's demo lane; changes no build scope.
+- Possible extra prize surface: ASUS "Build What's Next" (project built on ASUS hardware). Verify at the
+  booth that it stacks with Maximor before adding it to Plume.
+- Blocked on humans: one-time SSH password entry on the Mac to install Preet's key on the GX10; A+B
+  sign-off on lane C.
+
 ### 2026-09-19 ~20:20 ET — Kernel, `propose_entry` runtime, fact memory and router tier 0 landed (Person A)
 
 - `src/kernel/`: pure functions, no database or model import. Marks F1-F3, F7, E1-E3, E5, P1-P6, P9, J1-J3 and the six hard
