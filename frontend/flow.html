@@ -332,7 +332,7 @@ let LIVE=null;
 async function fetchLive(){
   try{
     const r=await fetch('/api/overview',{cache:'no-store'});
-    if(r.ok){const j=await r.json();LIVE=j.scoreboard?{...j.scoreboard,tied:!!(j.books&&j.books.tied)}:null;}
+    if(r.ok){const j=await r.json();LIVE=j.scoreboard?{...j.scoreboard,tied:!!(j.books&&j.books.tied),rules:j.rules||[],memory:(j.memory&&j.memory.active)||[]}:null;}
   }catch(_){LIVE=null;}
 }
 async function play(){
@@ -471,12 +471,31 @@ async function runDoc(){
     return;
   }
   if(f.ref)SEEN_REFS.add(f.ref);
+  const rules=(LIVE&&LIVE.rules)||[], facts=(LIVE&&LIVE.memory)||[];
+  const livePol=rules.filter(r=>r.status==='approved'||r.status==='live');
+  msg('Checker',`Consulting what the system has learned: ${livePol.length} live polic${livePol.length===1?'y':'ies'} and ${facts.length} remembered fact${facts.length===1?'':'s'}, read from the books just now. <span class="chip live">policies API, live</span>`);
+  await sleep(1800);if(guard())return;
   if(!mathOk){
+    // the flag: something the document claims is not explained. Is a learned policy allowed to settle it?
+    const short=(f.applications||[]).reduce((n,x)=>n+(x.amount_cents||0),0)+(f.discount_cents||0)-(f.amount_cents||0);
+    const evalCond=(c,v)=>!c||!c.all?false:c.all.every(t=>t.field!=='shortfall_cents'?true:(t.op==='>'?v>t.value:t.op==='>='?v>=t.value:t.op==='<'?v<t.value:t.op==='<='?v<=t.value:v===t.value));
+    const match=livePol.find(r=>r.action&&r.action.kind==='write_off'&&evalCond(r.condition,short));
+    const inScope=match&&(match.customer_scope||[]).some(slug=>(f.payer||'').toLowerCase().includes(slug));
+    if(match&&inScope){
+      msg('Checker',`${fmt(short)} is unexplained, and ${match.code} v${match.version} covers it: a policy learned from last quarter and approved by the controller. Written off to GL ${match.action.account}, no question asked.`);
+      card.querySelector('.chip').textContent='policy applied';card.querySelector('.chip').className='chip done';
+      stage(4);agent('a-check','on');$('wire').style.width='100%';
+      return;
+    }
     stage(3);agent('a-check','on');agent('a-human','hot');$('wire').style.width='82%';
-    msg('Checker',`The numbers do not tie: ${mathNote}. That difference is a judgment call, so one question goes to a person with the working attached.`,'reject');
+    if(match){
+      msg('Checker',`${fmt(short)} is unexplained. ${match.code} covers shortfalls this size, but only for the ${(match.customer_scope||[]).length} customers that earned it. ${f.payer||'This payer'} is new, so the flag fires: it stops and asks once.`,'reject');
+    } else {
+      msg('Checker',`The numbers do not tie: ${mathNote}. No live policy covers this, so the flag fires: it stops, shows its working, and asks once.`,'reject');
+    }
     card.querySelector('.chip').textContent='asking you';card.querySelector('.chip').className='chip wait';
-    msg('Human','This is where you answer once, and the answer is remembered with a scope and an end date.','human');
-    await sleep(1800);if(guard())return;
+    msg('Human','You answer once. The answer is stored with the state before and after, scoped, with an end date. Approve entries like it a few times and the route earns autonomy; correct a field and the fix joins the next retrain.','human');
+    await sleep(2200);if(guard())return;
     stage(4);agent('a-human','on');
     return;
   }
