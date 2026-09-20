@@ -63,7 +63,7 @@ export function checkP1(ctx: KernelContext, stage: KernelStage): Mark {
 }
 
 /** P2 — when approval is required, a valid one is on record. */
-export function checkP2(ctx: KernelContext, stage: KernelStage, required: boolean, adjustment: number): Mark {
+export function checkP2(ctx: KernelContext, stage: KernelStage, required: boolean, adjustment: number, proposal?: Proposal): Mark {
   if (stage !== "post_gate") return postGateMark("P", "P2");
   if (!required) return naMark("P", "P2", `approval not required for adjustment ${adjustment}`, [ctx.preparer]);
   const approval = ctx.approval;
@@ -74,27 +74,27 @@ export function checkP2(ctx: KernelContext, stage: KernelStage, required: boolea
   if (approval.outcome !== "approved" && approval.outcome !== "corrected") {
     return failMark("P", "P2", `approval outcome is ${approval.outcome}, not approved or corrected`, refs);
   }
-  const agentProblem = controllerAgentProblem(ctx, adjustment);
+  const agentProblem = controllerAgentProblem(ctx, adjustment, proposal);
   if (agentProblem) return failMark("P", "P2", agentProblem, refs);
   const detail = `${approval.approver_kind} ${approval.approver_id} ${approval.outcome} adjustment ${adjustment}`;
   return passMark("P", "P2", detail, refs);
 }
 
 /**
- * A controller agent may sign below materiality, and only on a kind of entry with a track record. At or above
- * materiality, or while the kind is still in shadow, a person must click: two models agreeing is not a record.
+ * A controller agent may sign only compiled judgment (an entry planned by code, or citing an approved policy or an
+ * active fact), below materiality, on a kind of entry with a track record. Anything else needs a person: an entry a
+ * model reached by free inference is exactly what was held back from posting alone, and a second model agreeing
+ * with the first is not a person.
  */
-function controllerAgentProblem(ctx: KernelContext, adjustment: number): string | undefined {
+function controllerAgentProblem(ctx: KernelContext, adjustment: number, proposal?: Proposal): string | undefined {
   const approval = ctx.approval;
   if (!approval || approval.approver_kind !== "controller_agent") return undefined;
-  if (ctx.autonomy_level === "shadow") {
-    return `controller_agent ${approval.approver_id} cannot approve a kind of entry still in shadow; a person must approve`;
-  }
+  const who = `controller_agent ${approval.approver_id}`;
+  if (ctx.autonomy_level === "shadow") return `${who} cannot approve a kind of entry still in shadow; a person must approve`;
+  const compiled = ctx.preparer_tier === 0 || (proposal?.policy_refs.length ?? 0) > 0 || (proposal?.fact_refs.length ?? 0) > 0;
+  if (!compiled) return `${who} cannot approve an entry reached by free inference (no approved policy, no active fact cited); a person must approve`;
   if (adjustment < ctx.materiality_cents) return undefined;
-  return (
-    `controller_agent ${approval.approver_id} cannot approve adjustment ${adjustment} ` +
-    `at or above materiality ${ctx.materiality_cents}; a person must approve`
-  );
+  return `${who} cannot approve adjustment ${adjustment} at or above materiality ${ctx.materiality_cents}; a person must approve`;
 }
 
 /** P3 — the approver exists on the authority list and their limit covers the adjustment. */
@@ -128,7 +128,7 @@ export function processMarks(
     checkP4(ctx),
     checkP6(proposal),
     checkP1(ctx, stage),
-    checkP2(ctx, stage, required, adjustment),
+    checkP2(ctx, stage, required, adjustment, proposal),
     checkP3(ctx, stage, adjustment),
   ];
 }

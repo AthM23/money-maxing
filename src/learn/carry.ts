@@ -33,15 +33,21 @@ export function carryMemory(from: Db, to: Db): CarryReport {
   return run();
 }
 
-const CARRIED_TABLES = ["trace", "fact", "policy", "autonomy"] as const;
+/** The columns carried, fixed here. The source file's own schema is never trusted to name them. */
+const CARRIED: Record<"trace" | "fact" | "policy" | "autonomy", readonly string[]> = {
+  trace: ["id", "source", "kind", "external_id", "event_time", "recorded_time", "ingested_at", "party_id", "version", "content_hash", "payload_json"],
+  fact: ["id", "party_id", "predicate", "value_json", "scope_json", "explained_amount_cents", "max_amount_cents", "uses", "valid_from", "valid_to",
+    "learned_at", "source_trace_ids_json", "stated_by", "approved_by", "status", "supersedes"],
+  policy: ["id", "function", "name", "condition_json", "action_json", "intent_text", "tier", "max_amount_cents", "backtest_json", "status",
+    "approved_by", "approved_at", "code", "version", "supersedes"],
+  autonomy: ["function", "kind", "agree", "n", "covered", "level", "updated_at"],
+};
 
-/** Table and column names come from this file and from the source schema, never from input; values are bound. */
-function insertRows(to: Db, table: (typeof CARRIED_TABLES)[number], rows: Row[], replace = false): number {
+function insertRows(to: Db, table: keyof typeof CARRIED, rows: Row[], replace = false): number {
+  const cols = CARRIED[table];
+  const sql = `INSERT OR ${replace ? "REPLACE" : "IGNORE"} INTO ${table} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
+  const insert = to.prepare(sql);
   let written = 0;
-  for (const row of rows) {
-    const cols = Object.keys(row);
-    const sql = `INSERT OR ${replace ? "REPLACE" : "IGNORE"} INTO ${table} (${cols.join(", ")}) VALUES (${cols.map(() => "?").join(", ")})`;
-    written += to.prepare(sql).run(...cols.map((c) => row[c])).changes;
-  }
+  for (const row of rows) written += insert.run(...cols.map((c) => row[c] ?? null)).changes;
   return written;
 }

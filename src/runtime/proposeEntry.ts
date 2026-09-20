@@ -49,7 +49,7 @@ export function proposeEntry(db: Db, input: unknown, meta: ProposeMeta, deps: Ru
   const reuse = meta.decision_id && attachProposal(db, meta.decision_id, proposal, meta) ? meta.decision_id : undefined;
   const decisionId = reuse ?? insertDecision(db, clock, proposal, meta);
   const ctxMeta: ContextMeta = {
-    mode: meta.mode, as_of: meta.as_of, preparer: meta.actor,
+    mode: meta.mode, as_of: meta.as_of, preparer: meta.actor, preparer_tier: meta.tier,
     autonomy_level: resolveAutonomy(db, meta.autonomy_level, proposal, meta.tier),
     approval: null, intent_id: proposal.intent_id, features: meta.features, extra_checks: meta.extra_checks,
     replay_docs: meta.replay_docs,

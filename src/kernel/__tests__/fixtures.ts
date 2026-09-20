@@ -79,6 +79,7 @@ export function policy(id: string, over: Partial<PolicyLite> = {}): PolicyLite {
     function: "ar",
     status: "approved",
     condition: { field: "shortfall_cents", op: "<=", value: 200_000 },
+    action: { kind: "credit_memo", account: DEFERRED },
     ...over,
   };
 }

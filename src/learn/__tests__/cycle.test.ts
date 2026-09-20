@@ -125,7 +125,7 @@ describe("the same month twice: run cold, learn from what people approved, run a
 
     await runOpenIntents(run1, { investigators: [writesOffTheFee], clock: fixedClock });
     // The cash is applied by code from the first day: there is no judgment in it. Every shortfall takes a model and a person.
-    expect(scoreboard(run1)).toMatchObject({ intents: 6, resolved: 0, waiting_on_human: 6, auto_posted: 6, settled_by_model: 6, model_calls: 24 });
+    expect(scoreboard(run1)).toMatchObject({ intents: 6, resolved: 0, waiting_on_human: 6, auto_posted: 6, decided_by_model: 6, model_calls: 24 });
     expect(personApprovesAll(run1)).toBe(6);
     expect(scoreboard(run1)).toMatchObject({ resolved: 6, human_approvals: 6 });
 
@@ -142,7 +142,8 @@ describe("the same month twice: run cold, learn from what people approved, run a
     const run2 = cold;
     expect(carryMemory(run1, run2)).toEqual({ traces: 0, facts: 0, policies: 1, autonomy_rows: 1 });
     await runOpenIntents(run2, { investigators: [writesOffTheFee], clock: fixedClock });
-    expect(scoreboard(run2)).toMatchObject({ settled_by_model: 0, model_calls: 0, cost_micros: 0, settled_by_code: 12, auto_posted: 6, questions: 0 });
+    // Twelve decisions reached by code; six of them (the cash) post with no person, six (the rule's write-offs) park for review.
+    expect(scoreboard(run2)).toMatchObject({ decided_by_model: 0, model_calls: 0, cost_micros: 0, decided_by_code: 12, auto_posted: 6, parked: 6, questions: 0 });
     const delta = Object.fromEntries(compareRuns(scoreboard(run1), scoreboard(run2)).map((d) => [d.metric, [d.run1, d.run2]]));
     expect(delta.model_calls).toEqual([24, 0]);
     expect(delta.cost_micros).toEqual([120000, 0]);

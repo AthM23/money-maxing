@@ -105,6 +105,32 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
     expect(intentStatus(db, "int_umbrella")).toBe("open");
   });
 
+  it("a credit for half the shortfall does not close the case, even with no end condition written: it is read off the case file", async () => {
+    const db = world();
+    db.prepare("UPDATE policy SET status = 'retired' WHERE id = 'pol_wire_fee'").run();
+    const halfCredit: Investigator = {
+      name: "scripted",
+      async investigate(task, call) {
+        call("propose_entry", {
+          intent_id: task.case_file.intent_id, function: "ar", kind: "write_off", party_id: "umbrella", entry_date: "2026-07-15",
+          applications: [{ doc_id: "INV-1060", amount_cents: 1000 }],
+          entries: [
+            { account: ACCOUNTS.bank_charges, debit_cents: 1000, credit_cents: 0, memo: "Half the fee" },
+            { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: 1000, memo: "Half the fee" },
+          ],
+          evidence: [{ claim: "the wire arrived short", trace_id: "tr_bank_2", quote: "WIRE UMBRELLA CORP" }],
+          policy_refs: [], fact_refs: [], judgment: [],
+        });
+        return { outcome: "proposed", summary: "half", places_looked: ["bank"] };
+      },
+    };
+    const report = await runOpenIntents(db, { investigators: [halfCredit], intent_id: "int_umbrella", clock: fixedClock });
+    const parked = report.worked[0]!.decision_id!;
+    expect(approveDecision(db, parked, { approver_id: "U_CTRL", approver_kind: "human", outcome: "approved" }, { clock: fixedClock }).status).toBe("posted");
+    expect(db.prepare("SELECT open_cents FROM invoice WHERE id = 'INV-1060'").get()).toEqual({ open_cents: 1000 });
+    expect(intentStatus(db, "int_umbrella")).toBe("open");
+  });
+
   it("keeps the document balances as they stood before anything posted", async () => {
     const db = world();
     earn(db, "apply_payment", "auto");

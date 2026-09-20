@@ -29,7 +29,7 @@ export function harvestLiveOutcomes(db: Db): HarvestedPoint[] {
     .prepare(
       `SELECT d.id AS decision_id, d.intent_id, d.function, d.proposal_json, i.case_json, a.approved_at, a.approver_id, a.note
        FROM decision d JOIN intent i ON i.id = d.intent_id
-       JOIN approval a ON a.decision_id = d.id AND a.approver_kind = 'human' AND a.outcome IN ('approved','corrected')
+       JOIN approval a ON a.decision_id = d.id AND a.approver_kind = 'human' AND a.outcome = 'approved'
        WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.proposal_json IS NOT NULL
          AND i.status = 'resolved' AND i.case_json IS NOT NULL
        ORDER BY d.intent_id, d.kind = 'apply_payment', d.rowid DESC`,

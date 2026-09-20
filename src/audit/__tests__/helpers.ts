@@ -79,7 +79,7 @@ export function postSmallMemos(db: Db, count: number): string[] {
 export function postPolicyCreditMemo(db: Db): string {
   db.prepare(
     `INSERT INTO policy (id, function, name, condition_json, action_json, intent_text, tier, status, approved_by, approved_at)
-     VALUES ('pol_short','ar','Small shortfalls take a concession', ?, '{}', 'Concede small shortfalls', 'company', 'approved', 'U_CTRL', '2026-07-01T00:00:00Z')`,
+     VALUES ('pol_short','ar','Small shortfalls take a concession', ?, '{"kind":"credit_memo","account":"2400"}', 'Concede small shortfalls', 'company', 'approved', 'U_CTRL', '2026-07-01T00:00:00Z')`,
   ).run(JSON.stringify({ all: [{ field: "shortfall_cents", op: "<=", value: 200_000 }] }));
   const proposal = { ...creditMemo(), policy_refs: ["pol_short"] };
   const parked = proposeEntry(db, proposal, { ...agent, features: { shortfall_cents: 120_000 } }, deps);

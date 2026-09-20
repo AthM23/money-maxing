@@ -1,16 +1,26 @@
 import { z } from "zod";
-import { Proposal } from "../../contract/types.js";
+import { Proposal, ProposalKind } from "../../contract/types.js";
 import { dedupeKey, openEscalation } from "../../memory/escalations.js";
 import { FactCandidate, recordFactCandidate } from "../../memory/facts.js";
 import { proposeEntry } from "../../runtime/proposeEntry.js";
 import type { ToolEnv } from "../env.js";
 import type { ToolSpec } from "./read.js";
 
+/**
+ * What can be unknown, as a closed list. Together with the party and the kind of entry it is the key that makes a
+ * question "the same question": free text here would let a rephrased question through as a new one, and a person
+ * would be asked twice. The sentence itself belongs in `what_is_unknown`.
+ */
+export const UNKNOWNS = [
+  "shortfall_reason", "overpayment_treatment", "payer_identity", "remittance_allocation", "bill_validity", "vendor_bank_change", "other",
+] as const;
+
 export const EscalateInput = z.object({
   asked_user: z.string().min(1),
   party_id: z.string().min(1),
-  predicate: z.string().min(1),
-  decision_kind: z.string().min(1),
+  predicate: z.enum(UNKNOWNS),
+  /** The kind of entry the answer would unlock. */
+  decision_kind: ProposalKind,
   what_happened: z.string().min(1),
   what_was_checked: z.array(z.object({ source: z.string(), query: z.string(), hits: z.number().int().nonnegative() })).min(1),
   what_is_unknown: z.string().min(1),
@@ -51,7 +61,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
   },
   {
     name: "escalate", registry_name: "escalate", input: EscalateInput,
-    description: "Ask the one person who knows. Only after the search plan is exhausted. If this was already asked, the stored answer comes back instead.",
+    description: "Ask the one person who knows. Only after the search plan is exhausted. `predicate` is what you do not know, picked from the list; `decision_kind` is the kind of entry the answer would unlock; the sentence goes in `what_is_unknown`. If this was already asked, the stored answer comes back instead.",
     run: (input, env) => {
       const q = EscalateInput.parse(input);
       // A person's time costs more than a stronger model's. The cheapest tier hands up instead of asking.

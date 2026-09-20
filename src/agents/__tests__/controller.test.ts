@@ -20,15 +20,26 @@ function smallWriteOff() {
 }
 
 describe("controller agent: independent review, never the last word on a material entry", () => {
-  it("can approve a sub-materiality entry at review level, and the entry posts", async () => {
+  it("can approve a sub-materiality entry planned by code at review level, and the entry posts", async () => {
     const db = seedInitech();
     // The approval matrix lists the controller agent with a ceiling just under materiality. Without the row it approves nothing.
     db.prepare("INSERT INTO approver (id, name, role, limit_cents) VALUES ('controller:gpt','Controller agent','controller_agent',49999)").run();
-    const parked = proposeEntry(db, smallWriteOff(), agent, { clock: fixedClock });
+    const parked = proposeEntry(db, smallWriteOff(), { ...agent, actor: "router:tier0", tier: 0 }, { clock: fixedClock });
     expect(parked.status).toBe("pending_approval");
     const out = await controllerReview(db, agreeing, parked.status === "pending_approval" ? parked.decision_id : "", { clock: fixedClock });
     expect(out.status).toBe("approved_by_controller");
     expect(db.prepare("SELECT approver_kind FROM approval").get()).toEqual({ approver_kind: "controller_agent" });
+  });
+
+  it("cannot approve what a model reached by free inference, however small: two models agreeing is not a person", async () => {
+    const db = seedInitech();
+    db.prepare("INSERT INTO approver (id, name, role, limit_cents) VALUES ('controller:gpt','Controller agent','controller_agent',49999)").run();
+    const parked = proposeEntry(db, smallWriteOff(), { ...agent, actor: "agent:ar:haiku", tier: 1 }, { clock: fixedClock });
+    expect(parked.status).toBe("pending_approval");
+    const out = await controllerReview(db, agreeing, parked.status === "pending_approval" ? parked.decision_id : "", { clock: fixedClock });
+    expect(out.status).toBe("needs_human");
+    expect(db.prepare("SELECT COUNT(*) AS n FROM gl_entry").get()).toEqual({ n: 1 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM approval WHERE outcome = 'approved'").get()).toEqual({ n: 0 });
   });
 
   it("agreeing on a $1,200 credit memo still leaves it for a person: the kernel will not take the controller's approval", async () => {

@@ -25,6 +25,7 @@ export type ApproveResult =
 
 interface DecisionRow {
   id: string; intent_id: string; mode: string; route: string | null; proposal_json: string; actor: string; autonomy_level: "auto" | "review" | "shadow";
+  tier: number | null;
 }
 
 /**
@@ -41,7 +42,7 @@ export function approveDecision(db: Db, decisionId: string, approval: ApprovalIn
 function decide(db: Db, decisionId: string, approval: ApprovalInput, deps: RuntimeDeps): ApproveResult {
   const clock = deps.clock ?? systemClock;
   const config = deps.config ?? DEFAULT_CONFIG;
-  const row = db.prepare("SELECT id, intent_id, mode, route, proposal_json, actor, autonomy_level FROM decision WHERE id = ?")
+  const row = db.prepare("SELECT id, intent_id, mode, route, proposal_json, actor, autonomy_level, tier FROM decision WHERE id = ?")
     .get(decisionId) as DecisionRow | undefined;
   if (!row) return { status: "not_found", decision_id: decisionId };
   if (row.route !== "PROPOSE" || row.mode !== "live" || isPosted(db, decisionId)) return { status: "not_pending", decision_id: decisionId };
@@ -59,7 +60,7 @@ function decide(db: Db, decisionId: string, approval: ApprovalInput, deps: Runti
   // The gate judges the same case the proposal was judged on: a cited policy is re-tested against those features.
   const features = storedFeatures(db, decisionId);
   const ctx = buildKernelContext(db, proposal, {
-    mode: "live", preparer: row.actor, autonomy_level: row.autonomy_level, approval, intent_id: row.intent_id, features,
+    mode: "live", preparer: row.actor, preparer_tier: row.tier ?? undefined, autonomy_level: row.autonomy_level, approval, intent_id: row.intent_id, features,
   }, config);
   const gate = runKernel(proposal, ctx, "post_gate");
   insertWorkpaper(db, clock, decisionId, gate, features);

@@ -39,6 +39,7 @@ const EVIDENCE_SQL = `
   FROM replay_result r JOIN decision_point p ON p.id = r.decision_point_id JOIN decision d ON d.id = r.decision_id
   WHERE substr(p.id, 1, ${LIVE_POINT_PREFIX.length}) != '${LIVE_POINT_PREFIX}'
     AND r.rowid = (SELECT MAX(r2.rowid) FROM replay_result r2 WHERE r2.decision_point_id = r.decision_point_id)
+    AND d.kind != 'no_action'
   UNION ALL
   SELECT d.function, d.kind, CASE WHEN a.outcome = 'approved' THEN 1 ELSE 0 END, CASE WHEN ${COVERED_SQL} THEN 1 ELSE 0 END
   FROM approval a JOIN decision d ON d.id = a.decision_id
@@ -59,12 +60,14 @@ export function rebuildLadder(db: Db, clock: Clock): LadderRow[] {
     )
     .all() as Array<LadderStats & { function: string; kind: string }>;
   const ladder = rows.map((r) => ({ ...r, covered: meetsAutoBar(r), level: levelFor(r) }));
-  const upsert = db.prepare(
-    `INSERT INTO autonomy (function, kind, agree, n, covered, level, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(function, kind) DO UPDATE SET agree = excluded.agree, n = excluded.n, covered = excluded.covered,
-       level = excluded.level, updated_at = excluded.updated_at`,
-  );
-  for (const r of ladder) upsert.run(r.function, r.kind, r.agree, r.n, r.covered ? 1 : 0, r.level, clock.now());
+  // A full recompute: a kind whose evidence has gone (its rule was retired and replay no longer reproduces the
+  // humans) drops off the ladder and is back in shadow. A level is never kept on evidence that no longer exists.
+  const rebuild = db.transaction(() => {
+    db.prepare("DELETE FROM autonomy").run();
+    const insert = db.prepare("INSERT INTO autonomy (function, kind, agree, n, covered, level, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    for (const r of ladder) insert.run(r.function, r.kind, r.agree, r.n, r.covered ? 1 : 0, r.level, clock.now());
+  });
+  rebuild();
   return ladder;
 }
 

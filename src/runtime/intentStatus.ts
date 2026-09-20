@@ -33,25 +33,42 @@ export function intentStanding(db: Db, intentId: string): IntentStatus {
   return newest.actor === UNSETTLED_ACTOR && (newest.tier ?? 0) === 0 ? "open" : "waiting_on_human";
 }
 
+interface EndCondition { bank_txn_applied?: string; docs_settled?: string[] }
+
 /**
- * An intent closes when its end condition holds in the ledger, not when an entry posts (the drift monitor writes
- * the condition: the bank line fully applied, the documents settled). Cash applied with money still owed leaves
- * the case open, to be planned again from the ledger as it now stands. A dispute hold settles nothing by design:
- * that case is with people. An intent that carries no end condition closes when its newest entry takes effect.
+ * An intent closes when its end condition holds in the ledger, not when an entry posts: the bank line fully applied
+ * and the documents settled. The drift monitor writes the condition; where none was written it is read off the case
+ * file, which names the same bank line and documents. Cash applied with money still owed, or a credit for half the
+ * shortfall, leaves the case open, to be planned again from the ledger as it now stands. A dispute hold settles
+ * nothing by design: that case is with people. Only an intent with neither closes on its newest entry.
  */
 function afterPosting(db: Db, intentId: string, newestKind: string): IntentStatus {
-  const row = db.prepare("SELECT end_condition_json FROM intent WHERE id = ?").get(intentId) as { end_condition_json: string | null } | undefined;
-  const end = row?.end_condition_json ? (safeJson(row.end_condition_json) as { bank_txn_applied?: string; docs_settled?: string[] } | null) : null;
+  const end = endConditionOf(db, intentId);
   if (!end || endConditionHolds(db, end)) return "resolved";
   return newestKind === "dispute_hold" ? "waiting_on_human" : "open";
 }
 
-function endConditionHolds(db: Db, end: { bank_txn_applied?: string; docs_settled?: string[] }): boolean {
+function endConditionOf(db: Db, intentId: string): EndCondition | null {
+  const row = db.prepare("SELECT end_condition_json, case_json FROM intent WHERE id = ?").get(intentId) as
+    { end_condition_json: string | null; case_json: string | null } | undefined;
+  if (row?.end_condition_json) return safeJson(row.end_condition_json) as EndCondition | null;
+  const c = row?.case_json ? (safeJson(row.case_json) as { bank_txn_id?: string; doc_ids?: string[] } | null) : null;
+  return c ? { bank_txn_applied: c.bank_txn_id, docs_settled: c.doc_ids ?? [] } : null;
+}
+
+function endConditionHolds(db: Db, end: EndCondition): boolean {
   if (end.bank_txn_applied) {
     const txn = getBankTxn(db, end.bank_txn_applied);
     if (txn && bankTxnAppliedCents(db, txn.id) < Math.abs(txn.amount_cents)) return false;
   }
-  return (end.docs_settled ?? []).every((id) => (getDoc(db, id)?.open_cents ?? 0) === 0);
+  return (end.docs_settled ?? []).every((id) => docSettled(db, id));
+}
+
+/** An invoice is settled at zero. A bill is settled once someone has taken a decision on it: approved, held, paid. */
+function docSettled(db: Db, id: string): boolean {
+  const bill = db.prepare("SELECT status FROM bill WHERE id = ?").get(id) as { status: string } | undefined;
+  if (bill) return bill.status !== "open";
+  return (getDoc(db, id)?.open_cents ?? 0) === 0;
 }
 
 /** Write the standing back to the intent. An abandoned intent stays abandoned. */

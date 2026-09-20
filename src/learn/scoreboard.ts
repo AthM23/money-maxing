@@ -8,10 +8,13 @@ export interface Scoreboard {
   /** Live decisions that reached a route. */
   decisions: number;
   by_route: Record<Route, number>;
-  /** Decisions settled by code (tier 0: an exact match, an active fact or an approved policy), with no model call. */
-  settled_by_code: number;
-  settled_by_model: number;
+  /** Decisions reached by code (tier 0: an exact match, an active fact or an approved policy), with no model call. Reached, not posted: some of them park. */
+  decided_by_code: number;
+  decided_by_model: number;
+  /** Took effect with no person involved. */
   auto_posted: number;
+  /** Accepted by the kernel and waiting for a person or the controller. */
+  parked: number;
   model_calls: number;
   cost_micros: number;
   questions: number;
@@ -41,9 +44,11 @@ export function scoreboard(db: Db, fn?: string): Scoreboard {
     waiting_on_human: one(`SELECT COUNT(*) AS n ${intent} AND status = 'waiting_on_human'`),
     decisions: routes.reduce((n, r) => n + r.n, 0),
     by_route,
-    settled_by_code: one(`SELECT COUNT(*) AS n FROM decision d WHERE ${LIVE} AND d.route IS NOT NULL AND d.tier = 0`),
-    settled_by_model: one(`SELECT COUNT(*) AS n FROM decision d WHERE ${LIVE} AND d.route IS NOT NULL AND d.tier >= 1`),
+    decided_by_code: one(`SELECT COUNT(*) AS n FROM decision d WHERE ${LIVE} AND d.route IS NOT NULL AND d.tier = 0`),
+    decided_by_model: one(`SELECT COUNT(*) AS n FROM decision d WHERE ${LIVE} AND d.route IS NOT NULL AND d.tier >= 1`),
     auto_posted: one(`SELECT COUNT(*) AS n FROM decision d WHERE ${LIVE} AND d.route = 'AUTO' AND d.posted_at IS NOT NULL`),
+    parked: one(`SELECT COUNT(*) AS n FROM decision d WHERE ${LIVE} AND d.route = 'PROPOSE' AND d.posted_at IS NULL
+                 AND NOT EXISTS (SELECT 1 FROM approval a WHERE a.decision_id = d.id AND a.outcome = 'rejected')`),
     model_calls: one(`SELECT SUM(d.model_calls) AS n FROM decision d WHERE ${LIVE}`),
     cost_micros: one(`SELECT SUM(d.cost_micros) AS n FROM decision d WHERE ${LIVE}`),
     questions: one(`SELECT COUNT(*) AS n FROM escalation e JOIN decision d ON d.id = e.decision_id WHERE ${LIVE}`),
@@ -81,7 +86,7 @@ export interface RunDelta {
 
 /** The same month twice. Only the numbers that memory can move are compared. */
 export function compareRuns(run1: Scoreboard, run2: Scoreboard): RunDelta[] {
-  const keys = ["decisions", "settled_by_code", "settled_by_model", "auto_posted", "model_calls", "cost_micros", "questions",
+  const keys = ["decisions", "decided_by_code", "decided_by_model", "auto_posted", "parked", "model_calls", "cost_micros", "questions",
     "repeat_questions", "human_approvals", "controller_approvals", "resolved", "waiting_on_human", "blocked"] as const;
   return keys.map((k) => ({ metric: k, run1: run1[k], run2: run2[k] }));
 }

@@ -11,8 +11,14 @@ import { lineageFor, retireOvertakenDrafts, ruleName } from "./policyVersions.js
 const MIN_AGREEING = 3;
 
 export interface Backtest {
-  n: number;                 // decision points the condition matches
+  n: number;                 // decision points the condition matches (the same history the rule was drafted from)
   agree: number;             // humans did exactly this
+  /**
+   * Leave-one-out, because the line above is in-sample: for each case behind the rule, the rule drafted from the
+   * OTHER cases alone. How many of them it would still have covered. The case that set the ceiling never is.
+   */
+  held_out_n: number;
+  held_out_covered: number;
   account_outliers: string[]; // same treatment, different account: an inconsistent human, shown to the approver
   regressions: string[];     // humans did something materially different: the policy would have mis-cleared
 }
@@ -61,7 +67,7 @@ function draftFor(db: Db, clock: Clock, fn: string, all: Point[], group: Point[]
     { field: "shortfall_cents", op: "<=", value: ceiling },
     { field: "method", op: "==", value: method },
   ] };
-  const backtest = runBacktest(all, condition, action);
+  const backtest = { ...runBacktest(all, condition, action), ...leaveOneOut(group) };
   const [actionJson, conditionJson] = [JSON.stringify(action), JSON.stringify(condition)];
   const lookup = lineageFor(db, fn, actionJson, method, conditionJson);
   if (lookup.status === "unchanged") {
@@ -84,8 +90,17 @@ function draftFor(db: Db, clock: Clock, fn: string, all: Point[], group: Point[]
   return { policy_id: id, name, condition, action, backtest, supersedes: lineage.supersedes ?? undefined };
 }
 
-function runBacktest(all: Point[], condition: Condition, action: PolicyDraft["action"]): Backtest {
-  const bt: Backtest = { n: 0, agree: 0, account_outliers: [], regressions: [] };
+function leaveOneOut(group: Point[]): Pick<Backtest, "held_out_n" | "held_out_covered"> {
+  let covered = 0;
+  for (const held of group) {
+    const others = group.filter((p) => p !== held).map((p) => p.case_file.shortfall_cents);
+    if (others.length > 0 && held.case_file.shortfall_cents <= Math.max(...others)) covered += 1;
+  }
+  return { held_out_n: group.length, held_out_covered: covered };
+}
+
+function runBacktest(all: Point[], condition: Condition, action: PolicyDraft["action"]): Omit<Backtest, "held_out_n" | "held_out_covered"> {
+  const bt: Omit<Backtest, "held_out_n" | "held_out_covered"> = { n: 0, agree: 0, account_outliers: [], regressions: [] };
   for (const p of all) {
     if (!evaluateCondition(condition, caseFeatures(p.case_file))) continue;
     bt.n += 1;

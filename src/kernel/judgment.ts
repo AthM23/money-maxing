@@ -1,9 +1,13 @@
 import type { Mark, Proposal } from "../contract/types.js";
 import { evaluateCondition } from "./condition.js";
-import type { FactLite, KernelContext } from "./types.js";
+import type { FactLite, KernelContext, PolicyLite } from "./types.js";
 import { isAfterAsOf, isControlAccount, mark, naMark, passMark, verdictMark } from "./util.js";
 
-/** J1 — every cited policy resolves, is approved, and its condition holds on this decision. */
+/**
+ * J1 — every cited policy resolves, is approved, its condition holds on this decision, AND it is a rule for this
+ * entry: same function, same kind, and the judgment amount lands on the rule's account. Citing a valid rule that
+ * says something else (a bank-fee rule stapled to a revenue concession) is not cover, it is a wrong citation.
+ */
 export function checkJ1(proposal: Proposal, ctx: KernelContext): Mark {
   const refs = proposal.policy_refs;
   if (refs.length === 0) return naMark("J", "J1", "proposal cites no policy", [proposal.intent_id]);
@@ -21,8 +25,19 @@ export function checkJ1(proposal: Proposal, ctx: KernelContext): Mark {
     if (!evaluateCondition(policy.condition, ctx.features)) {
       problems.push(`policy ${id} condition does not hold on the features of this decision`);
     }
+    problems.push(...actionProblems(policy, proposal, ctx));
   }
   return verdictMark("J", "J1", problems, `${refs.length} cited policy(s) approved and in condition`, refs);
+}
+
+function actionProblems(policy: PolicyLite, proposal: Proposal, ctx: KernelContext): string[] {
+  if (!policy.action) return [`policy ${policy.id} has no readable action, so it cannot cover any entry`];
+  const problems: string[] = [];
+  if (policy.function !== proposal.function) problems.push(`policy ${policy.id} is a rule for ${policy.function}, the entry is ${proposal.function}`);
+  if (policy.action.kind !== proposal.kind) problems.push(`policy ${policy.id} books ${policy.action.kind}, the entry is ${proposal.kind}`);
+  const wrong = proposal.entries.filter((l) => !isControlAccount(l.account, ctx) && l.account !== policy.action?.account).map((l) => l.account);
+  if (wrong.length > 0) problems.push(`policy ${policy.id} books to ${policy.action.account}, the entry uses ${[...new Set(wrong)].join(", ")}`);
+  return problems;
 }
 
 /** J2 — every cited fact resolves and is in scope for this party, kind, date and amount. */
