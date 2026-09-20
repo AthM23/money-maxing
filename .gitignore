@@ -14,3 +14,6 @@ data/
 world/answer-key*.json
 __pycache__/
 .vercel/
+# Local pnpm store and the linked worktrees agents check out into
+.pnpm-store/
+.worktrees/

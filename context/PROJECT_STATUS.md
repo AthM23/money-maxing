@@ -1996,3 +1996,27 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
 - User authorized merging fixes to main and handling conflicts/branches. Merged the latest origin/main ef88de0 into codex/demo-e2e; workspace/app.ts auto-merged cleanly. Preserved the earlier judge-readiness report and log.
 - Combined revision verified: 93 test files, 776 tests passing; typecheck clean. This supersedes the earlier 775-test count for the integrated source.
 - Publishing the integrated branch to main also triggers the existing Vercel deployment pipeline. The hosted site remains read-only; this does not install a live model or replace its prepared database with the local chat verification state.
+
+### 2026-09-20 — Working tree synced to main; merged branches pruned (Claude)
+
+- No merge was in progress and there were no conflicts to resolve. The primary checkout was simply 94 commits
+  behind: fast-forwarded `main` from `dc33ce3` to `dd80cc3`.
+- The checkout's two uncommitted items were already on `origin/main` verbatim and were discarded as duplicates,
+  not lost work: the two Codex log entries (landed in `52c1249`) and untracked
+  `context/JUDGE_READINESS_REVIEW_2026-09-20.md` (byte-identical to the tracked copy, verified by diff before
+  removal; it would otherwise have blocked the fast-forward).
+- Deleted four local branches, each with **zero** commits not already in `origin/main`, confirmed by
+  `git rev-list --count origin/main..<branch>`: `atharv-branch`, `b-phase2-on-main`,
+  `research/claude-session-notes`, `research/storytelling`.
+- Two local branches kept because worktrees hold them: `codex/demo-e2e` (`.worktrees/demo-e2e`) and
+  `vercel-setup` (`../mm-vercel`, the hand-deploy fixture). Both clean, both fully merged.
+  `C:/Users/A1M/.codex/worktrees/3400/money-maxing` is another session's live workspace (dirty, detached) and was
+  left untouched.
+- Remote `origin/atharv-branch` and `origin/research/claude-session-notes` are also fully merged but were **not**
+  deleted — other lanes may still reference them. Left for a human to call.
+- `package.json` gained `@modelcontextprotocol/sdk` and `esbuild` over those 94 commits; ran `pnpm install`.
+- Re-measured on `dd80cc3` after the sync: **93 test files, 776 tests passing; typecheck clean** — consistent with
+  the count the integration entry above recorded.
+- `.gitignore`: added `.pnpm-store/` and `.worktrees/`, which were showing as untracked noise in every status.
+- Still untracked and left alone: `context/research/Usage-Based Revenue Recognition for AI-Native Companies.pdf`
+  (no PDFs are tracked under `context/research/` today — commit or ignore is a human call).
