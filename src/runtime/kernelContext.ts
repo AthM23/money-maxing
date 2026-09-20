@@ -1,3 +1,4 @@
+import { laterWordOnFact } from "../memory/laterWord.js";
 import { ACCOUNTS } from "../contract/accounts.js";
 import { getBill } from "../agents/ap/match.js";
 import { normalizeInvoiceNo, sameObligation } from "../agents/ap/obligation.js";
@@ -48,6 +49,8 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     bankTxnAppliedCents: (id) => meta.mode === "replay" ? 0 : bankTxnAppliedCents(db, id),
     bankTxnAppliedDocs: (id) => meta.mode === "replay" ? undefined : bankTxnAppliedDocs(db, id),
     getFact: (id) => getFact(db, id),
+    // In replay the question is what was known then, and `getTrace` already hides later evidence; this guard is for live entries.
+    laterWordOnFact: (id) => meta.mode === "replay" ? [] : laterWordOnFact(db, id),
     getDocFx: (id) => getDocFx(db, id),
     getBankFx: (id) => getBankFx(db, id),
     bankFxForDoc: (id) => meta.mode === "replay" ? undefined : bankFxForDoc(db, id),

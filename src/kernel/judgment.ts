@@ -56,6 +56,11 @@ export function checkJ2(proposal: Proposal, ctx: KernelContext, adjustment: numb
     }
     problems.push(...factProblems(fact, proposal, ctx, adjustment));
   }
+  if (problems.length === 0) {
+    // In scope, but has the person it came from written again since? Then whether it still holds is a person's call.
+    const later = refs.flatMap((id) => (ctx.laterWordOnFact?.(id) ?? []).map((m) => `${id}: ${m.trace_id} (${m.at.slice(0, 10)})`));
+    if (later.length > 0) return mark("J", "J2", "judgment", `cited fact(s) are in scope, but there is a later word from the same person or thread that nobody has read against them: ${later.join("; ")}`, refs);
+  }
   return verdictMark("J", "J2", problems, `${refs.length} cited fact(s) in scope for this decision`, refs);
 }
 
