@@ -9,11 +9,12 @@ notable. See [`README.md`](./README.md) for the rules.
 
 | | |
 |---|---|
-| **Last updated** | 2026-09-19 ~21:20 ET |
+| **Last updated** | 2026-09-19 ~21:35 ET |
 | **Phase** | Pre-build — direction **proposed** (see "Proposed decision" below), waiting for team sign-off |
 | **Repo state** | Empty. No code committed yet. |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
+| **Judge feedback v2** | [`judge-feedback-v2-2026-09-19.md`](./judge-feedback-v2-2026-09-19.md): do not be generic; 2-3 processes as one customer story; own benchmark + fine-tune comparison |
 | **Test bar** | [`../tests/README.md`](../tests/README.md) — 115 edge cases, each with an expected route |
 | **Agent onboarding** | [`../AGENTS.md`](../AGENTS.md) |
 | **Proposed spec** | [`PROJECT_SPEC.md`](./PROJECT_SPEC.md) |
@@ -541,3 +542,25 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
 - **Blocked on a human (Atharv or Karan):** decide who plays which role and put it in `.env`, either
   `SLACK_DEFAULT_USER=U0C3415MFJ6` or a `SLACK_USER_MAP`. Until then an escalation has nobody real to reach.
   **Still untested:** a full escalation or approval round trip in Slack (needs A's runtime running and a model key).
+
+### 2026-09-19 ~21:35 ET — Second round of judge feedback recorded; direction change proposed (AthM23 + Claude Code session)
+
+- Added [`judge-feedback-v2-2026-09-19.md`](./judge-feedback-v2-2026-09-19.md), relayed by AthM23 from memory, his
+  note kept verbatim at the bottom. What the judges said: **do not be generic**; the demo is a story from start to
+  finish about a pain point people really face; **two or three finance processes done well** beat all of them done
+  thinly (the rest can be a closing line); fake data is fine if it is realistic; take the pain points from
+  **Maximor's actual customers** and walk through those in the recording; they **liked the fine-tune** and recommended
+  **our own benchmark**, in the spirit of AccountingBench, showing our fine-tuned model against open-source base models.
+- **Proposed, not agreed** (sections 5-8 of that file are our reading, not the judges' words): breadth becomes a
+  closing line and the five minutes go to 2-3 processes told as one customer-shaped story · the fine-tune plus a named
+  benchmark moves from fourth on the cut list to a headline result · candidates for the three: cash application that
+  knows when it does not know, the reason that lives in somebody's inbox, an entry you can defend at audit. This does
+  **not** reopen "Order-to-cash only" from Tried & rejected: the build stays cross-function on one ledger; what
+  changes is what the demo spends its time on. New evidence since that row was written: this feedback.
+- Not changed by it: full autonomy, ask once and remember with scope, the kernel, one ledger.
+- In progress: `research/customer-pain-points-and-accountingbench.md` (a research agent is writing it; unreviewed).
+- Also this session: `SLACK_DEFAULT_USER` set in B's `.env`, which clears the "who plays which role" blocker from the
+  21:20 entry for a one-person workspace (every role is `U0C3415MFJ6`); `atharv-branch` pushed to `origin`. `main` has
+  four commits that are not merged into `atharv-branch` yet (`fdc01c1`, `575be9e`, `3a962ef`, `3356c85`).
+- **Blocked on humans (both):** choose the two or three processes and the customer the story is about; decide whether
+  Lane C's harness is the benchmark or feeds it; re-order the roadmap's cut list accordingly.
