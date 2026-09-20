@@ -26,7 +26,7 @@ export function openAICompatReader(opts: OpenAICompatReaderOptions): DocumentRea
     async read(documentText: string): Promise<ReadOutcome> {
       const started = Date.now();
       const abort = new AbortController();
-      const timer = setTimeout(() => abort.abort(), (opts.max_seconds ?? 60) * 1000);
+      const timer = setTimeout(() => abort.abort(), (opts.max_seconds ?? 30) * 1000);
       try {
         const res = await fetch(url, {
           method: "POST", signal: abort.signal,
@@ -37,7 +37,7 @@ export function openAICompatReader(opts: OpenAICompatReaderOptions): DocumentRea
         if (!res.ok) return { ok: false, reason: `reader endpoint answered ${res.status}`, latency_ms: Date.now() - started };
         return toOutcome((await res.json()) as ChatResponse, Date.now() - started);
       } catch (err) {
-        const reason = abort.signal.aborted ? `no reply within ${opts.max_seconds ?? 60} seconds` : `reader unreachable: ${err instanceof Error ? err.message : String(err)}`;
+        const reason = abort.signal.aborted ? `no reply within ${opts.max_seconds ?? 30} seconds` : `reader unreachable: ${err instanceof Error ? err.message : String(err)}`;
         return { ok: false, reason, latency_ms: Date.now() - started };
       } finally {
         clearTimeout(timer);
@@ -66,10 +66,14 @@ export function parseJsonReply(text: string): unknown {
   }
 }
 
-/** FOOTNOTE_READER_URL, FOOTNOTE_READER_MODEL and optionally FOOTNOTE_READER_NAME / FOOTNOTE_READER_KEY. Absent means no reader. */
+/**
+ * One variable switches the reader on: FT_ENDPOINT_URL, as lane C's interface note says (ft/INTERFACE.md), or
+ * FOOTNOTE_READER_URL. Its server ignores the model field, so the model and display names are optional. Lane C's
+ * rule is that anything slower than 30 seconds goes to the next tier.
+ */
 export function readerFromEnv(env: NodeJS.ProcessEnv = process.env): DocumentReader | undefined {
-  const base = env.FOOTNOTE_READER_URL;
-  const model = env.FOOTNOTE_READER_MODEL;
-  if (!base || !model) return undefined;
-  return openAICompatReader({ base_url: base, model, name: env.FOOTNOTE_READER_NAME ?? model, api_key: env.FOOTNOTE_READER_KEY });
+  const base = env.FOOTNOTE_READER_URL ?? env.FT_ENDPOINT_URL;
+  if (!base) return undefined;
+  const model = env.FOOTNOTE_READER_MODEL ?? "qwen3-4b";
+  return openAICompatReader({ base_url: base, model, name: env.FOOTNOTE_READER_NAME ?? model, api_key: env.FOOTNOTE_READER_KEY, max_seconds: 30 });
 }

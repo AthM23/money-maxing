@@ -53,5 +53,7 @@ describe("document reader on an OpenAI-compatible endpoint (lane C's serve.py, v
     expect(parseJsonReply("{not json}")).toBeUndefined();
     expect(readerFromEnv({})).toBeUndefined();
     expect(readerFromEnv({ FOOTNOTE_READER_URL: "http://gx10:8000/v1", FOOTNOTE_READER_MODEL: "qwen3-4b-ft" })?.name).toBe("qwen3-4b-ft");
+    // Lane C's interface note names one variable; that alone is enough.
+    expect(readerFromEnv({ FT_ENDPOINT_URL: "http://100.64.0.1:8000/v1" })?.name).toBe("qwen3-4b");
   });
 });

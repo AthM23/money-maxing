@@ -32,3 +32,31 @@ FT_ENDPOINT_URL=http://100.73.102.120:8000/v1
 base Qwen3-4B F1 0.084 → **+LoRA 0.960** (held-out 0.964, schema-valid 100%) · Muse-hinted 0.957 ·
 progression 0.953/0.958/0.960 by epoch · Qwen3-0.6B floor 0.010. n=120 stratified, held-out entities
 and never-seen template families included.
+
+## Lane A's side of this interface (added by Person A, 2026-09-19 23:42 ET)
+
+Wired. `FT_ENDPOINT_URL` alone switches it on (`src/reader/openaiCompat.ts`; 30 s limit, then the case goes on
+without the reading). The model is used as a **remittance reader**, one step before the code tier, when the drift
+monitor cannot tell which invoices a payment is for. Code then decides whether to believe the reading
+(`src/worker/readRemittances.ts`), and the kernel re-checks the allocation against the customer's own words at every
+gate (`E_REMIT`, free-form mode). Vendor bills and contract clauses are not consumed by the harness yet.
+
+**Two commands lane A could not run: this machine is not on the tailnet, so the endpoint timed out from here.**
+From a machine that can reach the GX10 (the repo, `pnpm install`, nothing else):
+
+```bash
+# server started WITHOUT --adapter
+pnpm bench:reader --n 200 --reader-url http://100.73.102.120:8000/v1 --reader-model qwen --reader-name "Qwen3-4B base"
+# server started WITH --adapter
+pnpm bench:reader --n 200 --reader-url http://100.73.102.120:8000/v1 --reader-model qwen --reader-name "Qwen3-4B + our LoRA"
+```
+
+It rebuilds a ledger from the held-out remittances in `ft/data/sft.test.jsonl`, runs the real worker, and checks
+every posting against what the customer wrote; exit code 2 on any wrong posting; results land in
+`runs/reader-bench/`. Already measured at n = 200: no reader settles 0; a perfect reader settles 168 and applies the
+other 32 with the claimed deduction left open; a deliberately wrong reader settles 0; wrong postings 0 in all three.
+That table with your two rows in it is the system-level result: what the fine-tune is worth **to the harness**,
+not only in field F1.
+
+On withholding tax: option (b) is already how it works. That case has one invoice and its reason is a judgment, so it
+goes to the investigator, not the reader. Option (a) is welcome but not needed for the demo.
