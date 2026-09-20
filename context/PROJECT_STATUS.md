@@ -787,8 +787,13 @@ system claims cannot happen.** They were real. All are fixed; each has a regress
   is what makes run 1 against run 2 mean something. Suggest the skeleton's dispatch calls `runOpenIntents`
   (`src/worker/`) or passes `"earned"`. (3) `workpaper.marks_json` gained a `features` key. (4) `runCase` now settles
   `intent.status` itself and records a `router:unsettled` decision when no tier reaches a route.
-- `pnpm test` → **378 passing** on `main`'s tree (the reviewer's scratch probes under `src/__review__/` are excluded
-  and never committed).
+- **While this was being written Atharv merged lane B into `main` himself** (his ~21:35 and ~21:50 entries, which sit
+  either side of this one). His merge had adapted two walking-skeleton assertions to the earlier reading
+  (`waiting_on_human`); with the reading above they are back to `open`, which is what that test said originally. That
+  is the only lane B file touched here (`src/skeleton/__tests__/skeleton.test.ts`, two assertions and a test name).
+  His note that a skeleton pass leaves "5 `waiting_on_human`" is superseded: it leaves 5 `open`.
+- Measured on the rebased tree, lanes A, B and C together: typecheck clean; `pnpm test` → 43 files, **434 passing**
+  (the reviewer's scratch probes under `src/__review__/` are excluded and never committed).
 
 ### 2026-09-19 ~21:50 ET — Lane B merge pushed to `main` on top of A's Phase 2; one more seam moved (AthM23 + Claude Code session)
 

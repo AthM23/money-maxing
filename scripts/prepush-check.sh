@@ -5,7 +5,6 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 OWNED=("$@"); [ ${#OWNED[@]} -eq 0 ] && OWNED=(src eval package.json)
-ME="$(git config user.name)"
 
 [ "$(git rev-parse --abbrev-ref HEAD)" = "main" ] || { echo "not on main: git checkout main first"; exit 1; }
 BEFORE="$(git rev-parse origin/main)"
@@ -17,10 +16,12 @@ if ! git merge-base --is-ancestor "$BEFORE" "$AFTER"; then
   echo "!! origin/main was REWRITTEN (not a fast-forward). Stop and look before doing anything:"
   git log --oneline "$AFTER" -5; exit 2
 fi
-echo "== commits by others since the last sync, and the files they touched in ${OWNED[*]}:"
-git log "$BEFORE..$AFTER" --format='%h %an %s' | grep -v " $ME " || echo "   (none)"
-TOUCHED="$(git log "$BEFORE..$AFTER" --format='@@%an' --name-status -- "${OWNED[@]}" | awk -v me="$ME" '/^@@/{a=substr($0,3); next} NF && a!=me {print "   " a ": " $0}')"
-if [ -n "$TOUCHED" ]; then echo "!! others changed files you own. Read these diffs before pushing:"; echo "$TOUCHED"; fi
+echo "== commits that landed since the last sync:"
+git log "$BEFORE..$AFTER" --no-merges --format='   %h %an  %s' | cut -c1-140
+[ "$BEFORE" = "$AFTER" ] && echo "   (none)"
+# The net content change to the paths you own. A merge commit's own file list is noise; this is what actually differs.
+TOUCHED="$(git diff --name-status "$BEFORE" "$AFTER" -- "${OWNED[@]}")"
+if [ -n "$TOUCHED" ]; then echo "!! others changed files under ${OWNED[*]}. Read these diffs before pushing:"; echo "$TOUCHED" | sed 's/^/   /'; fi
 
 git pull --quiet --rebase --autostash origin main
 echo "== deleted since the last sync under ${OWNED[*]}:"
