@@ -1,4 +1,4 @@
-import { CaseFile } from "../contract/types.js";
+import { CaseFile, REDUCES_INVOICE_KINDS } from "../contract/types.js";
 import type { Db } from "../runtime/db.js";
 import { UNSETTLED_ACTOR } from "../runtime/intentStatus.js";
 import { getDoc, safeJson } from "../runtime/lookups.js";
@@ -88,7 +88,7 @@ function problemWith(row: IntentRow): CaseFile | string {
 }
 
 /** Kinds whose applications reduce a document's open balance when they post (see postEntry). */
-const REDUCES_OPEN = ["apply_payment", "credit_memo", "write_off", "customer_credit", "schedule_payment"] as const;
+const REDUCES_OPEN: readonly string[] = [...REDUCES_INVOICE_KINDS, "schedule_payment"];
 
 /**
  * Keep the document balances as they stood before anything posted on this case. Live runs ignore the snapshot; it

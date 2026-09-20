@@ -1,5 +1,5 @@
 import type { Topic } from "../contract/topics.js";
-import type { Proposal, ProposalKind } from "../contract/types.js";
+import { REDUCES_INVOICE_KINDS, type Proposal, type ProposalKind } from "../contract/types.js";
 import type { Clock } from "./config.js";
 import type { Db } from "./db.js";
 import { emit } from "./events.js";
@@ -29,7 +29,7 @@ const KIND_TOPIC: Partial<Record<ProposalKind, Topic>> = {
   rev_recognition: "rev.recognised",
 };
 
-const REDUCES_INVOICE: ReadonlySet<ProposalKind> = new Set(["apply_payment", "credit_memo", "write_off"]);
+const REDUCES_INVOICE: ReadonlySet<ProposalKind> = new Set(REDUCES_INVOICE_KINDS);
 
 /** Post an accepted proposal. One SQLite transaction: ledger, subledger, artifact and events move together or not at all. */
 export function postEntry(db: Db, clock: Clock, input: PostInput): PostResult {

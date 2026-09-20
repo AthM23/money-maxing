@@ -29,6 +29,8 @@ export const DEFAULT_CONFIG: RuntimeConfig = {
     credit_memo: [ACCOUNTS.deferred_revenue, ACCOUNTS.concessions],
     // A write-off is an expense of collecting, never a direct hit to revenue.
     write_off: [ACCOUNTS.bank_charges, ACCOUNTS.misc_expense],
+    // Tax withheld at source is an asset recoverable against the certificate. It is never a discount or an expense.
+    tax_withholding: [ACCOUNTS.wht_receivable],
     customer_credit: [ACCOUNTS.customer_credits],
     apply_payment: [ACCOUNTS.customer_credits],
   },

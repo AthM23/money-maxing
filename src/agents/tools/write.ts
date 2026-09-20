@@ -43,6 +43,7 @@ export const FinishInput = z.object({
 export const FactCandidateToolInput = FactCandidate.extend({
   value: z.object({
     pct_off: z.number().min(0).max(100).optional(),
+    pct_withheld: z.number().min(0).max(100).optional(),
     amount_cents: z.number().int().nonnegative().optional(),
     payer_party_id: z.string().min(1).optional(),
     note: z.string().optional(),

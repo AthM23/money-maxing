@@ -1,4 +1,4 @@
-import type { Mark, Proposal, ProposalKind } from "../contract/types.js";
+import { NON_CASH_SETTLEMENT_KINDS, REDUCES_INVOICE_KINDS, type Mark, type Proposal, type ProposalKind } from "../contract/types.js";
 import type { KernelContext } from "./types.js";
 import {
   appliedToDocKind,
@@ -86,7 +86,7 @@ function bankProblems(proposal: Proposal, ctx: KernelContext): string[] {
 }
 
 const INBOUND_KINDS: ReadonlySet<string> = new Set(["apply_payment", "customer_credit"]);
-const NO_CASH_KINDS: ReadonlySet<string> = new Set(["credit_memo", "write_off", "dispute_hold", "accrual", "payroll_accrual", "amortization", "rev_recognition"]);
+const NO_CASH_KINDS: ReadonlySet<string> = new Set([...NON_CASH_SETTLEMENT_KINDS, "dispute_hold", "accrual", "payroll_accrual", "amortization", "rev_recognition"]);
 
 /** F8 — the entry has the shape its kind claims. A concession or write-off moves no cash; only a cash application does. */
 export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
@@ -96,7 +96,7 @@ export function checkF8(proposal: Proposal, ctx: KernelContext): Mark {
   if (NO_CASH_KINDS.has(proposal.kind) && cashLines.length > 0) {
     problems.push(`kind ${proposal.kind} must not touch the cash account ${ctx.control.cash_account}`);
   }
-  if ((proposal.kind === "credit_memo" || proposal.kind === "write_off") && proposal.entries.length > 0) {
+  if (NON_CASH_SETTLEMENT_KINDS.includes(proposal.kind) && proposal.entries.length > 0) {
     const outside = proposal.entries.filter((l) => !isControlAccount(l.account, ctx));
     const debitOutside = sumDebits(outside);
     const applied = applicationsTotal(proposal);
@@ -119,7 +119,7 @@ export function apGlDelta(proposal: Proposal, ctx: KernelContext): number {
  * Kinds that actually retire receivable. dispute_hold is deliberately not one of them: it only
  * marks an invoice as disputed, posts no entry, and leaves the balance where it was.
  */
-const AR_REDUCING_KINDS: readonly ProposalKind[] = ["apply_payment", "credit_memo", "write_off"];
+const AR_REDUCING_KINDS: readonly ProposalKind[] = REDUCES_INVOICE_KINDS;
 
 /** What the same proposal does to the subledgers, derived from its applications, not from its entry. */
 export function subledgerDeltas(proposal: Proposal, ctx: KernelContext): { ar: number; ap: number } {

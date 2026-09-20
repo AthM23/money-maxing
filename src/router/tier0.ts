@@ -97,27 +97,35 @@ function liveOpenBalance(db: Db, docId: string): number {
   return doc?.open_cents ?? 0;
 }
 
+/** What a remembered fact can settle, and how each is booked. The percentage lives in the fact; the account lives here. */
+const FACT_TREATMENTS = [
+  { kind: "credit_memo", account: ACCOUNTS.deferred_revenue, pct_key: "pct_off", label: "Concession" },
+  { kind: "tax_withholding", account: ACCOUNTS.wht_receivable, pct_key: "pct_withheld", label: "Tax withheld at source" },
+] as const;
+
 function fromFact(db: Db, c: CaseFile, notes: string[], asOf?: string): Proposal | null {
-  const { applicable, refused } = applicableFacts(db, {
-    party_id: c.party_id, kind: "credit_memo", entry_date: c.entry_date, amount_cents: c.shortfall_cents, as_of: asOf,
-  });
-  for (const r of refused) notes.push(`fact ${r.fact_id} not used: ${r.failed_dimension} (${r.detail})`);
-  for (const fact of applicable) {
-    const pct = typeof fact.value.pct_off === "number" ? fact.value.pct_off : null;
-    const cents = typeof fact.value.amount_cents === "number" ? fact.value.amount_cents : null;
-    const explains = pct !== null ? Math.round((c.expected_cents * pct) / 100) : cents;
-    if (explains !== c.shortfall_cents) {
-      notes.push(`fact ${fact.fact_id} explains ${explains ?? "nothing"}, shortfall is ${c.shortfall_cents}: not used`);
-      continue;
+  for (const treatment of FACT_TREATMENTS) {
+    const { applicable, refused } = applicableFacts(db, {
+      party_id: c.party_id, kind: treatment.kind, entry_date: c.entry_date, amount_cents: c.shortfall_cents, as_of: asOf,
+    });
+    for (const r of refused) notes.push(`fact ${r.fact_id} not used: ${r.failed_dimension} (${r.detail})`);
+    for (const fact of applicable) {
+      const pct = fact.value[treatment.pct_key];
+      const cents = typeof fact.value.amount_cents === "number" ? fact.value.amount_cents : null;
+      const explains = typeof pct === "number" ? Math.round((c.expected_cents * pct) / 100) : cents;
+      if (explains !== c.shortfall_cents) {
+        notes.push(`fact ${fact.fact_id} explains ${explains ?? "nothing"}, shortfall is ${c.shortfall_cents}: not used`);
+        continue;
+      }
+      const memo = `${treatment.label} per fact ${fact.fact_id}, approved by ${fact.approved_by ?? "unknown"}`;
+      const p = base(c, treatment.kind, lastDocApplication(c), [
+        { account: treatment.account, debit_cents: c.shortfall_cents, credit_cents: 0, memo },
+        { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: c.shortfall_cents, memo },
+      ]);
+      p.fact_refs = [fact.fact_id];
+      p.evidence = factEvidence(db, fact.fact_id);
+      return p;
     }
-    const memo = `Concession per fact ${fact.fact_id}, approved by ${fact.approved_by ?? "unknown"}`;
-    const p = base(c, "credit_memo", lastDocApplication(c), [
-      { account: ACCOUNTS.deferred_revenue, debit_cents: c.shortfall_cents, credit_cents: 0, memo },
-      { account: ACCOUNTS.ar, debit_cents: 0, credit_cents: c.shortfall_cents, memo },
-    ]);
-    p.fact_refs = [fact.fact_id];
-    p.evidence = factEvidence(db, fact.fact_id);
-    return p;
   }
   return null;
 }

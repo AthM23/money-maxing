@@ -44,7 +44,7 @@ describe("desk: every question and every parked entry reaches one person, once",
     const db = await worldWithWayneAsked();
     const poster = recorder();
     const first = await deskPass(db, poster, fixedClock);
-    expect(first.escalations_posted).toHaveLength(2);
+    expect(first.escalations_posted).toHaveLength(3);
     // The stand-in poster does not write slack_ts; the real transport does. Mark them as the transport would.
     db.prepare("UPDATE escalation SET slack_ts = 'ts-q'").run();
     expect((await deskPass(db, poster, fixedClock)).escalations_posted).toEqual([]);

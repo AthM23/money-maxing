@@ -25,10 +25,10 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
   it("cold start: cash that matches posts from code on day one; everything that carries judgment parks for a person", async () => {
     const db = world();
     const report = await runOpenIntents(db, { investigators: [], clock: fixedClock });
-    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_initech", "int_umbrella", "int_wayne"]);
+    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_initech", "int_umbrella", "int_wayne", "int_meridian"]);
     // Umbrella: the wire is applied by code; the rule-driven write-off is a kind with no track record, so it parks.
     expect(report.worked.find((w) => w.intent_id === "int_umbrella")).toMatchObject({ routes: ["AUTO", "PROPOSE"], tier_used: 0, status: "waiting_on_human" });
-    expect(count(db, "SELECT COUNT(*) AS n FROM gl_entry")).toBe(4);
+    expect(count(db, "SELECT COUNT(*) AS n FROM gl_entry")).toBe(5);
     expect(count(db, "SELECT COUNT(*) AS n FROM decision WHERE mode = 'live' AND posted_at IS NOT NULL AND kind != 'apply_payment' AND id != 'dec_open'")).toBe(0);
     const t = readControlTotals(db);
     expect(t.ar_gl_cents).toBe(t.ar_subledger_cents);
@@ -92,7 +92,8 @@ describe("worker: open intents run at the autonomy each kind of entry has earned
 
     const shrugs: Investigator = { name: "scripted", investigate: () => Promise.resolve({ outcome: "budget_exhausted", summary: "ran out of turns", places_looked: ["mail"] }) };
     const again = await runOpenIntents(db, { investigators: [shrugs], clock: fixedClock });
-    expect(again.worked.map((w) => [w.intent_id, w.tier_used, w.status])).toEqual([["int_initech", 1, "waiting_on_human"], ["int_wayne", 1, "waiting_on_human"]]);
+    expect(again.worked.map((w) => [w.intent_id, w.tier_used, w.status])).toEqual([
+      ["int_initech", 1, "waiting_on_human"], ["int_wayne", 1, "waiting_on_human"], ["int_meridian", 1, "waiting_on_human"]]);
   });
 
   it("an intent closes on its end condition in the ledger, not because an entry posted", async () => {
@@ -207,7 +208,7 @@ describe("worker: bad input and failures are handed to a person, never guessed a
     expect(report.skipped[0]!.reason).toContain("names intent int_umbrella");
     expect(report.skipped[1]!.reason).toContain("does not parse");
     expect(intentStatus(db, "int_wayne")).toBe("waiting_on_human");
-    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_umbrella"]);
+    expect(report.worked.map((w) => w.intent_id)).toEqual(["int_umbrella", "int_meridian"]);
   });
 
   it("a run that throws leaves the case open for another pass, then gives it to a person", async () => {

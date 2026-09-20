@@ -13,7 +13,7 @@ export type LineageLookup =
 
 interface FamilyRow { id: string; code: string | null; version: number; status: string; condition_json: string }
 
-const PREFIX: Record<string, string> = { write_off: "SHORT-PAY", credit_memo: "CONCESSION", customer_credit: "CREDIT", approve_bill: "AP-MATCH" };
+const PREFIX: Record<string, string> = { write_off: "SHORT-PAY", credit_memo: "CONCESSION", tax_withholding: "WHT", customer_credit: "CREDIT", approve_bill: "AP-MATCH" };
 
 /**
  * A rule is never edited. When what the humans did moves (a wider ceiling, say), compile drafts the next version

@@ -1,6 +1,6 @@
 # Demo story (proposal) — "The 2%"
 
-Status: **proposed by Person A, 2026-09-19 22:20 ET. Not agreed yet.** It answers the judges' second note
+Status: **proposed by Person A, 2026-09-19 22:17 ET. Not agreed yet.** It answers the judges' second note
 (`judge-feedback-v2-2026-09-19.md`: one story, real pain, two or three processes, realistic documents) using what is on
 Maximor's own site (`research/maximor-site-deep-read-2026-09-19.md`). Each beat says what is built and measured today
 and what is not. Nothing in here may be claimed on stage until its line says built.
