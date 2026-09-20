@@ -20,7 +20,10 @@ def load(split):
     return rows
 
 train, cal, test = load("train"), load("cal"), load("test")
-print(f"train={len(train)} cal={len(cal)} test={len(test)}")
+# eval generation is ~2-5s/row: score a stratified slice, hard cases first (same policy as benchmark.py)
+test.sort(key=lambda r: not r["meta"].get("held_out_party", False))
+test = test[:: max(1, len(test) // 150)][:150]
+print(f"train={len(train)} cal={len(cal)} test={len(test)} (stratified slice)")
 assert len(train) >= 50, "too little training data — brief says do not bother under ~100 rows; fall back to GBT-only"
 
 tok = AutoTokenizer.from_pretrained(MODEL)
