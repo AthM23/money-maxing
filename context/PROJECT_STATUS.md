@@ -2061,3 +2061,18 @@ Behaviour of the demo is unchanged; the six existing sources pull exactly as bef
   **order** now assert the set instead — the registry lists the same five tools in a different order.
 - Docs: `src/connectors/README.md` — the two steps to add a source, the table of what is derived, and the two rules
   worth keeping (`recorded_time` is the source's clock; refuse a bad pull whole).
+
+### 2026-09-20 ~07:05 ET — Note on how to say the connector count out loud
+
+Follow-up to the entry above, recorded because "nine connectors" is easy to overstate and a finance judge will check.
+
+- **Nine registered sources, seven of which `pnpm ingest` pulls, two wired to a real external API: Gmail and Slack.**
+  Not "nine integrations". The rest: contracts, policy memos, CRM and the bank feed are local stores (the bank feed is
+  a file by Phase 0 decision 3, not for want of an API); the close workbook is seeded straight into the database;
+  QuickBooks is a **write-only mirror** — we push accepted entries and never read it back as evidence.
+- **The demo is unchanged and stays on Gmail and Slack, on purpose.** The registry is the answer to "can you add
+  another system?", not a claim that we added nine. Linear is registered and pulls an empty list unless
+  `data/stores/linear.json` exists, which no seeded world writes.
+- Stated in three places so it cannot drift: the header comment of `src/connectors/registry.ts`, a "What the demo
+  actually uses" section in `src/connectors/README.md` with a per-source table, and the `pnpm connectors` output
+  itself, which now counts live-credentialed sources rather than live-capable ones.

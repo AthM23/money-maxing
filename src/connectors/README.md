@@ -76,8 +76,34 @@ change either — the AR prompt names no source, and tool descriptions come from
 
 ## What is registered today
 
-`pnpm connectors` is the current answer. At the time of writing: contracts, policy memos, CRM, Linear, Gmail, Slack,
-the bank feed, the prior close workbook, and the QuickBooks mirror.
+`pnpm connectors` is the current answer. At the time of writing, nine sources — but they are not nine equivalent
+things, and it is worth being exact about that before saying a number out loud:
+
+| Source | What it is | Where its data comes from |
+|---|---|---|
+| `gmail` | Company email | **Live** against the real Gmail API, or the local store |
+| `slack` | Internal chat | **Live** against the real Slack API, or the local store |
+| `linear` | Engineering tickets | Live path written but **no API key**; local store otherwise |
+| `contract` | Signed agreements and amendments | Local files, `data/stores/contracts/*.md` |
+| `file` | Written accounting policy memos | Local files, `data/stores/files/*.json` |
+| `crm` | Deals and account notes | Local file, `data/stores/crm.json` |
+| `bank` | The bank feed | Local CSV — the bank feed is a file by decision, not for want of an API |
+| `workbook` | The prior close workbook | Seeded straight into the database; there is no system to pull it from |
+| `qbo` | QuickBooks Online | Write-only mirror: we push accepted entries, we never read it back as evidence |
+
+So: **nine registered sources**, **seven of which pull** on `pnpm ingest` (`workbook` and `qbo` are not pullers), and
+**two wired to a real external API today** — Gmail and Slack. The accurate sentence is "nine registered sources of
+context, two of them live against real APIs", not "nine integrations".
+
+### What the demo actually uses
+
+**The demo runs on Gmail and Slack, live, and that is on purpose.** The registry is the answer to "can you add
+another system?" — it is not a claim that we have added nine. Nothing about the demo path changed when it landed:
+the same six local stores, the same two live systems, the same routes.
+
+Linear is registered and pulls an empty list unless `data/stores/linear.json` exists, which the demo world does not
+write. It is there to be read as the worked example, and to make the extension point a file a judge can open rather
+than an assurance. If a judge asks for a source on the spot, the two steps below are the whole demonstration.
 
 **Live vs local.** Every source has an offline store under `data/stores/` so the whole system runs with no
 credentials. A live system *replaces* its local store rather than joining it — both carry the same records, and

@@ -19,7 +19,10 @@ function mode(def: ConnectorDef): string {
 
 function main(): void {
   loadEnv();
-  out(`${CONNECTORS.length} registered sources · ${LIVE_SOURCES.length} can be pulled live (--live=${LIVE_SOURCES.join(",")})\n`);
+  const ready = CONNECTORS.filter((c) => liveCredentials(c).ready).map((c) => c.source);
+  const pulled = CONNECTORS.filter((c) => c.local || c.live).length;
+  out(`${CONNECTORS.length} registered sources · ${pulled} are pulled by \`pnpm ingest\` · ${ready.length} are wired to a real API right now (${ready.join(", ") || "none"})`);
+  out(`--live=${LIVE_SOURCES.join(",")} swaps a local store for the real system.\n`);
   for (const def of CONNECTORS) {
     out(`  ${def.source.padEnd(9)} ${def.label}`);
     out(`  ${" ".repeat(9)} ${def.about}`);
@@ -27,6 +30,8 @@ function main(): void {
     out(`  ${" ".repeat(9)} agent tool: ${def.tool ? `${def.tool.name} — searches ${def.tool.describes}` : "none (read through typed tools)"}`);
     out("");
   }
+  out("The demo runs on Gmail and Slack, live. The rest are local stores, a seeded workbook and a write-only");
+  out("QuickBooks mirror; Linear is the worked example of adding a system, not part of the demo.\n");
   out("Add one: a module that maps the system's records to RawItem, plus one entry in src/connectors/registry.ts.");
   out("See src/connectors/README.md; src/connectors/linear.ts is the worked example.");
 }
