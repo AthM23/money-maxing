@@ -1364,7 +1364,7 @@
       ],
       "cc": [],
       "subject": "Remittance advice: INV-3151",
-      "body": "Dear Northwind AR team, we have remitted USD 16,200.00 today against invoice INV-3151 for USD 18,000.00. As required under Section 195 of the Income-tax Act, tax has been deducted at source at 10% (USD 1,800.00) and deposited with the Government of India. Form 16A for the quarter will follow by 15 August. Regards, Accounts Payable, Meridian Infotech Pvt Ltd",
+      "body": "Dear Northwind AR team, we have remitted USD 16,200.00 today against invoice INV-3151 for USD 18,000.00. As required under Section 393(2) of the Income-tax Act, 2025 (formerly Section 195), tax has been deducted at source at 10% (USD 1,800.00) and deposited with the Government of India. The TDS certificate, Form 131 (formerly Form 16A), for the quarter ending 30 September will follow by 15 November. Regards, Accounts Payable, Meridian Infotech Pvt Ltd",
       "party_id": "meridian"
     },
     {
