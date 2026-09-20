@@ -501,6 +501,19 @@ async function runDoc(){
   }
   msg('Checker',`Every claim ties: ${mathNote||'amount, date and reference are consistent'}. The entry is prepared and waits for one click, because ${name} has not yet earned the right to post alone.`);
   card.querySelector('.chip').textContent='prepared';card.querySelector('.chip').className='chip done';
+  if(f.doc_kind==='vendor_bill'&&f.vendor&&f.ref&&f.amount_cents&&f.date){
+    try{
+      const fr=await fetch('/api/do/upload_bill',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({vendor:f.vendor,ref:String(f.ref),bill_date:f.date,period:(f.period||'').slice(0,18)||undefined,amount_cents:f.amount_cents,terms_days:f.terms_days,raw:raw.slice(0,6000)})});
+      const fj=await fr.json();
+      if(fj.status==='filed'){
+        msg('System',`Filed into the company's books as ${fj.bill_id}, with the document kept as evidence. Ask the books "what bills are open?" on the dashboard and it is there. <span class="chip live">written to the books</span>`);
+        card.querySelector('.chip').textContent='in the books';card.querySelector('.chip').className='chip live';
+      } else if(fj.status==='duplicate'){
+        msg('System',`Already on file as ${fj.bill_id}: the books take a bill once.`);
+      }
+    }catch(_){/* read-only copy or offline: the draft stays on this page */}
+  }
   await sleep(2200);if(guard())return;
   stage(4);agent('a-check','on');agent('a-audit','hot');$('wire').style.width='100%';
   msg('Auditor','The reading, the checks and the draft are all on the record, re-performable without the preparer.');

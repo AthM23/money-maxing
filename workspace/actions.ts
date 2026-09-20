@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,6 +40,11 @@ const Accruals = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/) });
 const FactAction = z.object({ fact_id: Id, as: Id, outcome: z.enum(["approved", "rejected"]) });
 const PolicyAction = z.object({ policy_id: Id, as: Id });
 const Run = z.object({ intent_id: Id.optional() });
+const UploadBill = z.object({
+  vendor: z.string().min(2).max(80), ref: z.string().min(1).max(60), bill_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  period: z.string().regex(/^\d{4}-\d{2}( to .*)?$/).optional(), amount_cents: z.number().int().min(1).max(1_000_000_000),
+  terms_days: z.number().int().min(0).max(365).optional(), raw: z.string().min(10).max(6000),
+});
 const Audit = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/), tamper: z.boolean().optional() });
 const Ask = z.object({ question: z.string().min(2).max(300), period: z.string().regex(/^\d{4}-\d{2}$/), model: z.enum(ASK_MODELS).default("code"), history: AskHistory });
 const Tool = z.object({ name: Id, input: z.unknown().optional(), period: z.string().regex(/^\d{4}-\d{2}$/) });
@@ -46,6 +52,27 @@ const Tool = z.object({ name: Id, input: z.unknown().optional(), period: z.strin
 type Handler = (db: Db, body: unknown) => Promise<unknown> | unknown;
 
 export const ACTIONS: Record<string, Handler> = {
+  // A document uploaded on the pipeline page enters the books the way any new AP bill does: the document
+  // itself as evidence, the bill open and unposted. Nothing touches the ledger until a person approves it.
+  upload_bill: (db, body) => {
+    const u = parse(UploadBill, body);
+    const slug = "up_" + u.vendor.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40);
+    const billId = "BILL-UP-" + u.ref.replace(/[^A-Za-z0-9_-]+/g, "-").slice(0, 40);
+    if (db.prepare("SELECT 1 FROM bill WHERE id = ?").get(billId)) return { status: "duplicate", bill_id: billId };
+    const traceId = "tr_upload_" + billId;
+    const json = JSON.stringify({ title: `Uploaded document ${u.ref}`, text: u.raw });
+    const now = new Date().toISOString();
+    db.transaction(() => {
+      if (!db.prepare("SELECT 1 FROM party WHERE id = ?").get(slug))
+        db.prepare("INSERT INTO party (id, kind, name, owner_user) VALUES (?, 'vendor', ?, NULL)").run(slug, u.vendor);
+      db.prepare("INSERT INTO trace (id, source, kind, external_id, event_time, recorded_time, ingested_at, party_id, content_hash, payload_json) VALUES (?, 'file', 'document', ?, ?, ?, ?, ?, ?, ?)")
+        .run(traceId, traceId, `${u.bill_date}T12:00:00Z`, now, now, slug, createHash("sha256").update(json).digest("hex"), json);
+      const due = new Date(Date.parse(u.bill_date) + (u.terms_days ?? 30) * 86_400_000).toISOString().slice(0, 10);
+      db.prepare("INSERT INTO bill (id, party_id, po_id, vendor_invoice_no, bill_date, due_date, service_period, total_cents, open_cents, status, trace_id) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 'open', ?)")
+        .run(billId, slug, u.ref, u.bill_date, due, (u.period ?? u.bill_date.slice(0, 7)).slice(0, 18), u.amount_cents, u.amount_cents, traceId);
+    })();
+    return { status: "filed", bill_id: billId, vendor_id: slug, trace_id: traceId };
+  },
   approve: (db, body) => {
     const a = parse(Approve, body);
     return approveDecision(db, a.decision_id, { approver_id: a.as, approver_kind: "human", outcome: a.outcome, note: a.note }, { config: APP_CONFIG });

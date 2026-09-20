@@ -34,6 +34,14 @@ export const TOOLS = [
       const table = arAgeing(db, lastDay(period));
       return { title: "AR ageing by customer", summary: `${table.rows.length - 1} customers owe ${usd(Number(table.rows[0]?.[5] ?? 0))} as of ${lastDay(period)}.`, table, source: "invoice" };
     } }),
+  tool({ name: "open_bills", title: "Bills on file", icon: "t_close", example: "What bills are open?", input: None,
+    description: "Vendor bills on file that have not been posted or paid, newest first, each with its evidence.",
+    run: ({ db }) => {
+      const rows = db.prepare("SELECT b.id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents, b.status FROM bill b JOIN party p ON p.id = b.party_id WHERE b.status NOT IN ('paid','void') ORDER BY b.bill_date DESC LIMIT 50")
+        .all() as { id: string; vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number; status: string }[];
+      return { title: "Bills on file, not yet paid", summary: rows.length ? `${rows.length} open bill(s) totalling ${usd(rows.reduce((n, r) => n + r.total_cents, 0))}. Nothing posts until a person approves.` : "No open bills on file.",
+        table: { columns: ["Vendor", "Ref", "Bill date", "Period", "Amount", "Status"], money_columns: [4], rows: rows.map((r) => [r.vendor, r.ref, r.bill_date, r.service_period, r.total_cents, r.status]) }, source: "bill, trace" };
+    } }),
   tool({ name: "trial_balance", title: "Trial balance", icon: "t_balance", example: "Show me the trial balance", input: None,
     description: "Debit and credit balance of every ledger account through the month being closed. The totals must be equal.",
     run: ({ db, period }) => ({ title: `Trial balance through ${period}`, summary: "Debits and credits by account; the last row has to foot.", table: trialBalance(db, period), source: "gl_entry, gl_line" }) }),
