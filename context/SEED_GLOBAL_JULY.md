@@ -86,7 +86,7 @@ receipts have FX rows and no advice.
 
 ## Measured (2026-09-20, no model key)
 
-- `pnpm typecheck` clean; `pnpm test` → 72 files, **678 passing**.
+- `pnpm typecheck` clean; `pnpm test` → 72 files, **686 passing**.
 - Books before any agent: AR control = open invoices, trial balance foots, GL cash = the four bank files.
 - **Through lane A's harness on the seeded world, code only:** `SHORT-PAY-01 v1 · wire short ≤ $45.00 → 6150` drafted
   from 9 (8 exact, 1 other account, leave-one-out 6 of 8). Worker: 12 cases, 15 decisions by code, 11 posted with no

@@ -11,7 +11,7 @@ notable. See [`README.md`](./README.md) for the rules.
 |---|---|
 | **Last updated** | 2026-09-20 ~00:45 ET |
 | **Phase** | Phases 1 and 2 of lanes A and B and lane C's reader are merged on `main`. **Team direction (09-19 ~23:35): one international payment investigation first**, see [`TEAM_ROADMAP_2026-09-19.md`](./TEAM_ROADMAP_2026-09-19.md). Next gate: A/B/C agree the fixture and contract |
-| **Repo state** | `main` = lanes A, B and C; `atharv-branch` = `main`. `pnpm test` → 72 files, 678 passing; `pnpm typecheck` clean (measured 09-20 ~00:40, lane B's global July merged with lane A's main scene) |
+| **Repo state** | `main` = lanes A, B and C; `atharv-branch` = `main`. `pnpm test` → 72 files, 686 passing; `pnpm typecheck` clean (measured 09-20 ~00:40, lane B's global July merged with lane A's main scene) |
 | **Deadline** | 24h hackathon build |
 | **Design brief** | [`judge-interview-2026-09-19.md`](./judge-interview-2026-09-19.md) |
 | **Judge feedback v2** | [`judge-feedback-v2-2026-09-19.md`](./judge-feedback-v2-2026-09-19.md): do not be generic; 2-3 processes as one customer story; own benchmark + fine-tune comparison |
@@ -1407,7 +1407,7 @@ tonight. Get the Kiteworks *shape* with the least new logic:
   laid out as an incoming-wire advice and states every number `ADVICE_320` states; the remittance is a *Zahlungsavis*;
   the order form has lane A's fee clause and section 7 word for word inside payment-without-deduction and reverse-charge
   clauses; an email thread and a Slack thread show the request and that nobody with authority agreed.
-- **Measured, no model key:** typecheck clean; `pnpm test` → 72 files, **678 passing**. Drift produces lane A's `CASES`
+- **Measured, no model key:** typecheck clean; `pnpm test` → 72 files, **686 passing** (678 before lane A's red-team fixes `6a857ac` were merged in; the harness results below were re-measured after that merge and are unchanged). Drift produces lane A's `CASES`
   and `MAIN_CASES` field for field (test). Through lane A's harness on the seeded world: `SHORT-PAY-01 v1 ≤ $45.00`
   from 9 decisions (8 exact, 1 other account, leave-one-out 6 of 8); worker 12 cases, 15 decisions by code, 11 posted
   with no person, 4 parked, 0 model calls, 322 of 322 tick marks; on `BTX-320` cash 105,800.00 and **realised FX
