@@ -1,6 +1,6 @@
 import type { Mark, Proposal } from "../contract/types.js";
 import { remittanceProvenanceProblems, parseRemittance } from "../contract/remittance.js";
-import type { KernelContext } from "./types.js";
+import type { BankTxnLite, KernelContext, TraceLite } from "./types.js";
 import { failMark, isAfterAsOf, isControlAccount, naMark, normalizeWs, truncate, verdictMark } from "./util.js";
 
 /** E1 — every cited trace resolves, and in replay nothing recorded after as_of may be cited. */
@@ -126,7 +126,7 @@ function checkRemittance(proposal: Proposal, ctx: KernelContext): Mark {
   const problems: string[] = [];
   if (!trace || trace.superseded_by || isAfterAsOf(ctx, trace.recorded_time) || trace.party_id !== proposal.party_id) problems.push("remittance source is missing, stale, outside the replay window or belongs to another party");
   if (!proposal.evidence.some(e => e.trace_id === id)) problems.push("remittance must be cited in the workpaper");
-  if (trace && !remit) return freeFormRemittance(proposal, trace.payload_text, bank?.amount_cents, problems, id);
+  if (trace && !remit) return freeFormRemittance(proposal, trace, bank, problems);
   if (proposal.kind !== "apply_payment" || !remit || !bank || remit.amount_cents !== bank.amount_cents || remit.date !== bank.posted_date
     || !bank.descriptor?.split(/[^A-Za-z0-9-]+/).includes(remit.reference)) problems.push("remittance reference, date and total must agree to the bank receipt");
   const sorted = (apps: Proposal["applications"]) => JSON.stringify([...apps].sort((a, b) => a.doc_id.localeCompare(b.doc_id)));
@@ -134,13 +134,23 @@ function checkRemittance(proposal: Proposal, ctx: KernelContext): Mark {
   return verdictMark("E", "E_REMIT", problems, "remittance source, bank reference, total and every invoice allocation agree", [id]);
 }
 
+/** A remittance advice travels with its payment: up to ten days ahead of the bank line, or a few days behind it. */
+const REMIT_DAYS_BEFORE = 10;
+const REMIT_DAYS_AFTER = 3;
+const DAY_MS = 86_400_000;
+
 /**
  * A remittance written as ordinary mail cannot be re-parsed by rule, so whoever read it (a small model, usually) is
  * not believed either. The allocation is checked against the customer's own words instead: every invoice named,
- * each amount next to its invoice, the receipt total stated, and the allocations footing to the bank line.
+ * each amount next to its invoice, the receipt total stated, and the allocations footing to the bank line. Ordinary
+ * mail carries no bank reference, so what ties it to this receipt is the customer, the total to the cent and the date.
  */
-function freeFormRemittance(proposal: Proposal, text: string, bankCents: number | undefined, problems: string[], id: string): Mark {
-  if (proposal.kind !== "apply_payment" || bankCents === undefined) problems.push("a remittance can only direct a cash application against a bank receipt");
-  else problems.push(...remittanceProvenanceProblems(text, proposal.applications, bankCents));
-  return verdictMark("E", "E_REMIT", problems, "free-form remittance: every invoice and amount agrees to the customer's own words and foots to the receipt", [id]);
+function freeFormRemittance(proposal: Proposal, trace: TraceLite, bank: BankTxnLite | undefined, problems: string[]): Mark {
+  if (proposal.kind !== "apply_payment" || !bank) problems.push("a remittance can only direct a cash application against a bank receipt");
+  else {
+    const days = (Date.parse(trace.recorded_time) - Date.parse(`${bank.posted_date}T00:00:00Z`)) / DAY_MS;
+    if (!(days >= -REMIT_DAYS_BEFORE && days <= REMIT_DAYS_AFTER + 1)) problems.push(`the remittance is dated ${trace.recorded_time.slice(0, 10)}, the receipt ${bank.posted_date}: too far apart to be the same payment`);
+    problems.push(...remittanceProvenanceProblems(trace.payload_text, proposal.applications, bank.amount_cents));
+  }
+  return verdictMark("E", "E_REMIT", problems, "free-form remittance: every invoice and amount agrees to the customer's own words and foots to the receipt", [trace.id]);
 }

@@ -65,7 +65,7 @@ function planForeign(db: Db, c: CaseFile, f: ForeignParts, stillOpen: number, pr
   if (feeDue > 0) {
     // The fee is the bank's stated deduction, quoted as printed, never whatever is left over after the other causes.
     const stated = (feeDue / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const fee = fromPolicy(db, { ...c, shortfall_cents: feeDue }, notes, evidence.map((e) => ({ ...e, claim: "the fee the bank deducted, as its advice states it", quote: stated })));
+    const fee = fromPolicy(db, { ...c, shortfall_cents: feeDue }, notes, evidence.map((e) => ({ ...e, claim: "the fee the bank deducted, as its advice states it", quote: stated })), "write_off");
     if (fee) { features[proposals.length] = caseFeatures({ ...c, shortfall_cents: feeDue }); proposals.push(fee); } else unexplained += feeDue;
   }
   if (fxDue > 0) proposals.push(realizedFx(c, f, fxDue, evidence));
@@ -149,7 +149,8 @@ function citePayerFact(db: Db, c: CaseFile, p: Proposal): void {
     : null;
   if (!payer || payer === c.party_id) return;
   for (const predicate of ["payer_alias", "parent_pays"]) {
-    const { applicable } = applicableFacts(db, { party_id: c.party_id, kind: "apply_payment", entry_date: c.entry_date, amount_cents: 0, predicate });
+    // Sized by the cash it lets through: a payer fact approved by someone with a $500 limit does not apply a $500,000 receipt.
+    const { applicable } = applicableFacts(db, { party_id: c.party_id, kind: "apply_payment", entry_date: c.entry_date, amount_cents: c.received_cents, predicate });
     const fact = applicable.find((f) => f.value.payer_party_id === payer);
     if (!fact) continue;
     p.fact_refs = [...p.fact_refs, fact.fact_id];
@@ -217,13 +218,15 @@ function fromFact(db: Db, c: CaseFile, notes: string[], asOf?: string): Proposal
 
 interface PolicyRow { id: string; condition_json: string; action_json: string }
 
-function fromPolicy(db: Db, c: CaseFile, notes: string[], evidence?: Proposal["evidence"]): Proposal | null {
+/** `only` narrows the rules to one kind of entry: a bank's fee is an expense, never a concession to the customer. */
+function fromPolicy(db: Db, c: CaseFile, notes: string[], evidence?: Proposal["evidence"], only?: Proposal["kind"]): Proposal | null {
   const rows = db.prepare("SELECT id, condition_json, action_json FROM policy WHERE function = ? AND status = 'approved'")
     .all(c.function) as PolicyRow[];
   for (const row of rows) {
     const condition = safeJson(row.condition_json) as Condition | null;
     const action = safeJson(row.action_json) as { kind?: Proposal["kind"]; account?: string } | null;
     if (!condition || !action?.kind || !action.account) continue;
+    if (only && action.kind !== only) continue;
     if (!evaluateCondition(condition, caseFeatures(c))) {
       notes.push(`policy ${row.id}: condition does not match`);
       continue;

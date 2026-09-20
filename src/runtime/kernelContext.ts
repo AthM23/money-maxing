@@ -44,6 +44,7 @@ export function buildKernelContext(db: Db, proposal: Proposal, meta: ContextMeta
     getDoc: (id) => (meta.mode === "replay" ? meta.replay_docs?.find((d) => d.id === id) : undefined) ?? getDoc(db, id),
     getBankTxn: (id) => visibleBankTxn(db, id, meta),
     bankTxnAppliedCents: (id) => meta.mode === "replay" ? 0 : bankTxnAppliedCents(db, id),
+    bankTxnAppliedDocs: (id) => meta.mode === "replay" ? undefined : bankTxnAppliedDocs(db, id),
     getFact: (id) => getFact(db, id),
     getDocFx: (id) => getDocFx(db, id),
     getBankFx: (id) => getBankFx(db, id),
@@ -102,6 +103,19 @@ export function bankTxnAppliedCents(db: Db, bankTxnId: string): number {
     )
     .get(bankTxnId, ACCOUNTS.cash) as { n: number };
   return row.n;
+}
+
+/** The documents a bank line's cash went to, from the cash applications that took effect. */
+export function bankTxnAppliedDocs(db: Db, bankTxnId: string): string[] {
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT a.value ->> '$.doc_id' AS doc_id
+       FROM decision d, json_each(json_extract(d.proposal_json, '$.applications')) a
+       WHERE d.mode = 'live' AND d.posted_at IS NOT NULL AND d.kind = 'apply_payment'
+         AND json_extract(d.proposal_json, '$.bank_txn_id') = ?`,
+    )
+    .all(bankTxnId) as { doc_id: string }[];
+  return rows.map((r) => r.doc_id);
 }
 
 /** A date with no period row is treated as locked: nothing posts to a month nobody opened. */

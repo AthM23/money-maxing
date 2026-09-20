@@ -59,6 +59,12 @@ describe("the main scene: one wire, $4,200 short for three reasons, and only one
       evidence, policy_refs: [], fact_refs: [], judgment: [] });
     const agent = { actor: "agent:ar:sonnet", mode: "live" as const, autonomy_level: "auto" as const, tier: 2 };
     const failed = (p: ReturnType<typeof fx>): string[] => { const r = proposeEntry(db, p, agent, deps); return r.status === "rejected" ? r.failed.map((m) => m.check) : [r.status]; };
+    expect(failed(fx(196000))).toContain("F9");                       // before the cash has been applied to that invoice
+    const cash = { ...fx(0), kind: "apply_payment" as const, applications: [{ doc_id: "INV-3201", amount_cents: 10580000 }], evidence: [{ claim: "the bank line", trace_id: "tr_bank_BTX-320" }],
+      entries: [{ account: "1000", debit_cents: 10580000, credit_cents: 0, memo: "cash" }, { account: "1200", debit_cents: 0, credit_cents: 10580000, memo: "cash" }] };
+    expect(proposeEntry(db, cash, { ...agent, actor: "router:tier0", tier: 0 }, deps).status).toBe("posted");
+    // The customer's other EUR invoice would give a different (self-consistent) answer: the rate must come from the invoice this receipt paid.
+    expect(failed({ ...fx(196000), applications: [{ doc_id: "INV-3202", amount_cents: 196000 }] })).toContain("F9");
     expect(failed(fx(420000))).toContain("F9");                       // the whole shortfall called FX
     expect(failed(fx(196000, "6990"))).toContain("J4");                // the right amount hidden in misc expense
     expect(failed(fx(196000, "7100", []))).toContain("F9");            // the bank's advice not cited
@@ -100,5 +106,26 @@ describe("the main scene: one wire, $4,200 short for three reasons, and only one
 
     // The auditor re-performs every posted entry, the FX ones included.
     expect(buildAuditPack(db, clock, { period: "2026-07", seed: "main", size: 50 }).summary.findings_total).toBe(0);
+  });
+
+  it("the bank's figures have to be stated whole, and the bank's fee is never booked as a concession to the customer", async () => {
+    const db = await world();
+    // A concession rule that happens to match a $40 shortfall must not take the fee: the fee goes to a write-off rule or to nobody.
+    db.prepare("UPDATE policy SET status = 'retired' WHERE status = 'approved'").run();
+    db.prepare(`INSERT INTO policy (id, function, name, condition_json, action_json, intent_text, tier, max_amount_cents, status, approved_by, approved_at)
+                VALUES ('pol_concession','ar','small concessions', '{"all":[{"field":"shortfall_cents","op":">","value":0},{"field":"shortfall_cents","op":"<=","value":5000}]}', '{"kind":"credit_memo","account":"2400"}',
+                        'small concessions are credited', 'company', 10000000, 'approved', 'U_CTRL', '2026-07-01T00:00:00Z')`).run();
+    await runOpenIntents(db, { investigators: [], intent_id: "int_main", clock, config: APP_CONFIG });
+    expect(posted(db, "int_main")).toEqual(["apply_payment:10580000", "fx_realized:196000"]);
+    expect(db.prepare("SELECT COUNT(*) AS n FROM decision WHERE intent_id = 'int_main' AND kind = 'credit_memo'").get()).toEqual({ n: 0 });
+
+    // "98,000.00" inside "198,000.00" and "1.0800" inside "11.0800" do not state the receipt's amount or rate.
+    const other = await world();
+    await runOpenIntents(other, { investigators: [], intent_id: "int_addon", clock, config: APP_CONFIG });
+    other.prepare("UPDATE trace SET payload_json = replace(replace(payload_json, 'EUR 98,000.00', 'EUR 198,000.00'), '1.0800 USD', '11.0800 USD') WHERE id = 'tr_advice_BTX-320'").run();
+    await runOpenIntents(other, { investigators: [], intent_id: "int_main", clock, config: APP_CONFIG });
+    expect(posted(other, "int_main")).not.toContain("fx_realized:196000");
+    const refused = other.prepare("SELECT w.marks_json FROM workpaper w JOIN decision d ON d.id = w.decision_id WHERE d.intent_id = 'int_main' AND d.kind = 'fx_realized'").get() as { marks_json: string } | undefined;
+    expect(refused?.marks_json ?? "").toContain("does not state 98,000.00");
   });
 });

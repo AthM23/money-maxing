@@ -12,6 +12,7 @@ export const TOPICS = [
   "human.escalation.opened",
   "human.escalation.answered",
   "fact.activated",
+  "fact.rejected",
   "entry.posted",
   "entry.blocked",
   "ar.credit_memo.posted",

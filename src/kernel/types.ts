@@ -128,6 +128,8 @@ export interface KernelContext {
   getApprover(id: string): ApproverLite | undefined;
   /** Cents of this bank line already applied by posted decisions. A bank line cannot be spent twice. */
   bankTxnAppliedCents?(bank_txn_id: string): number;
+  /** The documents this bank line's cash has been applied to by posted decisions. Absent in replay, where the ledger is not the past. */
+  bankTxnAppliedDocs?(bank_txn_id: string): string[] | undefined;
   getDocFx?(doc_id: string): DocFxLite | undefined;
   getBankFx?(bank_txn_id: string): BankFxLite | undefined;
   /** Cents of realized FX already posted against this receipt. FX on one receipt is realized once. */
