@@ -2020,3 +2020,44 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
 - `.gitignore`: added `.pnpm-store/` and `.worktrees/`, which were showing as untracked noise in every status.
 - Still untracked and left alone: `context/research/Usage-Based Revenue Recognition for AI-Native Companies.pdf`
   (no PDFs are tracked under `context/research/` today — commit or ignore is a human call).
+
+### 2026-09-20 ~06:50 ET — Connectors standardised: one registry, and a worked example that is not Gmail or Slack
+
+Answers a judge question directly — "can you connect anything?" — by making the answer a list rather than a claim.
+Behaviour of the demo is unchanged; the six existing sources pull exactly as before.
+
+- **`src/connectors/registry.ts` is now the one place a source of context is declared.** Nine registered today:
+  contracts, policy memos, CRM, **Linear**, Gmail, Slack, the bank feed, the close workbook, the QuickBooks mirror.
+  Each entry carries the `trace.source` slug, a label, one line on what it carries, its `kind`s, its offline store,
+  its live loader plus the env vars that loader needs, and the search tool the investigator should get over it.
+- **Derived from that list, with no other edit when a source is added:** `buildConnectors()` pulls it ·
+  `--live=<source>` accepts it (and now refuses an unregistered name instead of silently ignoring it) ·
+  `READ_TOOL_SPECS` grows a search tool named and described in the registry's own words · `ingest()` accepts the
+  source · `TraceSource` widens, so a typo is a compile error · `pnpm connectors` prints the table with each live
+  source's credential state.
+- **Contract change (Person B, for Person A to review):** `trace.source`'s `CHECK (source IN (...))` enum in
+  `src/contract/schema.sql` is now `CHECK (source GLOB '[a-z][a-z0-9_-]*')` — a shape check. The real gate moved into
+  `ingest()`, which refuses an unregistered source with `ingest.refused` naming `src/connectors/registry.ts` and
+  writes no row. Rationale: an enum in the schema means adding a system is a migration, which is the opposite of the
+  claim we want to make. No migration needed for existing databases (the check only ever widened).
+- **`SEARCH_PLAN`** (the gate the agent must pass before it may pull a person in) is now derived from a
+  `search_before_escalating` flag on the registry entry, so it cannot fall behind the sources actually connected. Set
+  today on contracts, policy memo, Gmail, Slack — the same four as before, so the gate is byte-identical in effect.
+  Deliberately **off** for CRM, the workbook and Linear: every source in the gate is searched on every case.
+- **Worked example: `src/connectors/linear.ts`** (~150 lines, source `linear`, kinds `issue` and `comment`). It is
+  there to be read, not to carry the demo. Why tickets: an outage engineering tracked and a CSM promised a credit for
+  is the commonest reason a customer short-pays with no email to show for it. A `customer:<party_id>` label resolves
+  the party; otherwise it falls back to text resolution. One trace per ticket and one per comment, so a quote points
+  at the sentence that promised the credit.
+- **Measured** (throwaway db under the scratchpad, local stores, no model calls): `pnpm ingest` pulled
+  `local-tickets` alongside the other six and committed 2 traces; re-running it reported `unchanged: 1` for the
+  comment and `reversioned: 1` for the edited ticket, with `party_id` resolved to `acme` on v2 and one
+  `evidence.reversioned` event. Idempotency, versioning, party resolution and the three clocks all came from
+  ingestion, not from the connector.
+- **Unverified:** the live Linear GraphQL pull has not been run — no `LINEAR_API_KEY` on this machine. The offline
+  path is tested; the live path is typechecked only, and `pnpm connectors` prints it as `live (needs LINEAR_API_KEY)`.
+- `pnpm test` → **94 files, 788 tests passing**; `pnpm typecheck` clean. New: `src/connectors/__tests__/registry.test.ts`
+  (13 tests). Two assertions in `src/agents/__tests__/search.test.ts` that pinned the escalation gate's literal
+  **order** now assert the set instead — the registry lists the same five tools in a different order.
+- Docs: `src/connectors/README.md` — the two steps to add a source, the table of what is derived, and the two rules
+  worth keeping (`recorded_time` is the source's clock; refuse a bad pull whole).

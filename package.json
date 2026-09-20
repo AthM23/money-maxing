@@ -17,6 +17,7 @@
     "skeleton": "tsx --env-file-if-exists=.env src/skeleton/run.ts",
     "console": "tsx --env-file-if-exists=.env console/server.ts",
     "ingest": "tsx --env-file-if-exists=.env src/ingest/cli.ts",
+    "connectors": "tsx --env-file-if-exists=.env src/connectors/cli.ts",
     "auditpack": "tsx src/audit/cli.ts",
     "worker": "tsx src/worker/cli.ts",
     "learn": "tsx src/learn/cli.ts",

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { emit } from "../bus/bus.js";
+import { isRegisteredSource } from "../connectors/registry.js";
 import type { Connector, RawItem } from "../connectors/types.js";
 import type { Db } from "../ledger/db.js";
 import { systemClock, type Clock } from "../runtime/config.js";
@@ -51,6 +52,12 @@ export async function ingestAll(db: Db, connectors: Connector[], clock: Clock = 
 }
 
 function ingestOne(db: Db, clock: Clock, resolver: Resolver, item: RawItem, result: IngestResult): void {
+  // The registry is the gate, not a schema enum: a source nobody declared has no search tool and no provenance story.
+  if (!isRegisteredSource(item.source)) {
+    emit(db, { topic: "ingest.refused", from_function: "ingest", intent_id: null, payload: { source: item.source, external_id: item.external_id, reason: `source "${item.source}" is not in the connector registry (src/connectors/registry.ts)` } }, clock);
+    result.refused++;
+    return;
+  }
   if (!TS.test(item.event_time) || !TS.test(item.recorded_time)) {
     emit(db, { topic: "ingest.refused", from_function: "ingest", intent_id: null, payload: { source: item.source, external_id: item.external_id, reason: "event_time and recorded_time must be ISO-8601 UTC" } }, clock);
     result.refused++;

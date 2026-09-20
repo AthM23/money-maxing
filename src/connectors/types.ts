@@ -1,5 +1,9 @@
-/** trace.source values the contract schema allows. */
-export type TraceSource = "qbo" | "bank" | "gmail" | "slack" | "contract" | "workbook" | "crm" | "file";
+/**
+ * `trace.source`, inferred from the connector registry — the one place a source is declared. Add a system there and
+ * this union widens with it; ingestion refuses anything not on that list.
+ */
+export type { TraceSource } from "./registry.js";
+import type { TraceSource } from "./registry.js";
 
 /**
  * What every connector hands to ingestion. Connectors never write tables: they fetch, shape and date.

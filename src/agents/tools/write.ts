@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONNECTORS } from "../../connectors/registry.js";
 import { Proposal, ProposalKind } from "../../contract/types.js";
 import { dedupeKey, openEscalation } from "../../memory/escalations.js";
 import { FactCandidate, recordFactCandidate } from "../../memory/facts.js";
@@ -39,8 +40,14 @@ const MIN_ESCALATION_TIER = 2;
  * Everywhere an approval or an explanation could be on record. A person's time is only worth asking for once all of
  * these have been looked in, and that is checked against the steps this turn actually recorded, not against what the
  * model says it searched.
+ *
+ * Derived from the connector registry: a newly connected system joins this gate by setting one flag there, so the
+ * list can never quietly fall behind the sources that are actually connected.
  */
-const SEARCH_PLAN = ["memory_facts", "policy_memo_lookup", "mail_search", "chat_search", "contracts_find_clause"] as const;
+const SEARCH_PLAN: readonly string[] = [
+  "memory_facts",
+  ...CONNECTORS.flatMap((c) => (c.search_before_escalating && c.tool ? [c.tool.name] : [])),
+];
 
 export const FinishInput = z.object({
   summary: z.string().min(1),

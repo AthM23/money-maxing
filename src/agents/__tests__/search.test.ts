@@ -41,7 +41,9 @@ describe("ranked search: a query with wrong words still finds the right document
     // It claims to have checked mail. The record says it has looked nowhere.
     const refused = callTool(e, "escalate", question).output as { status: string; reason: string };
     expect(refused.status).toBe("handed_up");
-    expect(refused.reason).toContain("memory_facts, policy_memo_lookup, mail_search, chat_search, contracts_find_clause");
+    // the gate is the set the registry marks search_before_escalating, whatever order the registry lists them in
+    expect(refused.reason.match(/Not looked in yet: (.+?)\./)?.[1]?.split(", ").sort())
+      .toEqual(["chat_search", "contracts_find_clause", "mail_search", "memory_facts", "policy_memo_lookup"]);
     expect(e.db.prepare("SELECT COUNT(*) AS n FROM escalation").get()).toEqual({ n: 0 });
 
     callTool(e, "memory_facts", { party_id: "initech", kind: "credit_memo", entry_date: "2026-07-12", amount_cents: 120000 });
@@ -49,7 +51,7 @@ describe("ranked search: a query with wrong words still finds the right document
     callTool(e, "chat_search", { query: "Initech credit", party_id: "initech" });
     const partly = callTool(e, "escalate", question).output as { status: string; reason: string };
     expect(partly.status).toBe("handed_up");
-    expect(partly.reason).toContain("Not looked in yet: policy_memo_lookup, contracts_find_clause.");
+    expect(partly.reason.match(/Not looked in yet: (.+?)\./)?.[1]?.split(", ").sort()).toEqual(["contracts_find_clause", "policy_memo_lookup"]);
 
     callTool(e, "policy_memo_lookup", { query: "credit" });
     callTool(e, "contracts_find_clause", { query: "credit", party_id: "initech" });

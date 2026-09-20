@@ -1,29 +1,42 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { bankFile, contractFiles, DEFAULT_STORES_DIR, localChat, localCrm, localMail, policyFiles } from "./local.js";
+import { DEFAULT_STORES_DIR } from "./local.js";
+import { CONNECTORS, LIVE_SOURCES, type WorldIds } from "./registry.js";
 import type { Connector, RawItem } from "./types.js";
 
-export type LiveSource = "gmail" | "slack";
+export type LiveSource = string;
 
-/** `--live=gmail,slack` on any CLI. */
+/** `--live=gmail,slack` on any CLI (or FOOTNOTE_LIVE). Only sources the registry marks live-capable are accepted. */
 export function liveFromArgv(argv: string[]): Set<LiveSource> {
   const raw = argv.find((a) => a.startsWith("--live="))?.split("=")[1] ?? process.env.FOOTNOTE_LIVE ?? "";
-  return new Set(raw.split(",").filter((s): s is LiveSource => s === "gmail" || s === "slack"));
+  const asked = raw.split(",").map((s) => s.trim()).filter((s) => s !== "");
+  const unknown = asked.filter((s) => !LIVE_SOURCES.includes(s));
+  if (unknown.length) throw new Error(`--live: ${unknown.join(", ")} cannot be pulled live. Registered live sources: ${LIVE_SOURCES.join(", ")}`);
+  return new Set(asked);
 }
 
 /**
- * Every source once. A live system REPLACES its local store, never joins it: both carry the same mail, and
- * pulling both would give every message two traces. Live modules are imported only when asked for.
+ * Every registered source once, in the registry's order. A live system REPLACES its local store, never joins it:
+ * both carry the same mail, and pulling both would give every message two traces. Live modules are imported only
+ * when asked for, so a missing key or SDK never breaks a local run.
  */
 export async function buildConnectors(live: ReadonlySet<LiveSource> = new Set(), dir: string = DEFAULT_STORES_DIR): Promise<Connector[]> {
   const seeded = seededIds(dir);
-  const mail = live.has("gmail") ? onlyThisWorld(new (await import("./gmail.js")).GmailConnector(), seeded?.mail, seeded?.horizon, (id) => !/^[0-9a-f]{16}$/.test(id)) : localMail(dir);
-  const chat = live.has("slack") ? onlyThisWorld(new (await import("./slack.js")).SlackConnector(), seeded?.chat, seeded?.horizon, (id) => !id.includes(":")) : localChat(dir);
-  return [contractFiles(dir), policyFiles(dir), localCrm(dir), mail, chat, bankFile(dir)];
+  const out: Connector[] = [];
+  for (const def of CONNECTORS) {
+    if (def.live && live.has(def.source)) {
+      const connector = await def.live.load();
+      const w = def.live.world;
+      out.push(w && seeded ? onlyThisWorld(connector, w.ids(seeded), seeded.horizon, w.isSeeded) : connector);
+    } else if (def.local) {
+      out.push(def.local(dir));
+    }
+  }
+  return out;
 }
 
 /** The seeded ids of the world these stores hold (`world.json`, written by the seeder). Older stores have none. */
-function seededIds(dir: string): { mail: Set<string>; chat: Set<string>; horizon?: string } | undefined {
+function seededIds(dir: string): WorldIds | undefined {
   // mail ids and mail content keys share one set: a world id never looks like `date|sender|subject`
   const path = join(dir, "world.json");
   if (!existsSync(path)) return undefined;

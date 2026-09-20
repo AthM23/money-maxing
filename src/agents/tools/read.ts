@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONNECTORS } from "../../connectors/registry.js";
 import { applicableFacts } from "../../memory/applicability.js";
 import type { ToolEnv } from "../env.js";
 import { readTrace, searchTraces } from "./search.js";
@@ -24,13 +25,15 @@ function searchTool(name: string, registry: string, sources: string[], what: str
   };
 }
 
+/**
+ * One search tool per registered source that declares one. Registering a connector is therefore the whole job: the
+ * investigator can search the new system on the next run, with no edit here and no change to any system prompt.
+ */
+export const SOURCE_SEARCH_TOOLS: ToolSpec[] = CONNECTORS
+  .flatMap((c) => (c.tool ? [searchTool(c.tool.name, c.tool.registry_name, [c.source], c.tool.describes)] : []));
+
 export const READ_TOOL_SPECS: ToolSpec[] = [
-  searchTool("mail_search", "mail.search", ["gmail"], "company email"),
-  searchTool("chat_search", "chat.search", ["slack"], "Slack messages"),
-  searchTool("contracts_find_clause", "contracts.find_clause", ["contract"], "contracts and amendments"),
-  searchTool("crm_notes", "crm.notes", ["crm"], "CRM deal notes"),
-  searchTool("policy_memo_lookup", "policy_memo.lookup", ["file"], "the written accounting policy memo"),
-  searchTool("workbook_lookup", "workbook.lookup", ["workbook"], "the prior close workbook and reviewer comments"),
+  ...SOURCE_SEARCH_TOOLS,
   {
     name: "read_trace", registry_name: "mail.get_thread", input: z.object({ trace_id: z.string().min(1) }),
     description: "Read the full text of one trace. Evidence quotes must be exact spans of this text.",

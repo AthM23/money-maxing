@@ -76,7 +76,9 @@ CREATE TABLE IF NOT EXISTS gl_line (
 
 -- ───────────── shared judgment layer (Person A writes through the runtime)
 CREATE TABLE IF NOT EXISTS trace (
-  id TEXT PRIMARY KEY, source TEXT NOT NULL CHECK (source IN ('qbo','bank','gmail','slack','contract','workbook','crm','file')),
+  -- source is any slug registered in src/connectors/registry.ts, which ingestion enforces; the column only checks the
+  -- shape, so adding a system (Linear, NetSuite, a vendor portal) needs no schema change and no migration of this table
+  id TEXT PRIMARY KEY, source TEXT NOT NULL CHECK (source GLOB '[a-z][a-z0-9_-]*'),
   kind TEXT NOT NULL, external_id TEXT NOT NULL,
   event_time TEXT NOT NULL,                 -- when it happened in the world
   recorded_time TEXT NOT NULL,              -- when the company's systems knew it; replay reads only recorded_time <= T
