@@ -32,6 +32,7 @@ async function main(): Promise<number> {
     for (const f of report.facts_posted) out(`asked to remember: ${f.fact_id} → ${f.approver_id}`);
     for (const id of report.escalations_posted) out(`asked: ${id}`);
     for (const a of report.approvals_posted) out(`approval requested: ${a.decision_id} → ${a.approver_id}`);
+    for (const b of report.bills_posted) out(`uploaded bill sent for review: ${b.bill_id} → ${b.approver_id}`);
     for (const u of report.unroutable) warn(`not routed: ${u.decision_id}: ${u.reason}`);
     if (args.flags.once === true) break;
     await new Promise((resolve) => setTimeout(resolve, intervalMs));

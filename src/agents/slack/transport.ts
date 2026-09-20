@@ -20,7 +20,7 @@ interface InteractiveBody {
  * Needs SLACK_BOT_TOKEN (xoxb) and SLACK_APP_TOKEN (xapp, connections:write). Every answer and approval still goes
  * through recordHumanAnswer and approveDecision, so the identity checks and the kernel's post gate apply unchanged.
  */
-export async function startSlack(db: Db): Promise<{ postEscalation: typeof postEscalation; postApproval: typeof postApproval; postFact: typeof postFact; stop(): Promise<void> }> {
+export async function startSlack(db: Db): Promise<{ postEscalation: typeof postEscalation; postApproval: typeof postApproval; postFact: typeof postFact; postBill: typeof postBill; stop(): Promise<void> }> {
   const botToken = process.env.SLACK_BOT_TOKEN;
   const appToken = process.env.SLACK_APP_TOKEN;
   if (!botToken || !appToken) throw new Error("SLACK_BOT_TOKEN and SLACK_APP_TOKEN must be set to start the Slack transport");
@@ -66,7 +66,27 @@ export async function startSlack(db: Db): Promise<{ postEscalation: typeof postE
     return res.ts;
   }
 
-  return { postEscalation, postApproval, postFact, stop: () => socket.disconnect() };
+  async function postBill(billId: string, approverSlackUser: string): Promise<string | undefined> {
+    const b = db.prepare(`SELECT b.id, p.name AS vendor, b.vendor_invoice_no AS ref, b.bill_date, b.service_period, b.total_cents,
+          (SELECT COUNT(*) FROM bill o WHERE o.party_id = b.party_id AND o.id <> b.id) AS prior,
+          (SELECT AVG(o.total_cents) FROM bill o WHERE o.party_id = b.party_id AND o.id <> b.id) AS avg
+        FROM bill b JOIN party p ON p.id = b.party_id WHERE b.id = ?`)
+      .get(billId) as { id: string; vendor: string; ref: string; bill_date: string; service_period: string; total_cents: number; prior: number; avg: number | null } | undefined;
+    if (!b) return undefined;
+    const usd = (c: number): string => (c / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+    const hist = b.prior ? `${b.prior} prior bill(s) from this vendor averaging ${usd(Math.round(b.avg ?? 0))}.` : "First bill from this vendor.";
+    const blocks = [
+      { type: "section", text: { type: "mrkdwn", text: `*Uploaded bill to review*\n${b.vendor} sent *${b.ref}* for *${usd(b.total_cents)}*, dated ${b.bill_date}, period ${b.service_period}.\n${hist} Accepting queues it for the payment run; nothing posts to the ledger until then.` } },
+      { type: "actions", elements: [
+        { type: "button", style: "primary", text: { type: "plain_text", text: "Accept the bill" }, action_id: "bill_accept", value: billId },
+        { type: "button", text: { type: "plain_text", text: "Reject" }, action_id: "bill_reject", value: billId },
+      ] },
+    ];
+    const res = await web.chat.postMessage({ channel: approverSlackUser, text: `Uploaded bill: ${b.vendor} ${b.ref}`, blocks: blocks as never });
+    return res.ts;
+  }
+
+  return { postEscalation, postApproval, postFact, postBill, stop: () => socket.disconnect() };
 }
 
 async function handleInteractive(db: Db, web: { views: { open(args: never): Promise<unknown> }; chat: { postMessage(args: never): Promise<unknown> } }, body: InteractiveBody): Promise<void> {
@@ -79,6 +99,19 @@ async function handleInteractive(db: Db, web: { views: { open(args: never): Prom
     const approver = approverFor(db, body.user.id, askedToApprove(db, action.value));
     const result = approveDecision(db, action.value, { approver_id: approver, approver_kind: "human", outcome: action.action_id === "approve" ? "approved" : "rejected" }, { config: APP_CONFIG });
     await web.chat.postMessage({ channel: body.user.id, text: describe(result) } as never);
+    return;
+  }
+  if (body.type === "block_actions" && action && (action.action_id === "bill_accept" || action.action_id === "bill_reject")) {
+    const row = db.prepare("SELECT status FROM bill WHERE id = ?").get(action.value) as { status: string } | undefined;
+    let said: string;
+    if (!row) said = "No such bill.";
+    else if (row.status !== "open") said = `Already decided (${row.status}).`;
+    else {
+      const next = action.action_id === "bill_accept" ? "approved" : "void";
+      db.prepare("UPDATE bill SET status = ?, open_cents = CASE WHEN ? = 'void' THEN 0 ELSE open_cents END WHERE id = ?").run(next, next, action.value);
+      said = next === "approved" ? "Accepted for the payment run. Nothing posts to the ledger until a person runs it." : "Rejected and voided.";
+    }
+    await web.chat.postMessage({ channel: body.user.id, text: said } as never);
     return;
   }
   if (body.type === "block_actions" && action && (action.action_id === "fact_approve" || action.action_id === "fact_reject")) {

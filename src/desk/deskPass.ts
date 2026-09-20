@@ -11,12 +11,15 @@ export interface Poster {
   postApproval(decisionId: string, approverSlackUser: string, controllerNote?: string): Promise<string | undefined>;
   /** Something an agent proposes to remember. Optional, so a poster that cannot show it simply leaves it in the inbox. */
   postFact?(factId: string, approverSlackUser: string): Promise<string | undefined>;
+  /** A bill uploaded on the pipeline page, waiting for accept or reject. Optional for the same reason. */
+  postBill?(billId: string, approverSlackUser: string): Promise<string | undefined>;
 }
 
 export interface DeskReport {
   facts_posted: { fact_id: string; approver_id: string }[];
   escalations_posted: string[];
   approvals_posted: { decision_id: string; approver_id: string }[];
+  bills_posted: { bill_id: string; approver_id: string }[];
   /** Parked entries nobody on the approval matrix can be reached for. They stay in the terminal inbox. */
   unroutable: { decision_id: string; reason: string }[];
 }
@@ -29,7 +32,7 @@ const REQUEST_STEP = "desk:approval_request";
  * back through recordHumanAnswer and approveDecision, where identity, authority and the kernel's post gate apply.
  */
 export async function deskPass(db: Db, poster: Poster, clock: Clock, alreadyAsked: Set<string> = new Set()): Promise<DeskReport> {
-  const report: DeskReport = { facts_posted: [], escalations_posted: [], approvals_posted: [], unroutable: [] };
+  const report: DeskReport = { facts_posted: [], escalations_posted: [], approvals_posted: [], bills_posted: [], unroutable: [] };
   await postFactCandidates(db, poster, alreadyAsked, report);
   const questions = db.prepare("SELECT id FROM escalation WHERE answered_at IS NULL AND slack_ts IS NULL ORDER BY asked_at").all() as { id: string }[];
   for (const q of questions) {
@@ -45,6 +48,17 @@ export async function deskPass(db: Db, poster: Poster, clock: Clock, alreadyAske
     if (!ts) continue;
     recordRequest(db, clock, parked.id, approver.id, ts);
     report.approvals_posted.push({ decision_id: parked.id, approver_id: approver.id });
+  }
+  if (poster.postBill) {
+    const bills = db.prepare("SELECT id, total_cents FROM bill WHERE status = 'open' AND id LIKE 'BILL-UP-%' ORDER BY bill_date").all() as { id: string; total_cents: number }[];
+    for (const b of bills) {
+      if (alreadyAsked.has(`bill:${b.id}`)) continue;
+      const approver = chooseApprover(db, { id: b.id, actor: "upload", amount_cents: b.total_cents, answered_by: null });
+      if (!approver) { report.unroutable.push({ decision_id: b.id, reason: "no reachable approver for an uploaded bill" }); continue; }
+      if (!(await poster.postBill(b.id, approver.slack_user))) continue;
+      alreadyAsked.add(`bill:${b.id}`);
+      report.bills_posted.push({ bill_id: b.id, approver_id: approver.id });
+    }
   }
   return report;
 }
