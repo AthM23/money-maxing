@@ -41,7 +41,7 @@ export const WRITE_TOOL_SPECS: ToolSpec[] = [
       const q = EscalateInput.parse(input);
       return openEscalation(env.db, env.clock, {
         decision_id: env.decision_id, intent_id: env.intent_id, asked_user: q.asked_user,
-        dedupe_key: dedupeKey(q.party_id, q.predicate, q.decision_kind), question: q,
+        dedupe_key: dedupeKey(q.party_id, q.predicate, q.decision_kind), question: q, entry_date: env.entry_date,
       });
     },
   },

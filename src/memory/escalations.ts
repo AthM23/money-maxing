@@ -16,6 +16,8 @@ export interface OpenEscalationInput {
   dedupe_key: string;
   question: Record<string, unknown>;
   deadline?: string;
+  /** Date of the case being asked about. Lets a dated or one-time answer stop covering later cases. */
+  entry_date?: string;
 }
 
 export type OpenEscalationResult =
@@ -28,12 +30,15 @@ export function openEscalation(db: Db, clock: Clock, input: OpenEscalationInput)
   const prior = db
     .prepare("SELECT id, answer_json FROM escalation WHERE dedupe_key = ? ORDER BY asked_at DESC LIMIT 1")
     .get(input.dedupe_key) as { id: string; answer_json: string | null } | undefined;
-  if (prior?.answer_json) {
-    return { status: "already_answered", escalation_id: prior.id, answer: (safeJson(prior.answer_json) as Record<string, unknown>) ?? {} };
+  const priorAnswer = prior?.answer_json ? ((safeJson(prior.answer_json) as Record<string, unknown> | null) ?? {}) : null;
+  if (prior && priorAnswer && covers(priorAnswer, input.entry_date)) {
+    return { status: "already_answered", escalation_id: prior.id, answer: priorAnswer };
   }
-  if (prior) return { status: "already_open", escalation_id: prior.id };
+  if (prior && !priorAnswer) return { status: "already_open", escalation_id: prior.id };
 
   const id = newId("esc");
+  // A one-time or lapsed answer does not cover this case: that is a new question, and it carries the old answer with it.
+  if (prior && priorAnswer) input = { ...input, question: { ...input.question, prior_escalation_id: prior.id, prior_answer: priorAnswer } };
   const run = db.transaction(() => {
     db.prepare(
       "INSERT INTO escalation (id, decision_id, asked_user, dedupe_key, question_json, deadline, asked_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -44,6 +49,13 @@ export function openEscalation(db: Db, clock: Clock, input: OpenEscalationInput)
   });
   run();
   return { status: "opened", escalation_id: id };
+}
+
+/** A stored answer covers a later case only if it was given as standing and has not lapsed by that case's date. */
+function covers(answer: Record<string, unknown>, entryDate?: string): boolean {
+  if (answer.uses !== "standing") return false;
+  const validTo = typeof answer.valid_to === "string" ? answer.valid_to : null;
+  return !(validTo && entryDate && entryDate > validTo);
 }
 
 export type AnswerResult =

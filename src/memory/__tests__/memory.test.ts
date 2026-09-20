@@ -96,14 +96,17 @@ describe("escalations: asked once", () => {
 
     const id = first.escalation_id;
     expect(answerEscalation(db, fixedClock, id, "U_RANDOM", { treatment: "write_off" }).status).toBe("unauthorised");
-    expect(answerEscalation(db, fixedClock, id, "U_SAM", { treatment: "credit_memo", reason: "failed SSO rollout" }).status).toBe("answered");
+    expect(answerEscalation(db, fixedClock, id, "U_SAM", { treatment: "credit_memo", uses: "standing", valid_to: "2027-06-30", reason: "failed SSO rollout" }).status).toBe("answered");
     expect(answerEscalation(db, fixedClock, id, "U_SAM", { treatment: "write_off" }).status).toBe("already_answered");
 
     const again = openEscalation(db, fixedClock, base);
     expect(again).toMatchObject({ status: "already_answered", answer: { treatment: "credit_memo", answered_by: "U_SAM" } });
     expect(db.prepare("SELECT COUNT(*) AS n FROM escalation").get()).toEqual({ n: 1 });
+    // A standing answer stops covering cases dated after it lapses: that is a new question, carrying the old answer.
+    const lapsed = openEscalation(db, fixedClock, { ...base, entry_date: "2027-08-01" });
+    expect(lapsed.status).toBe("opened");
     const topics = (db.prepare("SELECT topic FROM event WHERE topic LIKE 'human.%' ORDER BY id").all() as { topic: string }[]).map((e) => e.topic);
-    expect(topics).toEqual(["human.escalation.opened", "human.escalation.answered"]);
+    expect(topics).toEqual(["human.escalation.opened", "human.escalation.answered", "human.escalation.opened"]);
   });
 
   it("the kernel refuses to post while an escalation on the intent is unanswered (P4)", () => {

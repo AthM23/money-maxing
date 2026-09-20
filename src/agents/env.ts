@@ -14,6 +14,8 @@ export interface ToolEnv {
   tier: number;
   autonomy_level: AutonomyLevel;
   intent_id: string;
+  /** Date of the case in hand. */
+  entry_date?: string;
   /** The decision opened at intake. Steps are metered against it. */
   decision_id: string;
   features?: Record<string, string | number | boolean>;

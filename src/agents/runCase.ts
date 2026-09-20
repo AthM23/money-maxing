@@ -38,6 +38,7 @@ export async function runCase(db: Db, input: unknown, opts: RunCaseOptions): Pro
   if (!parsed.success) return { status: "invalid", routes: [], final_route: null, tier_used: 0, decision_id: null, report: null, notes: parsed.error.issues.map((i) => i.message) };
   const c = parsed.data;
   const deps = { clock: opts.clock ?? systemClock, config: opts.config ?? DEFAULT_CONFIG };
+  db.prepare("UPDATE intent SET case_json = COALESCE(case_json, ?) WHERE id = ?").run(JSON.stringify(c), c.intent_id);
   const t0 = routeTier0(db, c, { mode: opts.mode, autonomy_level: opts.autonomy_level, as_of: opts.as_of }, deps);
   if (t0.status === "done") {
     return { status: "done", routes: t0.routes, final_route: t0.routes.at(-1) ?? null, tier_used: 0, decision_id: null, report: null, notes: t0.notes };
@@ -61,7 +62,7 @@ async function runTier(
   const env: ToolEnv = {
     db, clock: deps.clock, config: deps.config, mode: opts.mode, as_of: opts.as_of, actor: `agent:${c.function}:${investigator.name}`,
     tier, autonomy_level: opts.autonomy_level, intent_id: c.intent_id, decision_id: decisionId, features: caseFeatures(c),
-    replay_docs: c.docs_snapshot,
+    replay_docs: c.docs_snapshot, entry_date: c.entry_date,
   };
   const seen: ToolCallResult[] = [];
   const call = (tool: string, toolInput: unknown): ToolCallResult => {
