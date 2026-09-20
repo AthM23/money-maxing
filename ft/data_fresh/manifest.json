@@ -1,0 +1,46 @@
+{
+  "generator": "ft/gen_data.py",
+  "seed": 99,
+  "sft_counts": {
+    "train": 381,
+    "cal": 205,
+    "test": 614
+  },
+  "pairs_txns": 600,
+  "coding_rows": {
+    "train": 824,
+    "test": 376
+  },
+  "held_out_customers": [
+    "Cyberdyne Labs",
+    "Cyberdyne Partners",
+    "Globex Dynamics",
+    "Globex Group",
+    "Hooli Group",
+    "Hooli Partners",
+    "Initech Corp",
+    "Initech Partners",
+    "Prestige Dynamics",
+    "Prestige Partners",
+    "Stark Corp",
+    "Stark Industries",
+    "Umbrella Corp",
+    "Vandelay Dynamics",
+    "Vandelay Logistics",
+    "Wayne Dynamics",
+    "Wayne Industries",
+    "Wayne Software"
+  ],
+  "held_out_vendors": [
+    "Carta",
+    "NetSuite",
+    "Salesforce",
+    "Slack Technologies",
+    "Vercel"
+  ],
+  "test_only_families": [
+    "bill_foreign",
+    "remit_ocr"
+  ],
+  "honesty_note": "synthetic; test = held-out entities + never-seen template families + July"
+}
