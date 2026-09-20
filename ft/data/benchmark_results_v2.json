@@ -61,6 +61,20 @@
       "ts": "03:07",
       "kind": "local+lora",
       "model": "Qwen/Qwen3-8B+/home/asus/ft/out/run8b/adapter"
+    },
+    "tuned20b": {
+      "n": 120,
+      "schema_valid": 0.933,
+      "exact": 0.642,
+      "field_f1": 0.947,
+      "held_out_n": 74,
+      "held_out_exact": 0.635,
+      "held_out_f1": 0.938,
+      "avg_latency_s": 9.77,
+      "est_cost_usd": null,
+      "ts": "06:28",
+      "kind": "local+lora",
+      "model": "openai/gpt-oss-20b+/home/asus/ft/out/run20b/adapter"
     }
   }
 }
