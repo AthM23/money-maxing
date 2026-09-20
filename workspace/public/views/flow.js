@@ -68,7 +68,9 @@ function codeNode(run, previous) {
   const chips = run.filter((s) => s.kind && s.kind !== "no_action").map((s) => bubble(s.outcome.startsWith("posted") ? `${ENTRY[s.kind] ?? words(s.kind)} · posted` : `${TRIED[s.kind] ?? words(s.kind)} · ${s.outcome}`, s.outcome.startsWith("posted") ? "green" : "coral", () => showEntry(s.decision_id)));
   for (const s of run) for (const st of s.steps.filter((x) => x.kind === "approval")) chips.push(bubble(st.title, st.status === "ok" ? "green" : "coral"));
   const refused = run.some((s) => s.outcome.startsWith("refused"));
-  const title = resumed ? "Prepared the entry the person's answer calls for" : posted ? `Posted ${posted} entr${posted === 1 ? "y" : "ies"} with no person involved` : refused ? "Proposed an entry; the kernel refused it, so nothing posted" : "Nothing more it can settle from code";
+  const approved = run.some((s) => s.outcome === "posted after approval");
+  const parked = run.some((s) => s.outcome === "parked for a person");
+  const title = resumed ? "Prepared the entry the person's answer calls for" : posted ? `Posted ${posted} entr${posted === 1 ? "y" : "ies"}${approved ? "; approval recorded" : " with no person involved"}` : refused ? "Proposed an entry; the kernel refused it, so nothing posted" : parked ? "Prepared an entry; waiting for approval" : "Nothing more it can settle from code";
   return { via: previous ? viaOf(previous.span) : "case opened", span: run.at(-1),
     el: node({ tone: "green", iconName: "code", type: resumed ? "Code · from the answer" : "Code tier", title, chips, foot: ["code", duration(run.reduce((n, s) => n + s.duration_ms, 0)), "$0"] }) };
 }

@@ -146,6 +146,9 @@ function checkSchedulesRevised(db: Db, period: string): CheckResult {
   if (posted.length === 0) return { done: true, reason: `no posted concessions in ${period} to revise a schedule for`, decision_ids };
   const has = db.prepare("SELECT 1 FROM contract_modification WHERE cause_decision_id = ?");
   const missing = posted.filter((m) => has.get(m.id) === undefined);
+  const unrevised = db.prepare("SELECT 1 FROM contract_modification WHERE cause_decision_id = ? AND treatment = 'memo_only' AND to_version IS NULL");
+  const needsReview = posted.filter((m) => unrevised.get(m.id) !== undefined);
+  if (needsReview.length) return { done: false, reason: `${needsReview.length} concession(s) left the revenue schedule unchanged and still need review: ${needsReview.map((m) => m.id).join(", ")}`, decision_ids };
   if (missing.length === 0) return { done: true, reason: `${posted.length} concession(s), each with a contract modification on record`, decision_ids };
   return { done: false, reason: `${missing.length} of ${posted.length} concession(s) with no contract modification yet: ${missing.map((m) => m.id).join(", ")}`, decision_ids };
 }

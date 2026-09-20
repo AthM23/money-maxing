@@ -6,6 +6,22 @@ import { JULY, approve, clock, emitRevised, insertForecast, insertModification, 
 /** Reviewed defects, each reproduced here: an item is done only when its condition holds in the ledger. */
 
 const INITECH = "CTR-initech-2026";
+it("does not tick revenue revisions when a memo could not revise its schedule", async () => {
+  const db = seededWorld();
+  openArIntent(db, "int_ar_1");
+  const memo = parkMemo(db, "int_ar_1");
+  approve(db, memo);
+  insertModification(db, memo);
+  db.prepare("UPDATE contract_modification SET treatment = 'memo_only', to_version = NULL, delta_total_cents = 0 WHERE cause_decision_id = ?").run(memo);
+  await closeOnce(db, clock);
+  expect(item(db, "rev-schedules-revised")).toMatchObject({ status: "in_progress", blocked_reason: expect.stringContaining("still need review") });
+  expect(item(db, "rev-recognised").status).toBe("blocked");
+  // A deliberate contra-revenue treatment legitimately needs no schedule revision.
+  db.prepare("UPDATE contract_modification SET treatment = 'contra_revenue_no_schedule_change' WHERE cause_decision_id = ?").run(memo);
+  await closeOnce(db, clock);
+  expect(item(db, "rev-schedules-revised").status).toBe("done");
+  db.close();
+});
 const balance = (db: ReturnType<typeof seededWorld>, account: string, party: string): number =>
   (db.prepare("SELECT COALESCE(SUM(l.credit_cents - l.debit_cents), 0) AS n FROM gl_line l JOIN gl_entry e ON e.id = l.entry_id WHERE l.account = ? AND l.party_id = ? AND e.date >= '2026-07-01'").get(account, party) as { n: number }).n;
 

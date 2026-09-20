@@ -114,10 +114,11 @@ export const ACTIONS: Record<string, Handler> = {
  */
 async function tamperedAudit(db: Db, period: string): Promise<unknown> {
   const dir = mkdtempSync(join(tmpdir(), "workspace-audit-"));
+  let copy: Db | undefined;
   try {
     const copyPath = join(dir, "copy.db");
     await db.backup(copyPath);
-    const copy = openDb(copyPath);
+    copy = openDb(copyPath);
     const target = copy
       .prepare(
         `SELECT t.id, t.payload_json FROM trace t WHERE t.payload_json GLOB '*[0-9].[0-9][0-9][0-9][0-9]*' AND EXISTS (
@@ -130,9 +131,9 @@ async function tamperedAudit(db: Db, period: string): Promise<unknown> {
     const swapped = `${rate.slice(0, -1)}${rate.endsWith("9") ? "1" : "9"}`;
     copy.prepare("UPDATE trace SET payload_json = replace(payload_json, ?, ?) WHERE id = ?").run(rate, swapped, target.id);
     const pack = buildAuditPack(copy, systemClock, { period, seed: "workspace-tamper", size: 50 });
-    copy.close();
     return { changed: { trace_id: target.id, from: rate, to: swapped }, summary: pack.summary, findings: findingsOf(pack) };
   } finally {
+    copy?.close();
     rmSync(dir, { recursive: true, force: true });
   }
 }

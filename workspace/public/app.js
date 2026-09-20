@@ -84,7 +84,10 @@ function render() {
   renderMe(o);
   const main = document.getElementById("main");
   const view = VIEWS[app.route.view] ?? VIEWS.overview;
-  Promise.resolve().then(() => view.render(app, o)).then((node) => main.replaceChildren(node)).catch((err) => main.replaceChildren(h("p", { class: "error" }, err.message)));
+  Promise.resolve().then(() => view.render(app, o)).then((node) => {
+    if (o.read_only) node.prepend(h("p", { class: "brief", role: "status" }, "Read-only demo snapshot. Explore documents, reports and audit here. Running agents, answering questions and approving entries require the team's writable demo instance."));
+    main.replaceChildren(node);
+  }).catch((err) => main.replaceChildren(h("p", { class: "error" }, err.message)));
 }
 
 // The rail shows the sections in two groups: the books themselves, then the agents that keep them.

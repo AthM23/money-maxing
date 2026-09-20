@@ -167,6 +167,7 @@ function modelOf(lane: Lane, actor: string): string {
   if (lane === "code") return "code";
   if (lane === "reader") return actor.slice("reader:".length);
   const name = actor.split(":").at(-1) ?? actor;
+  if (name === "chat-agent-verification") return "chat agent (verification; API usage not measured)";
   return MODEL_IDS[name] ?? (lane === "model" ? `${name} (scripted stand-in, not a model)` : name);
 }
 
@@ -186,7 +187,10 @@ function laneOf(actor: string, tier: number | null): Lane {
 
 function labelOf(lane: Lane, d: DecisionRow): string {
   if (lane === "reader") return `Document reader (${d.actor.slice("reader:".length)})`;
-  if (lane === "model") return `${MODEL_NAMES[d.tier ?? 0] ?? "Model"} · tier ${d.tier}`;
+  if (lane === "model") {
+    const name = d.actor.split(":").at(-1) ?? d.actor;
+    return `${MODEL_IDS[name] ? MODEL_NAMES[d.tier ?? 0] ?? name : name === "chat-agent-verification" ? "Chat agent verification" : name + " (stand-in)"} · tier ${d.tier}`;
+  }
   if (lane === "controller") return "Controller agent";
   if (d.actor === "router:resume") return "Code, carrying out a person's answer";
   if (d.actor === "router:unsettled") return "Code: nothing more it can settle";

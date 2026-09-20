@@ -35,6 +35,7 @@ describe("the trace of a case, and of the whole month", () => {
     expect(trace.spans.filter((s) => s.lane === "code" && s.outcome === "posted, no person involved").map((s) => s.kind)).toEqual(["apply_payment", "write_off", "fx_realized"]);
     const models = trace.spans.filter((s) => s.lane === "model");
     expect(models.length).toBeGreaterThan(0);
+    expect(models.every(s => !s.label.startsWith("Haiku") && !s.label.startsWith("Sonnet"))).toBe(true);
     expect(models.flatMap((s) => s.steps).some((st) => st.kind === "tool")).toBe(true);
     expect(trace.totals).toMatchObject({ questions: 1, posted: 3 });
     expect(models.every((s) => !s.outcome.startsWith("posted"))).toBe(true);
@@ -53,6 +54,16 @@ describe("the trace of a case, and of the whole month", () => {
 });
 
 describe("what the page can change goes through the same functions as the command line and Slack", () => {
+  it("closes the audit copy when no posted evidence can be tampered with", async () => {
+    const db = await learnedWorld();
+    try {
+      const result = await ACTIONS.audit!(db, { period: "2026-07", tamper: true }) as { tampered: { changed: unknown; note: string } };
+      expect(result.tampered.changed).toBeNull();
+      expect(result.tampered.note).toContain("no posted entry");
+      expect(() => db.prepare("SELECT COUNT(*) FROM trace").get()).not.toThrow();
+    } finally { db.close(); }
+  });
+
   it("run, answer as the CFO, approve as the controller: the invoice is paid and the answer is remembered", async () => {
     const db = await learnedWorld();
     const ran = await ACTIONS.run!(db, {}) as { worked: { intent_id: string; routes: string[] }[] };

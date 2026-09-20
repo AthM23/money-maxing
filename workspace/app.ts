@@ -27,7 +27,7 @@ const SITE_CSP = "default-src 'none'; style-src 'unsafe-inline'; script-src 'uns
 export async function handle(db: Db, stores: string | null, readOnly: boolean, req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
-    if (req.method === "GET") return get(db, url, res);
+    if (req.method === "GET") return get(db, url, res, readOnly);
     if (req.method === "POST" && url.pathname.startsWith("/api/do/")) {
       assertSameOrigin(req);
       const action = ACTIONS[url.pathname.slice("/api/do/".length)];
@@ -48,8 +48,8 @@ export async function handle(db: Db, stores: string | null, readOnly: boolean, r
   }
 }
 
-function get(db: Db, url: URL, res: ServerResponse): void {
-  if (url.pathname === "/api/overview") return sendJson(res, 200, overview(db, BRAND));
+function get(db: Db, url: URL, res: ServerResponse, readOnly: boolean): void {
+  if (url.pathname === "/api/overview") return sendJson(res, 200, { ...(overview(db, BRAND) as Record<string, unknown>), read_only: readOnly });
   if (url.pathname === "/api/fleet") return sendJson(res, 200, fleetView(db));
   if (url.pathname === "/api/model") return sendJson(res, 200, modelView());
   if (url.pathname === "/api/modules") return sendJson(res, 200, modules(db, url.searchParams.get("period") ?? ""));

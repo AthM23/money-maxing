@@ -1969,3 +1969,12 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   Reader, and the demo month is built without it on purpose (`scripts/demo-build.sh` blanks the reader's address);
   what is measured is the reader bench, 168 of 200 settled with 0 wrong postings. `DEMO_PATH.md` has the wording.
 - Full suite: 92 files, **772 passing**; typecheck clean.
+
+### 2026-09-20 — Presentation E2E verification (Codex)
+
+- Tested origin/main 455e18c in isolated branch codex/demo-e2e. Added a full HTTP presentation regression; 775 tests across 93 files pass and typecheck passes.
+- User requested a chat-agent substitute for Claude/GX10 on the other setup. Independent agent used real investigator tools over seeded source records, found missing officer authority, and escalated. Browser answer/approval settled INV-3201 and reused the scoped fact on INV-3202 without a new question. No fresh Claude/GX10 or live external-service claim.
+- Fixed Windows audit-copy cleanup, false close completion for unrevised memo-only concessions, substitute-model identity labels, and flow claims of autonomy after a human approval. Added read-only snapshot disclosure and conservative checkable-mark percentages.
+- Browser audit: 16/16 clean; tampered copy 5 findings. Fresh 200-document oracle checker control: 168 settled/32 deductions open/0 wrong; saboteur: 200 refused/0 wrong. These are not model benchmarks.
+- Verified INV-3202 revenue schedule revision by $550. INV-3201's revenue adjustment still needs review; the close now says so. Vercel remains a read-only uninvestigated snapshot; fixes not deployed.
+- Details and limits: context/PRESENTATION_VERIFICATION_2026-09-20.md in .worktrees/demo-e2e. Changes remain isolated from the original checkout's existing edits.
