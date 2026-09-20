@@ -437,7 +437,7 @@ async function runDoc(){
   if(trap){
     pulled.push('the trap scanner, a code rule that reads refusal markers');
     logDoc(f,'refused','carries a VOID or do-not-pay marker');
-    msg('Checker','REFUSED: the document says it should not be paid. The rule that catches VOID and duplicate markers is code, not a model, and it fires before anything posts.','reject');
+    msg('Checker','REFUSED under the payment controls: this document carries a VOID, do-not-pay marker. Company policy is that a voided document never enters payables, so the payment is refused. The control is code, not a model, and it fired before anything could post.','reject');
     card.querySelector('.chip').textContent='refused';card.querySelector('.chip').className='chip wait';
     $('wire').style.width='100%';agent('a-check','on');
     msg('System','Nothing posted. The document and the refusal are both kept as evidence.');
