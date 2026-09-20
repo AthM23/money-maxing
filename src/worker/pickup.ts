@@ -21,6 +21,8 @@ export interface PickupFilter {
   has_model_tiers?: boolean;
   /** Try every open case again regardless, e.g. after the code itself was fixed. */
   retry?: boolean;
+  /** Work this one case only. */
+  intent_id?: string;
 }
 
 interface IntentRow { id: string; function: string; case_json: string }
@@ -37,6 +39,7 @@ export function pickOpenIntents(db: Db, filter: PickupFilter = {}): { ready: Pic
        ORDER BY created_at, id`,
     )
     .all(filter.function ?? null, filter.function ?? null) as IntentRow[])
+    .filter((row) => !filter.intent_id || row.id === filter.intent_id)
     .filter((row) => filter.retry || filter.has_model_tiers || worthAnotherCodePass(db, row.id))
     .slice(0, filter.limit ?? undefined);
   const ready: PickedIntent[] = [];
