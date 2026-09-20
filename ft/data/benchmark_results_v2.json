@@ -47,6 +47,20 @@
       "ts": "01:26",
       "kind": "local+lora",
       "model": "Qwen/Qwen3-0.6B+/home/asus/ft/out/run06/adapter"
+    },
+    "tuned8b": {
+      "n": 120,
+      "schema_valid": 1.0,
+      "exact": 0.7,
+      "field_f1": 0.968,
+      "held_out_n": 74,
+      "held_out_exact": 0.77,
+      "held_out_f1": 0.975,
+      "avg_latency_s": 22.07,
+      "est_cost_usd": null,
+      "ts": "03:07",
+      "kind": "local+lora",
+      "model": "Qwen/Qwen3-8B+/home/asus/ft/out/run8b/adapter"
     }
   }
 }
