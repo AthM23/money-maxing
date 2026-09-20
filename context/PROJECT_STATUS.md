@@ -1922,3 +1922,32 @@ without the fix. Measured on this branch after them: `pnpm test` → **85 files,
   deployments a day; if it is reached, deploys are refused until it resets and the last good copy stays up.
 - Noticed, not changed (not this lane's): `DEPLOY.md` still names `scripts/deploy-public.sh`, which `main` has since
   renamed `scripts/deploy-aws.sh`.
+
+
+### 2026-09-20 ~05:26 ET — The AWS copy is the whole workspace now, behind the same sign-in as Vercel (Karan + Claude Code session)
+
+- **Supersedes the AWS part of the 05:05 entry** (read-only on plain http). Karan asked for the AWS copy to do
+  everything, since Vercel already covers read-only. **https://32-198-75-6.sslip.io** : `/` is the marketing page, open;
+  `/dashboard` is the full workspace behind `workspace/gate.ts` with the team password (not in the repo). Decide,
+  approve, run the code tier, find unbilled expenses, learn, audit, and Ask with Haiku or Opus all work there.
+- **How:** the workspace is bound to 127.0.0.1 on the box; Caddy in front adds TLS (Let's Encrypt on the `sslip.io`
+  name) and nothing else; `/etc/money-maxer.env` (root only, 600) holds `ANTHROPIC_API_KEY` and `DASHBOARD_PASSWORD`,
+  put there by hand with Karan's say-so, and no other credential is on the box. Ask is capped at 60 paid questions an
+  hour there (`ASK_AGENT_MAX_PER_HOUR`, `37f5f24`). The unit refuses to start without `DASHBOARD_PASSWORD`; tried both
+  ways on the box with a throwaway unit.
+- **Measured from outside, 05:22:** no cookie: `/`, `/site`, `/logo.svg` 200; `/dashboard`, its scripts, every `/api/`
+  read, `run`, the paid Ask and a wrong password all 401; port 4320 does not answer; http redirects to https; the
+  certificate verifies. Signed in: reads in about 100 ms, `run` and `accruals` go through and the other books refresh,
+  one Haiku question in 5.4 s through two tools (9,198 tokens in, 378 out, about one cent).
+- **Scripts:** `scripts/aws-box-setup.sh` builds the box (run on the live box, 05:24) and `scripts/deploy-aws.sh <ip>
+  [--reset]` updates it; `scripts/deploy-public.sh` is gone. `context/DEPLOY.md` is rewritten around this, with
+  AthM23's Vercel section kept word for word (that also settles the stale script name he noticed at 05:25).
+  Reset the month there: `ssh -i ~/.ssh/money-maxer-demo.pem ec2-user@32.198.75.6 mm-reset`.
+- **Also in this push window:** Ask answers are returned as plain words (the page shows text, and models add markdown
+  anyway; `plainWords`, tested). After Preet's 05:17 re-run the Model page had lost its Opus row
+  (`benchmark_v2_opus.json` became `benchmark_v2_opus48.json`); it reads the new file and shows all eight contenders
+  with no problems, and README, `DEMO_PATH.md` and `JUDGE_QA.md` quote the re-run figures (best Claude row: Opus 4.8,
+  0.958 and 66.7% exact; ours 0.972 and 70.0%). Full suite after AthM23's server refactor: 91 files, 770 passing,
+  typecheck clean (05:19).
+- **To do by a person:** tear the box down after judging (commands in `DEPLOY.md`); that also destroys the only copy
+  of the key that is off Karan's laptop.

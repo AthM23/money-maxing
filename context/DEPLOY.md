@@ -1,20 +1,46 @@
-# The public copies (read-only): AWS and Vercel
+# The hosted copies: AWS (the whole workspace) and Vercel (read-only)
 
-**Live since 20 Sep 2026, 05:02 EDT: `http://32.198.75.6/` is the marketing page and `http://32.198.75.6/dashboard` is
-the workspace**, on one t3.small in us-east-1 (Karan's account), running as a systemd service that restarts itself.
-Verified from outside: every page and read answers in about 100 ms; approve, run, accruals, decide and the paid Ask
-all answer 403; Ask in code mode and the tools answer. There is no `.env` on the box and no key in the service's
-environment, and the month on it has the real Slack member id scrubbed out. It is plain http on an IP: no domain, no
-TLS. The live demo, where decisions are made, stays on the laptop.
+## On AWS: the whole workspace, behind a password — https://32-198-75-6.sslip.io
 
-- **Update it** after new commits or a new month: `scripts/deploy-public.sh 32.198.75.6`. It sends the code as
-  committed and a scrubbed copy of `runs/demo/start.db`, swaps them in, restarts the service and checks both answers.
-  The SSH key is `~/.ssh/money-maxer-demo.pem` on Karan's laptop; SSH is open only to the address it was deployed from
-  (if that changes: add the new address to security group `money-maxer-demo-sg`, port 22).
-- **Atharv, for Vercel:** the marketing page's "Open the dashboard" button points at `/dashboard`, which exists only
-  on this box. On Vercel it has to be `http://32.198.75.6/dashboard`.
-  *(AthM23, 05:05: not needed. The Vercel copy serves its own `/dashboard`, behind a password; see the next section.)*
-- **Take it down** when judging is over (it costs about 50 cents a day):
+**Full since 20 Sep 2026, 05:22 EDT.** `/` is the marketing page, open to anyone. `/dashboard` is the workspace and
+asks for the team password once: the same sign-in form and thirty-day cookie as the Vercel copy (`workspace/gate.ts`),
+and the same password, which is not in the repo. Signed in, it is the workspace as it runs on a laptop: decide,
+approve, run the code tier, find unbilled expenses, learn, audit, and Ask with Haiku or Opus. One t3.small in
+us-east-1 (Karan's account), about 50 cents a day.
+
+How it is put together (`scripts/aws-box-setup.sh` builds all of it, and was run on this box):
+
+- `money-maxer.service` (systemd, restarts itself) runs `pnpm -s workspace runs/live/month.db --port 4320 --stores
+  runs/live/stores`, **bound to 127.0.0.1**. It is started without `WORKSPACE_PUBLIC`, so it is not read-only, and
+  without that flag the server listens nowhere but its own machine. The unit refuses to start if
+  `DASHBOARD_PASSWORD` is missing (checked both ways on the box): a full workspace is never online without a gate.
+- Caddy is the only way in: ports 80 and 443, a Let's Encrypt certificate for the `sslip.io` name (it resolves to the
+  IP written in it; no domain was bought), plain http redirected to https. It adds TLS and nothing else. Port 4320
+  does not answer from outside.
+- `/etc/money-maxer.env` (root only, mode 600) holds two values and nothing else: `ANTHROPIC_API_KEY`, which only Ask
+  uses, and `DASHBOARD_PASSWORD`. Neither is in the repo or in anything the scripts send; both were put there by
+  hand. **No Slack, QuickBooks, Gmail or HubSpot credential is on the box**, so nothing there can message a person or
+  touch a real ledger, and the month on it has the real Slack member id scrubbed out.
+- What a visitor can spend: nothing without the password. With it, only Ask calls a paid model, and the unit sets
+  `ASK_AGENT_MAX_PER_HOUR=60`. "Run the code tier" and every other button is code.
+
+Checked from outside at 05:22: with no cookie, `/`, `/site` and `/logo.svg` answer 200 and everything else answers
+401 (`/dashboard`, its scripts and styles, every `/api/` read, `run`, the paid Ask, a wrong password). The cookie is
+`HttpOnly; SameSite=Lax; Secure`. Signed in: pages and reads in about 100 ms; `run` and `accruals` go through and the
+other books refresh; one Haiku question came back in 5.4 s through two tools (9,198 tokens in, 378 out, about a cent).
+
+- **Update it** after new commits or a new month: `scripts/deploy-aws.sh 32.198.75.6` (add `--reset` to also put the
+  month back to the start). It sends the code as committed, a scrubbed copy of `runs/demo/start.db` and its stores,
+  swaps them in, restarts, and checks that the dashboard refuses a visitor who has not signed in. It refuses a month
+  that holds a secret-shaped string.
+- **Reset the month** after a rehearsal or a judge's visit, three seconds:
+  `ssh -i ~/.ssh/money-maxer-demo.pem ec2-user@32.198.75.6 mm-reset`
+- **Change the password:** edit `DASHBOARD_PASSWORD` in `/etc/money-maxer.env` on the box, then
+  `sudo systemctl restart money-maxer.service`. Everyone is signed out.
+- **SSH** is key-only (`~/.ssh/money-maxer-demo.pem` on Karan's laptop) and open to `104.28.0.0/16`, because the
+  laptop's outbound address rotates inside that range. If ssh times out, add the new address to security group
+  `money-maxer-demo-sg`, port 22.
+- **Take it down** when judging is over. This also destroys the only copy of the key that is off the laptop:
   `aws ec2 terminate-instances --region us-east-1 --instance-ids i-0b4b617b2060e0d33`, then
   `aws ec2 delete-security-group --region us-east-1 --group-id sg-02170e069ce23e142` and
   `aws ec2 delete-key-pair --region us-east-1 --key-name money-maxer-demo`.
@@ -55,33 +81,14 @@ day (UNVERIFIED, from their published limits).
 
 `.vercelignore` replaces `.gitignore` for the CLI, so `.env` is named in it; keep it named.
 
-## What goes up, and what never does
+## Read-only mode, which the Vercel copy runs in
 
 `WORKSPACE_PUBLIC=1` starts the workspace **read-only** (`workspace/publicMode.ts`, tested): every action that writes
-or spends is refused by name (answer, approve, decide, fact, learn, policy, run), Ask answers from code only, and only
-in this mode will the server listen beyond 127.0.0.1. The books as tools, every page, the trace, the Model page and
-the audit (it works on a temporary copy) all work. **No `.env`, no API key, no Slack or QuickBooks credential goes on
-the box**: the public copy has nothing to call them with. The live demo, where decisions are made, stays on the laptop.
+or spends is refused by name (answer, approve, decide, fact, learn, policy, run, accruals), Ask answers from code
+only, and only in this mode will the server itself listen beyond 127.0.0.1. The books as tools, every page, the
+trace, the Model page and the audit (it works on a temporary copy) all work. A read-only copy needs no `.env`, no API
+key and no credential of any kind, and the Vercel copy has none. The AWS box ran this way from 05:02 to 05:12 on
+20 Sep, on plain http, before it was made the full workspace above.
 
-## One small box
-
-```bash
-# on the laptop: the code as committed, plus the month as the demo begins
-git archive --format=tar.gz -o /tmp/mm.tgz HEAD
-scp /tmp/mm.tgz runs/demo/start.db ec2-user@<host>:/tmp/
-
-# on the box (Amazon Linux 2023, t3.small is plenty): Node 22 and pnpm, then
-mkdir -p ~/mm && tar -xzf /tmp/mm.tgz -C ~/mm && cd ~/mm && corepack enable && pnpm install --frozen-lockfile
-mkdir -p runs/public && cp /tmp/start.db runs/public/month.db
-WORKSPACE_PUBLIC=1 nohup pnpm -s workspace runs/public/month.db --port 8080 > workspace.log 2>&1 &
-```
-
-Open port 8080 in the instance's security group to the judges' network or to everyone, as Karan decides. `/` is the
-marketing page, `/dashboard` the workspace. To refresh the copy, replace `month.db` and restart.
-
-## Not done, on purpose
-
-No TLS and no domain (an IP and a port are enough for a judge's click; put a load balancer or Caddy in front for
-either). No password: the copy cannot write, spend or reveal a secret, and the data is a fictional company's.
-If the marketing page is hosted elsewhere (Vercel), set `MARKETING_URL` and the root redirects to it; its
-"Dashboard" link must then point at this box, not at `/dashboard`.
+If the marketing page is hosted somewhere else, set `MARKETING_URL` and the root redirects to it; its "Open the
+dashboard" button must then point at a host that serves `/dashboard`.
