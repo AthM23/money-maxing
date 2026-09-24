@@ -1,5 +1,24 @@
 # Money Maxer
 
+![Money Maxer: close the books while you sleep. An agent finance team that reads the inbox, matches the bank, books every entry through a checker that re-performs it, and asks a human exactly once.](docs/hero.png)
+
+<p align="center">
+  <b>Ramp: 3rd place, Save Time. Save Money.</b> &nbsp;·&nbsp; <b>Maximor AI: 4th place, Office of the CFO Agent Challenge</b><br>
+  HackMIT 2026 &nbsp;·&nbsp; Preet Karia, Karan Singh Bisht, Atharv Mungale
+</p>
+
+<p align="center">
+  <a href="https://plume.hackmit.org/project/nlhtb-gqmiu-yvcyw-pibeg">HackMIT project page</a> &nbsp;·&nbsp;
+  <a href="https://drive.google.com/file/d/1RLDRcEYKdf4m_-kqa3kAZAnqPq-xy7mI/view">Paper (PDF)</a> &nbsp;·&nbsp;
+  <a href="https://money-maxing-mu.vercel.app">Live demo (read-only)</a>
+</p>
+
+> **The paper.** *Money Maxer: Verified Small-Model Document Extraction for the Financial Close* asks how small,
+> cheap and local the model that reads finance documents can be when no agent is trusted anyway. We LoRA-fine-tune
+> open-weight models from 0.6B to 20B parameters on 956 synthetic documents and evaluate on NorthwindBench (time
+> split, held-out customers, vendors and templates). With no schema in its prompt, the fine-tuned Qwen3-4B reaches
+> 0.972 field-F1 and 100% schema validity on 120 test documents.
+
 *(Working name: Footnote. The code, the `FOOTNOTE_*` environment variables, `data/footnote.db` and the older notes in
 `context/` still say so; they are the same project.)*
 
